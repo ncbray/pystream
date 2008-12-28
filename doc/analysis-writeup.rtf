@@ -1,0 +1,58 @@
+{\rtf1\ansi\deff0\adeflang1025
+{\fonttbl{\f0\froman\fprq2\fcharset0 Times New Roman;}{\f1\froman\fprq2\fcharset0 Times New Roman;}{\f2\fswiss\fprq2\fcharset0 Arial;}{\f3\froman\fprq2\fcharset0 Times New Roman;}{\f4\fswiss\fprq2\fcharset0 Lucida Sans Unicode;}{\f5\fnil\fprq0\fcharset0 Tahoma;}{\f6\fswiss\fprq2\fcharset0 Tahoma;}{\f7\fswiss\fprq0\fcharset0 Tahoma;}}
+{\colortbl;\red0\green0\blue0;\red128\green128\blue128;}
+{\stylesheet{\s1\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033\snext1 Normal;}
+{\s2\sb240\sa120\keepn\rtlch\af0\afs28\lang255\ltrch\dbch\af0\langfe255\hich\f2\fs28\lang1033\loch\f2\fs28\lang1033\sbasedon1\snext3 Heading;}
+{\s3\sa120\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033\sbasedon1\snext3 Body Text;}
+{\s4\sa120\rtlch\af7\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033\sbasedon3\snext4 List;}
+{\s5\sb120\sa120\rtlch\af5\afs24\lang255\ai\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\i\loch\fs24\lang1033\i\sbasedon1\snext5 caption;}
+{\s6\rtlch\af7\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033\sbasedon1\snext6 Index;}
+{\s7\sb120\sa120\rtlch\af7\afs24\lang255\ai\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\i\loch\fs24\lang1033\i\sbasedon1\snext7 caption;}
+}
+{\info{\creatim\yr2008\mo6\dy17\hr15\min37}{\revtim\yr1601\mo1\dy1\hr0\min0}{\printim\yr1601\mo1\dy1\hr0\min0}{\comment StarWriter}{\vern6800}}\deftab709
+{\*\pgdsctbl
+{\pgdsc0\pgdscuse195\pgwsxn12240\pghsxn15840\marglsxn1134\margrsxn1134\margtsxn1134\margbsxn1134\pgdscnxt0 Standard;}}
+{\*\pgdscno0}\paperh15840\paperw12240\margl1134\margr1134\margt1134\margb1134\sectd\sbknone\pgwsxn12240\pghsxn15840\marglsxn1134\margrsxn1134\margtsxn1134\margbsxn1134\ftnbj\ftnstart1\ftnrstcont\ftnnar\aenddoc\aftnrstcont\aftnstart1\aftnnrlc
+\pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ab\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\b\loch\fs24\lang1033\b {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b [ Design ]}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 Minimal knowledge of language, implement language semantics as functions.}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 Global variables are actually heap pointers.  Any mechanism that is precise for heap variables will be precise for global variables.}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 knowledge about the program is stored in a relational database.  The database is encoded into a BDD to compress redundant information.  For context-sensitive analysis, there tends to be quite a bit of redundant information, as contexts for a given function
+ tend to be similar.}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 Pythonism: don't modify the standard library.  Result: need precise switches, not just precise methods.  Particulalry, idioms such as: "isinstance(obj, objType)" and "type(obj) is objType" must be precise.}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ab\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\b\loch\fs24\lang1033\b {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b [ Store Model ]}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 Slots}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 Array elements}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 Dictionary elements}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 Low-level elements}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ab\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\b\loch\fs24\lang1033\b {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b [ Memory Allocation]}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 Memory management is intimately tied into the analysis algorithm.  First, memory allocations are abstracted, the algorithm allows a single object in the analysis correspond to multiple objects at runtime.  This helps bound the memory and time required by t
+he analysis.  Further, if the concrete semantics of the allocation/garbage collection/deallocation mechanisms were taken into account, it is likely alias information would be less precise.  Second, objects are labeled according to their type and allocation
+ context.  Adding these labels requires action by the analysis system.}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ab\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\b\loch\fs24\lang1033\b {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b [ Language Abstractions ]}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 Dictionaries}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 Calling conventions}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 \tab Needs to know call chain for context}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 \tab Precompute varg transfer functions to preserve precision}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 \tab Also need to return.}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ab\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\b\loch\fs24\lang1033\b {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b [ Operations ]}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 In many cases this is an optimization, but in some cases it is vital for breaking recursive dependencies.  For example, when getting an attribute from an object, the getter function is stored as an attribute.  Getting the getter function therefore requires
+ having the getter function to begin with, a paradox that is resolved by storing a "naked" pointer to the function in a known place.}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 (Double check) Operations are also necessary for preserving the semantics of Python.  In (many) cases the mechanism for getting attributes is bypassed, which has distinct semantic implications if the getter function has side effects or returns a different 
+value than is held in the operation table.}
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 
+\par \pard\plain \ltrpar\s1\ql\rtlch\af6\afs24\lang255\ltrch\dbch\af4\langfe255\hich\fs24\lang1033\loch\fs24\lang1033 {\rtlch \ltrch\loch\f0\fs24\lang1033\i0\b0 The end result is that it is unsound to analyze an object as it were purely Python, rather the underlying function tables must be taken into account.}
+\par }

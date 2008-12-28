@@ -1,0 +1,233 @@
+class CallerArgs(object):
+	__slots__ = 'selfarg', 'args', 'kwds', 'vargs', 'kargs'
+	
+	def __init__(self, selfarg, args, kwds, vargs, kargs):
+		self.selfarg = selfarg
+		self.args    = args
+		self.kwds    = kwds
+		self.vargs   = vargs
+		self.kargs   = kargs
+
+	def __repr__(self):
+		return "args(self=%s, args=%s, kwds=%s, vargs=%s, kargs=%s)" % (repr(self.selfarg), repr(self.args), repr(self.kwds), repr(self.vargs), repr(self.kargs))
+
+class CalleeParams(object):
+	__slots__ = 'selfparam', 'params', 'paramnames', 'defaults', 'vparam', 'kparam'
+
+	def __init__(self, selfparam, params, paramnames, defaults, vparam, kparam):
+		self.selfparam  = selfparam
+		self.params     = params
+		self.paramnames = paramnames
+		self.defaults   = defaults
+		self.vparam     = vparam
+		self.kparam     = kparam
+
+	def __repr__(self):
+		return "params(self=%s, params=%s, names=%s, vparam=%s, kparam=%s)" % (repr(self.selfparam), repr(self.params), repr(self.paramnames), repr(self.vparam), repr(self.kparam))
+
+	@classmethod
+	def fromFunction(cls, func):
+		code = func.code
+		assert not hasattr(func, 'defaults'), "Temporary limitation"
+		return cls(code.selfparam, code.parameters, code.parameternames, [], code.vparam, code.kparam)
+# arg ->
+#	param
+# 	vparam
+# varg ->
+#	param
+#	vparam
+# kwd ->
+#	param
+#	kparam
+# karg ->
+#	param
+#	kparam
+
+# Must bind
+# May bind
+
+Maybe = 'maybe'
+
+class PositionalTransfer(object):
+	def __init__(self):
+		self.reset()
+
+
+	def transfer(self, src, dst, count):
+		assert count > 0, count
+
+		self.active = True
+		self.sourceBegin = src
+		self.sourceEnd = src+count
+
+		self.destinationBegin = dst
+		self.destinationEnd = dst+count
+
+		self.count = count
+
+	def reset(self):
+		self.active = False
+		self.sourceBegin = 0
+		self.sourceEnd = 0
+		self.destinationBegin = 0
+		self.destinationEnd = 0
+		self.count = 0
+		
+class CallInfo(object):
+	def __init__(self):
+		self.willAlwaysFail    = False
+		self.willAlwaysSucceed = False
+		
+		self.argParam   = PositionalTransfer()
+		self.argVParam  = PositionalTransfer()
+
+		self.exceptions = set()
+		
+		self.uncertainParam = False
+		self.uncertainParamStart = 0
+
+		self.vparamUncertain = False
+		self.vparamUncertainStart = 0
+
+		self.certainKeywords = set()
+		self.defaults = set()
+
+	def isBound(self, param):
+		if param < self.argParam.count:
+			return True
+		elif param in self.certainKeywords:
+			return True
+		elif param in self.defaults:
+			return True
+		elif self.uncertainParam:
+			return Maybe
+		else:
+			return False
+
+	def mustFail(self):
+		self.willAlwaysFail    = True
+		self.willAlwaysSucceed = False
+
+		self.argParam.reset()
+		self.argVParam.reset()
+		
+		self.uncertainParam = 0
+		self.vparamUncertain = False
+		
+		self.certainKeywords.clear()
+		self.defaults.clear()
+
+		return self
+
+def bindDefaults(callee, info):
+	### Handle default values ###
+	numDefaults = len(callee.defaults)
+	numParams   = len(callee.params)
+	defaultOffset = numParams-numDefaults
+	for i in range(defaultOffset, numParams):
+		bound = info.isBound(i)
+		# If it isn't bound for sure, it may default.
+		if bound is not True:
+			info.defaults.add(i)
+
+def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncertainKwds):
+	assert isinstance(callee, CalleeParams), callee
+	assert isinstance(numArgs, int) and numArgs >= 0, numArgs
+
+	assert not isUncertainKwds, isUncertainKwds
+
+	info = CallInfo()
+
+
+	# Exactly known parameters [0, exact)
+	numParams = len(callee.params)
+
+	arg    = 0
+	param  = 0
+	vparam = 0
+
+	mayFail = False
+
+	# arg -> param
+	count = min(numArgs, numParams)
+	if count > 0:
+		info.argParam.transfer(arg, param, count)
+		arg   += count
+		param += count
+
+	# arg -> vparam
+	count = numArgs-arg
+	if count > 0:
+		if callee.vparam is not None:
+			assert param == numParams
+			info.argVParam.transfer(arg, vparam, count)
+			arg += count
+			vparam  += count
+		else:
+			# Can't put extra args into vparam.
+			info.exceptions.add(TypeError)
+			return info.mustFail()
+
+	# Parameters to fill with uncertain values [uncertain, inf)
+	if param < numParams and uncertainVArgs:
+		info.uncertainParam = True
+		info.uncertainParamStart = param
+
+	# Uncertain args will spill into vargs.
+	if uncertainVArgs:
+		if callee.vparam is not None:
+			info.vparamUncertain = True
+			info.vparamUncertainStart = vparam
+		else:
+			# Without a vparam, the uncertain arguments may overflow.
+			info.exceptions.add(TypeError)
+			mayFail = True
+
+
+
+	### Handle keywords that we are certain will be passed ###
+	if certainKwds:
+		paramMap = {}
+		for i, name in enumerate(callee.paramnames):
+			paramMap[name] = i
+			
+		for kwd in certainKwds:
+			if kwd in paramMap:
+				param = paramMap[kwd]
+				bound = info.isBound(param)
+				if bound is False:
+					info.certainKeywords.add(param)
+				elif bound is Maybe:
+					# POSSIBLE: got multiple values for keyword argument '%s'
+					info.certainKeywords.add(param)
+					info.exceptions.add(TypeError)
+					mayFail = True
+					# TODO may no fail 
+				else:
+					# got multiple values for keyword argument '%s'
+					info.exceptions.add(TypeError)
+					return info.mustFail()
+			elif callee.kparam is None:
+				# got an nexpected keyword argument '%s'
+				info.exceptions.add(TypeError)
+				return info.mustFail()
+			else:
+				assert False, "Temporary limitation: cannot handle kparams"
+
+	bindDefaults(callee, info)
+
+	# Validate binding
+	completelyBound = True
+	#for i in range(info.argParam.count, numParams):
+	for i in range(numParams):
+		bound = info.isBound(i)
+		if bound is False:
+			info.exceptions.add(TypeError)
+			return info.mustFail()
+		elif bound is Maybe:
+			completelyBound = False
+			info.exceptions.add(TypeError)
+
+	info.willAlwaysSucceed = completelyBound and not mayFail
+	
+	return info

@@ -1,0 +1,14 @@
+# Python
+*.pyc
+*.pyo
+
+# vi
+*.swp
+
+# Generic temp files
+*.bak
+*.tmp
+
+# Project spesific
+summaries/
+wiki/

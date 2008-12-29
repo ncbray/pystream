@@ -5,7 +5,6 @@ import sys
 import os.path
 def libraryDirectory(root, path):
 	libdir = os.path.normpath(os.path.join(root, path))
-	print libdir
 	sys.path.append(libdir)
 
 
@@ -14,16 +13,16 @@ def scriptRoot(fn):
 	return path
 
 def profile(f):
-    import hotshot, hotshot.stats
-    prof = hotshot.Profile("tests.prof")
-    prof.runcall(f)
-    prof.close()
-    stats = hotshot.stats.load("tests.prof")
-    stats.strip_dirs()
-    stats.sort_stats('cumulative')
-    #stats.sort_stats('time')
-    stats.print_stats(40)
-
+	import hotshot, hotshot.stats
+	prof = hotshot.Profile("tests.prof")
+	result = prof.runcall(f)
+	prof.close()
+	stats = hotshot.stats.load("tests.prof")
+	stats.strip_dirs()
+	stats.sort_stats('cumulative')
+	#stats.sort_stats('time')
+	stats.print_stats(40)
+	return result
 
 def initPsyco(psycoProfile=False):
 	try:

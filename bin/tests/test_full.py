@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import unittest
-
+import os.path
 
 
 from . fullcompiler import compileExample
@@ -17,7 +17,11 @@ physics = True
 
 class FullTestBase(unittest.TestCase):
 	def setUp(self):
-		self.module, self.generated = compileExample(self.makefile)
+		# The makefile is relitive to this module.
+		path, filename = os.path.split(__file__)
+		makefile = os.path.join(path, self.makefile)
+		
+		self.module, self.generated = compileExample(makefile)
 
 	def compare(self, name, *args):
 		original = getattr(self.module, name)
@@ -26,7 +30,7 @@ class FullTestBase(unittest.TestCase):
 
 if example:
 	class TestExampleFull(FullTestBase):
-		makefile = 'tests/full/makeexample.py'
+		makefile = 'full/makeexample.py'
 
 		def testF(self):
 			self.compare('f')
@@ -92,7 +96,7 @@ if example:
 
 if linear:		
 	class TestLinearFull(FullTestBase):
-		makefile = 'tests/full/makelinear.py'
+		makefile = 'full/makelinear.py'
 
 		def testDoDot(self):
 			self.compare('doDot')
@@ -108,7 +112,7 @@ if linear:
 
 if confusion:
 	class TestConfusionFull(FullTestBase):
-		makefile = 'tests/full/makeconfusion.py'
+		makefile = 'full/makeconfusion.py'
 
 		def testBeConfused(self):
 			self.compare('beConfused', False)
@@ -134,7 +138,7 @@ if confusion:
 
 if loops:
 	class TestLoopsFull(FullTestBase):
-		makefile = 'tests/full/makeloops.py'
+		makefile = 'full/makeloops.py'
 
 		def testWhileLoop(self):
 			self.compare('whileLoop', 0.0)
@@ -156,7 +160,7 @@ if loops:
 
 if tuples:
 	class TestTuplesFull(FullTestBase):
-		makefile = 'tests/full/maketuples.py'
+		makefile = 'full/maketuples.py'
 		
 		def testTupleTest(self):
 			self.compare('tupleTest', 1.0, 2.0, 3.0)
@@ -187,7 +191,7 @@ if tuples:
 
 
 ##class TestListsFull(FullTestBase):
-##	makefile = 'tests/full/makelists.py'
+##	makefile = 'full/makelists.py'
 ##	
 ##	def testListTest(self):
 ##		self.compare('listTest', 1.0, 2.0, 3.0)
@@ -218,13 +222,13 @@ if tuples:
 
 if physics:
 	class TestPhysicsFull(FullTestBase):
-		makefile = 'tests/full/makephysics.py'
+		makefile = 'full/makephysics.py'
 		
 		def testTupleTest(self):
 			self.compare('simpleUpdate', 0.25)
 
 ##class TestRuntimeFull(FullTestBase):
-##	makefile = 'tests/full/makeruntime.py'
+##	makefile = 'full/makeruntime.py'
 ##
 ##	def testF(self):
 ##		self.compare('testF')

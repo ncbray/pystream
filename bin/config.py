@@ -1,5 +1,8 @@
 usePsyco        = True
-outputDirectory = "../summaries"
+
+# Absolute path, as durring development the script
+# may be called from different working directories...
+outputDirectory = "c:/projects/pystream/summaries"
 
 #limitedTest = ['tests.test_util']
 

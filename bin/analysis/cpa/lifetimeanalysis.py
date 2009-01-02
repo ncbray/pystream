@@ -1,4 +1,5 @@
 import collections
+import time
 
 from . import base
 
@@ -31,12 +32,8 @@ def wrapFunctionContext(schema):
 	return schema
 
 
-readModifyStruct = structure.StructureSchema(
-	('read',   lattice.setUnionSchema),
-	('modify', lattice.setUnionSchema)
-	)
-readModifySchema = wrapOpContext(readModifyStruct)
 
+opDataflowSchema = wrapOpContext(lattice.setUnionSchema)
 
 invokesStruct = structure.StructureSchema(
 	('function', functionSchema),
@@ -70,14 +67,6 @@ def filteredSCC(G):
 			o.append(g)
 	return o
 
-# object points to object
-# context points to object
-# context calls context
-
-# Object may be loop/recursive/stream allocated
-# If not, the number of allocations are countable.
-
-#globalHeap = 'global heap'
 
 def objectOfInterest(obj):
 	return True
@@ -98,59 +87,36 @@ class ObjectInfo(object):
 
 class ReadModifyAnalysis(object):
 	def __init__(self, killed, invokedBy):
-
-		# HACK
-		self.invokes         = collections.defaultdict(set)
-		#self.invokedBy       = collections.defaultdict(set)
 		self.invokedBy       = invokedBy
 		self.killed          = killed
 		
 		self.contextReads    = collections.defaultdict(set)
 		self.contextModifies = collections.defaultdict(set)
-
-		self.opReads 	     = collections.defaultdict(set)
-		self.opModifies      = collections.defaultdict(set)
-
-		self.allReads        = set()
-		self.allModifies     = set()
-
-##		self.contextOps      = collections.defaultdict(set)
-
 	
 	def process(self, sys):
-##		# what contexts are invoked by a given cop
-##		for cop, contexts in sys.opInvokes.iteritems():
-##			for context in contexts:
-##				self.invokedBy[context].add(cop)
+		self.system = sys
+
+		allReads        = set()
+		allModifies     = set()
+
+		self.opReadDB   = opDataflowSchema.instance()
+		self.opModifyDB = opDataflowSchema.instance()
+
 
 		# Copy modifies
 		for cop, slots in sys.opModifies.iteritems():
-			self.opModifies[(cop.function, cop.op, cop.context)].update(slots)
-			self.allModifies.update(slots)
+			self.opModifyDB[cop.function][cop.op].merge(cop.context, slots)
+			self.contextModifies[cop.context].update(slots)
+			allModifies.update(slots)
+
 
 		# Copy Reads
 		for cop, slots in sys.opReads.iteritems():
-			for slot in slots:
-				# Filter static reads.
-				if slot in self.allModifies: 
-					self.opReads[(cop.function, cop.op, cop.context)].add(slot)
-					
-			self.allReads.update(slots)
-
-
-##		# Create context -> cop mapping for all cop
-##		for cop in sys.opReads.iterkeys():
-##			self.contextOps[cop.context].add(cop)
-##		for cop in sys.opModifies.iterkeys():
-##			self.contextOps[cop.context].add(cop)
-##		for cop in sys.opAllocates.iterkeys():
-##			self.contextOps[cop.context].add(cop)
-##		for cop in sys.opInvokes.iterkeys():
-##			self.contextOps[cop.context].add(cop)
-
-
-		self.system = sys
-
+			# Only track reads that may change
+			filtered = set([slot for slot in slots if slot in allModifies])
+			self.opReadDB[cop.function][cop.op].merge(cop.context, filtered)
+			self.contextReads[cop.context].update(filtered)
+			allReads.update(slots)
 
 		self.processReads()
 		self.processModifies()
@@ -159,10 +125,8 @@ class ReadModifyAnalysis(object):
 	def processReads(self):
 		self.dirty = set()
 		
-		for (func, op, context), values in self.opReads.iteritems():
-			if values:
-				self.contextReads[context].update(values)
-				self.dirty.add((func, context))
+		for context, values in self.contextReads.iteritems():
+			if values: self.dirty.add((context.func, context))
 
 
 		while self.dirty:
@@ -174,53 +138,52 @@ class ReadModifyAnalysis(object):
 		
 		for prev in self.invokedBy[currentF][currentC]:
 			prevF, prevO, prevC = prev
+
+			prevRead = self.opReadDB[prevF][prevO]
 			
-			isDirty = False
 			killed = self.killed[(prevC, currentC)]
 
 			# Propigate reads
-			for value in self.contextReads[currentC]:
-				if value.obj in killed: continue
-				
-				if value not in self.opReads[prev]:
-					self.opReads[prev].add(value)
-					self.contextReads[prevC].add(value)
-					isDirty = True
+			filtered = set([value for value in self.contextReads[currentC] if value.obj not in killed])
+			current = prevRead[prevC]
+			diff = filtered-current if current else filtered
 
-			if isDirty: self.dirty.add((prevF, prevC))
+			if diff:
+				self.contextReads[prevC].update(diff)
+				prevRead.merge(prevC, diff)
+				self.dirty.add((prevF, prevC))
+
+
 
 	def processModifies(self):
 		self.dirty = set()
 		
-		for (func, op, context), values in self.opModifies.iteritems():
-			if values:
-				self.contextModifies[context].update(values)
-				self.dirty.add((func, context))
+		for context, values in self.contextModifies.iteritems():
+			if values: self.dirty.add((context.func, context))
 
 		while self.dirty:
 			current = self.dirty.pop()
 			self.processContextModifies(current)
-
 
 	def processContextModifies(self, current):
 		currentF, currentC = current
 		
 		for prev in self.invokedBy[currentF][currentC]:
 			prevF, prevO, prevC = prev
+
+			prevMod = self.opModifyDB[prevF][prevO]
 			
-			isDirty = False
 			killed = self.killed[(prevC, currentC)]
 
 			# Propigate modifies
-			for value in self.contextModifies[currentC]:
-				if value.obj in killed: continue
-				
-				if value not in self.opModifies[prev]:
-					self.opModifies[prev].add(value)
-					self.contextModifies[prevC].add(value)
-					isDirty = True
-
-			if isDirty: self.dirty.add((prevF, prevC))
+			filtered = set([value for value in self.contextModifies[currentC] if value.obj not in killed])
+			#diff = filtered-self.opModifies[prev]
+			current = prevMod[prevC]
+			diff = filtered-current if current else filtered
+			if diff:
+				self.contextModifies[prevC].update(diff)
+				prevMod.merge(prevC, diff)
+				self.dirty.add((prevF, prevC))
 
 		
 class LifetimeAnalysis(object):
@@ -472,14 +435,7 @@ class LifetimeAnalysis(object):
 		self.createDB()
 
 	def createDB(self):
-		db = readModifySchema.instance()
-
-		# Copy into a database
-		for (function, op, context), slots in self.rm.opReads.iteritems():
-			db[function][op].merge(context, (slots, None))
-
-		for (function, op, context), slots in self.rm.opModifies.iteritems():
-			db[function][op].merge(context, (None, slots))
+		self.readDB = self.rm.opReadDB
+		self.modifyDB = self.rm.opModifyDB
 
 
-		self.db = db

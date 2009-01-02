@@ -96,11 +96,15 @@ class CPAData(object):
 
 		# HACK
 		if hasattr(self.db, 'lifetime'):
-			for func, ops in self.db.lifetime.db:
+			for func, ops in self.db.lifetime.readDB:
 				for op, contexts in ops:
-					for context, (reads, modifies) in contexts:
+					for context, reads in contexts:
 						if reads:
 							self.funcReads[func][context].update(reads)
+
+			for func, ops in self.db.lifetime.modifyDB:
+				for op, contexts in ops:
+					for context, modifies in contexts:
 						if modifies:
 							self.funcModifies[func][context].update(modifies)
 				

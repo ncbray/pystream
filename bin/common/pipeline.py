@@ -33,10 +33,12 @@ def codeConditioning(extractor, entryPoints, dataflow):
 		print "Code conditioning: Method Call"
 		optimization.methodcall.methodCall(extractor, adb)
 
+	start = time.clock()
 	print "Analysis: Object Lifetime"
 	la =  analysis.cpa.lifetimeanalysis.LifetimeAnalysis()
 	la.process(dataflow)
 	dataflow.db.lifetime = la # HACK
+	print "Analysis: %.2e" % (time.clock()-start)
 
 	if True:
 		print "Code conditioning: Simplify"
@@ -62,12 +64,12 @@ def cpaPass(e, entryPoints):
 	print "Analyize"
 	start = time.clock()
 	result = analysis.cpa.evaluate(e, entryPoints)
-	print "Analysis Time: %.2f" % (time.clock()-start)
+	print "Analysis Time: %.3f" % (time.clock()-start)
 
 	print
 	start = time.clock()
 	codeConditioning(e, entryPoints, result)
-	print "Optimize: %.2f" % (time.clock()-start)
+	print "Optimize: %.3f" % (time.clock()-start)
 
 	return result
 
@@ -75,7 +77,7 @@ def cpaDump(e, result, entryPoints):
 	print "Dump..."
 	start = time.clock()
 	analysis.cpa.dump(e, result, entryPoints)
-	print "Dump: %.2f" % (time.clock()-start)
+	print "Dump: %.3f" % (time.clock()-start)
 
 
 ##def fiApproxPass(e, entryPoints):

@@ -29,9 +29,8 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 	def modificationsForOp(self, function, op):
 		if hasattr(self.db, 'lifetime'):
 			# HACK
-			result = self.db.lifetime.db[function][op].forget()
-			modifies = result.modify
-			return modifies
+			result = self.db.lifetime.modifyDB[function][op].forget()
+			return result
 		else:
 			return ()
 
@@ -61,8 +60,12 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 		if hasattr(self.db, 'lifetime'):
 			if isinstance(original, (ast.Expression, ast.Statement)):
 				if isinstance(newast, (ast.Expression, ast.Statement)):
-					db = self.db.lifetime.db
-					db[function].merge(newast, db[function][original])
+					readDB = self.db.lifetime.readDB
+					readDB[function].merge(newast, readDB[function][original])
+
+					modifyDB = self.db.lifetime.modifyDB
+					modifyDB[function].merge(newast, modifyDB[function][original])
+
 
 	def origin(self, function, op):
 		return op

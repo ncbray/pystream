@@ -288,7 +288,8 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		for op in funcOps:
 			printTabbed(op, info.opInfo(op).context(context).references)
 
-			read, modify = data.db.lifetime.db[func][op][context]
+			read   = data.db.lifetime.readDB[func][op][context]
+			modify = data.db.lifetime.modifyDB[func][op][context]
 
 			# HACK?
 			if read or modify:

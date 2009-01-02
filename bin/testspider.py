@@ -43,6 +43,19 @@ def runTests(path, testList=None, exclude=set()):
 
 	# Filter out explicitly excluded tests.
 	exclude = frozenset(exclude)
+	testListSet = frozenset(testList)
+
+
+	header = False
+	for s in exclude:
+		if s not in testListSet:
+			if not header:
+				print "WARNING: attempted to exclude the following non-existant tests..."
+				header = True
+			print '\t%s' % s
+	if header:
+		print
+	
 	testList = [s for s in testList if s not in exclude]
 
 	print "/========== Tests ==========\\"

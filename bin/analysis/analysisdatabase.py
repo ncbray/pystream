@@ -50,6 +50,7 @@ class AbstractAnalysisDatabase(object):
 	def hasSideEffects(self, function, op):
 		return bool(self.modificationsForOp(function, self.origin(function, op)))
 
+
 class DummyAnalysisDatabase(AbstractAnalysisDatabase):
 	def objectsForLocal(self, function, local):
 		return ()

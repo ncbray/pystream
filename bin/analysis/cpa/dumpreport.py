@@ -287,6 +287,17 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.begin('pre')
 		for op in funcOps:
 			printTabbed(op, info.opInfo(op).context(context).references)
+
+			read, modify = data.db.lifetime.db[func][op][context]
+
+			# HACK?
+			if read or modify:
+				out << '\t\t'
+				out.begin('i')
+				if read: out << "R"
+				if modify: out << "M"
+				out.end('i')
+				out.endl()
 		
 		out.endl()
 
@@ -322,8 +333,8 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.end('p')
 
 
-		live = data.inter.la.contextLive[context]
-		killed = data.inter.la.contextKilled[context]
+		live = data.db.lifetime.live[(func, context)]
+		killed = data.db.lifetime.contextKilled[(func, context)]
 
 		if live:
 			out.begin('h3')
@@ -383,7 +394,7 @@ def dumpHeapInfo(heap, data, links, out):
 	heapInfo = data.db.heapInfo(heap)
 	contexts = heapInfo.contexts
 
-	la = data.inter.la
+	la = data.db.lifetime
 
 	out.begin('pre')
 

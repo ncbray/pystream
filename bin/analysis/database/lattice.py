@@ -15,21 +15,49 @@ class LatticeSchema(base.Schema):
 			raise base.SchemaError, "Argument is not the correct type of value."
 
 def setUnionValidate(arg):
-	return isinstance(arg, set)
+	if not isinstance(arg, set):
+		raise base.SchemaError, "Expected set, got %s" % type(arg).__name__
+	else:
+		return True
 
 def setUnionCreate():
 	return set()
 
-def setUnionMerge(argiter):
+def setUnionMerge(*args):
 	out = set()
-	for arg in argiter:
+	for arg in args:
 		out.update(arg)
 	return out
 
-def inplaceSetUnionMerge(target, argiter):
-	for arg in argiter:
+def inplaceSetUnionMerge(target, *args):
+	for arg in args:
 		target.update(arg)
 	return target
 
-setUnionSchema = LatticeSchema(setUnionValidate, setUnionCreate,
-			       setUnionMerge, inplaceSetUnionMerge)
+##setUnionSchema = LatticeSchema(setUnionValidate, setUnionCreate,
+##			       setUnionMerge, inplaceSetUnionMerge)
+
+
+def setCompressedUnionValidate(arg):
+	if arg is not None and not isinstance(arg, set):
+		raise base.SchemaError, "Expected set, got %s" % type(arg).__name__
+	else:
+		return True
+
+def setCompressedUnionCreate():
+	return None
+
+def setCompressedUnionMerge(*args):
+	return inplaceSetCompressedUnionMerge(None, *args)
+
+def inplaceSetCompressedUnionMerge(target, *args):
+	for arg in args:
+		if arg:
+			if target:
+				target.update(arg)
+			else:
+				target = set(arg)
+	return target
+
+setUnionSchema = LatticeSchema(setCompressedUnionValidate, setCompressedUnionCreate,
+			       setCompressedUnionMerge, inplaceSetCompressedUnionMerge)

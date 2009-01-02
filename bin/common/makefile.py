@@ -2,7 +2,6 @@ import sys
 import copy
 import os
 import os.path
-import time
 
 #import optimization
 
@@ -12,14 +11,7 @@ from decompiler.programextractor import extractProgram
 
 import imp
 
-# TEST
-#import precise	
-
-#import analysis.fiapprox
-
-
-import analysis.cpa
-import analysis.shape
+import common.pipeline
 
 import cProfile
 
@@ -116,78 +108,9 @@ class Makefile(object):
 
 		e, entryPoints = extractProgram(self.moduleName, self.module, self.rawEntryPoints)
 
-		# HACK
-		def f():
-			dumpFirst = False
-
-			print
-			print "============="
-			print "=== CPA 1 ==="
-			print "============="
-			print
-			print "Analyize"
-			start = time.clock()
-			result = analysis.cpa.evaluate(e, entryPoints)
-			print "Analysis Time: %.2f" % (time.clock()-start)
-
-			print
-			print "Optimize"
-			start = time.clock()
-			analysis.cpa.optimize(e, entryPoints, result)
-			print "Optimize: %.2f" % (time.clock()-start)
-
-
-			#analysis.shape.evaluate(e, entryPoints, result)
-
-			if False:
-				print
-				print "============="
-				print "=== CPA 2 ==="
-				print "============="
-				print
-				print "Analyize"			
-				result = analysis.cpa.evaluate(e, entryPoints)
-
-				print
-				print "Optimize"
-				analysis.cpa.optimize(e, entryPoints, result)
-
-			print "Dump..."
-			start = time.clock()
-			analysis.cpa.dump(e, result, entryPoints)
-			print "Dump: %.2f" % (time.clock()-start)
-
-			assert False
-			
-			print
-			print "==========================="
-			print "===== Analysis Pass 1 ====="
-			print "==========================="
-			print
-			
-			analysis.fiapprox.evaluate(self.moduleName, e, entryPoints, dumpFirst, False)
-
-			print
-			print "==========================="			
-			print "===== Analysis Pass 2 ====="
-			print "==========================="
-			print
-			
-			analysis.fiapprox.evaluate(self.moduleName, e, entryPoints, not dumpFirst, True)
-
-
-		f()
-		#cProfile.runctx('f()', globals(), locals())
-
-		#precise.evaluatePrecise(self.moduleName, self.moduleStruct, self.rawEntryPoints, self.rootPath)
-
-		# Compile
-		#self.resolver.resolve()
-
-##		# Optimize
-##		program = optimization.run(self.entryPoints)
-##
+		common.pipeline.evaluate(e, entryPoints)
+		
 ##		# Output
-		assureDirectoryExists(self.outdir)		
+		assureDirectoryExists(self.outdir)
 		self.outfile = os.path.join(self.outdir, self.moduleName+'.py')
 ##		marshal(self, program, self.entryPoints, self.outfile)

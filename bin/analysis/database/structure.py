@@ -1,5 +1,7 @@
 from . import base
 
+import util.namedtuple
+
 class WildcardSchema(base.Schema):
 	__slots__ = ()
 	def __init__(self):
@@ -19,13 +21,20 @@ class TypeSchema(base.Schema):
 
 
 class StructureSchema(base.Schema):
-	__slots__ = 'fields', 'map'
+	__slots__ = 'fields', 'map', 'type_'
 	def __init__(self, *fields):
 		self.fields = []
 		self.map = {}
-		
+
 		for name, field in fields:
 			self.__addField(name, field)
+
+		# HACK no typename, just 'structure'?
+		names = [name for name, field in fields]
+		self.type_ = util.namedtuple.namedtuple('structure', names)
+
+	def missing(self):
+		return self.type_(*[field.missing() for (name, field) in self.fields])
 
 	def __addField(self, name, field):
 		if name in self.map:
@@ -50,3 +59,14 @@ class StructureSchema(base.Schema):
 		
 		for (name, field), arg in zip(self.fields, args):
 			field.validate(arg)
+
+
+	def merge(self, *args):
+		output = self.missing()
+		for arg in args:
+			self.validate(arg)
+			output = self.type_(*[field.inplaceMerge(target, data) for (name, field), target, data in zip(self.fields, output, arg)])
+		return output
+
+	def inplaceMerge(self, *args):
+		return self.merge(*args)

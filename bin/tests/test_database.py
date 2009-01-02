@@ -5,7 +5,7 @@ import unittest
 
 import analysis.database.structure as structure
 import analysis.database.tupleset as tupleset
-import analysis.database.tuplemap as tuplemap
+import analysis.database.mapping as mapping
 import analysis.database.lattice as lattice
 
 
@@ -63,23 +63,23 @@ class TestTupleSet(unittest.TestCase):
 
 
 
-class TestTupleMap(unittest.TestCase):
+class TestMapping(unittest.TestCase):
 	def setUp(self):
 		intSchema = structure.TypeSchema(int)
 		
 		s = structure.StructureSchema(('a', intSchema), ('b', intSchema))
 		v = lattice.setUnionSchema
 		
-		schema = tuplemap.TupleMapSchema(s, v)
+		schema = mapping.MappingSchema(s, v)
 		self.schema = schema
 
 
 	def testAdd(self):
 		m = self.schema.instance()
-		
-		m[(1, 2)].add(1)
-		m[(1, 2)].add(2)
-		m[(1, 3)].add(1)
+
+		m.merge((1, 2), (1,))
+		m.merge((1, 2), (2,))
+		m.merge((1, 3), (1,))
 
 		self.assertEqual(len(m), 2)
 
@@ -94,12 +94,31 @@ class TestTupleMap(unittest.TestCase):
 
 	def testForget(self):
 		m = self.schema.instance()
-		m[(1, 2)].add(1)
-		m[(1, 2)].add(2)
-		m[(1, 3)].add(1)
-		m[(1, 3)].add(3)
+		m.merge((1, 2), (1,))
+		m.merge((1, 2), (2,))
+		m.merge((1, 3), (1,3,))
 
 		self.assertEqual(len(m), 2)
 
 		f = m.forget()
 		self.assertEqual(f, set((1, 2, 3)))
+
+
+class TestMapMapForget(unittest.TestCase):
+	def setUp(self):
+		intSchema = structure.TypeSchema(int)
+		
+		schema = mapping.MappingSchema(intSchema, lattice.setUnionSchema)
+		schema = mapping.MappingSchema(intSchema, schema)
+		self.schema = schema
+
+	def testForget(self):
+		m = self.schema.instance()
+		m[1].merge(2, (1,2,))
+		m[1].merge(3, (1,3,))
+		m[2].merge(2, (4,5,))
+
+
+		f = m.forget().forget()
+		self.assertEqual(f, set((1, 2, 3, 4, 5)))
+		

@@ -1,6 +1,6 @@
 from analysis.analysisdatabase import AbstractAnalysisDatabase
 from analysis.astcollector import getOps
-
+import programIR.python.ast as ast
 
 dontTrack = (str, int, long, float, type(None), list, tuple, dict)
 
@@ -27,7 +27,13 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 
 	# Returns a set of contextual objects
 	def modificationsForOp(self, function, op):
-		return self.db.functionInfo(function).opInfo(op).merged.modifies
+		if hasattr(self.db, 'lifetime'):
+			# HACK
+			result = self.db.lifetime.db[function][op].forget()
+			modifies = result.modify
+			return modifies
+		else:
+			return ()
 
 	def liveFunctions(self):
 		return set(self.db.functionInfos.keys())
@@ -51,6 +57,12 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 
 		finfo = self.db.functionInfo(function)
 		finfo.trackRewrite(original, newast)
+
+		if hasattr(self.db, 'lifetime'):
+			if isinstance(original, (ast.Expression, ast.Statement)):
+				if isinstance(newast, (ast.Expression, ast.Statement)):
+					db = self.db.lifetime.db
+					db[function].merge(newast, db[function][original])
 
 	def origin(self, function, op):
 		return op

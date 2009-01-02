@@ -18,20 +18,13 @@ from util.fold import foldFunction
 
 
 from . cpadatabase import CPADatabase
-
-from . lifetimeanalysis import LifetimeAnalysis
-
-#########################
-### Optimization pass ###
-#########################
-
-from optimization.cullprogram import cullProgram
-from optimization.simplify import simplify
-from optimization.clone import clone
-from optimization.callconverter import callConverter
 from . analysisdatabase import CPAAnalysisDatabase
 
-import optimization.methodcall
+
+# HACK?
+from stubs.stubcollector import descriptiveLUT
+
+from analysis.astcollector import getOps
 
 #########################
 ### Utility functions ###
@@ -85,29 +78,33 @@ class CPAData(object):
 		self.invokeDestination = collections.defaultdict(set)
 		self.invokeSource = collections.defaultdict(set)
 
-		self.funcReads    = collections.defaultdict(lambda: collections.defaultdict(set))
-		self.funcModifies = collections.defaultdict(lambda: collections.defaultdict(set))
-
-
 		# Derived
 		for func, funcinfo in self.db.functionInfos.iteritems():
-			for op, copinfo in funcinfo.opInfos.iteritems():
+			ops, lcls = getOps(func)
+			for op in ops:
+				copinfo = funcinfo.opInfo(op)
 				for context, opinfo in copinfo.contexts.iteritems():
-					self.funcReads[func][context].update(opinfo.reads)
-					self.funcModifies[func][context].update(opinfo.modifies)
-
 					src = (func, context)
 					for dstC, dstF in opinfo.invokes:
 						dst = (dstF, dstC)
 						self.invokeDestination[src].add(dst)
 						self.invokeSource[dst].add(src)		
-					
-##		for srcop, destfunc in inter.invocations:
-##			src = (srcop.function, srcop.context)
-##			dst = (destfunc.function, destfunc.context)
-##			
-##			self.invokeDestination[src].add(dst)
-##			self.invokeSource[dst].add(src)
+
+		self.funcReads    = collections.defaultdict(lambda: collections.defaultdict(set))
+		self.funcModifies = collections.defaultdict(lambda: collections.defaultdict(set))
+
+
+		# HACK
+		if hasattr(self.db, 'lifetime'):
+			for func, ops in self.db.lifetime.db:
+				for op, contexts in ops:
+					for context, (reads, modifies) in contexts:
+						if reads:
+							self.funcReads[func][context].update(reads)
+						if modifies:
+							self.funcModifies[func][context].update(modifies)
+				
+
 
 	def liveFunctions(self):
 		return self.db.liveFunctions()
@@ -370,43 +367,6 @@ class InterproceduralDataflow(object):
 		# Process
 		self.process()
 
-		la = LifetimeAnalysis()
-		la.process(self)
-		self.la = la # HACK
-
-from stubs.stubcollector import descriptiveLUT
-
-def optimize(extractor, entryPoints, dataflow):
-	db = dataflow.db
-	adb = CPAAnalysisDatabase(db)
-
-	if True:
-		print "Optimize: Method Call"
-		optimization.methodcall.methodCall(extractor, adb)
-
-	if True:
-		print "Optimize: Simplify"
-		live = db.liveFunctions()
-		desc = extractor.desc
-		newfuncs = [simplify(extractor, adb, func) if func not in descriptiveLUT and func in live else func for func in desc.functions]
-		desc.functions = newfuncs
-
-	if True:
-		print "Optimize: Lower"
-
-		# Flatten the interpreter calls.
-		# Needs to be done before cloning, as cloning can only redirect direct calls.
-		for func in adb.liveFunctions():
-			if not func in descriptiveLUT:
-				callConverter(extractor, adb, func)
-
-	if False:
-		print "Optimize: Clone"
-		clone(extractor, entryPoints, adb)
-
-
-
-
 def dump(extractor, dataflow, entryPoints):
 	print
 	print "Dumping report..."
@@ -429,6 +389,7 @@ def evaluate(extractor, entryPoints):
 
 	dataflow.solve()
 
+	# HACK?
 	dataflow.db.load(dataflow)
 
 	return dataflow

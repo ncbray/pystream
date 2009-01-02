@@ -80,6 +80,8 @@ class MarkLocals(object):
 		util.xform.visitAllChildren(self, node)
 
 
+nodesWithNoSideEffects = (ast.GetGlobal, ast.Existing, ast.Local, ast.Load, ast.Allocate)
+
 class MarkLive(object):
 	__metaclass__ = typedispatcher
 
@@ -89,9 +91,7 @@ class MarkLive(object):
 		self.marker = MarkLocals()
 
 	def hasNoSideEffects(self, node):
-		return isinstance(node, (ast.GetGlobal, ast.Existing, ast.Local, ast.Load, ast.Allocate)) or not self.adb.hasSideEffects(self.function, node)
-		#return not self.adb.hasSideEffects(node)
-		#return False
+		return isinstance(node, nodesWithNoSideEffects) or not self.adb.hasSideEffects(self.function, node)
 
 	@dispatch(ast.Condition)
 	def visitCondition(self, node):

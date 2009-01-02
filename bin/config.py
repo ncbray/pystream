@@ -4,7 +4,11 @@ usePsyco        = True
 # may be called from different working directories...
 outputDirectory = "c:/projects/pystream/summaries"
 
-#limitedTest = ['tests.test_database']
+if True:
+	limitedTest = [
+		'tests.test_database',
+		'tests.test_full',
+		]
 
 testExclude = [
 	#'tests.test_full',

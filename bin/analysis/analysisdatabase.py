@@ -6,16 +6,20 @@ class AbstractAnalysisDatabase(object):
 	def __init__(self):
 		self.opTracking = weakref.WeakKeyDictionary()
 
-	def trackRewrite(self, function, original, newast):
-		if isinstance(original, dontTrack):
-			return
-
-		if isinstance(newast, dontTrack):
-			return
-
-		if original is not newast:
-			origin = self.origin(function, original)
-			self.opTracking[newast] = origin
+##	def trackRewrite(self, function, original, newast):
+##		if isinstance(original, dontTrack):
+##			return
+##
+##		if isinstance(newast, dontTrack):
+##			return
+##
+##		if original is not newast:
+##			origin = self.origin(function, original)
+##			print "TRACK"
+##			print newast
+##			print origin
+##			print
+##			self.opTracking[newast] = origin
 
 	def origin(self, function, op):
 		return self.opTracking.get(op, op)
@@ -48,7 +52,9 @@ class AbstractAnalysisDatabase(object):
 		return self._invocationsForContextOp(function, self.origin(function, op), context)
 
 	def hasSideEffects(self, function, op):
-		return bool(self.modificationsForOp(function, self.origin(function, op)))
+		originalOp = self.origin(function, op)
+		result = bool(self.modificationsForOp(function, originalOp))
+		return result
 
 
 class DummyAnalysisDatabase(AbstractAnalysisDatabase):
@@ -62,3 +68,5 @@ class DummyAnalysisDatabase(AbstractAnalysisDatabase):
 		return True
 
 
+	def trackRewrite(self, function, original, newast):
+		pass

@@ -271,9 +271,9 @@ class MethodRewrite(object):
 			dstcopinfo = dstInfo.context(context)
 
 			dstcopinfo.references.update(srccopinfo.references)
-			dstcopinfo.reads.update(srccopinfo.reads)
-			dstcopinfo.modifies.update(srccopinfo.modifies)
-			dstcopinfo.allocates.update(srccopinfo.allocates)
+			#dstcopinfo.reads.update(srccopinfo.reads)
+			#dstcopinfo.modifies.update(srccopinfo.modifies)
+			#dstcopinfo.allocates.update(srccopinfo.allocates)
 
 			# Reach for the function that the method call invokes.
 			for c, f in srccopinfo.invokes:

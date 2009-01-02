@@ -39,7 +39,7 @@ class FoldRewrite(object):
 			funcobj = None
 			newargs = [node.expr]
 			newargs.extend(node.args)
-			result = ast.DirectCall(func, funcobj, newargs, node.kwds, node.vargs, node.kargs)				
+			result = ast.DirectCall(func, funcobj, newargs, node.kwds, node.vargs, node.kargs)
 			self.adb.trackRewrite(self.function, node, result)
 			return result
 		return node

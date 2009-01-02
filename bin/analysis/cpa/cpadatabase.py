@@ -64,7 +64,6 @@ class HeapInfo(object):
 		
 		self.contexts    = set()
 		
-		#self.slotInfos  = weakref.WeakKeyDictionary()
 		self.slotInfos = {}
 
 	def slotInfo(self, slotType, field):
@@ -80,17 +79,12 @@ class HeapInfo(object):
 			info.merge()
 
 class OpInfo(object):
+	__slots__ = 'references', 'invokes'
 	def __init__(self):
 		self.references = set()
-		self.reads      = set()
-		self.modifies   = set()
-		self.allocates  = set()
 		self.invokes    = set()
 
 	def merge(self, other):
-		self.allocates.update(other.allocates)
-		self.reads.update(other.reads)
-		self.modifies.update(other.modifies)
 		self.invokes.update(other.invokes)
 		self.references.update(other.references)
 
@@ -193,15 +187,15 @@ class CPADatabase(object):
 				info = self.heapInfo(slot.obj.obj).slotInfo(slot.slottype, slot.key).context(slot.obj.context)
 				info.references.update(values)
 	
-		for cop, slots in sys.la.rm.opReads.iteritems():
-			info = self.contextOpInfo(cop.function, cop.op, cop.context)
-			info.reads.update(slots)
+##		for cop, slots in sys.la.rm.opReads.iteritems():
+##			info = self.contextOpInfo(cop.function, cop.op, cop.context)
+##			info.reads.update(slots)
+##
+##		for cop, slots in sys.la.rm.opModifies.iteritems():
+##			info = self.contextOpInfo(cop.function, cop.op, cop.context)
+##			info.modifies.update(slots)
 
-		for cop, slots in sys.la.rm.opModifies.iteritems():
-			info = self.contextOpInfo(cop.function, cop.op, cop.context)
-			info.modifies.update(slots)
-
-		# Allocates?
+		# TODO Allocates?
 
 		# Finalize the datastructures
 		for info in self.functionInfos.itervalues():

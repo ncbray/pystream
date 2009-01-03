@@ -32,7 +32,7 @@ def getExistingStr(node):
 	if node.object.isConstant():
 		return repr(node.object.pyobj)
 	else:
-		return "[|%s|]" % repr(node.object)
+		return "[|%r|]" % node.object
 
 class SimpleExprGen(StandardVisitor):
 	def __init__(self, parent):
@@ -74,8 +74,7 @@ class SimpleExprGen(StandardVisitor):
 		return self.localLUT[node]
 
 	def setLocalName(self, node, name):
-		assert not node in self.localLUT, "%s has already been named: %s." % (repr(node), self.localLUT[node])
-		#assert not name in self.names, "Name %s has already been used." % repr(name)
+		assert not node in self.localLUT, "%r has already been named: %s." % (node, self.localLUT[node])
 
 		if isIdentifier.match(name):
 			self.names.add(name)
@@ -105,7 +104,7 @@ class SimpleExprGen(StandardVisitor):
 
 
 	def visitImport(self, node):
-		return ("__import__(%s, globals(), locals(), %s, %d)" % (repr(node.name), repr(node.fromlist), node.level)), 4
+		return ("__import__(%r, globals(), locals(), %r, %d)" % (node.name, node.fromlist, node.level)), 4
 
 
 	def visitGetIter(self, node):
@@ -119,10 +118,10 @@ class SimpleExprGen(StandardVisitor):
 		return ("<allocate>(%s)" % (self.process(node.expr, 24))), 4
 
 	def visitLoad(self, node):
-		return ("<load>(%s, %s, %s)" % (self.process(node.expr, 24), repr(node.fieldtype), self.process(node.name, 24))), 4
+		return ("<load>(%s, %r, %s)" % (self.process(node.expr, 24), node.fieldtype, self.process(node.name, 24))), 4
 
 	def visitStore(self, node):
-		return ("<store>(%s, %s, %s, %s)" % (self.process(node.expr, 24), repr(node.fieldtype), self.process(node.name, 24), self.process(node.value, 24))), 4
+		return ("<store>(%s, %r, %s, %s)" % (self.process(node.expr, 24), node.fieldtype, self.process(node.name, 24), self.process(node.value, 24))), 4
 
 
 	def visitGetAttr(self, node):
@@ -324,7 +323,7 @@ class SimpleCodeGen(StandardVisitor):
 			if False:
 				raise UncollapsableCodeError, stmt
 			else:
-				print "Tried to emit %s inside a conditional." % repr(stmt)
+				print "Tried to emit %r inside a conditional." % stmt
 				return
 
 		self.out.emitStatement(stmt)

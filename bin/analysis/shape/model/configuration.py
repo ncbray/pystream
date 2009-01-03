@@ -14,7 +14,7 @@ class Configuration(object):
 		return True
 
 	def __repr__(self):
-		return "conf(object=%s, entry=%s, exit=%s)" % (repr(self.object), repr(self.entrySet), repr(self.currentSet))
+		return "conf(object=%r, entry=%r, exit=%r)" % (self.object, self.entrySet, self.currentSet)
 
 	def incrementRef(self, sys, slot):
 		newrefs = sys.canonical.incrementRef(self.currentSet, slot)

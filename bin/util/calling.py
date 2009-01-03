@@ -9,7 +9,7 @@ class CallerArgs(object):
 		self.kargs   = kargs
 
 	def __repr__(self):
-		return "args(self=%s, args=%s, kwds=%s, vargs=%s, kargs=%s)" % (repr(self.selfarg), repr(self.args), repr(self.kwds), repr(self.vargs), repr(self.kargs))
+		return "args(self=%r, args=%r, kwds=%r, vargs=%r, kargs=%r)" % (self.selfarg, self.args, self.kwds, self.vargs, self.kargs)
 
 class CalleeParams(object):
 	__slots__ = 'selfparam', 'params', 'paramnames', 'defaults', 'vparam', 'kparam'
@@ -23,8 +23,7 @@ class CalleeParams(object):
 		self.kparam     = kparam
 
 	def __repr__(self):
-		return "params(self=%s, params=%s, names=%s, vparam=%s, kparam=%s)" % (repr(self.selfparam), repr(self.params), repr(self.paramnames), repr(self.vparam), repr(self.kparam))
-
+		return "params(self=%r, params=%r, names=%r, vparam=%r, kparam=%r)" % (self.selfparam, self.params, self.paramnames, self.vparam, self.kparam)
 	@classmethod
 	def fromFunction(cls, func):
 		code = func.code

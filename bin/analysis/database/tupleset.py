@@ -43,5 +43,5 @@ class TupleSet(object):
 	def remove(self, *args):
 		self.schema.validate(args)
 		if not args in self.data:
-			raise base.DatabaseError, "Cannot remove tuple %s from database, as the tuple is not in the database" % (repr(args),)
+			raise base.DatabaseError, "Cannot remove tuple %r from database, as the tuple is not in the database" % (args,)
 		self.data.remove(args)

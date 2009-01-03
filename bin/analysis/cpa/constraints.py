@@ -213,7 +213,7 @@ class AbstractCallConstraint(Constraint):
 				con = SimpleCallConstraint(self.op, self.path, func, expr, allslots, argslots, vargslots, self.target)
 				con.attach(sys)			
 			else:
-				assert func, "Attempted to call uncallable object:\n%s\n\nat op:\n%s\n\nwith args:\n%s\n\n" % (repr(expr.obj), repr(self.op), repr(vargs))
+				assert func, "Attempted to call uncallable object:\n%r\n\nat op:\n%r\n\nwith args:\n%r\n\n" % (expr.obj, self.op, vargs)
 
 
 	def attach(self, sys):

@@ -28,7 +28,7 @@ class Bracket(object):
 		return self.prev == None and self.next == None
 
 	def __repr__(self):
-		return "Bracket(%s)" % repr(self.data)
+		return "Bracket(%r)" % self.data
 
 class BracketList(object):
 	def __init__(self):

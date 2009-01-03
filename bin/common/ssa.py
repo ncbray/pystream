@@ -11,8 +11,7 @@ class SSADefinitions(object):
 		self.defn = {}
 
 	def define(self, local, defn, merge=False):
-		#assert merge or not local in self.defn, "Attempt to redefine %s" % repr(local)
-		assert not local in self.defn, "Attempt to redefine %s" % repr(local)
+		assert not local in self.defn, "Attempt to redefine %r" % local
 		assert local != defn
 
 		defn = constify(defn)

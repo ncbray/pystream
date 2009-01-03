@@ -100,8 +100,7 @@ class CPAContext(AnalysisContext):
 		       and self.selfparam == other.selfparam and self.params == other.params and self.vparams == other.vparams
 
 	def __repr__(self):
-		return "%s(%s, %s, %s, %s, %s)" % (type(self).__name__, repr(self.path), repr(self.func.name), \
-						   repr(self.selfparam), repr(self.params), repr(self.vparams))
+		return "%s(%r, %r, %r, %r, %r)" % (type(self).__name__, self.path, self.func.name, self.selfparam, self.params, self.vparams)
 
 	def bindParameters(self, sys):
 		func = self.func
@@ -198,8 +197,7 @@ class ContextObject(object):
 		return type(self) == type(other) and self.context == other.context and self.obj == other.obj
 
 	def __repr__(self):
-		#return "%s(%s, %s)" % (type(self).__name__, repr(self.context), repr(self.obj))
-		return "%s(%s, %s)" % (type(self).__name__, repr(id(self.context)), repr(self.obj))
+		return "%s(%r, %r)" % (type(self).__name__, id(self.context), self.obj)
 
 	def decontextualize(self):
 		return self.obj
@@ -224,7 +222,7 @@ class ContextOp(object):
 		return self is other or type(self) == type(other) and self.context == other.context and self.function == other.function and self.op == other.op
 
 	def __repr__(self):
-		return "%s(%s, %s, %s)" % (type(self).__name__, repr(self.context), repr(self.function.name), repr(self.op))
+		return "%s(%r, %r, %r)" % (type(self).__name__, self.context, self.function.name, self.op)
 
 
 class ContextFunction(object):
@@ -244,7 +242,7 @@ class ContextFunction(object):
 		return self is other or type(self) == type(other) and self.context == other.context and self.function == other.function
 
 	def __repr__(self):
-		return "%s(%s, %s)" % (type(self).__name__, repr(self.context), repr(self.function.name))
+		return "%s(%r, %r)" % (type(self).__name__, self.context, self.function.name)
 
 	def decontextualize(self):
 		return self.function
@@ -280,7 +278,7 @@ class ObjectSlot(AbstractSlot):
 		return True
 
 	def __repr__(self):
-		return "%s(%s, %s, %s)" % (type(self).__name__, repr(self.obj), repr(self.slottype), repr(self.key))
+		return "%s(%r, %r, %r)" % (type(self).__name__, self.obj, self.slottype, self.key)
 
 	def __eq__(self, other):
 		return id(self) == id(other) or type(self) == type(other) and self.obj == other.obj and self.slottype == other.slottype and self.key == other.key
@@ -339,7 +337,7 @@ class LocalSlot(AbstractSlot):
 		return True
 	
 	def __repr__(self):
-		return "%s(%d, %s, %s)" % (type(self).__name__, id(self.context), repr(self.function.name), repr(self.local))
+		return "%s(%d, %r, %r)" % (type(self).__name__, id(self.context), self.function.name, self.local)
 
 	def __eq__(self, other):
 		return id(self) == id(other) or type(self) == type(other) and self.context == other.context and self.function == other.function and self.local == other.local

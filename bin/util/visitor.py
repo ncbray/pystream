@@ -93,7 +93,7 @@ class StandardVisitor(object):
 ##		StandardWalker(self)
 
 	def default(self, block, *args):
-		raise NotImplementedError, "%s -> %s:%s" % (type(self).__name__, type(block).__name__, repr(block))
+		raise NotImplementedError, "%s -> %s:%r" % (type(self).__name__, type(block).__name__, block)
 
 	def walk(self, tree, *args):
 		# Not initalized correctly?

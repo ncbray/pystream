@@ -43,7 +43,7 @@ class SESERegion(object):
 		self.edges.append((src, dst))
 
 	def __repr__(self):
-		return "SESERegion(%s, %s)" % (repr(self.entry), repr(self.exit))
+		return "SESERegion(%r, %r)" % (self.entry, self.exit)
 
 	def dump(self, indent=''):
 		print indent, repr(self)

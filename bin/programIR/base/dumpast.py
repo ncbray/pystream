@@ -28,7 +28,7 @@ class DumpAST(StandardVisitor):
 
 
 	def visitAssign(self, node, tabs):
-		self.writeLine("%s = %s" % (repr(node.lcl), repr(node.expr)), tabs)
+		self.writeLine("%r = %r" % (node.lcl, node.expr), tabs)
 		
 	def default(self, node, tabs=0):
 		if isinstance(node, (int, float, str)) or node==None:

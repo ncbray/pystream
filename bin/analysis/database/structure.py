@@ -16,7 +16,7 @@ class TypeSchema(base.Schema):
 
 	def validate(self, args):
 		if not isinstance(args, self.type_):
-			raise base.SchemaError, "Expected type %s, got %s." % (repr(self.type_), repr(type(args)))
+			raise base.SchemaError, "Expected type %r, got %r." % (self.type_, type(args))
 		
 
 

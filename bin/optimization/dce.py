@@ -5,69 +5,6 @@ from dataflow.reverse import *
 
 import util.xform
 
-##class LiveOp(object):
-##	simple = set((ast.GetGlobal, ast.BuildTuple, ast.Local, ast.Existing))
-##	
-##	def __call__(self, node):
-##		if type(node) in self.simple:
-##			for child in ast.children(node):
-##				if self(child):
-##					return True
-##			else:
-##				return False
-##		else:
-##			return True
-##		
-##
-##class MarkLive(object):
-##	__metaclass__ = typedispatcher
-##
-##	def __init__(self):
-##		self.liveOp = LiveOp()
-##		self.live = set()
-##
-##	def markLive(self, node):
-##		if isinstance(node, (list, tuple)): return
-##
-##		if not node in self.live:
-##			self.live.add(node)	
-##			util.xform.visitAllChildren(self.markLive, node)
-##
-##	@dispatch(ast.Return, ast.Raise,
-##		  ast.SetAttr, ast.SetSubscript, ast.SetSlice,
-##		  ast.SetGlobal,
-##		  ast.DeleteAttr, ast.DeleteSubscript, ast.DeleteSlice,
-##		  ast.Print)
-##	def visitMustUse(self, node):
-##		self.markLive(node)
-##
-##
-##	@dispatch(ast.Break, ast.Continue, ast.Delete)
-##	def visitSimple(self, node):
-##		pass
-##
-##	@dispatch(ast.Assign)
-##	def visitAssign(self, node):
-##		if node.lcl in self.live or self.liveOp(node.expr):
-##			self.markLive(node.expr)
-##
-##	@dispatch(ast.Discard)
-##	def visitDiscard(self, node):
-##		if self.liveOp(node.expr):
-##			self.markLive(node.expr)
-##
-##	@dispatch(ast.UnpackSequence)
-##	def visitUnpackSequence(self, node):
-##		# HACK
-##		self.markLive(node.expr)
-##
-##	
-##	@defaultdispatch
-##	def default(self, node):
-##		assert False, repr(node)
-
-
-
 class MarkLocals(object):
 	__metaclass__ = typedispatcher
 

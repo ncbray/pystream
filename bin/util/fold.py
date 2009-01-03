@@ -14,7 +14,7 @@ def foldFunction(func, vargs=(), kargs={}):
 
 def foldBinaryOp(op, l, r):
 	if not op in opnames.binaryOpName:
-		raise FoldError, "Unreconsized binary operator: %s" % repr(op)
+		raise FoldError, "Unreconsized binary operator: %r" % op
 	
 	name = opnames.binaryOpName[op]
 	func = getattr(operator, name)
@@ -23,7 +23,7 @@ def foldBinaryOp(op, l, r):
 
 def foldUnaryPrefixOp(op, expr):
 	if not op in opnames.unaryPrefixOpName:
-		raise FoldError, "Unreconsized unary prefix operator: %s" % repr(op)
+		raise FoldError, "Unreconsized unary prefix operator: %r" % op
 	
 	name = opnames.unaryPrefixOpName[op]
 	func = getattr(operator, name)

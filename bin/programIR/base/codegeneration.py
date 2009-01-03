@@ -29,21 +29,21 @@ def makeInit(name, fields, types, optional):
 		if field in types:
 			tn = typeName(types[field])
 			t = makeTypecheck(field, tn, field in optional)
-			r = 'raise TypeError, "Expected %%s for field %s.%%s, got %%s" %% (%s, %s, type(%s).__name__)' % (name, repr(tn), repr(field), field)
+			# TODO simplify: interpolating constant strings
+			r = 'raise TypeError, "Expected %%s for field %s.%%s, got %%s" %% (%r, %r, type(%s).__name__)' \
+			    % (name, tn, field, field)
 			inits.append('\tif %s: %s\n' % (t, r))
 		elif field not in optional:
 			inits.append('\tassert %s != None, "Field %s.%s is not optional."\n' % (field, name, field))
 			
 		inits.append('\tself.%s = %s\n' % (field, field))
-
 	
 	code = "def __init__(%s):\n\tsuper(%s, self).__init__()\n%s" % (args, name, ''.join(inits))
-
 	return code
 
 def makeRepr(name, fields):
-	interp = ", ".join(['%s']*len(fields))
-	fields = " ".join("repr(self.%s),"%field for field in fields)
+	interp = ", ".join(['%r']*len(fields))
+	fields = " ".join("self.%s,"%field for field in fields)
 	
 	code = """def __repr__(self):
 	return "%s(%s)" %% (%s)
@@ -69,7 +69,7 @@ def makeGetChildren(fields):
 
 
 def makeGetFields(fields):
-	children = ' '.join(["(%s, self.%s)," % (repr(field), field) for field in fields])
+	children = ' '.join(["(%r, self.%s)," % (field, field) for field in fields])
 	code = """def fields(self):
 	return (%s)
 """ % (children)
@@ -104,7 +104,7 @@ def makeSetter(name, field, types, optional):
 		tn = typeName(types)
 		t = makeTypecheck('value', tn, optional)
 		#r = 'raise TypeError, "Expected %%s for field %s.%%s, got %%s" %% (%s, %s, type(%s).__name__)' % (name, repr(tn), repr(field), field)
-		inits.append('\tassert not(%s), (type(self), %s, value)\n' % (t, repr(field)))
+		inits.append('\tassert not(%s), (type(self), %r, value)\n' % (t, field))
 	elif not optional:
 		inits.append('\tassert value != None, "Field %s.%s is not optional."\n' % (name, field))
 			

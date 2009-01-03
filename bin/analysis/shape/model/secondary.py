@@ -57,7 +57,7 @@ class SecondaryInformation(object):
 		return changed
 
 	def __repr__(self):
-		return "secondary(hits=%s, misses=%s)" % (repr(self.hits), repr(self.misses))
+		return "secondary(hits=%r, misses=%r)" % (self.hits, self.misses)
 
 	def copy(self):
 		hits = self.hits

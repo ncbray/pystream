@@ -17,7 +17,7 @@ class Existing(Reference):
 		self.object = o
 
 	def __repr__(self):
-		return "%s(%s)" % (type(self).__name__, repr(self.object))
+		return "%s(%r)" % (type(self).__name__, self.object)
 
 ##	def isConstant(self):
 ##		return True
@@ -80,7 +80,7 @@ class Cell(ASTNode):
 		return True
 
 	def __repr__(self):
-		return "%s(%s)" % (type(self).__name__, repr(self.name))
+		return "%s(%r)" % (type(self).__name__, self.name)
 
 
 
@@ -218,10 +218,10 @@ class DirectCall(Expression):
 
 
 	def __repr__(self):
-		return "%s(%s, %s, %s, %s, %s, %s)" % (type(self).__name__, repr(self.func.name),
-						       repr(self.selfarg),
-						       repr(self.args), repr(self.kwds),
-						       repr(self.vargs), repr(self.kargs))
+		return "%s(<%s>, %r, %r, %r, %r, %r)" % (type(self).__name__, self.func.name,
+						       self.selfarg,
+						       self.args, self.kwds,
+						       self.vargs, self.kargs)
 
 class BuildTuple(Expression):
 	__metaclass__ 	= astnode

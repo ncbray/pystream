@@ -21,7 +21,7 @@ for arg in sys.argv[1:]:
 			fileString = arg[2:]
 		elif arg[:2] == '-d':
 			directoryName = arg[2:]
-			assert os.path.exists(directoryName), "Directory %s does not exist." % repr(directoryName)
+			assert os.path.exists(directoryName), "Directory %r does not exist." % directoryName
 
 		else:
 			assert False, "Unknown command: %s" % arg

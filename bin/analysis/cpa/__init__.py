@@ -1,5 +1,7 @@
 import collections
 
+import util
+
 from base import *
 
 import dumpreport
@@ -36,22 +38,6 @@ def foldFunctionIR(extractor, func, vargs=(), kargs={}):
 	return extractor.getObject(result)
 
 
-
-
-class Canonical(object):
-	def __init__(self, create):
-		self.create = create
-		self.cache = {}
-
-	def __call__(self, *args):
-		obj = self.create(*args)
-		if not obj in self.cache:
-			self.cache[obj] = obj
-			return obj
-		else:
-			return self.cache[obj]
-
-
 ###############################
 ### Main class for analysis ###
 ###############################
@@ -73,12 +59,12 @@ class InterproceduralDataflow(object):
 
 		self.dirty = collections.deque()
 
-		self.local             = Canonical(LocalSlot)
-		self.objectSlot        = Canonical(ObjectSlot)
-		self._contextObject     = Canonical(ContextObject)
-		self._canonicalContext = Canonical(CPAContext)
-		self.contextOp         = Canonical(ContextOp)
-		self.contextFunction   = Canonical(ContextFunction)
+		self.local             = util.Canonical(LocalSlot)
+		self.objectSlot        = util.Canonical(ObjectSlot)
+		self._contextObject    = util.Canonical(ContextObject)
+		self._canonicalContext = util.Canonical(CPAContext)
+		self.contextOp         = util.Canonical(ContextOp)
+		self.contextFunction   = util.Canonical(ContextFunction)
 
 		self.invocations = set()
 		self.allocations = set()
@@ -88,13 +74,13 @@ class InterproceduralDataflow(object):
 
 
 		# Information for contextual operations.
-		self.opReads         = collections.defaultdict(set)
-		self.opModifies      = collections.defaultdict(set)
-		self.opAllocates     = collections.defaultdict(set)
-		self.opInvokes       = collections.defaultdict(set)
+		self.opReads          = collections.defaultdict(set)
+		self.opModifies       = collections.defaultdict(set)
+		self.opAllocates      = collections.defaultdict(set)
+		self.opInvokes        = collections.defaultdict(set)
 
 		self.functionContexts = collections.defaultdict(set)
-		self.heapContexts = collections.defaultdict(set)
+		self.heapContexts     = collections.defaultdict(set)
 
 		self.rootPath = CallPath(None)
 

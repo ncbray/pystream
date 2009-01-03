@@ -126,3 +126,17 @@ def explodeCombonations(callback, limit, *args):
 	current = [None for i in range(len(args))]
 	index = 0
 	__explodeCombonations(callback, limit, args, current, index)
+
+
+class Canonical(object):
+	def __init__(self, create):
+		self.create = create
+		self.cache = {}
+
+	def __call__(self, *args):
+		obj = self.create(*args)
+		if not obj in self.cache:
+			self.cache[obj] = obj
+			return obj
+		else:
+			return self.cache[obj]

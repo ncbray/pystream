@@ -54,9 +54,11 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 		if original is newast or isinstance(original, dontTrack) or isinstance(newast, dontTrack):
 			return
 
+		# CPA transfer
 		finfo = self.db.functionInfo(function)
 		finfo.trackRewrite(original, newast)
 
+		# Lifetime info transfer
 		if hasattr(self.db, 'lifetime'):
 			if isinstance(original, (ast.Expression, ast.Statement)):
 				if isinstance(newast, (ast.Expression, ast.Statement)):
@@ -66,7 +68,56 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 					modifyDB = self.db.lifetime.modifyDB
 					modifyDB[function].merge(newast, modifyDB[function][original])
 
+	def trackOpTransfer(self, srcFunc, srcOp, dstFunc, dstOp, contexts, invokeMap=None):
+		assert isinstance(srcOp, (ast.Expression, ast.Statement)), srcOp
+		assert isinstance(dstOp, (ast.Expression, ast.Statement)), dstOp
 
+		# CPA transfter
+		srcInfo = self.db.functionInfo(srcFunc).opInfo(srcOp)
+		dstInfo = self.db.functionInfo(dstFunc).opInfo(dstOp)
+
+		for context in contexts:
+			cSrcInfo = srcInfo.context(context)
+			cDstInfo = dstInfo.context(context)
+
+			if invokeMap:
+				cDstInfo.references.update(cSrcInfo.references)
+				cDstInfo.invokes.update([invokeMap(inv) for inv in cSrcInfo.invokes])
+			else:
+
+				cDstInfo.merge(cSrcInfo)
+
+		dstInfo.merge()
+		
+
+		# Lifetime info transfer
+		if hasattr(self.db, 'lifetime'):
+			readDB = self.db.lifetime.readDB
+			srcInfo = readDB[srcFunc][srcOp]
+			dstInfo = readDB[dstFunc][dstOp]
+			for context in contexts:
+				dstInfo.merge(context, srcInfo[context])
+
+			modifyDB = self.db.lifetime.modifyDB
+			srcInfo = modifyDB[srcFunc][srcOp]
+			dstInfo = modifyDB[dstFunc][dstOp]
+			for context in contexts:
+				dstInfo.merge(context, srcInfo[context])
+				
+			
+	def trackLocalTransfer(self, srcFunc, srcLcl, dstFunc, dstLcl, contexts):
+		# CPA transfter
+		srcInfo = self.db.functionInfo(srcFunc).localInfo(srcLcl)
+		dstInfo = self.db.functionInfo(dstFunc).localInfo(dstLcl)
+		
+		# Transfer the cloned contexts
+		for context in contexts:
+			csrc = srcInfo.context(context)
+			cdst = dstInfo.context(context)
+			cdst.merge(csrc)
+
+		dstInfo.merge()
+		
 	def origin(self, function, op):
 		return op
 

@@ -32,35 +32,45 @@ def codeConditioning(extractor, entryPoints, dataflow):
 	adb = analysis.cpa.analysisdatabase.CPAAnalysisDatabase(db)
 
 	if True:
+		start = time.clock()
 		print "Code conditioning: Method Call"
 		optimization.methodcall.methodCall(extractor, adb)
+		print "Time: %.2e" % (time.clock()-start)
+
 
 	start = time.clock()
 	print "Analysis: Object Lifetime"
 	la =  analysis.cpa.lifetimeanalysis.LifetimeAnalysis()
 	la.process(dataflow)
 	dataflow.db.lifetime = la # HACK
-	print "Analysis: %.2e" % (time.clock()-start)
+	print "Time: %.2e" % (time.clock()-start)
 
 	if True:
 		print "Code conditioning: Simplify"
+		start = time.clock()
 		live = db.liveFunctions()
 		desc = extractor.desc
 		newfuncs = [simplify(extractor, adb, func) if func not in descriptiveLUT and func in live else func for func in desc.functions]
 		desc.functions = newfuncs
+		print "Time: %.2e" % (time.clock()-start)
+
 
 	if True:
 		print "Code conditioning: Lower"
+		start = time.clock()
 		# Flatten the interpreter calls.
 		# Needs to be done before cloning, as cloning can only
 		# redirect direct calls.
 		for func in adb.liveFunctions():
 			if not func in descriptiveLUT:
 				callConverter(extractor, adb, func)
+		print "Time: %.2e" % (time.clock()-start)
 
-	if False:
+	if True:
+		start = time.clock()
 		print "Code conditioning: Clone"
 		clone(extractor, entryPoints, adb)
+		print "Time: %.2e" % (time.clock()-start)
 
 def cpaPass(e, entryPoints):
 	print "Analyize"

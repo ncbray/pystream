@@ -172,8 +172,6 @@ class ProgramCloner(object):
 			
 		return funcs
 
-##class CloneDataMapping(object):
-##	def __init__(self, adb, sourcefunction, destfunction, group):
 		
 
 class FunctionCloner(object):
@@ -229,9 +227,11 @@ class FunctionCloner(object):
 
 
 		# If the op is unreachable in this context, there may be no invocations.
-		if self.adb.invocationsForOp(self.destfunction, tempresult):
+		invocations = self.adb.invocationsForOp(self.destfunction, tempresult)
+		if invocations:
+			# We do this computation after transfer, as it can reduce the number of invocations.
 			func = self.adb.singleCall(self.destfunction, tempresult)
-			assert func, self.adb.invocationsForOp(self.destfunction, tempresult)
+			assert func, invocations
 			result = ast.DirectCall(func, *tempresult.children()[1:])
 
 			self.adb.trackRewrite(self.destfunction, tempresult, result)
@@ -240,44 +240,23 @@ class FunctionCloner(object):
 
 		return result
 
-	def translateContextFunction(self, c, func):
-		newfunc = self.newfuncLUT[func][self.groupLUT[c]]
-		return c, newfunc
+	def translateFunctionContext(self, func, context):
+		newfunc = self.newfuncLUT[func][self.groupLUT[context]]
+		return context, newfunc
 
 	def transferAnalysisData(self, original, replacement):
-		if original in self.originalInfo.opInfos: # HACK?
-			srcOpInfo = self.originalInfo.opInfo(original)
-			dstOpInfo = self.newInfo.opInfo(replacement)
 
-			# Transfer the cloned contexts
-			for context in self.group:
-				csrc = srcOpInfo.context(context)
-				cdst = dstOpInfo.context(context)
+		if not isinstance(original, (ast.Expression, ast.Statement)):    return
+		if not isinstance(replacement, (ast.Expression, ast.Statement)): return
 
-				cdst.references.update(csrc.references)
-
-				cdst.reads.update(csrc.reads)
-				cdst.modifies.update(csrc.modifies)
-				cdst.allocates.update(csrc.allocates)
-
-				# The invocation edges need to be modified
-				for c, func in csrc.invokes:
-					cdst.invokes.add(self.translateContextFunction(c, func))
-				
-			dstOpInfo.merge()
-	
+		def mapper(target):
+			c, func = target
+			return self.translateFunctionContext(func, c)
+		
+		self.adb.trackOpTransfer(self.sourcefunction, original, self.destfunction, replacement, self.group, mapper)
+			
 	def transferLocal(self, original, replacement):
-		srcInfo = self.originalInfo.localInfo(original)
-		dstInfo = self.newInfo.localInfo(replacement)
-
-		# Transfer the cloned contexts
-		for context in self.group:
-			csrc = srcInfo.context(context)
-			cdst = dstInfo.context(context)
-			cdst.merge(csrc)
-
-		dstInfo.merge()
-
+		self.adb.trackLocalTransfer(self.sourcefunction, original, self.destfunction, replacement, self.group)
 
 def clone(extractor, entryPoints, adb):
 	cloner = ProgramCloner(adb)

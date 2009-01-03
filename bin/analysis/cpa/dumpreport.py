@@ -608,5 +608,100 @@ def dumpReport(data, entryPoints):
 		out.close()
 
 
-	
+import collections
+import base
+from analysis.astcollector import getOps
+
+class CPAData(object):
+	def __init__(self, inter, db):
+
+		self.db = db
+		self.inter = inter
+		
+		self.lcls = collections.defaultdict(lambda: collections.defaultdict(set))
+		self.objs = collections.defaultdict(lambda: collections.defaultdict(set))
+
+		for slot, values in inter.slots.iteritems():
+			if isinstance(slot, base.LocalSlot):
+				self.lcls[slot.function][slot.context].add(slot)
+			else:
+				self.objs[slot.obj.obj][slot.obj].add(slot)
+
+
+		self.calcInvocations()
+		self.calcReadModify()
+
+	def calcInvocations(self):
+		# Derived
+		self.invokeDestination = collections.defaultdict(set)
+		self.invokeSource      = collections.defaultdict(set)
+		
+		for func, funcinfo in self.db.functionInfos.iteritems():
+			ops, lcls = getOps(func)
+			for op in ops:
+				copinfo = funcinfo.opInfo(op)
+				for context, opinfo in copinfo.contexts.iteritems():
+					src = (func, context)
+					for dstC, dstF in opinfo.invokes:
+						dst = (dstF, dstC)
+						self.invokeDestination[src].add(dst)
+						self.invokeSource[dst].add(src)		
+
+
+	def calcReadModify(self):
+		self.funcReads    = collections.defaultdict(lambda: collections.defaultdict(set))
+		for func, ops in self.db.lifetime.readDB:
+			for op, contexts in ops:
+				for context, reads in contexts:
+					if reads:
+						self.funcReads[func][context].update(reads)
+
+
+		self.funcModifies = collections.defaultdict(lambda: collections.defaultdict(set))
+		for func, ops in self.db.lifetime.modifyDB:
+			for op, contexts in ops:
+				for context, modifies in contexts:
+					if modifies:
+						self.funcModifies[func][context].update(modifies)
+				
+
+
+	def liveFunctions(self):
+		return self.db.liveFunctions()
+
+	def functionContexts(self, func):
+		return self.db.functionInfo(func).contexts
+
+	def functionContextSlots(self, function, context):
+		return self.lcls[function][context]
+		
+	def callers(self, function, context):
+		return self.invokeSource[(function, context)]
+
+	def callees(self, function, context):
+		return self.invokeDestination[(function, context)]
+
+	def slot(self, slot):
+		return self.inter.slots[slot]
+
+	def liveHeap(self):
+		return self.objs.keys()
+
+	def heapContexts(self, heap):
+		return self.objs[heap].keys()
+
+	def heapContextSlots(self, heapC):
+		return self.objs[heapC.obj][heapC]
+
+
+from . analysisdatabase import CPAAnalysisDatabase
+
+def dump(extractor, dataflow, entryPoints):
+	print
+	print "Dumping report..."
+
+	adb = CPAAnalysisDatabase(dataflow.db)
+	data = CPAData(dataflow, dataflow.db)
+	data.adb = adb
+	dumpReport(data, entryPoints)
 

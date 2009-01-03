@@ -2,6 +2,8 @@ import time
 
 import analysis.cpa
 import analysis.cpa.lifetimeanalysis
+import analysis.cpa.analysisdatabase
+import analysis.cpa.dumpreport
 import analysis.shape
 #import analysis.fiapprox
 
@@ -27,7 +29,7 @@ def codeConditioning(extractor, entryPoints, dataflow):
 
 	
 	db = dataflow.db
-	adb = analysis.cpa.CPAAnalysisDatabase(db)
+	adb = analysis.cpa.analysisdatabase.CPAAnalysisDatabase(db)
 
 	if True:
 		print "Code conditioning: Method Call"
@@ -76,27 +78,8 @@ def cpaPass(e, entryPoints):
 def cpaDump(e, result, entryPoints):
 	print "Dump..."
 	start = time.clock()
-	analysis.cpa.dump(e, result, entryPoints)
+	analysis.cpa.dumpreport.dump(e, result, entryPoints)
 	print "Dump: %.3f" % (time.clock()-start)
-
-
-##def fiApproxPass(e, entryPoints):
-##	print
-##	print "==========================="
-##	print "===== Analysis Pass 1 ====="
-##	print "==========================="
-##	print
-##	
-##	analysis.fiapprox.evaluate(self.moduleName, e, entryPoints, dumpFirst, False)
-##
-##	print
-##	print "==========================="			
-##	print "===== Analysis Pass 2 ====="
-##	print "==========================="
-##	print
-##	
-##	analysis.fiapprox.evaluate(self.moduleName, e, entryPoints, not dumpFirst, True)
-
 
 def evaluate(e, entryPoints):
 	cpaHeader(1)

@@ -573,11 +573,13 @@ def dumpReport(data, entryPoints):
 ##	for node in nodes-set(liveHeap):
 ##		print node
 ##	print
-	
-	print "Missing"
-	for node in set(liveHeap)-nodes:
-		print node
-	print
+
+	missing = set(liveHeap)-nodes
+	if missing:
+		print "Missing"
+		for node in missing:
+			print node
+		print
 
 
 ##	out.begin('ul')

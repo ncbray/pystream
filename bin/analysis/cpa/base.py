@@ -2,6 +2,7 @@ from _pystream import bijection
 
 from programIR.python import program, ast
 
+import util
 import util.calling
 
 # Things
@@ -108,7 +109,7 @@ class CPAContext(AnalysisContext):
 
 		def bindObjToLocal(obj, lcl):
 			if obj is not None and lcl is not None:
-				sys.update(sys.local(context, func, lcl), (obj,))
+				sys.update(sys.canonical.local(context, func, lcl), (obj,))
 		
 		# Local binding done after creating constraints,
 		# to ensure the variables are dirty.
@@ -127,14 +128,14 @@ class CPAContext(AnalysisContext):
 			# Bind the vargs
 			for i, param in enumerate(self.vparams):
 				index = sys.extractor.getObject(i)
-				target = sys.objectSlot(context.vparamObj, 'Array', sys.existingObject(index).obj)
+				target = sys.canonical.objectSlot(context.vparamObj, 'Array', sys.existingObject(index).obj)
 				sys.update(target, (param,))
 
 
 			# Set the length of the vparam tuple.
 			length     = sys.existingObject(sys.extractor.getObject(len(self.vparams)))
 			lengthStr  = sys.extractor.getObject('length')
-			lengthSlot = sys.objectSlot(context.vparamObj, 'LowLevel', sys.existingObject(lengthStr).obj)
+			lengthSlot = sys.canonical.objectSlot(context.vparamObj, 'LowLevel', sys.existingObject(lengthStr).obj)
 			sys.update(lengthSlot, (length,)) 
 
 
@@ -347,3 +348,13 @@ class LocalSlot(AbstractSlot):
 
 	def createInital(self, sys):
 		return set()
+
+
+class CanonicalObjects(object):
+	def __init__(self):
+		self.local             = util.Canonical(LocalSlot)
+		self.objectSlot        = util.Canonical(ObjectSlot)
+		self.contextObject     = util.Canonical(ContextObject)
+		self._canonicalContext = util.Canonical(CPAContext)
+		self.contextOp         = util.Canonical(ContextOp)
+		self.contextFunction   = util.Canonical(ContextFunction)

@@ -32,13 +32,13 @@ class ExtractDataflow(object):
 
 	def contextual(self, lcl):
 		if lcl is not None:
-			return self.system.local(self.context, self.function, lcl)
+			return self.system.canonical.local(self.context, self.function, lcl)
 		else:
 			return None
 
 
 	def contextOp(self, node):
-		return self.system.contextOp(self.context, self.function, node)
+		return self.system.canonical.contextOp(self.context, self.function, node)
 
 	def directCall(self, node, func, selfarg, args, vargs=None, kargs=None):
 		result = self.contextual(node)

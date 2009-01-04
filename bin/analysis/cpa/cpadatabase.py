@@ -187,16 +187,6 @@ class CPADatabase(object):
 				info = self.heapInfo(slot.obj.obj).slotInfo(slot.slottype, slot.key).context(slot.obj.context)
 				info.references.update(values)
 	
-##		for cop, slots in sys.la.rm.opReads.iteritems():
-##			info = self.contextOpInfo(cop.function, cop.op, cop.context)
-##			info.reads.update(slots)
-##
-##		for cop, slots in sys.la.rm.opModifies.iteritems():
-##			info = self.contextOpInfo(cop.function, cop.op, cop.context)
-##			info.modifies.update(slots)
-
-		# TODO Allocates?
-
 		# Finalize the datastructures
 		for info in self.functionInfos.itervalues():
 			info.merge()

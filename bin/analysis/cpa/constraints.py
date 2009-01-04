@@ -68,7 +68,7 @@ class LoadConstraint(Constraint):
 		explodeCombonations(self.concreteCombination, 0, (sys,), exprs, keys)
 
 	def concreteCombination(self, sys, expr, key):
-		slot = sys.objectSlot(expr, self.slottype, key.obj)
+		slot = sys.canonical.objectSlot(expr, self.slottype, key.obj)
 		
 		if not slot in self.cache:
 			self.cache.add(slot)
@@ -101,7 +101,7 @@ class StoreConstraint(Constraint):
 		explodeCombonations(self.concreteCombination, 0, (sys,), exprs, keys)
 
 	def concreteCombination(self, sys, expr, key):
-		slot = sys.objectSlot(expr, self.slottype, key.obj)
+		slot = sys.canonical.objectSlot(expr, self.slottype, key.obj)
 		
 		if not slot in self.cache:
 			self.cache.add(slot)
@@ -138,9 +138,6 @@ class AllocateConstraint(Constraint):
 					sys.extractor.ensureLoaded(type_.obj)
 					inst = type_.obj.abstractInstance()
 					contextInst = sys.allocatedObject(self.path, inst)
-
-					# Setting the type pointer is part of allocation.
-					sys.setTypePointer(contextInst, type_)
 					
 					# Return the allocated object.
 					sys.update(self.target, (contextInst,))
@@ -182,7 +179,7 @@ class AbstractCallConstraint(Constraint):
 	def concreteCombination(self, sys, expr, vargs, kargs):
 		if vargs is not None:
 			lengthStr = sys.extractor.getObject('length')
-			lengthSlot = sys.objectSlot(vargs, 'LowLevel', sys.existingObject(lengthStr).obj)
+			lengthSlot = sys.canonical.objectSlot(vargs, 'LowLevel', sys.existingObject(lengthStr).obj)
 
 			for vlengthObj in sys.read(lengthSlot):
 				vlength = vlengthObj.obj.pyobj
@@ -203,7 +200,7 @@ class AbstractCallConstraint(Constraint):
 				allslots = list(self.args)
 				for i in range(vlength):
 					index = sys.extractor.getObject(i)
-					vslot = sys.objectSlot(vargs, 'Array', sys.existingObject(index).obj)
+					vslot = sys.canonical.objectSlot(vargs, 'Array', sys.existingObject(index).obj)
 					allslots.append(vslot)
 
 				division = len(func.code.parameters)

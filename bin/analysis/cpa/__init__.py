@@ -59,12 +59,7 @@ class InterproceduralDataflow(object):
 
 		self.dirty = collections.deque()
 
-		self.local             = util.Canonical(LocalSlot)
-		self.objectSlot        = util.Canonical(ObjectSlot)
-		self._contextObject    = util.Canonical(ContextObject)
-		self._canonicalContext = util.Canonical(CPAContext)
-		self.contextOp         = util.Canonical(ContextOp)
-		self.contextFunction   = util.Canonical(ContextFunction)
+		self.canonical = CanonicalObjects()
 
 		self.invocations = set()
 		self.allocations = set()
@@ -89,53 +84,62 @@ class InterproceduralDataflow(object):
 
 		self.db = CPADatabase()
 
+		# For vargs
+		self.tupleClass = self.extractor.getObject(tuple)
+		self.extractor.ensureLoaded(self.tupleClass)
+
+		# For kargs
+		self.dictionaryClass = self.extractor.getObject(dict)
+		self.extractor.ensureLoaded(self.dictionaryClass)
+
+
 	def dependsRead(self, constraint, slot):
 		self.reads[slot].add(constraint)
 		if self.read(slot):
 			constraint.mark(self)
 
-	def canonicalContext(self, path, func, selfparam, params, vparams):
-		# Create tuple for vparam
+	def extendedParamObjects(self, path, func):
 		if func.code.vparam is not None:
-			tup = self.extractor.getObject(tuple)
-			self.extractor.ensureLoaded(tup)
-
+			# Create tuple for vparam
 			# HACK should name per-context, rather than per-path, to maintain precision?
-			# TODO create this inside the context?
-			vparamObj = self.allocatedObject(path, tup.typeinfo.abstractInstance)
-
-
-			# Make sure there's a type pointer...
-			self.setTypePointer(vparamObj, self.existingObject(tup))
+			# TODO create this inside the context w/opcode?
+			vparamObj = self.allocatedObject(path, self.tupleClass.typeinfo.abstractInstance)
 		else:
 			vparamObj = None
 
 		# Create dictionary for karg (disabled)
 		assert func.code.kparam is None
 		kparamObj = None
-		
-		context = self._canonicalContext(path, func, selfparam, params, vparams, vparamObj, kparamObj)
+
+		return vparamObj, kparamObj
+
+	def canonicalContext(self, path, func, selfparam, params, vparams):
+		vparamObj, kparamObj = self.extendedParamObjects(path, func)
+		context = self.canonical._canonicalContext(path, func, selfparam, params, vparams, vparamObj, kparamObj)
 		self.functionContexts[func].add(context)
 		return context
 
+	def setTypePointer(self, cobj):
+		# Makes sure the type pointer is valid.
+		typestr = self.extractor.getObject('type')
+		slot    = self.canonical.objectSlot(cobj, 'LowLevel', typestr)
+		
+		if not self.read(slot):
+			self.extractor.ensureLoaded(cobj.obj)
+			type_ = self.existingObject(cobj.obj.type)
+			self.update(slot, (type_,))
+
 	def contextObject(self, context, obj):
-		cobj = self._contextObject(context, obj)
-		self.heapContexts[obj].add(context)
+		isNew = not self.canonical.contextObject.exists(context, obj)
+		cobj  = self.canonical.contextObject(context, obj)
+		if isNew:
+			self.setTypePointer(cobj)
+			self.heapContexts[obj].add(context)
 		return cobj
 	
 	def externalObject(self, obj):
 		cobj = self.contextObject(externalObjectContext, obj)
-
-
-		# HACK to initalize external objects.
-		self.extractor.ensureLoaded(obj) # Makes sure the type pointer is valid.
-		ctype = self.existingObject(obj.type)
-		self.setTypePointer(cobj, ctype)
 		return cobj
-
-	def setTypePointer(self, obj, type_):		
-		typestr = self.extractor.getObject('type')
-		self.update(self.objectSlot(obj, 'LowLevel', typestr), (type_,))
 
 	def existingObject(self, obj):
 		return self.contextObject(existingObjectContext, obj)
@@ -201,7 +205,7 @@ class InterproceduralDataflow(object):
 			result = self.existingObject(result)
 
 			# Set the return value
-			returnSource = self.local(targetcontext, func, func.code.returnparam)
+			returnSource = self.canonical.local(targetcontext, func, func.code.returnparam)
 			self.update(returnSource, (result,))
 			
 			return True
@@ -214,9 +218,9 @@ class InterproceduralDataflow(object):
 		assert func is not None, funcObj
 
 		funcobj = self.existingObject(funcobj)
-		args    = [self.externalObject(arg) for arg in args]
+		args    = tuple([self.externalObject(arg) for arg in args])
 
-		targetcontext = self.canonicalContext(path, func, funcobj, args, [])
+		targetcontext = self.canonicalContext(path, func, funcobj, args, ())
 		return targetcontext
 
 	def bindCall(self, target, targetcontext):
@@ -237,13 +241,13 @@ class InterproceduralDataflow(object):
 			# HACK recoving op from callpath, may not work in the future.
 			op = targetcontext.path.path[-1]
 
-			sourceop = self.contextOp(target.context, target.function, op)
-			dstfunc = self.contextFunction(targetcontext, func)
+			sourceop = self.canonical.contextOp(target.context, target.function, op)
+			dstfunc = self.canonical.contextFunction(targetcontext, func)
 			
 			self.invocations.add((sourceop, dstfunc))
 
 			# Copy the return value
-			returnSource = self.local(targetcontext, func, func.code.returnparam)
+			returnSource = self.canonical.local(targetcontext, func, func.code.returnparam)
 			self.createAssign(returnSource, target)
 
 
@@ -263,7 +267,7 @@ class InterproceduralDataflow(object):
 	def addEntryPoint(self, func, funcobj, args):
 		context = self.getContext(self.rootPath, func, funcobj, args)
 		dummy = ast.Local('external_escape')
-		dummyslot = self.local(externalFunctionContext, externalFunction, dummy)
+		dummyslot = self.canonical.local(externalFunctionContext, externalFunction, dummy)
 		self.bindCall(dummyslot, context)
 
 

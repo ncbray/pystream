@@ -128,15 +128,23 @@ def explodeCombonations(callback, limit, *args):
 	__explodeCombonations(callback, limit, args, current, index)
 
 
+# Assumes that the same arguments will create the same object,
+# and different arguments will create different objects.
 class Canonical(object):
 	def __init__(self, create):
 		self.create = create
 		self.cache = {}
 
 	def __call__(self, *args):
-		obj = self.create(*args)
-		if not obj in self.cache:
-			self.cache[obj] = obj
+		if args not in self.cache:
+			obj = self.create(*args)
+			self.cache[args] = obj
 			return obj
 		else:
-			return self.cache[obj]
+			return self.cache[args]
+
+	def get(self, *args):
+		return self(*args)
+
+	def exists(self, *args):
+		return args in self.cache

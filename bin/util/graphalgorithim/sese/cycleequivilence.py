@@ -1,21 +1,11 @@
 import collections
 from . import bracket
-
-
-def reverse(G):
-	reverse = {}
-	for node, children in G.iteritems():
-		for child in children:
-			if child not in reverse:
-				reverse[child] = [node]
-			else:
-				reverse[child].append(node)
-	return reverse
+from .. import basic
 
 # Explicitly expands the graph so each node consists of an "in", "internal", and "out" node.
 # Also creates directed "back" edges, which guarentees the search will find all nodes.
 def orderedUndirected(G, start):
-	rG = reverse(G)
+	rG = basic.reverseDirectedGraph(G)
 	
 	nG = {}
 
@@ -36,7 +26,7 @@ class UndirectedTransformationSearcher(object):
 		# Expand G
 
 		self.forward    = G
-		self.reverse    = reverse(G)
+		self.reverse    = basic.reverseDirectedGraph(G)
 
 		startX = (start, 'out')
 

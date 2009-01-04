@@ -1,3 +1,5 @@
+from . import basic
+
 class ReversePostorderCrawler(object):
 	def __init__(self, G, head):
 		self.G = G
@@ -101,27 +103,13 @@ def dominatorTree(G, head):
 			tree[idom].append(node)
 	return tree
 	
-def reverseGraph(G):
-	out = {}
-	for node, nexts in G.iteritems():
-		for next in nexts:
-			if next not in out:
-				out[next] = [node]
-			else:
-				out[next].append(node)
-	return out
+
 
 def makeSingleHead(G, head):
-	entryPoints = findEntryPoints(G)
+	entryPoints = basic.findEntryPoints(G)
 	G[head] = entryPoints
 
-def findEntryPoints(G):
-	entryPoints = set(G.iterkeys())
-	for nexts in G.itervalues():
-		for next in nexts:
-			if next in entryPoints:
-				entryPoints.remove(next)
-	return list(entryPoints)
+
 
 if __name__ == '__main__':
 	G = {0:(1, 2), 1:(3,), 2:(3,), 3:(4, 5), 4:(6,), 5:(6,)}

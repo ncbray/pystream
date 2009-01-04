@@ -8,12 +8,14 @@ if True:
 	limitedTest = [
 		'tests.test_database',
 		'tests.test_full',
+		#'tests.test_lattice',
 		]
 
 testExclude = [
 	#'tests.test_full',
 	'tests.test_shape',
 	'tests.test_sese',
+	'tests.test_lattice',
 	'analysis.bdddatalog.tests.test_datalog',
 	'analysis.bdddatalog.tests.test_relational',
 	]

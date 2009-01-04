@@ -83,6 +83,7 @@ class InterproceduralDataflow(object):
 
 
 		self.db = CPADatabase()
+		self.db.canonical = self.canonical # HACK so the canonical objects are accessable.
 
 		# For vargs
 		self.tupleClass = self.extractor.getObject(tuple)
@@ -138,8 +139,7 @@ class InterproceduralDataflow(object):
 		return cobj
 	
 	def externalObject(self, obj):
-		cobj = self.contextObject(externalObjectContext, obj)
-		return cobj
+		return self.contextObject(externalObjectContext, obj)
 
 	def existingObject(self, obj):
 		return self.contextObject(existingObjectContext, obj)

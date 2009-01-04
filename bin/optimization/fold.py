@@ -32,11 +32,52 @@ class FoldRewrite(object):
 		
 		return node
 
+	def getObjects(self, ref):
+		if isinstance(ref, ast.Local):
+			return self.adb.db.functionInfo(self.function).localInfo(ref).merged.references
+		elif isinstance(ref, ast.Existing):
+			# HACK needs access to canonical objects
+			return set((self.adb.db.canonical.existingObject(ref.object),))
+
+	def getMethodFunction(self, expr, name):
+		# Static setup
+		db = self.adb.db
+		typeStrObj = self.extractor.getObject('type')
+		dictStrObj = self.extractor.getObject('dictionary')
+
+		def cobjSlotRefs(cobj, slotType, key):
+			return db.heapInfo(cobj.obj).slotInfo(slotType, key).context(cobj.context).references
+
+
+		# Dynamic setup
+		funcs = set()
+		targetObjs = self.getObjects(expr)
+		nameObjs = self.getObjects(name)
+		
+		for target in targetObjs:
+			typeObjs = cobjSlotRefs(target, 'LowLevel', typeStrObj)
+			for t in typeObjs:
+				dictObjs = cobjSlotRefs(t, 'LowLevel', dictStrObj)
+				for d in dictObjs:
+					for nameObj in nameObjs:
+						funcObjs = cobjSlotRefs(d, 'Dictionary', nameObj.obj)
+						funcs.update(funcObjs)
+
+		if len(funcs) == 1:
+			return ast.Existing(funcs.pop().obj)
+		else:
+			return None
+
 	@dispatch(ast.MethodCall)
 	def visitMethodCall(self, node):
 		func = self.adb.singleCall(self.function, node)
 		if func is not None:
-			funcobj = None
+			funcobj = self.getMethodFunction(node.expr, node.name)
+
+			# TODO deal with single call / multiple function object case?
+			if not funcobj:
+				return node
+			
 			newargs = [node.expr]
 			newargs.extend(node.args)
 			result = ast.DirectCall(func, funcobj, newargs, node.kwds, node.vargs, node.kargs)

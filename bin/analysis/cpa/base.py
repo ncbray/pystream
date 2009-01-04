@@ -358,3 +358,10 @@ class CanonicalObjects(object):
 		self._canonicalContext = util.Canonical(CPAContext)
 		self.contextOp         = util.Canonical(ContextOp)
 		self.contextFunction   = util.Canonical(ContextFunction)
+
+	def externalObject(self, obj):
+		return self.contextObject(externalObjectContext, obj)
+
+	def existingObject(self, obj):
+		return self.contextObject(existingObjectContext, obj)
+

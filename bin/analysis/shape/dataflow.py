@@ -9,48 +9,11 @@ from __future__ import absolute_import
 #		Per store
 #		Per index
 
-
 # Shape analysis
 # Full index:
 #	('shape', function, fsid, context, configuration) -> secondary
 # Observer index:
 #	('shape', function, fsid, context) -> observer set
-
-# Worklist: list(analysis, constraint, index)
-
-# Forget: forget fields and merge
-# Project: select fields that match, then forget
-# Select: get a subset of the database
-# Reindex: paritions/repartitions key
-#	Example: ('shape', function, fsid, configuration) -> (context,) -> secondary
-# DBMap?
-
-##class DataflowStore(object):
-##	__slots__ = 'consumers', 'mapping'
-##	def __init__(self):
-##		self.consumers = set()
-##		self.mapping   = {}
-##
-##	def addConsumer(self, constraint):
-##		self.consumers.add(constraint)
-##
-##	def merge(self, sys, index, info):
-##		# Do the merge
-##		if not index in self.mapping:
-##			self.mapping[index] = info.copy()
-##			changed = True
-##		else:
-##			changed = self.mapping[index].merge(info)
-##
-##		# Did we discover any new information?
-##		if changed:
-##			# Make sure the consumers will be re-evaluated.
-##			for consumer in self.consumers:
-##				sys.worklist.addDirty(consumer, index)
-##
-##	def secondary(self, index):
-##		return self.mapping[index]
-##
 
 class DataflowEnvironment(object):
 	__slots__ = '_secondary', 'observers'
@@ -83,6 +46,7 @@ class DataflowEnvironment(object):
 	def secondary(self, point, context, index):
 		key = (point, context, index)
 		return self._secondary.get(key)
+
 
 # Processes the queue depth first.
 class Worklist(object):

@@ -11,6 +11,12 @@ class SetUnionSchema(base.Schema):
 	def missing(self):
 		return None
 
+	def copy(self, original):
+		if original:
+			return set(original)
+		else:
+			return None
+
 	def merge(self, *args):
 		target, changed = self.inplaceMerge(None, *args)
 		return target
@@ -39,6 +45,12 @@ class SetIntersectionSchema(base.Schema):
 
 	def missing(self):
 		return None
+
+	def copy(self, original):
+		if original:
+			return set(original)
+		else:
+			return None
 
 	def merge(self, first, *args):
 		if not first: return None

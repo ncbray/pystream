@@ -9,6 +9,73 @@ import analysis.database.mapping as mapping
 import analysis.database.lattice as lattice
 
 
+class TestSetIntersection(unittest.TestCase):
+	def testMerge(self):
+		a = set((1,2,5,6))
+		b = set((1,3,5,7))
+
+		c = lattice.setIntersectionSchema.merge(a, b)
+
+		self.assertEqual(a, set((1,2,5,6)))	
+		self.assertEqual(b, set((1,3,5,7)))
+		self.assertEqual(c, set((1,5)))
+
+	def testInplaceMerge(self):
+		a = set((1,2,5,6))
+		b = set((1,3,5,7))
+
+		c, changed = lattice.setIntersectionSchema.inplaceMerge(a, b)
+
+		self.assertEqual(a, set((1,5)))	
+		self.assertEqual(b, set((1,3,5,7)))
+		self.assertEqual(c, set((1,5)))
+		self.assertEqual(changed, True)
+
+
+	def testInplaceMergeNull(self):
+		a = set((1,5))
+		b = set((1,2,5,6))
+
+		c, changed = lattice.setIntersectionSchema.inplaceMerge(a, b)
+
+		self.assertEqual(a, set((1,5)))
+		self.assertEqual(b, set((1,2,5,6)))	
+		self.assertEqual(c, set((1,5)))
+		self.assertEqual(changed, False)
+
+class TestSetUnion(unittest.TestCase):
+	def testMerge(self):
+		a = set((1,2,5,6))
+		b = set((1,3,5,7))
+
+		c = lattice.setUnionSchema.merge(a, b)
+
+		self.assertEqual(a, set((1,2,5,6)))	
+		self.assertEqual(b, set((1,3,5,7)))
+		self.assertEqual(c, set((1,2,3,5,6,7)))
+
+	def testInplaceMerge(self):
+		a = set((1,2,5,6))
+		b = set((1,3,5,7))
+
+		c, changed = lattice.setUnionSchema.inplaceMerge(a, b)
+
+		self.assertEqual(a, set((1,2,3,5,6,7)))	
+		self.assertEqual(b, set((1,3,5,7)))
+		self.assertEqual(c, set((1,2,3,5,6,7)))
+		self.assertEqual(changed, True)
+
+	def testInplaceMergeNull(self):
+		a = set((1,2,5,6))
+		b = set((1,5))
+
+		c, changed = lattice.setUnionSchema.inplaceMerge(a, b)
+
+		self.assertEqual(a, set((1,2,5,6)))	
+		self.assertEqual(b, set((1,5)))
+		self.assertEqual(c, set((1,2,5,6)))
+		self.assertEqual(changed, False)
+
 class TestStructureSchema(unittest.TestCase):
 	def testCreate(self):
 		intSchema = structure.TypeSchema(int)

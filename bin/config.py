@@ -6,16 +6,20 @@ outputDirectory = "c:/projects/pystream/summaries"
 
 if True:
 	limitedTest = [
+		'tests.test_shape',
 		'tests.test_database',
-		'tests.test_full',
+		#'tests.test_full',
 		#'tests.test_lattice',
 		]
+else:
+	testExclude = [
+		# Time consuming
+		#'tests.test_full',
+		'tests.test_shape',
 
-testExclude = [
-	#'tests.test_full',
-	'tests.test_shape',
-	'tests.test_sese',
-	'tests.test_lattice',
-	'analysis.bdddatalog.tests.test_datalog',
-	'analysis.bdddatalog.tests.test_relational',
-	]
+		# Old, slightly buggy.
+		'tests.test_sese',
+		'tests.test_lattice',
+		'analysis.bdddatalog.tests.test_datalog',
+		'analysis.bdddatalog.tests.test_relational',
+		]

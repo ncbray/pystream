@@ -21,3 +21,8 @@ class Schema(object):
 			return False
 		else:
 			return True
+
+	def merge(self, *args):
+		target = self.missing()
+		target, changed = self.inplaceMerge(target, *args)
+		return target

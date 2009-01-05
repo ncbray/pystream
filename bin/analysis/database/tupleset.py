@@ -13,15 +13,13 @@ class TupleSetSchema(base.Schema):
 	def validate(self, args):
 		self.valueschema.validate(args)
 
-	def merge(self, *args):
-		target = self.missing()
-		return self.inplaceMerge(target, *args)
-
 	def inplaceMerge(self, target, *args):
+		oldLen = len(target)
 		for arg in args:
 			for value in arg:
 				target.add(*value)
-		return target
+		newLen = len(target)
+		return target, oldLen != newLen
 
 
 class TupleSet(object):

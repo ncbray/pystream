@@ -18,6 +18,11 @@ class TypeSchema(base.Schema):
 		if not isinstance(args, self.type_):
 			raise base.SchemaError, "Expected type %r, got %r." % (self.type_, type(args))
 		
+	def instance(self):
+		raise base.SchemaError, "Cannot directly create instances of types."
+
+	def missing(self):
+		return self.instance()
 
 
 class StructureSchema(base.Schema):
@@ -32,6 +37,9 @@ class StructureSchema(base.Schema):
 		# HACK no typename, just 'structure'?
 		names = [name for name, field in fields]
 		self.type_ = util.namedtuple.namedtuple('structure', names)
+
+	def instance(self):
+		raise base.SchemaError, "Cannot directly create instances of structures."
 
 	def missing(self):
 		return self.type_(*[field.missing() for (name, field) in self.fields])
@@ -61,12 +69,30 @@ class StructureSchema(base.Schema):
 			field.validate(arg)
 
 
-	def merge(self, *args):
-		output = self.missing()
-		for arg in args:
-			self.validate(arg)
-			output = self.type_(*[field.inplaceMerge(target, data) for (name, field), target, data in zip(self.fields, output, arg)])
-		return output
 
-	def inplaceMerge(self, *args):
-		return self.merge(*args)
+	def inplaceMerge(self, target, *args):
+		self.validate(target)
+		for arg in args: self.validate(arg)
+
+		accum = []
+
+		changed = False
+		for (name, fieldSchema), targetfield, argfields in zip(self.fields, target, zip(*args)):
+			result, fieldChanged = fieldSchema.inplaceMerge(targetfield, *argfields)
+			accum.append(result)
+			changed |= fieldChanged
+			
+		output = self.type_(*accum)
+		return output, changed
+		
+	def merge(self, *args):
+		for arg in args: self.validate(arg)
+
+		accum = []
+
+		for (name, fieldSchema), argfields in zip(self.fields, zip(*args)):
+			result = fieldSchema.merge(*argfields)
+			accum.append(result)
+			
+		output = self.type_(*accum)
+		return output

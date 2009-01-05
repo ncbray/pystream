@@ -33,6 +33,54 @@ class TestStructureSchema(unittest.TestCase):
 		self.assert_(not s.validateNoRaise((1, 2, 3, 4)))
 
 
+class TestStructure(unittest.TestCase):
+	def setUp(self):
+		intSchema = structure.TypeSchema(int)
+		self.schema = structure.StructureSchema(
+			('a', lattice.setUnionSchema),
+			('b', lattice.setUnionSchema),
+			)
+
+
+	def testMerge(self):
+		s1 = (set((2,)), None)
+		s2 = (None, set((1,)))
+
+		s3 = self.schema.merge(s1, s2)
+
+
+		self.assertEqual(s1, (set((2,)), None))
+		self.assertEqual(s2, (None, set((1,))))
+		self.assertEqual(s3, (set((2,)), set((1,))))
+
+	def testInplaceMerge1(self):
+		s1 = (set((2,)), None)
+		s2 = (None, set((1,)))
+		s3 = (set((2,)), set((1,)))
+
+		s4, changed = self.schema.inplaceMerge(s3, s1)
+
+		self.assertEqual(s4, (set((2,)), set((1,))))
+		self.assertEqual(changed, False)
+
+		# s1 is NOT mutated.
+		self.assertEqual(s1, (set((2,)), None))
+
+
+	def testInplaceMerge2(self):
+		s1 = (set((2,)), None)
+		s2 = (None, set((1,)))
+		s3 = (set((2,)), set((1,)))
+		      
+		s4, changed = self.schema.inplaceMerge(s1, (set((3,)),None))
+
+		self.assertEqual(s4, (set((2,3)), None))
+		self.assertEqual(changed, True)
+
+		# s1 is mutated.
+		self.assertEqual(s1, (set((2,3)), None))
+
+
 class TestTupleSet(unittest.TestCase):
 	def setUp(self):
 		intSchema = structure.TypeSchema(int)

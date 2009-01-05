@@ -213,7 +213,8 @@ class MethodCall(Expression):
 class DirectCall(Expression):
 	__metaclass__ 	= astnode
 	__fields__ 	= 'func', 'selfarg', 'args', 'kwds', 'vargs', 'kargs'
-	__types__ 	= {'args':(list, tuple), 'kwds':(list, tuple)}
+	__types__ 	= {'selfarg':Expression, 'args':(list, tuple), 'kwds':(list, tuple),
+			   'vargs':Expression, 'kargs':Expression}
 	__optional__ 	= 'selfarg', 'vargs', 'kargs'
 
 

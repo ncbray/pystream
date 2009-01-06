@@ -763,6 +763,10 @@ class TestSimpleCase(TestConstraintBase):
 		b, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
 		c, self.cSlot, self.cExpr  = self.makeLocalObjs('c')
 
+		self.aRef = self.scalarIncrement(None, self.aSlot)
+		self.bRef = self.scalarIncrement(None, self.bSlot)
+		self.cRef = self.scalarIncrement(None, self.cSlot)
+
 		dc = ast.DirectCall(self.func, None, [a,b], [], None, None)
 		self.caller = ast.Suite([
 			ast.Assign(dc, c),
@@ -772,12 +776,13 @@ class TestSimpleCase(TestConstraintBase):
 
 
 		self.context = None
+		self.cs = True
 
 		# Make a dummy invocation
 		self.db.addInvocation(None, self.context, dc, self.func, self.context)
 
-		self.inputPoint, self.outputPoint = self.makeConstraints(self.func)
-		#self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
+		self.funcInput,  self.funcOutput   = self.makeConstraints(self.func)
+		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
 
 
 	def makeConstraints(self, func):
@@ -786,74 +791,20 @@ class TestSimpleCase(TestConstraintBase):
 		return builder.statementPre[func], builder.statementPost[func]
 
 
+	def createInput(self, ref):
+		entry = ref if self.cs else None
+		argument = (ref, None, None)
+		conf, secondary = self.convert(argument, entry)
+		self.setInput(conf, secondary)
+
 	def setInput(self, conf, secondary):
 		self.sys.environment.merge(self.sys, self.inputPoint, self.context, conf, secondary)
 
-	def testDataflow(self):
-
-		x = True
-		y = True
-		n = True
-		n2 = False
-
-		cs = True
-
-		if n:
-			ref = self.nRef
-			entry = ref if cs else None
-			argument = (ref, None, None)
-			conf, secondary = self.convert(argument, entry)
-			self.setInput(conf, secondary)
-
-
-		if n2:
-			ref = self.n2Ref
-			entry = ref if cs else None
-			argument = (ref, None, None)
-			conf, secondary = self.convert(argument, entry)
-			self.setInput(conf, secondary)
-
-		if x:
-			ref = self.xRef
-			entry = ref if cs else None
-			argument = (ref, None, None)
-			conf, secondary = self.convert(argument, entry)
-			self.setInput(conf, secondary)
-
-
-		if y:
-			ref = self.yRef
-			entry = ref if cs else None
-			argument = (ref, None, None)
-			conf, secondary = self.convert(argument, entry)
-			self.setInput(conf, secondary)
-
-		def f():
-			self.sys.process()
-
-		def profile(f):
-		    import hotshot, hotshot.stats
-		    prof = hotshot.Profile("tests.prof")
-		    prof.runcall(f)
-		    prof.close()
-		    stats = hotshot.stats.load("tests.prof")
-		    stats.strip_dirs()
-		    stats.sort_stats('cumulative')
-		    #stats.sort_stats('time')
-		    stats.print_stats(40)
-
-
-		start = time.clock()
-		f()
-		#profile(f)
-		end = time.clock()
-
+	def dumpPoint(self, givenPoint):
 		mapping = self.sys.environment._secondary
-
-		print
-		print "*"*80
+		       
 		for (point, context, conf), secondary in mapping.iteritems():
-			if point != self.outputPoint: continue
+			if point != givenPoint: continue
 
 			print conf.entrySet
 			print conf.currentSet
@@ -867,11 +818,56 @@ class TestSimpleCase(TestConstraintBase):
 					print '\t', miss
 			print
 
-		print "Out", len(mapping)
-		print "Unique", len(self.sys.canonical.configurationCache)
-		print "Max Worklist", self.sys.worklist.maxLength
-		print "Steps", "%d/%d" % (self.sys.worklist.usefulSteps, self.sys.worklist.steps)
+	def dumpStatistics(self):
+		print "Entries:", len(self.sys.environment._secondary)
+		print "Unique Config:", len(self.sys.canonical.configurationCache)
+		print "Max Worklist:", self.sys.worklist.maxLength
+		print "Steps:", "%d/%d" % (self.sys.worklist.usefulSteps, self.sys.worklist.steps)
 
-		print "Time", end-start
-		print "*"*80
+
+	def process(self):
+		start = time.clock()
+		self.sys.process()
+		end = time.clock()
+		self.elapsed = end-start
+
+	def dump(self, point):
 		print
+		print "/%s\\" % ("*"*80)
+		self.dumpPoint(point)
+		self.dumpStatistics()
+		if self.elapsed < 1.0:
+			print "Time: %.1f ms" % (self.elapsed*1000.0)
+		elif self.elapsed < 10.0:
+			print "Time: %.2f s" % (self.elapsed)
+		else:
+			print "Time: %.1f s" % (self.elapsed)
+		print "\\%s/" % ("*"*80)
+		print
+
+	def testLocal(self):
+		self.inputPoint = self.funcInput
+		self.outputPoint = self.funcOutput
+		
+		self.createInput(self.xRef)
+		self.createInput(self.yRef)
+		self.createInput(self.nRef)
+		#self.createInput(self.n2Ref)
+
+		self.process()
+
+		self.dump(self.outputPoint)
+
+
+	def testCall(self):
+		self.inputPoint = self.callerInput
+		self.outputPoint = self.callerOutput
+		#self.outputPoint = self.funcOutput
+		
+		self.createInput(self.aRef)
+		self.createInput(self.bRef)
+		self.createInput(self.nRef)
+
+		self.process()
+
+		self.dump(self.outputPoint)

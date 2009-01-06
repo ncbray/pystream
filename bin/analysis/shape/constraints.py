@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import util.calling
 from . import transferfunctions
 
 class Constraint(object):
@@ -40,37 +41,3 @@ class CopyConstraint(Constraint):
 	def evaluate(self, sys, point, context, configuration, secondary):
 		# Simply changes the program point.
 		sys.environment.merge(sys, self.outputPoint, context, configuration, secondary)
-
-
-class CallConstraint(Constraint):
-	def __init__(self, sys, inputPoint, outputPoint, invocations, callerargs, target):
-		Constraint.__init__(self, sys, inputPoint, outputPoint)
-
-		self.invocations = invocations
-		self.callerargs  = callerargs
-		self.target      = target
-
-	def evaluate(self, sys, point, context, configuration, secondary):
-		if context in self.invocations:
-			invocations = self.invocations[context]
-
-			callerargs = self.callerargs
-			
-			for dstFunc, dstContext in invocations:
-				callPoint = sys.constraintbuilder.statementPre[dstFunc]
-				
-				print dstFunc
-				print dstContext
-				print callPoint
-				print
-
-				print callerargs
-
-				calleeparams = sys.constraintbuilder.functionParams[dstFunc]
-
-				print calleeparams
-				
-			assert False
-			
-		#transferfunctions.assignmentConstraint(sys, self.outputPoint, context, self.sourceExpr, self.destinationExpr, configuration, secondary.hits, secondary.misses)
-	

@@ -33,9 +33,10 @@ class ShapeConstraintBuilder(object):
 
 	def __init__(self, sys):
 		self.sys = sys
-		
+
+		self.function = None
 		self.uid = 0
-		self.current  = None
+		self.current  = (self.function, self.uid)
 
 		self.statementPre = {}
 		self.statementPost = {}
@@ -48,6 +49,10 @@ class ShapeConstraintBuilder(object):
 		self.functionParams = {}
 
 		self.returnPoint = None
+
+	def setFunction(self, func):
+		self.function = func
+		self.current = (func, self.current[1])
 
 	def newID(self):
 		uid = self.uid
@@ -87,9 +92,56 @@ class ShapeConstraintBuilder(object):
 		constraint = constraints.AssignmentConstraint(self.sys, pre, post, source, destination)
 		self.constraints.append(constraint)
 
+	def forget(self, lcl):
+		self.assign(expressions.null, lcl)
+
 	def copy(self, src, dst):
 		constraint = constraints.CopyConstraint(self.sys, src, dst)
 		self.constraints.append(constraint)
+
+
+	def makeCallerArgs(self, node, target):
+		selfarg = self.localExpr(node.selfarg)
+		args = [self.localExpr(arg) for arg in node.args]
+
+		kwds = {}
+		for kwd, lcl in node.kwds:
+			kwds[kwd] = self.localExpr(lcl)
+
+		vargs = self.localExpr(node.vargs)
+		kargs = self.localExpr(node.kargs)
+
+		if target is not None:
+			returnarg = self.localExpr(target)
+		else:
+			returnarg = None
+
+		callerargs = util.calling.CallerArgs(selfarg, args, kwds, vargs, kargs, returnarg)
+		return callerargs
+
+
+	def _makeCalleeParams(self, node):
+		code = node.code
+		selfparam = self.localExpr(code.selfparam)
+		params = [self.localExpr(arg) for arg in code.parameters]
+		paramnames = code.parameternames
+		defaults = []
+
+		vparam = self.localExpr(code.vparam)
+		kparam = self.localExpr(code.kparam)
+		returnparam = self.localExpr(code.returnparam)
+
+		calleeparams = util.calling.CalleeParams(selfparam, params, paramnames, defaults, vparam, kparam, returnparam)
+		return calleeparams
+
+
+	def getCalleeParams(self, node):
+		if node not in self.functionParams:
+			params = self._makeCalleeParams(node)
+			self.functionParams[node] = params
+			return params
+		else:
+			return self.functionParams
 
 	@defaultdispatch
 	def default(self, node, *args):
@@ -108,7 +160,6 @@ class ShapeConstraintBuilder(object):
 		self(node.expr, node.lcl)
 		self.post(node)
 
-
 	@dispatch(ast.Discard)
 	def visitDiscard(self, node):
 		self.pre(node)
@@ -119,40 +170,84 @@ class ShapeConstraintBuilder(object):
 	def visitLocal(self, node, target):
 		self.assign(self.localExpr(node), self.localExpr(target))
 
-	def makeCallerArgs(self, node):
-		selfarg = self.localExpr(node.selfarg)
-		args = [self.localExpr(arg) for arg in node.args]
-
-		kwds = {}
-		for kwd, lcl in node.kwds:
-			kwds[kwd] = self.localExpr(lcl)
-
-		vargs = self.localExpr(node.vargs)
-		kargs = self.localExpr(node.kargs)
-
-		callerargs = util.calling.CallerArgs(selfarg, args, kwds, vargs, kargs)
-		return callerargs
-
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node, target):
 		# TODO context sensitivity?
-		invoke = self.sys.db.invocations(self.function, self.context, node)
-		invocations = {self.context:invoke}
+		invocations = self.sys.db.invocations(self.function, self.context, node)
+		invocationMap = {self.context:invocations}
 
-		callerargs = self.makeCallerArgs(node)
-
-		
-		target = self.localExpr(target)
-
+		callerargs = self.makeCallerArgs(node, target)
 
 		pre = self.pre(node)
 		post = self.advance()
-		
-		constraint = constraints.CallConstraint(self.sys, pre, post, invocations, callerargs, target)
-		self.constraints.append(constraint)
 
+		for dstFunc, dstContext in invocations:
+			self.handleInvocation(pre, post, self.context, callerargs, dstFunc, dstContext)
+
+		
+##		constraint = constraints.CallConstraint(self.sys, pre, post, invocationMap, callerargs, target)
+##		self.constraints.append(constraint)
+
+		self.current = post
 		self.post(node)
 
+	def computeTransfer(self, callerargs, calleeparams):
+		assert callerargs.vargs is None
+		assert callerargs.kargs is None
+		
+		numVArgs = 0
+		info = util.calling.callStackToParamsInfo(calleeparams, len(callerargs.args)+numVArgs, False, callerargs.kwds.keys(), False)
+		return info
+
+	def handleInvocation(self, callPoint, returnPoint, srcContext, callerargs, dstFunc, dstContext):
+		calleeparams = self.getCalleeParams(dstFunc)
+		
+
+		print "FUNC   ", dstFunc.name
+		print "CONTEXT", dstContext
+		print "ARG    ", callerargs
+		print "PARAM  ", calleeparams
+		print
+
+		info = self.computeTransfer(callerargs, calleeparams)
+
+		if info.willAlwaysFail: return
+
+		# HACK things not supported for this iteration
+		assert not info.uncertainParam
+		assert not info.uncertainVParam
+		assert not info.certainKeywords
+		assert not info.defaults
+
+		self.current = callPoint
+
+		# Self transfer?
+
+		for argID, paramID in info.argParam:
+			arg = callerargs.args[argID]
+			param = calleeparams.params[paramID]
+			print arg, '->', param
+			self.assign(arg, param)
+
+
+		for argID, paramID in info.argVParam:
+			assert False, "Can't handle vparams?"
+			print argID, '->', paramID
+
+		# We may not know the program point for the function entry,
+		# so defer linking until after all the functions have been processed.
+
+		# TODO context sensitive copy?
+		callIn = self.functionCall[dstFunc]
+		self.copy(self.current, callIn)
+
+
+		self.current = self.functionReturn[dstFunc]
+
+		if callerargs.returnarg:
+			self.assign(calleeparams.returnparam, callerargs.returnarg)
+		self.forget(calleeparams.returnparam)
+		self.copy(self.current, returnPoint)
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, target):
@@ -170,7 +265,8 @@ class ShapeConstraintBuilder(object):
 	def visitDelete(self, node):
 		self.pre(node)		
 		# HACK should also create a pointer to a null object.
-		lcl = node.lcl		
+		lcl = node.lcl
+		# This is not a forget, as it is replaced will a null
 		self.assign(expressions.null, self.localExpr(node.lcl))
 		self.post(node)
 
@@ -241,26 +337,13 @@ class ShapeConstraintBuilder(object):
 ##		body = self(node.ast)
 
 
-	def makeCalleeParams(self, node):
-		selfparam = self.localExpr(node.selfparam)
-		params = [self.localExpr(arg) for arg in node.parameters]
-		paramnames = node.parameternames
-		defaults = []
-
-		vparam = self.localExpr(node.vparam)
-		kparam = self.localExpr(node.kparam)
-
-		calleeparams = util.calling.CalleeParams(selfparam, params, paramnames, defaults, vparam, kparam)
-		return calleeparams
-		
 
 	@dispatch(ast.Function)
 	def visitFunciton(self, node):
-		self.function = node
+		self.setFunction(node)
 		self.returnValue = node.code.returnparam
 
-		pre = self.advance()
-		self.pre(node)
+		pre = self.pre(node)
 		self.functionCall[node] = pre
 
 		self.returnPoint = self.newID()
@@ -276,17 +359,15 @@ class ShapeConstraintBuilder(object):
 		lcls = [self.sys.canonical.localExpr(self.sys.canonical.localSlot(lcl)) for lcl in lcls]
 
 		for lcl in lcls:
-			self.assign(expressions.null, lcl)
+			self.forget(lcl)
 
 		post = self.post(node)
 
 		self.functionReturn[node] = self.current
 
-		self.functionParams[node] = self.makeCalleeParams(node.code)
-
-
 	def process(self, node):
-		self.function = None
+		self.setFunction(None)
+		self.advance()
 		self.context  = None # HACK
 		self(node)
 		return self.statementPre[node], self.statementPost[node]

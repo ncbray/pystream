@@ -1,49 +1,44 @@
+__all__ = ['CallerArgs', 'CalleeParams', 'CallInfo', 'Maybe', 'callStackToParamsInfo']
+
 class CallerArgs(object):
-	__slots__ = 'selfarg', 'args', 'kwds', 'vargs', 'kargs'
+	__slots__ = 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'returnarg'
 	
-	def __init__(self, selfarg, args, kwds, vargs, kargs):
-		self.selfarg = selfarg
-		self.args    = args
-		self.kwds    = kwds
-		self.vargs   = vargs
-		self.kargs   = kargs
+	def __init__(self, selfarg, args, kwds, vargs, kargs, returnarg):
+		self.selfarg   = selfarg
+		self.args      = args
+		self.kwds      = kwds
+		self.vargs     = vargs
+		self.kargs     = kargs
+		self.returnarg = returnarg
 
 	def __repr__(self):
 		return "args(self=%r, args=%r, kwds=%r, vargs=%r, kargs=%r)" % (self.selfarg, self.args, self.kwds, self.vargs, self.kargs)
 
 class CalleeParams(object):
-	__slots__ = 'selfparam', 'params', 'paramnames', 'defaults', 'vparam', 'kparam'
+	__slots__ = 'selfparam', 'params', 'paramnames', 'defaults', 'vparam', 'kparam', 'returnparam'
 
-	def __init__(self, selfparam, params, paramnames, defaults, vparam, kparam):
-		self.selfparam  = selfparam
-		self.params     = params
-		self.paramnames = paramnames
-		self.defaults   = defaults
-		self.vparam     = vparam
-		self.kparam     = kparam
+	def __init__(self, selfparam, params, paramnames, defaults, vparam, kparam, returnparam):
+		self.selfparam   = selfparam
+		self.params      = params
+		self.paramnames  = paramnames
+		self.defaults    = defaults
+		self.vparam      = vparam
+		self.kparam      = kparam
+		self.returnparam = returnparam
 
 	def __repr__(self):
 		return "params(self=%r, params=%r, names=%r, vparam=%r, kparam=%r)" % (self.selfparam, self.params, self.paramnames, self.vparam, self.kparam)
+
 	@classmethod
 	def fromFunction(cls, func):
 		code = func.code
 		assert not hasattr(func, 'defaults'), "Temporary limitation"
-		return cls(code.selfparam, code.parameters, code.parameternames, [], code.vparam, code.kparam)
-# arg ->
-#	param
-# 	vparam
-# varg ->
-#	param
-#	vparam
-# kwd ->
-#	param
-#	kparam
-# karg ->
-#	param
-#	kparam
+		return cls(code.selfparam, code.parameters, code.parameternames, [], code.vparam, code.kparam, code.returnparam)
 
-# Must bind
-# May bind
+# arg  -> param / vparam
+# varg -> param / vparam
+# kwd  -> param / kparam
+# karg -> param / kparam
 
 Maybe = 'maybe'
 
@@ -51,6 +46,13 @@ class PositionalTransfer(object):
 	def __init__(self):
 		self.reset()
 
+	def reset(self):
+		self.active = False
+		self.sourceBegin = 0
+		self.sourceEnd = 0
+		self.destinationBegin = 0
+		self.destinationEnd = 0
+		self.count = 0
 
 	def transfer(self, src, dst, count):
 		assert count > 0, count
@@ -64,13 +66,13 @@ class PositionalTransfer(object):
 
 		self.count = count
 
-	def reset(self):
-		self.active = False
-		self.sourceBegin = 0
-		self.sourceEnd = 0
-		self.destinationBegin = 0
-		self.destinationEnd = 0
-		self.count = 0
+	def __iter__(self):
+		assert self.active or self.count == 0
+		for i in range(self.count):
+			yield self.sourceBegin+i, self.destinationBegin+i
+
+	def __len__(self):
+		return self.count
 		
 class CallInfo(object):
 	def __init__(self):
@@ -85,8 +87,8 @@ class CallInfo(object):
 		self.uncertainParam = False
 		self.uncertainParamStart = 0
 
-		self.vparamUncertain = False
-		self.vparamUncertainStart = 0
+		self.uncertainVParam = False
+		self.uncertainVParamStart = 0
 
 		self.certainKeywords = set()
 		self.defaults = set()
@@ -103,15 +105,15 @@ class CallInfo(object):
 		else:
 			return False
 
-	def mustFail(self):
+	def _mustFail(self):
 		self.willAlwaysFail    = True
 		self.willAlwaysSucceed = False
 
 		self.argParam.reset()
 		self.argVParam.reset()
 		
-		self.uncertainParam = 0
-		self.vparamUncertain = False
+		self.uncertainParam  = False
+		self.uncertainVParam = False
 		
 		self.certainKeywords.clear()
 		self.defaults.clear()
@@ -165,7 +167,7 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 		else:
 			# Can't put extra args into vparam.
 			info.exceptions.add(TypeError)
-			return info.mustFail()
+			return info._mustFail()
 
 	# Parameters to fill with uncertain values [uncertain, inf)
 	if param < numParams and uncertainVArgs:
@@ -175,8 +177,8 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 	# Uncertain args will spill into vargs.
 	if uncertainVArgs:
 		if callee.vparam is not None:
-			info.vparamUncertain = True
-			info.vparamUncertainStart = vparam
+			info.uncertainVParam = True
+			info.uncertainVParamStart = vparam
 		else:
 			# Without a vparam, the uncertain arguments may overflow.
 			info.exceptions.add(TypeError)
@@ -205,11 +207,11 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 				else:
 					# got multiple values for keyword argument '%s'
 					info.exceptions.add(TypeError)
-					return info.mustFail()
+					return info._mustFail()
 			elif callee.kparam is None:
 				# got an nexpected keyword argument '%s'
 				info.exceptions.add(TypeError)
-				return info.mustFail()
+				return info._mustFail()
 			else:
 				assert False, "Temporary limitation: cannot handle kparams"
 
@@ -222,7 +224,7 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 		bound = info.isBound(i)
 		if bound is False:
 			info.exceptions.add(TypeError)
-			return info.mustFail()
+			return info._mustFail()
 		elif bound is Maybe:
 			completelyBound = False
 			info.exceptions.add(TypeError)

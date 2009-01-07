@@ -184,10 +184,6 @@ class ShapeConstraintBuilder(object):
 		for dstFunc, dstContext in invocations:
 			self.handleInvocation(pre, post, self.context, callerargs, dstFunc, dstContext)
 
-		
-##		constraint = constraints.CallConstraint(self.sys, pre, post, invocationMap, callerargs, target)
-##		self.constraints.append(constraint)
-
 		self.current = post
 		self.post(node)
 
@@ -198,6 +194,32 @@ class ShapeConstraintBuilder(object):
 		numVArgs = 0
 		info = util.calling.callStackToParamsInfo(calleeparams, len(callerargs.args)+numVArgs, False, callerargs.kwds.keys(), False)
 		return info
+
+	def mapArguments(self, callerargs, calleeparams, info):
+		# HACK things not supported for this iteration
+		assert not info.uncertainParam
+		assert not info.uncertainVParam
+		assert not info.certainKeywords
+		assert not info.defaults
+
+		
+		# Self transfer?
+		for argID, paramID in info.argParam:
+			arg = callerargs.args[argID]
+			param = calleeparams.params[paramID]
+			print arg, '->', param
+			self.assign(arg, param)
+
+
+		for argID, paramID in info.argVParam:
+			assert False, "Can't handle vparams?"
+			print argID, '->', paramID
+		
+
+	def mapReturnValue(self, callerargs, calleeparams, info):
+		if callerargs.returnarg:
+			self.assign(calleeparams.returnparam, callerargs.returnarg)
+		self.forget(calleeparams.returnparam)
 
 	def handleInvocation(self, callPoint, returnPoint, srcContext, callerargs, dstFunc, dstContext):
 		calleeparams = self.getCalleeParams(dstFunc)
@@ -213,41 +235,32 @@ class ShapeConstraintBuilder(object):
 
 		if info.willAlwaysFail: return
 
-		# HACK things not supported for this iteration
-		assert not info.uncertainParam
-		assert not info.uncertainVParam
-		assert not info.certainKeywords
-		assert not info.defaults
-
-		self.current = callPoint
-
-		# Self transfer?
-
-		for argID, paramID in info.argParam:
-			arg = callerargs.args[argID]
-			param = calleeparams.params[paramID]
-			print arg, '->', param
-			self.assign(arg, param)
-
-
-		for argID, paramID in info.argVParam:
-			assert False, "Can't handle vparams?"
-			print argID, '->', paramID
-
 		# We may not know the program point for the function entry,
 		# so defer linking until after all the functions have been processed.
 
+
+		splitMergeInfo = constraints.SplitMergeInfo() 
+
+		# Call invoke
+		self.current = callPoint
+		self.mapArguments(callerargs, calleeparams, info)
+
+
 		# TODO context sensitive copy?
-		callIn = self.functionCall[dstFunc]
-		self.copy(self.current, callIn)
+		pre = self.current
+		post = self.functionCall[dstFunc]
+		constraint = constraints.SplitConstraint(self.sys, pre, post, splitMergeInfo)
+		self.constraints.append(constraint)
 
 
-		self.current = self.functionReturn[dstFunc]
+		# Call return
+		pre  = self.functionReturn[dstFunc]
+		post = self.advance()
+		constraint = constraints.MergeConstraint(self.sys, pre, post, splitMergeInfo)
+		self.constraints.append(constraint)
 
-		if callerargs.returnarg:
-			self.assign(calleeparams.returnparam, callerargs.returnarg)
-		self.forget(calleeparams.returnparam)
-		self.copy(self.current, returnPoint)
+		self.mapReturnValue(callerargs, calleeparams, info)
+		self.copy(self.current, returnPoint) # TODO eliminate?
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, target):
@@ -331,17 +344,15 @@ class ShapeConstraintBuilder(object):
 
 		self.post(node)
 
-##	@dispatch(ast.Code)
-##	def visitCode(self, node):
-##		# HACK
-##		body = self(node.ast)
-
-
 
 	@dispatch(ast.Function)
 	def visitFunciton(self, node):
 		self.setFunction(node)
 		self.returnValue = node.code.returnparam
+
+
+		allLcls = getLocals(node.code)
+		self.funcLocals = allLcls
 
 		pre = self.pre(node)
 		self.functionCall[node] = pre
@@ -354,8 +365,8 @@ class ShapeConstraintBuilder(object):
 		self.current = self.returnPoint
 
 		# Generate a kill constraint for the locals.
-		lcls = getLocals(node.code)
-		lcls.remove(node.code.returnparam)
+		
+		lcls = allLcls - set((node.code.returnparam,))
 		lcls = [self.sys.canonical.localExpr(self.sys.canonical.localSlot(lcl)) for lcl in lcls]
 
 		for lcl in lcls:

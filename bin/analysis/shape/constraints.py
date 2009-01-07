@@ -41,3 +41,46 @@ class CopyConstraint(Constraint):
 	def evaluate(self, sys, point, context, configuration, secondary):
 		# Simply changes the program point.
 		sys.environment.merge(sys, self.outputPoint, context, configuration, secondary)
+
+class SplitMergeInfo(object):
+	def __init__(self):
+		self.splitLUT = {}
+		self.mergeLUT = {}
+
+
+class SplitConstraint(Constraint):
+	__slots__ = 'info'
+
+	def __init__(self, sys, inputPoint, outputPoint, info):
+		Constraint.__init__(self, sys, inputPoint, outputPoint)
+		self.info = info
+		
+	def evaluate(self, sys, point, context, configuration, secondary):
+
+		if configuration not in self.info.splitLUT:
+			newconfig = sys.canonical.configuration(configuration.object, configuration.region, configuration.currentSet, configuration.currentSet)
+			self.info.splitLUT[configuration] = newconfig
+
+			if newconfig.entrySet not in self.info.mergeLUT:
+				self.info.mergeLUT[newconfig.entrySet] = set()
+			self.info.mergeLUT[newconfig.entrySet].add(configuration)
+		else:
+			newconfig = self.info.splitLUT[configuration]
+	
+		sys.environment.merge(sys, self.outputPoint, context, newconfig, secondary)
+
+
+class MergeConstraint(Constraint):
+	__slots__ = 'info'
+
+	def __init__(self, sys, inputPoint, outputPoint, info):
+		Constraint.__init__(self, sys, inputPoint, outputPoint)
+		self.info = info
+	
+	def evaluate(self, sys, point, context, configuration, secondary):
+		# TODO do we need to reevaluate when the info is updated?
+
+		for oldconfig in self.info.mergeLUT.get(configuration.entrySet, ()):
+			newconfig = sys.canonical.configuration(configuration.object, configuration.region, oldconfig.entrySet, configuration.currentSet)
+		
+			sys.environment.merge(sys, self.outputPoint, context, newconfig, secondary)

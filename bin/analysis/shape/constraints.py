@@ -32,7 +32,7 @@ class AssignmentConstraint(Constraint):
 
 
 	def evaluate(self, sys, point, context, configuration, secondary):
-		transferfunctions.assignmentConstraint(sys, self.outputPoint, context, self.sourceExpr, self.destinationExpr, configuration, secondary.hits, secondary.misses)
+		transferfunctions.assignmentConstraint(sys, self.outputPoint, context, self.sourceExpr, self.destinationExpr, configuration, secondary.hits, secondary.misses, secondary.externalReferences)
 
 
 class CopyConstraint(Constraint):

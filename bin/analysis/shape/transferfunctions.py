@@ -63,7 +63,7 @@ def mapConfiguration(sys, i, slot, b0, b1):
 	return Si
 	
 
-def updateHitMiss(sys, e0, e1, slot, hits, misses, b0, b1):
+def updateHitMiss(sys, e0, e1, b0, b1, slot, hits, misses):
 	assert slot.isSlot(), slot
 
 	#assert isinstance(hits, frozenset), hits
@@ -117,7 +117,7 @@ def updateHitMiss(sys, e0, e1, slot, hits, misses, b0, b1):
 
 	return newHits, newMisses
 
-def assign(sys, outpoint, context, e0, e1, i, hits, misses, b0, b1):
+def assign(sys, outpoint, context, e0, e1, b0, b1, i, hits, misses, external):
 	# Must not modify hits and misses
 	
 	# b0 -> e0 aliases to i
@@ -126,7 +126,7 @@ def assign(sys, outpoint, context, e0, e1, i, hits, misses, b0, b1):
 	if b0 and b1:
 		# e0 must alias i, and e1 must alias i, therefore e0 must alias e1
 		# This assigment therefore does nothing.
-		secondary = sys.canonical.secondary(hits, misses)
+		secondary = sys.canonical.secondary(hits, misses, external)
 		sys.environment.merge(sys, outpoint, context, i, secondary)
 
 		# TODO can we infer new hits/misses?
@@ -145,19 +145,19 @@ def assign(sys, outpoint, context, e0, e1, i, hits, misses, b0, b1):
 		# possible hits and misses?
 		
 		# Aliasing issues can modify the hits and misses
-		newHits, newMisses = updateHitMiss(sys, e0, e1, slot, hits, misses, b0, b1)
+		newHits, newMisses = updateHitMiss(sys, e0, e1, b0, b1, slot, hits, misses)
 
 		# Discard "obvious" miss sets
 		# All elements of Si will have the same references (but possibally different counts), so just check one.
 		newMisses = filterTrivialMisses(sys, Si[0], newMisses)
 
 		# Merge in the new info
-		secondary = sys.canonical.secondary(newHits, newMisses)
+		secondary = sys.canonical.secondary(newHits, newMisses, external)
 		for newConf in Si:
 			sys.environment.merge(sys, outpoint, context, newConf, secondary)
 
 
-def assignmentConstraint(sys, outpoint, context, e1, e0, index, hits, misses):
+def assignmentConstraint(sys, outpoint, context, e1, e0, index, hits, misses, external):
 	assert e1.isExpression(), e1
 	assert e0.isExpression(), e0
 
@@ -194,61 +194,20 @@ def assignmentConstraint(sys, outpoint, context, e1, e0, index, hits, misses):
 
 	if not e0Uncertain:
 		if not e1Uncertain:
-			assign(sys, outpoint, context, e0, e1, index, hits, misses, e0Must, e1Must)
+			assign(sys, outpoint, context, e0, e1, e0Must, e1Must, index, hits, misses, external)
 		else:
-			assign(sys, outpoint, context, e0, e1, index, hits.union((e1,)), misses, e0Must, True)
-			assign(sys, outpoint, context, e0, e1, index, hits, misses.union((e1,)), e0Must, False)
+			assign(sys, outpoint, context, e0, e1, e0Must, True, index, hits.union((e1,)), misses, external)
+			assign(sys, outpoint, context, e0, e1, e0Must, False, index, hits, misses.union((e1,)), external)
 
 	else:
 		if not e1Uncertain:
-			assign(sys, outpoint, context, e0, e1, index, hits.union((e0,)), misses, True, e1Must)
-			assign(sys, outpoint, context, e0, e1, index, hits, misses.union((e0,)), False, e1Must)
+			assign(sys, outpoint, context, e0, e1, True, e1Must, index, hits.union((e0,)), misses, external)
+			assign(sys, outpoint, context, e0, e1, False, e1Must, index, hits, misses.union((e0,)), external)
 
 		else:
 			assert False, "This case requires heap-to-heap data transfer, which is not allowed by the IR."
 			
-			assign(sys, outpoint, context, e0, e1, index, hits.union((e0, e1)), misses, True, True)
-			assign(sys, outpoint, context, e0, e1, index, hits.union((e0,)), misses.union((e1,)), True, False)
-			assign(sys, outpoint, context, e0, e1, index, hits.union((e1,)), misses.union((e0,)), False, True)
-			assign(sys, outpoint, context, e0, e1, index, hits, misses.union((e0, e1)), False, False)
-
-##def callIn():
-##	MuCS Rq -> Rp
-##
-##	conf = (indexCurrent, indexEntry)
-##
-##
-##	call q(e1, ... en)
-##
-##	# do parameter assignments
-##	a = p1 <- e1, ... pn <- en
-##
-##
-##	for all:
-##		filter
-##		for e in hits:
-##			for slot in range(mu):
-##				e.stableValue(slot)
-##
-##		newIndex = currentRC.map(mu)
-##
-##
-##		# Used for in and out.
-##		hitq  =  hit, stableValue w.r.t. all values in range(mu)
-##		missq = ...
-##
-##		mapCS(ic)
-##
-##
-##		newConfig = (newIndex, newIndex)
-##		newSecondary = hit-hitq, miss-missq
-##
-##		# Leaks "impossible" hits and misses into the procedure, then returns them
-##		# The called procedure maintains and updates, them, before returning.
-##		# This can make recursion interesting.
-##
-##		# backMap: if the index is in the range, reverse map it, else maintain it.
-##
-##def callOut():
-
-
+			assign(sys, outpoint, context, e0, e1, index, True, True, hits.union((e0, e1)), misses, external)
+			assign(sys, outpoint, context, e0, e1, index, True, False, hits.union((e0,)), misses.union((e1,)), external)
+			assign(sys, outpoint, context, e0, e1, index, False, True, hits.union((e1,)), misses.union((e0,)), external)
+			assign(sys, outpoint, context, e0, e1, index, False, False, hits, misses.union((e0, e1)), external)

@@ -30,19 +30,17 @@ class CanonicalObjects(object):
 		return c
 
 
-	def secondary(self, hits, misses):
-		if hits or misses:
-			if hits:
-				for hit in hits:
-					assert hit.isExpression(), hit
-			if misses:
-				for miss in misses:
-					assert miss.isExpression(), miss
+	def secondary(self, hits, misses, external):
+		if hits:
+			for hit in hits:
+				assert hit.isExpression(), hit
+		if misses:
+			for miss in misses:
+				assert miss.isExpression(), miss
 
+		assert isinstance(external, bool)
 
-			return secondary.SecondaryInformation(hits, misses)
-		else:
-			return secondary.emptyInformation
+		return secondary.SecondaryInformation(hits, misses, external)
 
 	def localExpr(self, lcl):
 		assert isinstance(lcl, slots.Slot), lcl

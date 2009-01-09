@@ -38,8 +38,9 @@ class TestConstraintBase(unittest.TestCase):
 		current, hits, misses = row
 		if isinstance(hits, tuple): hits = set(hits)
 		if isinstance(misses, tuple): misses = set(misses)
+		external = False
 		
-		return self.sys.canonical.configuration(type_, region, entry, current), self.sys.canonical.secondary(hits, misses)
+		return self.sys.canonical.configuration(type_, region, entry, current), self.sys.canonical.secondary(hits, misses, external)
 
 	def countOutputs(self):
 		count = 0
@@ -203,7 +204,7 @@ class TestExpressions(unittest.TestCase):
 		b0 = False
 		b1 = False
 
-		newHits, newMisses = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, slot, hits, misses, b0, b1)
+		newHits, newMisses = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, b0, b1, slot, hits, misses)
 
 		# The retargeted hit
 		# HACK
@@ -231,7 +232,7 @@ class TestExpressions(unittest.TestCase):
 		b0 = False
 		b1 = True
 
-		newHits, newMisses = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, slot, hits, misses, b0, b1)
+		newHits, newMisses = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, b0, b1, slot, hits, misses)
 
 		# HACK precision lost if RHS and LHS conflict
 		#expectedHits = set((self.zero_b,))
@@ -253,7 +254,7 @@ class TestExpressions(unittest.TestCase):
 		b0 = True
 		b1 = False
 
-		newHits, newMisses = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, slot, hits, misses, b0, b1)
+		newHits, newMisses = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, b0, b1, slot, hits, misses)
 
 		# HACK precision lost if RHS and LHS conflict
 		#expectedHits = set((self.zero, self.zero_b))

@@ -24,6 +24,9 @@ class GetLocals(object):
 		self.locals.add(node)
 
 def getLocals(node):
+	if isinstance(node, ast.Function):
+		node = node.code
+		
 	gl = GetLocals()
 	gl(node)
 	return gl.locals
@@ -43,16 +46,18 @@ class ShapeConstraintBuilder(object):
 
 		self.constraints = []
 
-		self.functionCall   = {}
-		self.functionReturn = {}
+		self.functionCallPoint   = {}
+		self.functionReturnPoint = {}
 
 		self.functionParams = {}
+		self.functionLocals = {}
+		self.functionLocalExprs = {}
 
 		self.returnPoint = None
 
 	def setFunction(self, func):
 		self.function = func
-		self.current = (func, self.current[1])
+		self.current  = (func, self.current[1])
 
 	def newID(self):
 		uid = self.uid
@@ -202,14 +207,16 @@ class ShapeConstraintBuilder(object):
 		assert not info.certainKeywords
 		assert not info.defaults
 
-		
-		# Self transfer?
+		# Self arg transfer
+		if callerargs.selfarg and calleeparams.selfparam:
+			self.assign(callerargs.selfarg, calleeparams.selfparam)
+
+		# Arg to param transfer
 		for argID, paramID in info.argParam:
 			arg = callerargs.args[argID]
 			param = calleeparams.params[paramID]
-			print arg, '->', param
+			#print arg, '->', param
 			self.assign(arg, param)
-
 
 		for argID, paramID in info.argVParam:
 			assert False, "Can't handle vparams?"
@@ -224,13 +231,6 @@ class ShapeConstraintBuilder(object):
 	def handleInvocation(self, callPoint, returnPoint, srcContext, callerargs, dstFunc, dstContext):
 		calleeparams = self.getCalleeParams(dstFunc)
 		
-
-		print "FUNC   ", dstFunc.name
-		print "CONTEXT", dstContext
-		print "ARG    ", callerargs
-		print "PARAM  ", calleeparams
-		print
-
 		info = self.computeTransfer(callerargs, calleeparams)
 
 		if info.willAlwaysFail: return
@@ -240,6 +240,8 @@ class ShapeConstraintBuilder(object):
 
 
 		splitMergeInfo = constraints.SplitMergeInfo() 
+		splitMergeInfo.srcLocals = self.functionLocalExprs[self.function]
+		splitMergeInfo.dstLocals = self.functionLocalExprs[dstFunc]
 
 		# Call invoke
 		self.current = callPoint
@@ -248,13 +250,13 @@ class ShapeConstraintBuilder(object):
 
 		# TODO context sensitive copy?
 		pre = self.current
-		post = self.functionCall[dstFunc]
+		post = self.functionCallPoint[dstFunc]
 		constraint = constraints.SplitConstraint(self.sys, pre, post, splitMergeInfo)
 		self.constraints.append(constraint)
 
 
 		# Call return
-		pre  = self.functionReturn[dstFunc]
+		pre  = self.functionReturnPoint[dstFunc]
 		post = self.advance()
 		constraint = constraints.MergeConstraint(self.sys, pre, post, splitMergeInfo)
 		self.constraints.append(constraint)
@@ -347,15 +349,9 @@ class ShapeConstraintBuilder(object):
 
 	@dispatch(ast.Function)
 	def visitFunciton(self, node):
-		self.setFunction(node)
-		self.returnValue = node.code.returnparam
-
-
-		allLcls = getLocals(node.code)
-		self.funcLocals = allLcls
-
 		pre = self.pre(node)
-		self.functionCall[node] = pre
+
+		self.returnValue = node.code.returnparam
 
 		self.returnPoint = self.newID()
 		
@@ -366,7 +362,7 @@ class ShapeConstraintBuilder(object):
 
 		# Generate a kill constraint for the locals.
 		
-		lcls = allLcls - set((node.code.returnparam,))
+		lcls = self.functionLocals[self.function] - set((node.code.returnparam,))
 		lcls = [self.sys.canonical.localExpr(self.sys.canonical.localSlot(lcl)) for lcl in lcls]
 
 		for lcl in lcls:
@@ -374,11 +370,22 @@ class ShapeConstraintBuilder(object):
 
 		post = self.post(node)
 
-		self.functionReturn[node] = self.current
+		
 
 	def process(self, node):
-		self.setFunction(None)
-		self.advance()
 		self.context  = None # HACK
+
+		self.setFunction(node)
+		
+		self.functionLocals[node] =  frozenset(getLocals(node))
+
+		# TODO these are slots, not expressions?
+		self.functionLocalExprs[node] = frozenset([self.sys.canonical.localSlot(lcl) for lcl in self.functionLocals[node]])
+		
+		self.advance()
+
+		self.functionCallPoint[node] = self.current
 		self(node)
+		self.functionReturnPoint[node] = self.current
+		
 		return self.statementPre[node], self.statementPost[node]

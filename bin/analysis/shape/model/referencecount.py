@@ -83,15 +83,21 @@ class ReferenceCountManager(object):
 
 		if saturated:
 			return (canonical, rc)
-		elif canonical:
-			return (canonical,)
 		else:
-			return ()
-		
+			# Even if canonical is empty.
+			return (canonical,)		
 
 	def getCanonical(self, rc):
-		if not len(rc):
-			return None
+##		if not len(rc):
+##			return None
+
+		# Validate the reference counts
+		fields = set()
+		for slot, count in rc:
+			if slot in fields:
+				assert False, "Two counts for the same field: %r" % slot
+			else:
+				fields.add(slot)
 
 		rc = frozenset(rc)
 		
@@ -103,6 +109,25 @@ class ReferenceCountManager(object):
 
 		return obj
 
+
+	def split(self, rc, valid):
+		validrc   = []
+		invalidrc = []
+		
+		for slot, count in rc.counts:
+			if slot in valid:
+				validrc.append((slot, count))
+			else:
+				invalidrc.append((slot, count))
+
+		return self.getCanonical(validrc), self.getCanonical(invalidrc)
+
+	def merge(self, a, b):
+		# Assumes the reference counts are disjoint.
+		newrc = []
+		if a: newrc.extend(a.counts)
+		if b: newrc.extend(b.counts)
+		return self.getCanonical(newrc)
 
 class ReferenceCount(object):
 	__slots__ = 'counts'
@@ -123,3 +148,6 @@ class ReferenceCount(object):
 
 	def isExpression(self):
 		return False
+
+	def __len__(self):
+		return len(self.counts)

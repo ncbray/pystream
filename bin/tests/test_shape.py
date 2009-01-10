@@ -48,10 +48,18 @@ class TestConstraintBase(unittest.TestCase):
 			if point == self.outputPoint:
 				count += 1
 		return count
-	
-	def checkConstraint(self, argument, results):
-		inputPoint = self.constraint.inputPoint
-		outputPoint = self.constraint.outputPoint
+
+	def setInOut(self, inp, outp):
+		self.inputPoint = inp
+		self.outputPoint = outp
+
+	def setConstraint(self, constraint):
+		self.constraint = constraint
+		self.setInOut(constraint.inputPoint, constraint.outputPoint)
+
+	def checkTransfer(self, argument, results):
+		inputPoint = self.inputPoint
+		outputPoint = self.outputPoint
 		context = None
 
 		entry = argument[0]
@@ -67,7 +75,7 @@ class TestConstraintBase(unittest.TestCase):
 			econf, esecondary = self.convert(row, entry)
 			secondary = self.sys.environment.secondary(outputPoint, context, econf)
 
-			self.assertNotEqual(secondary, None)
+			self.assertNotEqual(secondary, None, "Expected output %r not found." % econf)
 			self.assertEqual(secondary.hits, esecondary.hits)
 			self.assertEqual(secondary.misses, esecondary.misses)	
 
@@ -277,6 +285,8 @@ class TestReferenceCounts(unittest.TestCase):
 		self.localz = self.sys.canonical.localSlot('zero')
 		self.localo = self.sys.canonical.localSlot('one')
 
+		self.null = self.sys.canonical.rcm.getCanonical([])
+
 	def scalarIncrement(self, rc, slot):
 		next = self.sys.canonical.incrementRef(rc, slot)
 		self.assertEqual(len(next), 1)
@@ -317,8 +327,9 @@ class TestReferenceCounts(unittest.TestCase):
 		self.assertEqual(dec1, (inc1,))
 
 		# Decrementing one can eliminate the reference count
+		# A "null" object is still returned, however.
 		dec0 = self.sys.canonical.decrementRef(inc1, self.localz)
-		self.assertEqual(dec0, ())
+		self.assertEqual(dec0, (self.null,))
 
 
 
@@ -367,7 +378,7 @@ class TestReferenceCounts(unittest.TestCase):
 ##		results = [
 ##			(self.cRef, None, None),
 ##			]
-##		self.checkConstraint(argument, results)
+##		self.checkTransfer(argument, results)
 ##
 ##
 ##	def testForget(self):
@@ -376,7 +387,7 @@ class TestReferenceCounts(unittest.TestCase):
 ##		argument = (self.aRef, None, None)
 ##		results = [
 ##			]
-##		self.checkConstraint(argument, results)
+##		self.checkTransfer(argument, results)
 
 
 class TestCopyConstraint(TestConstraintBase):
@@ -387,12 +398,11 @@ class TestCopyConstraint(TestConstraintBase):
 		self.cLcl, self.cSlot, self.cExpr  = self.makeLocalObjs('c')
 		self.cRef = self.scalarIncrement(None, self.cSlot)
 
-		self.inputPoint  = 0
-		self.outputPoint = 1
+		self.inputPoint  = (None, 0)
+		self.outputPoint = (None, 1)
 
 		# b = a
-		self.constraint = analysis.shape.constraints.CopyConstraint(self.sys, self.inputPoint, self.outputPoint)
-
+		self.setConstraint(analysis.shape.constraints.CopyConstraint(self.sys, self.inputPoint, self.outputPoint))
 
 	def testNoAlias(self):
 		# c -> c
@@ -401,7 +411,7 @@ class TestCopyConstraint(TestConstraintBase):
 		results = [
 			(self.cRef, None, None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 
 class TestLocalAssignConstraint(TestConstraintBase):
@@ -426,11 +436,11 @@ class TestLocalAssignConstraint(TestConstraintBase):
 
 		self.xRef = self.scalarIncrement(None, self.xAttr)
 
-		self.inputPoint  = 0
-		self.outputPoint = 1
+		self.inputPoint  = (None, 0)
+		self.outputPoint = (None, 1)
 
 		# b = a
-		self.constraint = analysis.shape.constraints.AssignmentConstraint(self.sys, self.inputPoint, self.outputPoint, self.aExpr, self.bExpr)
+		self.setConstraint(analysis.shape.constraints.AssignmentConstraint(self.sys, self.inputPoint, self.outputPoint, self.aExpr, self.bExpr))
 
 
 	def testNoAlias(self):
@@ -440,7 +450,7 @@ class TestLocalAssignConstraint(TestConstraintBase):
 		results = [
 			(self.cRef, None, None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 
 	def testArgAlias(self):
@@ -449,14 +459,14 @@ class TestLocalAssignConstraint(TestConstraintBase):
 		results = [
 			(self.abRef, None, None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 	def testTargetAlias(self):
 		# b -> null
 		argument = (self.bRef, None, None)
 		results = [
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 	def testBothAlias(self):
 		# ab -> ab
@@ -464,7 +474,7 @@ class TestLocalAssignConstraint(TestConstraintBase):
 		results = [
 			(self.abRef, None, None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 	def testPartialAlias(self):
 		# bc -> c
@@ -472,7 +482,7 @@ class TestLocalAssignConstraint(TestConstraintBase):
 		results = [
 			(self.cRef, None, None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 
 	def testHeapPath1(self):
@@ -481,7 +491,7 @@ class TestLocalAssignConstraint(TestConstraintBase):
 		results = [
 			(self.xRef, (self.axExpr, self.bxExpr,), None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 	def testHeapPath2(self):
 		# x(b.x|) -> x(|)
@@ -489,7 +499,7 @@ class TestLocalAssignConstraint(TestConstraintBase):
 		results = [
 			(self.xRef, None, None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 	def testHeapPath3(self):
 		# x(|a.x) -> x(|a.x,b.x)
@@ -497,7 +507,7 @@ class TestLocalAssignConstraint(TestConstraintBase):
 		results = [
 			(self.xRef, None, (self.axExpr, self.bxExpr,)),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 	def testHeapPath4(self):
 		# x(|b.x) -> x(|)
@@ -505,7 +515,7 @@ class TestLocalAssignConstraint(TestConstraintBase):
 		results = [
 			(self.xRef, None, None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 class TestLoadAssignConstraint(TestConstraintBase):
 	def setUp(self):
@@ -531,11 +541,11 @@ class TestLoadAssignConstraint(TestConstraintBase):
 		self.bxRef = self.scalarIncrement(self.bRef, self.xAttr)
 		self.abxRef = self.scalarIncrement(self.bxRef, self.aSlot)
 
-		self.inputPoint = 0
-		self.outputPoint = 1
+		self.inputPoint = (None, 0)
+		self.outputPoint = (None, 1)
 
 		# b = a.x
-		self.constraint = analysis.shape.constraints.AssignmentConstraint(self.sys, self.inputPoint, self.outputPoint, self.axExpr, self.bExpr)
+		self.setConstraint(analysis.shape.constraints.AssignmentConstraint(self.sys, self.inputPoint, self.outputPoint, self.axExpr, self.bExpr))
 
 	
 
@@ -543,7 +553,7 @@ class TestLoadAssignConstraint(TestConstraintBase):
 		# b -> nil
 		argument = (self.bRef, None, None)
 		results = []
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 	def testExprAlias(self):
 		# a -> a
@@ -551,7 +561,7 @@ class TestLoadAssignConstraint(TestConstraintBase):
 		results = [
 			(self.aRef, None, None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 	def testAttrMayAlias(self):
 		# x(|) -> x(|a.x), bx(a.x|)
@@ -560,7 +570,7 @@ class TestLoadAssignConstraint(TestConstraintBase):
 			(self.xRef, None, (self.axExpr,)),
 			(self.bxRef, (self.axExpr,), None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 	def testAttrMustAlias(self):
 		# x(a.x|) -> bx(a.x|)
@@ -568,7 +578,7 @@ class TestLoadAssignConstraint(TestConstraintBase):
 		results = [
 			(self.bxRef, (self.axExpr,), None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 
 	def testAttrMustNotAlias(self):
@@ -578,7 +588,7 @@ class TestLoadAssignConstraint(TestConstraintBase):
 		results = [
 			(self.xRef, (self.axxExpr, self.bxExpr), (self.axExpr,)),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 	def testAttrLocalAlias(self):
 		# bx1 -> x1, bx1
@@ -587,7 +597,7 @@ class TestLoadAssignConstraint(TestConstraintBase):
 			(self.xRef, None, (self.axExpr,)),
 			(self.bxRef, (self.axExpr,), None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 
 	def testAttrExprAlias(self):
@@ -597,7 +607,7 @@ class TestLoadAssignConstraint(TestConstraintBase):
 			(self.axRef, None, (self.axExpr,)),
 			(self.abxRef, (self.axExpr,), None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 
 class TestStoreAssignConstraint(TestConstraintBase):
@@ -629,11 +639,11 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		self.abxRef = self.scalarIncrement(self.bxRef, self.aSlot)
 
 
-		self.inputPoint = 0
-		self.outputPoint = 1
+		self.inputPoint = (None, 0)
+		self.outputPoint = (None, 1)
 
 		# b.x = a
-		self.constraint = analysis.shape.constraints.AssignmentConstraint(self.sys, self.inputPoint, self.outputPoint, self.aExpr, self.bxExpr)
+		self.setConstraint(analysis.shape.constraints.AssignmentConstraint(self.sys, self.inputPoint, self.outputPoint, self.aExpr, self.bxExpr))
 
 	def testTargetAlias(self):
 		# a -> ax(b.x|)
@@ -641,7 +651,7 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		results = [
 			(self.axRef, (self.bxExpr,), None),
 			]
-		self.checkConstraint(argument, results)
+		self.checkTransfer(argument, results)
 
 
 	def testHeapAlias(self):
@@ -650,7 +660,7 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		results = [
 			(self.xRef, None, (self.bxExpr,)),
 			]
-		self.checkConstraint(argument, results)		
+		self.checkTransfer(argument, results)		
 
 
 	def testHeapMustAliasChild(self):
@@ -659,7 +669,7 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		results = [
 			(self.xRef, (self.axExpr,self.bxxExpr), (self.bxExpr,)),
 			]
-		self.checkConstraint(argument, results)	
+		self.checkTransfer(argument, results)	
 
 
 	def testNoAffect(self):
@@ -668,14 +678,14 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		results = [
 			(self.axRef, (self.bxExpr,self.bxxExpr), None),
 			]
-		self.checkConstraint(argument, results)	
+		self.checkTransfer(argument, results)	
 
 	def testHeapMustAlias(self):
 		# x(b.x|) -> null
 		argument = (self.xRef, (self.bxExpr,), None)
 		results = [
 			]
-		self.checkConstraint(argument, results)	
+		self.checkTransfer(argument, results)	
 
 	def testHeapLocalMustAlias(self):
 		# bx(b.x|) -> b
@@ -683,7 +693,7 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		results = [
 			(self.bRef, None, None),
 			]
-		self.checkConstraint(argument, results)	
+		self.checkTransfer(argument, results)	
 
 	def testHeap2LocalMustAlias(self):
 		# bxx(b.x|) -> bx(|b.x)
@@ -691,7 +701,7 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		results = [
 			(self.bxRef, None, (self.bxExpr,)),
 			]
-		self.checkConstraint(argument, results)	
+		self.checkTransfer(argument, results)	
 
 
 
@@ -703,21 +713,21 @@ class TestSimpleCase(TestConstraintBase):
 		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
 		
 		# Splice example from paper
-
-
 		x, self.xSlot, self.xExpr  = self.makeLocalObjs('x')
 		y, self.ySlot, self.yExpr  = self.makeLocalObjs('y')
 		z, self.zSlot, self.zExpr  = self.makeLocalObjs('z')
 		t, self.tSlot, self.tExpr  = self.makeLocalObjs('t')
 		q, self.qSlot, self.qExpr  = self.makeLocalObjs('q')
-
+		ret, self.retSlot, self.retExpr  = self.makeLocalObjs('internal_return')
 
 		self.xRef = self.scalarIncrement(None, self.xSlot)
 		self.yRef = self.scalarIncrement(None, self.ySlot)
+		self.retRef = self.scalarIncrement(None, self.retSlot)
 		self.nSlot = self.sys.canonical.fieldSlot(None, ('LowLevel', 'n'))
 
 		self.nRef = self.scalarIncrement(None, self.nSlot)
 		self.n2Ref = self.scalarIncrement(self.nRef, self.nSlot)
+		self.n3Ref = self.scalarIncrement(self.n2Ref, self.nSlot)
 
 
 		# t = x
@@ -756,7 +766,7 @@ class TestSimpleCase(TestConstraintBase):
 			])
 
 
-		self.code = ast.Code(None, [x, y], ['x', 'y'], None, None, ast.Local('internal_return'), self.body)
+		self.code = ast.Code(None, [x, y], ['x', 'y'], None, None, ret, self.body)
 		self.func = ast.Function('test', self.code)
 
 
@@ -767,6 +777,9 @@ class TestSimpleCase(TestConstraintBase):
 		self.aRef = self.scalarIncrement(None, self.aSlot)
 		self.bRef = self.scalarIncrement(None, self.bSlot)
 		self.cRef = self.scalarIncrement(None, self.cSlot)
+		self.bcRef = self.scalarIncrement(self.bRef, self.cSlot)
+
+		self.anRef = self.scalarIncrement(self.aRef, self.nSlot)
 
 		dc = ast.DirectCall(self.func, None, [a,b], [], None, None)
 		self.caller = ast.Suite([
@@ -780,11 +793,12 @@ class TestSimpleCase(TestConstraintBase):
 		self.cs = True
 
 		# Make a dummy invocation
-		self.db.addInvocation(None, self.context, dc, self.func, self.context)
+		self.db.addInvocation(self.caller, self.context, dc, self.func, self.context)
 
 		self.funcInput,  self.funcOutput   = self.makeConstraints(self.func)
 		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
 
+		self.setInOut(self.callerInput, self.callerOutput)
 
 	def makeConstraints(self, func):
 		builder = self.sys.constraintbuilder
@@ -807,6 +821,7 @@ class TestSimpleCase(TestConstraintBase):
 		for (point, context, conf), secondary in mapping.iteritems():
 			if point != givenPoint: continue
 
+			print conf.object, conf.region
 			print conf.entrySet
 			print conf.currentSet
 			if secondary.hits:
@@ -817,6 +832,7 @@ class TestSimpleCase(TestConstraintBase):
 				print "misses"
 				for miss in secondary.misses:
 					print '\t', miss
+			print "externalReferences: %r" % secondary.externalReferences
 			print
 
 	def dumpStatistics(self):
@@ -832,6 +848,8 @@ class TestSimpleCase(TestConstraintBase):
 		end = time.clock()
 		self.elapsed = end-start
 
+		self.dump(self.outputPoint)
+
 	def dump(self, point):
 		print
 		print "/%s\\" % ("*"*80)
@@ -846,29 +864,71 @@ class TestSimpleCase(TestConstraintBase):
 		print "\\%s/" % ("*"*80)
 		print
 
-	def testLocal(self):
-		self.inputPoint = self.funcInput
-		self.outputPoint = self.funcOutput
-		
-		self.createInput(self.xRef)
-		self.createInput(self.yRef)
-		self.createInput(self.nRef)
-		#self.createInput(self.n2Ref)
+##	def testLocal(self):
+##		self.setInOut(self.funcInput, self.funcOutput)
+##
+##		self.createInput(self.xRef)
+##		self.createInput(self.yRef)
+##		self.createInput(self.nRef)
+##
+##		self.process()
 
-		self.process()
+	def testLocal1(self):
+		self.setInOut(self.funcInput, self.funcOutput)
 
-		self.dump(self.outputPoint)
+		argument = (self.xRef, None, None)
+		results = [
+			(self.nRef, None, None),
+			]
+		self.checkTransfer(argument, results)
 
+	def testLocal2(self):
+		self.setInOut(self.funcInput, self.funcOutput)
 
-	def testCall(self):
-		self.inputPoint = self.callerInput
-		self.outputPoint = self.callerOutput
-		#self.outputPoint = self.funcOutput
-		
-		self.createInput(self.aRef)
-		self.createInput(self.bRef)
-		self.createInput(self.nRef)
+		argument = (self.yRef, None, None)
+		results = [
+			(self.retRef, None, None),
+			]
+		self.checkTransfer(argument, results)
 
-		self.process()
+	def testLocal3(self):
+		self.setInOut(self.funcInput, self.funcOutput)
 
-		self.dump(self.outputPoint)
+		argument = (self.nRef, None, None)
+		results = [
+			(self.nRef, None, None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testLocal4(self):
+		self.setInOut(self.funcInput, self.funcOutput)
+
+		argument = (self.n2Ref, None, None)
+		results = [
+			(self.nRef, None, None),
+			(self.n2Ref, None, None),
+			(self.n3Ref, None, None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testCall1(self):		
+		argument = (self.aRef, None, None)
+		results = [
+			(self.aRef, None, None),
+			(self.anRef, None, None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testCall2(self):		
+		argument = (self.bRef, None, None)
+		results = [
+			(self.bcRef, None, None),
+			]		
+		self.checkTransfer(argument, results)
+
+	def testCall3(self):		
+		argument = (self.nRef, None, None)
+		results = [
+			(self.nRef, None, None),
+			]
+		self.checkTransfer(argument, results)

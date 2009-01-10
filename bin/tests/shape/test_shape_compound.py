@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from tests.shape_base import *
+from tests.shape.shape_base import *
 
 class TestSimpleCase(TestCompoundConstraintBase):
 	def setUp(self):

@@ -125,6 +125,10 @@ def updateHitMiss(sys, e0, e1, b0, b1, slot, hits, misses):
 	return newHits, newMisses
 
 def assign(sys, outpoint, context, e0, e1, b0, b1, i, hits, misses, external):
+##	print "ASSIGN"
+##	print e0, e1
+##	print i
+##	print hits, misses, external
 	# Must not modify hits and misses
 	
 	# b0 -> e0 aliases to i
@@ -162,6 +166,10 @@ def assign(sys, outpoint, context, e0, e1, b0, b1, i, hits, misses, external):
 		secondary = sys.canonical.secondary(newHits, newMisses, external)
 		for newConf in Si:
 			gcMerge(sys, outpoint, context, newConf, secondary)
+##			print "out"
+##			print '\t',newConf
+##			print '\t',secondary
+##	print
 
 def assignmentConstraint(sys, outpoint, context, e1, e0, index, hits, misses, external):
 	assert e1.isExpression(), e1

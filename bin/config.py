@@ -10,6 +10,7 @@ if True:
 		'tests.shape.test_shape_compound',
 		'tests.shape.test_shape_paths',
 		'tests.test_database',
+		'tests.test_compressedset',
 		#'tests.test_full',
 		#'tests.test_lattice',
 		]

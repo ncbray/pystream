@@ -11,6 +11,8 @@ import analysis.shape
 from programIR.python import ast
 
 
+import util.compressedset
+
 class MockDB(object):
 	def __init__(self):
 		self.invokeLUT = collections.defaultdict(set)
@@ -39,8 +41,8 @@ class TestConstraintBase(unittest.TestCase):
 		type_  = None
 		region = None
 		current, hits, misses = row
-		if isinstance(hits, tuple): hits = set(hits)
-		if isinstance(misses, tuple): misses = set(misses)
+		hits = util.compressedset.copy(hits)
+		misses = util.compressedset.copy(misses)
 		external = False
 		
 		return self.sys.canonical.configuration(type_, region, entry, current), self.sys.canonical.secondary(hits, misses, external)

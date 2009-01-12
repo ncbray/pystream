@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import unittest
 
 import analysis.shape.path as path
+import analysis.shape.model.canonical as canonical
 
 
 class TestUnionFind(unittest.TestCase):
@@ -32,25 +33,27 @@ class TestUnionFind(unittest.TestCase):
 		self.assertEquals(len(u.weights), 2)
 
 
-class TestPathEquivalence(unittest.TestCase):
+class TestEquivilenceBase(unittest.TestCase):
+	def makeExprs(self, lcl):
+		lclSlot = self.canonical.localSlot(lcl)
+		lclExpr = self.canonical.localExpr(lclSlot)
+		lclN = self.canonical.fieldExpr(lclExpr, self.nSlot)
+		lclNN = self.canonical.fieldExpr(lclN, self.nSlot)
+		return lclExpr, lclN, lclNN
+
 	def setUp(self):
-		self.pe = path.PathEquivalence()
-		
-		self.x = (None, 'x')
-		self.xn = (self.x, 'n')
-		self.xnn = (self.xn, 'n')
+		self.canonical = canonical.CanonicalObjects()
+		self.pe = path.PathEquivalence(self.canonical.fieldExpr)
+		self.nSlot = self.canonical.fieldSlot(None, 'n')
 
-		self.y = (None, 'y')
-		self.yn = (self.y, 'n')
-		self.ynn = (self.yn, 'n')
+		self.a, self.an, self.ann = self.makeExprs('a')
+		self.b, self.bn, self.bnn = self.makeExprs('b')
+		self.c, self.cn, self.cnn = self.makeExprs('c')
 
-		self.z = (None, 'z')
-		self.zn = (self.z, 'n')
-		self.znn = (self.zn, 'n')
-
-		self.w = (None, 'w')
-		self.wn = (self.w, 'n')
-		self.wnn = (self.wn, 'n')
+		self.x, self.xn, self.xnn = self.makeExprs('x')
+		self.y, self.yn, self.ynn = self.makeExprs('y')
+		self.z, self.zn, self.znn = self.makeExprs('z')
+		self.w, self.wn, self.wnn = self.makeExprs('w')	
 
 	def dump(self):
 		print
@@ -58,6 +61,8 @@ class TestPathEquivalence(unittest.TestCase):
 		self.pe.dump()
 		print
 
+
+class TestPathEquivalence(TestEquivilenceBase):
 	def testUnion1(self):
 		self.pe.union(self.x, self.y)
 		self.assertEqual(self.pe.canonical(self.x),   self.pe.canonical(self.y))
@@ -169,46 +174,13 @@ class TestPathEquivalence(unittest.TestCase):
 
 
 
-class TestPathEquivalenceOps(unittest.TestCase):
-	def setUp(self):		
-		self.x = (None, 'x')
-		self.xn = (self.x, 'n')
-		self.xnn = (self.xn, 'n')
-
-		self.y = (None, 'y')
-		self.yn = (self.y, 'n')
-		self.ynn = (self.yn, 'n')
-
-		self.z = (None, 'z')
-		self.zn = (self.z, 'n')
-		self.znn = (self.zn, 'n')
-
-		self.a = (None, 'a')
-		self.an = (self.a, 'n')
-		self.ann = (self.an, 'n')
-
-		self.b = (None, 'b')
-		self.bn = (self.b, 'n')
-		self.bnn = (self.bn, 'n')
-
-		self.c = (None, 'c')
-		self.cn = (self.c, 'n')
-		self.cnn = (self.cn, 'n')
-
-
-	def dump(self):
-		print
-		print "DUMP"
-		self.pe.dump()
-		print
-
-
+class TestPathEquivalenceOps(TestEquivilenceBase):
 	def testIntersection(self):
-		pe1 = path.PathEquivalence()
+		pe1 = path.PathEquivalence(self.canonical.fieldExpr)
 		pe1.union(self.a, self.b, self.c)
 		pe1.union(self.x, self.y, self.z)
 
-		pe2 = path.PathEquivalence()
+		pe2 = path.PathEquivalence(self.canonical.fieldExpr)
 		pe2.union(self.a, self.b, self.z)
 		pe2.union(self.x, self.y, self.c)
 
@@ -228,11 +200,11 @@ class TestPathEquivalenceOps(unittest.TestCase):
 		
 
 	def testIntersection(self):
-		pe1 = path.PathEquivalence()
+		pe1 = path.PathEquivalence(self.canonical.fieldExpr)
 		pe1.union(self.a, self.b)
 		pe1.union(self.x, self.y)
 
-		pe2 = path.PathEquivalence()
+		pe2 = path.PathEquivalence(self.canonical.fieldExpr)
 		pe2.union(self.a, self.c)
 		pe2.union(self.x, self.z)
 

@@ -56,19 +56,13 @@ class UnionFind(object):
 
 			self.weights[biggestRoot] = weight
 
-def length(path):
-	tail, head = path
-	if tail is None:
-		return 1
-	else:
-		return length(tail)+1
-	
-
 
 
 class PathEquivalence(object):
-	def __init__(self):
+	__slots__ = '_canonical', '_callback'
+	def __init__(self, callback):
 		self._canonical = {}
+		self._callback = callback
 
 	def _canonicalCompress(self, path):
 		parent = self._canonical.get(path, path)
@@ -81,17 +75,17 @@ class PathEquivalence(object):
 			return root
 
 	def _canonicalTail(self, path):
-		tail, head = path
+		tail, head = path.split()
 		
 		newtail = None if tail is None else self.canonical(tail)
 		if tail != newtail:
-			newpath = (newtail, head)
+			newpath = self._callback(newtail, head)
 		else:
 			newpath = path
 		return newpath
 	
 	def canonical(self, path):
-		newpath = self._canonicalTail(path)			
+		newpath = self._canonicalTail(path)
 		compressed = self._canonicalCompress(newpath)
 		return compressed
 
@@ -102,10 +96,10 @@ class PathEquivalence(object):
 		if len(cpathsSet) > 1:
 			cfirst         = cpaths[0]
 			shortestPath   = cfirst
-			shortestLength = length(cfirst)
+			shortestLength = len(cfirst)
 
 			for cpath in cpathsSet:
-				l = length(cpath)
+				l = len(cpath)
 				if  l < shortestLength:
 					shortestPath = cpath
 					shortestLength = l
@@ -124,7 +118,7 @@ class PathEquivalence(object):
 				
 				if key in d:
 					other = d[key]
-					if length(value) >= length(other):
+					if len(value) >= len(other):
 						# key -> other  and  value -> other
 						chain(d, value, other)
 					else:
@@ -171,7 +165,7 @@ class PathEquivalence(object):
 		return p
 
 	def setUnion(self, other):
-		p = PathEquivalence()
+		p = PathEquivalence(self._callback)
 		p._canonical.update(self._canonical)
 
 		for k, v in other._canonical.iteritems():

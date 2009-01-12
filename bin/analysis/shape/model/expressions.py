@@ -11,7 +11,6 @@ class Expression(object):
 	def __init__(self):
 		pass
 
-
 	def __repr__(self):
 		return "expr(%s)" % self.path()
 
@@ -21,6 +20,11 @@ class Expression(object):
 	def isSlot(self):
 		return False
 
+	def split(self):
+		return None, self.slot
+
+	def __iter__(self):
+		return iter(self.split())
 
 class NullExpr(Expression):
 	__slots__ = ()
@@ -45,6 +49,9 @@ class NullExpr(Expression):
 
 	def isTrivial(self):
 		return True
+
+	def __len__(self):
+		return 0
 
 null = NullExpr()
 
@@ -88,16 +95,20 @@ class LocalExpr(Expression):
 	def isTrivial(self):
 		return True
 
+	def __len__(self):
+		return 1
+
+
 class FieldExpr(Expression):
-	__slots__ = 'parent'
+	__slots__ = 'parent', '_length'
 	def __init__(self, parent, slot):
 		assert parent.isExpression(), parent
 		assert slot.isSlot(), slot
 		assert slot.isHeap(), slot
 		
-		self.parent = parent
-		self.slot  = slot
-
+		self.parent  = parent
+		self.slot    = slot
+		self._length = len(self.parent)+1
 		
 	def stableLocation(self, sys, slot, stableValues):
 		#assert slot.isSlot(), slot
@@ -156,3 +167,10 @@ class FieldExpr(Expression):
 
 	def isTrivial(self):
 		return False
+
+	def split(self):
+		return self.parent, self.slot
+
+
+	def __len__(self):
+		return self._length

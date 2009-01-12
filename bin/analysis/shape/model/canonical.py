@@ -39,7 +39,7 @@ class CanonicalObjects(object):
 			for miss in misses:
 				assert miss.isExpression(), miss
 
-		return pathinformation.PathInformation(hits, misses)
+		return pathinformation.PathInformation.fromHitMiss(hits, misses, self.fieldExpr)
 
 	def secondary(self, paths, external):
 		assert isinstance(external, bool)

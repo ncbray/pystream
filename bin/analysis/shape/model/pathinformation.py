@@ -1,9 +1,20 @@
 import util.compressedset
+from .. import path
 
 class PathInformation(object):
-	__slots__ = 'hits', 'misses'
+	__slots__ = 'hits', 'misses', 'equivalence'
 
-	def __init__(self, hits, misses):
+	@classmethod
+	def fromHitMiss(cls, hits, misses, callback):
+		eq = path.PathEquivalence(callback)
+		if hits:
+			eq.union(*hits)
+##			eq.dump()
+##		hits   = set([eq.canonical(hit)  for hit in hits])
+##		misses = set([eq.canonical(miss) for miss in misses])
+		return cls(hits, misses, eq)
+
+	def __init__(self, hits, misses, equivalence):
 		# Validate
 		util.compressedset.validate(hits)
 		util.compressedset.validate(misses)
@@ -18,6 +29,7 @@ class PathInformation(object):
 
 		self.hits   = hits if hits else None
 		self.misses = misses if misses else None
+		self.equivalence = equivalence
 
 	def classifyHitMiss(self, e):
 		isHit  = e in self.hits if self.hits else False
@@ -36,13 +48,13 @@ class PathInformation(object):
 	def copy(self):
 		hits   = util.compressedset.copy(self.hits)
 		misses = util.compressedset.copy(self.misses)
-		return PathInformation(hits, misses)
+		return PathInformation.fromHitMiss(hits, misses, self.equivalence._callback)
 
 	def unionHitMiss(self, additionalHits, additionalMisses):
 		# HACK?
 		newHits   = util.compressedset.union(self.hits,   additionalHits)
 		newMisses = util.compressedset.union(self.misses, additionalMisses)
-		return PathInformation(newHits, newMisses)
+		return PathInformation.fromHitMiss(newHits, newMisses, self.equivalence._callback)
 
 		
 	def filterUnstable(self, sys, slot, stableValues):
@@ -58,7 +70,7 @@ class PathInformation(object):
 			
 		newHits   = filterUnstable(sys, self.hits,   slot, stableValues)
 		newMisses = filterUnstable(sys, self.misses, slot, stableValues)
-		return PathInformation(newHits, newMisses)
+		return PathInformation.fromHitMiss(newHits, newMisses, self.equivalence._callback)
 
 	def unify(self, sys, e1, e0):
 		def substituteUpdate(sys, expressions, e1, e0):

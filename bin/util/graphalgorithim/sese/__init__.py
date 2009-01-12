@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import PADS.DFS
 
-from . import cycleequivilence
+from . import cycleequivalence
 
 class Searcher(object):
 	def search(self, G, start):
@@ -212,10 +212,10 @@ class FindRegions(Searcher):
 
 
 
-def findCycleEquivilences(G, head, tail):
+def findCycleEquivalences(G, head, tail):
 	start = 'start'
 	
-	s = cycleequivilence.CycleEquivilenceSearcher(G, head, tail)
+	s = cycleequivalence.CycleEquivalenceSearcher(G, head, tail)
 	nodeClass, edgeClass = s.NQClass, s.CEClass
 
 	fr = FindRegions(G, head, tail, nodeClass, edgeClass)

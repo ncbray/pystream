@@ -32,9 +32,9 @@ class TestUnionFind(unittest.TestCase):
 		self.assertEquals(len(u.weights), 2)
 
 
-class TestPathEquivilence(unittest.TestCase):
+class TestPathEquivalence(unittest.TestCase):
 	def setUp(self):
-		self.pe = path.PathEquivilence()
+		self.pe = path.PathEquivalence()
 		
 		self.x = (None, 'x')
 		self.xn = (self.x, 'n')
@@ -169,7 +169,7 @@ class TestPathEquivilence(unittest.TestCase):
 
 
 
-class TestPathEquivilenceOps(unittest.TestCase):
+class TestPathEquivalenceOps(unittest.TestCase):
 	def setUp(self):		
 		self.x = (None, 'x')
 		self.xn = (self.x, 'n')
@@ -204,11 +204,11 @@ class TestPathEquivilenceOps(unittest.TestCase):
 
 
 	def testIntersection(self):
-		pe1 = path.PathEquivilence()
+		pe1 = path.PathEquivalence()
 		pe1.union(self.a, self.b, self.c)
 		pe1.union(self.x, self.y, self.z)
 
-		pe2 = path.PathEquivilence()
+		pe2 = path.PathEquivalence()
 		pe2.union(self.a, self.b, self.z)
 		pe2.union(self.x, self.y, self.c)
 
@@ -228,11 +228,11 @@ class TestPathEquivilenceOps(unittest.TestCase):
 		
 
 	def testIntersection(self):
-		pe1 = path.PathEquivilence()
+		pe1 = path.PathEquivalence()
 		pe1.union(self.a, self.b)
 		pe1.union(self.x, self.y)
 
-		pe2 = path.PathEquivilence()
+		pe2 = path.PathEquivalence()
 		pe2.union(self.a, self.c)
 		pe2.union(self.x, self.z)
 

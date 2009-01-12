@@ -63,114 +63,10 @@ def length(path):
 	else:
 		return length(tail)+1
 	
-##class PathEquivilence(object):
-##	def __init__(self):
-##		self._canonical = {}
-##
-##	def _canonicalCompress(self, path):
-##		parent = self._canonical.get(path, path)
-##
-##		if path == parent:
-##			return path
-##		else:
-##			root = self.canonical(parent)
-##			self._canonical[path] = root
-##			return root
-##
-##	def _canonicalTail(self, path):
-##		tail, head = path
-##		
-##		newtail = None if tail is None else self.canonical(tail)
-##		if tail != newtail:
-##			newpath = (newtail, head)
-##		else:
-##			newpath = path
-##		return newpath
-##	
-##	def canonical(self, path):
-##		newpath = self._canonicalTail(path)			
-##		compressed = self._canonicalCompress(newpath)
-##		return compressed
-##
-##	def union(self, *paths):
-##		cpaths = [self.canonical(path) for path in paths]
-##		cpathsSet = set(cpaths)
-##		
-##		if len(cpathsSet) > 1:
-##			cfirst         = cpaths[0]
-##			shortestPath   = cfirst
-##			shortestLength = length(cfirst)
-##
-##			for cpath in cpathsSet:
-##				l = length(cpath)
-##				if  l < shortestLength:
-##					shortestPath = cpath
-##					shortestLength = l
-##
-##			#cpathsSet.remove(shortestPath) #?
-##			for cpath in cpathsSet:
-##				self._canonical[cpath] = shortestPath
-##
-##			self.compress()
-##
-##
-##	def compress(self):
-##		def chain(d, key, value):
-##			if key != value:
-##				# key -> value
-##				
-##				if key in d:
-##					other = d[key]
-##					if length(value) >= length(other):
-##						# key -> other  and  value -> other
-##						chain(d, value, other)
-##					else:
-##						# key -> value  and  other -> value
-##						d[key] = value
-##						chain(d, other, value)
-##				else:			
-##					d[key] = value
-##
-##		outp = {}		
-##		for k, v in self._canonical.iteritems():
-##			ck = self._canonicalTail(k)
-##			cv = self.canonical(v)
-##			chain(outp, ck, cv)
-##
-##		self._canonical = outp
-##
-##
-##	def dump(self):
-##		for k, v in self._canonical.iteritems():
-##			print "%r  ->  %r" % (k, v)
-##
-##
-##	def intersection(self, other):
-##		pairC = {}
-##		outp  = {}
-##
-##		p = PathEquivilence()
-##
-##		def addValue(k):
-##			c1 = self.canonical(k)
-##			c2 = other.canonical(k)
-##			pair = (c1, c2)
-##			
-##			if pair not in pairC:
-##				pairC[pair] = k
-##			else:
-##				p.union(k, pairC[pair])
-##
-##		for k, v in self._canonical.iteritems():
-##			addValue(k)
-##			addValue(v)
-##
-##		p._canonical.update(outp)
-##		return p
 
 
 
-class PathEquivilence(object):
+class PathEquivalence(object):
 	def __init__(self):
 		self._canonical = {}
 
@@ -255,7 +151,7 @@ class PathEquivilence(object):
 	def setIntersection(self, other):
 		pairC = {}
 
-		p = PathEquivilence()
+		p = PathEquivalence()
 
 		def addValue(k):
 			c1 = self.canonical(k)
@@ -275,7 +171,7 @@ class PathEquivilence(object):
 		return p
 
 	def setUnion(self, other):
-		p = PathEquivilence()
+		p = PathEquivalence()
 		p._canonical.update(self._canonical)
 
 		for k, v in other._canonical.iteritems():

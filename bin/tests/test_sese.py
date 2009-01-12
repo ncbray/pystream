@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import unittest
 
 
-from util.graphalgorithim.sese import findCycleEquivilences
+from util.graphalgorithim.sese import findCycleEquivalences
 
 def makeGraph(graph):
 	if graph == 0:
@@ -33,7 +33,7 @@ def makeGraph(graph):
 class TestSESE(unittest.TestCase):
 	def testSESE0(self):
 		G, head, tail = makeGraph(0)
-		result = findCycleEquivilences(G, head, tail)
+		result = findCycleEquivalences(G, head, tail)
 		self.assertEqual(result.entry, head)
 		self.assertEqual(result.exit, tail)
 
@@ -53,13 +53,13 @@ class TestSESE(unittest.TestCase):
 
 	def testSESE1(self):
 		G, head, tail = makeGraph(1)
-		result = findCycleEquivilences(G, head, tail)
+		result = findCycleEquivalences(G, head, tail)
 		self.assertEqual(result.entry, head)
 		self.assertEqual(result.exit, tail)
 
 	def testSESE2(self):
 		G, head, tail = makeGraph(2)
-		result = findCycleEquivilences(G, head, tail)
+		result = findCycleEquivalences(G, head, tail)
 		self.assertEqual(result.entry, head)
 		self.assertEqual(result.exit, tail)
 
@@ -72,7 +72,7 @@ class TestSESE(unittest.TestCase):
 
 	def testSESE3(self):
 		G, head, tail = makeGraph(3)
-		result = findCycleEquivilences(G, head, tail)
+		result = findCycleEquivalences(G, head, tail)
 		self.assertEqual(result.entry, head)
 		self.assertEqual(result.exit, tail)
 

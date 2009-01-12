@@ -102,7 +102,7 @@ class UndirectedTransformationSearcher(object):
 
 
 
-class CycleEquivilenceSearcher(UndirectedTransformationSearcher):
+class CycleEquivalenceSearcher(UndirectedTransformationSearcher):
 	def __init__(self,G, head, tail):
 
 		#self.head = head

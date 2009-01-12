@@ -61,21 +61,16 @@ class PathInformation(object):
 		return PathInformation(newHits, newMisses)
 
 	def unify(self, sys, e1, e0):
-		def substitute(sys, expressions, e1, e0):
-			newExpressions = set()
-			for e in expressions:
-				newE = e.substitute(sys, e1, e0)
-
-				# Local references are "trivial" as they can be easily infered from the configuration.
-				if newE and not newE.isTrivial():
-					newExpressions.add(newE)
-			return newExpressions
-
-
 		def substituteUpdate(sys, expressions, e1, e0):
 			if expressions:
-				subs = substitute(sys, expressions, e1, e0)
-				expressions.update(subs)
+				newExpressions = set()
+				for e in expressions:
+					newE = e.substitute(sys, e1, e0)
+
+					# Local references are "trivial" as they can be easily infered from the configuration.
+					if newE and not newE.isTrivial():
+						newExpressions.add(newE)
+				expressions.update(newExpressions)
 		
 		substituteUpdate(sys, self.hits,   e1, e0)
 		substituteUpdate(sys, self.misses, e1, e0)

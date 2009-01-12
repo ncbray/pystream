@@ -51,6 +51,7 @@ class ShapeConstraintBuilder(object):
 
 		self.functionParams = {}
 		self.functionLocals = {}
+		self.functionLocalSlots = {}
 		self.functionLocalExprs = {}
 
 		self.returnPoint = None
@@ -99,6 +100,10 @@ class ShapeConstraintBuilder(object):
 
 	def forget(self, lcl):
 		self.assign(expressions.null, lcl)
+
+	def forgetAll(self, exprs):
+		for expr in exprs:
+			self.forget(expr)
 
 	def copy(self, src, dst):
 		constraint = constraints.CopyConstraint(self.sys, src, dst)
@@ -240,8 +245,8 @@ class ShapeConstraintBuilder(object):
 
 
 		splitMergeInfo = constraints.SplitMergeInfo() 
-		splitMergeInfo.srcLocals = self.functionLocalExprs[self.function]
-		splitMergeInfo.dstLocals = self.functionLocalExprs[dstFunc]
+		splitMergeInfo.srcLocals = self.functionLocalSlots[self.function]
+		splitMergeInfo.dstLocals = self.functionLocalSlots[dstFunc]
 
 		# Call invoke
 		self.current = callPoint
@@ -361,12 +366,9 @@ class ShapeConstraintBuilder(object):
 		self.current = self.returnPoint
 
 		# Generate a kill constraint for the locals.
-		
-		lcls = self.functionLocals[self.function] - set((node.code.returnparam,))
-		lcls = [self.sys.canonical.localExpr(self.sys.canonical.localSlot(lcl)) for lcl in lcls]
-
-		for lcl in lcls:
-			self.forget(lcl)
+		returnExpr = self.sys.canonical.localExpr(self.sys.canonical.localSlot(node.code.returnparam))
+		lcls = self.functionLocalExprs[self.function] - set((returnExpr,))
+		self.forgetAll(lcls)
 
 		post = self.post(node)
 
@@ -380,7 +382,8 @@ class ShapeConstraintBuilder(object):
 		self.functionLocals[node] =  frozenset(getLocals(node))
 
 		# TODO these are slots, not expressions?
-		self.functionLocalExprs[node] = frozenset([self.sys.canonical.localSlot(lcl) for lcl in self.functionLocals[node]])
+		self.functionLocalSlots[node] = frozenset([self.sys.canonical.localSlot(lcl) for lcl in self.functionLocals[node]])
+		self.functionLocalExprs[node] = frozenset([self.sys.canonical.localExpr(lcl) for lcl in self.functionLocalSlots[node]])
 		
 		self.advance()
 

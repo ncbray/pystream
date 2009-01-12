@@ -61,67 +61,6 @@ class TestExpressions(unittest.TestCase):
 		mexpr01 = self.zero_a_b.substitute(self.sys, self.one_a, self.zero_a)
 		self.assertEqual(mexpr01, None)
 
-	def testSubUpdate(self):
-		exprs = set((self.zero_a_b, self.one_a))
-		expected = set((self.zero_a_b, self.one_a, self.one_a_b))
-
-		analysis.shape.transferfunctions.substituteUpdate(self.sys, exprs, self.zero, self.one)
-
-		self.assertEqual(exprs, expected)	
-
-
-
-	def testFilterUnstable1(self):
-		stableValues = frozenset()
-		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.localz, stableValues)
-
-		expected = set((self.one, self.one_a, self.one_a_b))
-		self.assertEqual(result, expected)
-
-# No Longer quite right
-##	def testFilterUnstable2(self):
-##		# Preserve location stable
-##		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.localz, True)
-##
-##		expected = set((self.zero, self.one, self.one_a, self.one_a_b))
-##		self.assertEqual(result, expected)
-
-
-	def testFilterUnstable3(self):
-		# Preserve location stable
-		stableValues = frozenset()
-		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.fielda, stableValues)
-
-		expected = set((self.zero, self.one))
-		self.assertEqual(result, expected)
-
-# No longer quite right
-##	def testFilterUnstable4(self):
-##		# Preserve location stable
-##		stableValues = frozenset()
-##		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.fielda, stableValues)
-##		
-##		expected = set((self.zero, self.one, self.zero_a, self.one_a))
-##		self.assertEqual(result, expected)
-
-
-	def testFilterUnstable5(self):
-		# Preserve location stable
-		stableValues = frozenset()
-		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.fieldb, stableValues)
-
-		expected = set((self.zero, self.one, self.zero_a, self.one_a))
-		self.assertEqual(result, expected)
-
-	def testFilterUnstable6(self):
-		# Preserve location stable
-		stableValues = frozenset((self.zero_a_b, self.one_a_b))
-		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.fieldb, stableValues)
-		
-		expected = self.allExpr
-		self.assertEqual(result, expected)
-
-
 
 	def testUpdateHitMiss1(self):
 		# zero = zero.a
@@ -130,12 +69,13 @@ class TestExpressions(unittest.TestCase):
 		# How do we know self.zero_a != self.zero_a_b?
 
 		slot = e0.slot
-		hits   = set((self.zero_a_b,))
-		misses = set((self.one_a_b, self.zero_a_a))
 		b0 = False
 		b1 = False
 
+		hits   = set((self.zero_a_b,))
+		misses = set((self.one_a_b, self.zero_a_a))
 		paths = self.sys.canonical.paths(hits, misses)
+
 		newPaths = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, b0, b1, slot, paths)
 
 		# The retargeted hit
@@ -198,6 +138,69 @@ class TestExpressions(unittest.TestCase):
 
 		self.assertEqual(newPaths.hits, expectedHits)
 		self.assertEqual(newPaths.misses, expectedMisses)
+
+
+##class TestFilterUnstable(unittest.TestCase):
+##	def setUp(self):
+##		self.db = MockDB()
+##		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
+##
+##		self.fielda = self.sys.canonical.fieldSlot(None, 'a')
+##		self.fieldb = self.sys.canonical.fieldSlot(None, 'b')
+##
+##		self.localz = self.sys.canonical.localSlot('zero')
+##		self.localo = self.sys.canonical.localSlot('one')
+##
+##		self.zero = self.sys.canonical.localExpr(self.localz)
+##		self.zero_a = self.sys.canonical.fieldExpr(self.zero,   self.fielda)
+##		self.zero_a_a = self.sys.canonical.fieldExpr(self.zero_a, self.fielda)
+##		self.zero_a_b = self.sys.canonical.fieldExpr(self.zero_a, self.fieldb)
+##
+##		self.zero_b = self.sys.canonical.fieldExpr(self.zero,   self.fieldb)
+##		self.zero_b_a = self.sys.canonical.fieldExpr(self.zero_b, self.fielda)
+##		self.zero_b_b = self.sys.canonical.fieldExpr(self.zero_b, self.fieldb)
+##
+##		self.one = self.sys.canonical.localExpr(self.localo)		
+##		self.one_a = self.sys.canonical.fieldExpr(self.one,   self.fielda)
+##		self.one_a_a = self.sys.canonical.fieldExpr(self.one_a, self.fielda)
+##		self.one_a_b = self.sys.canonical.fieldExpr(self.one_a, self.fieldb)
+##		
+##		self.one_b = self.sys.canonical.fieldExpr(self.one,   self.fieldb)
+##		self.one_b_a = self.sys.canonical.fieldExpr(self.one_b,   self.fielda)
+##		self.one_b_b = self.sys.canonical.fieldExpr(self.one_b,   self.fieldb)
+##
+##		self.allExpr = set((self.zero, self.zero_a, self.zero_a_b, self.one, self.one_a, self.one_a_b))
+##
+##	def testFilterUnstable1(self):
+##		stableValues = frozenset()
+##		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.localz, stableValues)
+##
+##		expected = set((self.one, self.one_a, self.one_a_b))
+##		self.assertEqual(result, expected)
+##
+##	def testFilterUnstable3(self):
+##		# Preserve location stable
+##		stableValues = frozenset()
+##		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.fielda, stableValues)
+##
+##		expected = set((self.zero, self.one))
+##		self.assertEqual(result, expected)
+##
+##	def testFilterUnstable5(self):
+##		# Preserve location stable
+##		stableValues = frozenset()
+##		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.fieldb, stableValues)
+##
+##		expected = set((self.zero, self.one, self.zero_a, self.one_a))
+##		self.assertEqual(result, expected)
+##
+##	def testFilterUnstable6(self):
+##		# Preserve location stable
+##		stableValues = frozenset((self.zero_a_b, self.one_a_b))
+##		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.fieldb, stableValues)
+##		
+##		expected = self.allExpr
+##		self.assertEqual(result, expected)
 
 
 class TestReferenceCounts(unittest.TestCase):

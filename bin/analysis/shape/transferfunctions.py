@@ -22,39 +22,6 @@ def filterTrivialMisses(sys, configuration, paths):
 	else:
 		return paths
 
-def substitute(sys, expressions, e1, e0):
-	newExpressions = set()
-	for e in expressions:
-		#print "!!!", e
-		newE = e.substitute(sys, e1, e0)
-
-		# Local references are "trivial" as they can be easily infered from the configuration.
-		if newE and not newE.isTrivial():
-			newExpressions.add(newE)
-	return newExpressions
-
-
-def substituteUpdate(sys, expressions, e1, e0):
-	if expressions:
-		subs = substitute(sys, expressions, e1, e0)
-		expressions.update(subs)
-
-
-def filterUnstable(sys, exprs, slot, stableValues):
-	if exprs is None: return None
-	
-	#assert isinstance(stableValues, frozenset), stableValues
-
-	# Location stable value implies stable location.
-	# As such, this is simplified from code given in the paper.
-
-	if exprs is stableValues:
-		# Optimization, all the values are known stable, so just check the locations.
-		return set([e for e in exprs if e.stableLocation(sys, slot, stableValues)])
-	else:	
-		return set([e for e in exprs if e.stableValue(sys, slot, stableValues)])
-
-
 def mapConfiguration(sys, i, slot, b0, b1):
 	# e0 = e1
 	# If neither points to the configuration i question, do nothing.
@@ -95,44 +62,35 @@ def updateHitMiss(sys, e0, e1, b0, b1, slot, paths):
 	# If the expression aliases the configuration (b1), this gives us no insight into what's changing.
 
 
-	stableValues = paths.misses if b0 else paths.hits
-	newHits   = filterUnstable(sys, paths.hits,   slot, stableValues)
-	newMisses = filterUnstable(sys, paths.misses, slot, stableValues)
-
-
+	stableValues = paths.misses if b0 else paths.hits	
 	e0StableLocation = e0.stableLocation(sys, slot, stableValues)
 	e1StableLocation = e1.stableLocation(sys, slot, stableValues)
+
+	newPaths = paths.filterUnstable(sys, slot, stableValues)
 
 
 	# For "store" like statements... 
 	# These type of statements will create a new hit or miss if the LHS is stable
 	# If the configuration aliases with the RHS, it's a hit.  Else, a miss.
-
 	if not e0.isTrivial() and e0StableLocation:
 		if b1:
 			# Aliases with the RHS, now aliases with the LHS
-			if newHits is None: newHits = set()
-			newHits.add(e0)
+			hitmiss = ((e0,),())
 		else:
-			# Does not alias with the RHS, now cannot alias with the LHS
-			if newMisses is None: newMisses = set()
-			newMisses.add(e0)
+			# Does not alias with the RHS, now cannot alias with the LHS			
+			hitmiss = ((), (e0,))
+
+		newPaths = newPaths.unionHitMiss(*hitmiss)
 
 
 	# Substitutes *e0 where *e1 occurs.
 	# Should this occur before filtering?
 	if e0StableLocation and e1StableLocation:		
-		substituteUpdate(sys, newHits, e1, e0)
-		substituteUpdate(sys, newMisses, e1, e0)
+		newPaths.unify(sys, e1, e0)
 
-	return sys.canonical.paths(newHits, newMisses)
+	return newPaths
 
-def assign(sys, outpoint, context, e0, e1, b0, b1, i, paths, external):
-##	print "ASSIGN"
-##	print e0, e1
-##	print i
-##	print hits, misses, external
-	
+def assign(sys, outpoint, context, e0, e1, b0, b1, i, paths, external):	
 	# b0 -> e0 aliases to i
 	# b1 -> e1 aliases to i
 
@@ -153,25 +111,22 @@ def assign(sys, outpoint, context, e0, e1, b0, b1, i, paths, external):
 	# Map the original configuration onto the new configuration(s)
 	Si = mapConfiguration(sys, i, slot, b0, b1)
 
-	if Si:
-		# TODO optimization: use secondary information from destination store to bound
-		# possible hits and misses?
-		
-		# Aliasing issues can modify the hits and misses
-		newPaths = updateHitMiss(sys, e0, e1, b0, b1, slot, paths)
+	# TODO optimization: earily check for garbage collection?
+	# TODO optimization: use secondary information from destination store to bound possible hits and misses?
+	
+	# Aliasing issues can modify the hits and misses
+	newPaths = updateHitMiss(sys, e0, e1, b0, b1, slot, paths)
 
-		# Discard "obvious" miss sets
-		# All elements of Si will have the same references (but possibally different counts), so just check one.
-		newPaths = filterTrivialMisses(sys, Si[0], newPaths)
+	# Discard "obvious" miss sets
+	# All elements of Si will have the same references (but possibally different counts), so just check one.
+	# TODO may not be correct if external references exist?
+	newPaths = filterTrivialMisses(sys, Si[0], newPaths)
 
-		# Merge in the new info
-		secondary = sys.canonical.secondary(newPaths, external)
-		for newConf in Si:
-			gcMerge(sys, outpoint, context, newConf, secondary)
-##			print "out"
-##			print '\t',newConf
-##			print '\t',secondary
-##	print
+	# Merge in the new info
+	secondary = sys.canonical.secondary(newPaths, external)
+	for newConf in Si:
+		gcMerge(sys, outpoint, context, newConf, secondary)
+
 
 def assignmentConstraint(sys, outpoint, context, e1, e0, index, paths, external):
 	assert e1.isExpression(), e1

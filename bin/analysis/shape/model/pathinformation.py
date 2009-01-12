@@ -43,3 +43,39 @@ class PathInformation(object):
 		newHits   = util.compressedset.union(self.hits,   additionalHits)
 		newMisses = util.compressedset.union(self.misses, additionalMisses)
 		return PathInformation(newHits, newMisses)
+
+		
+	def filterUnstable(self, sys, slot, stableValues):
+		def filterUnstable(sys, exprs, slot, stableValues):
+			if exprs:
+				if exprs is stableValues:
+					# Optimization, all the values are known stable, so just check the locations.
+					return util.compressedset.copy([e for e in exprs if e.stableLocation(sys, slot, stableValues)])
+				else:	
+					return util.compressedset.copy([e for e in exprs if e.stableValue(sys, slot, stableValues)])
+			else:
+				return util.compressedset.nullSet
+			
+		newHits   = filterUnstable(sys, self.hits,   slot, stableValues)
+		newMisses = filterUnstable(sys, self.misses, slot, stableValues)
+		return PathInformation(newHits, newMisses)
+
+	def unify(self, sys, e1, e0):
+		def substitute(sys, expressions, e1, e0):
+			newExpressions = set()
+			for e in expressions:
+				newE = e.substitute(sys, e1, e0)
+
+				# Local references are "trivial" as they can be easily infered from the configuration.
+				if newE and not newE.isTrivial():
+					newExpressions.add(newE)
+			return newExpressions
+
+
+		def substituteUpdate(sys, expressions, e1, e0):
+			if expressions:
+				subs = substitute(sys, expressions, e1, e0)
+				expressions.update(subs)
+		
+		substituteUpdate(sys, self.hits,   e1, e0)
+		substituteUpdate(sys, self.misses, e1, e0)

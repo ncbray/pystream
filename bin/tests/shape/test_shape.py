@@ -135,12 +135,13 @@ class TestExpressions(unittest.TestCase):
 		b0 = False
 		b1 = False
 
-		newHits, newMisses = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, b0, b1, slot, hits, misses)
+		paths = self.sys.canonical.paths(hits, misses)
+		newPaths = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, b0, b1, slot, paths)
 
 		# The retargeted hit
 		# HACK
 		#expectedHits   = set((self.zero_b,))
-		expectedHits   = set()
+		expectedHits   = None
 
 		# This original miss is not disrupted, and as the configuration does not alias to e1, it must now miss e0
 		# HACK precision lost if RHS and LHS conflict
@@ -149,8 +150,8 @@ class TestExpressions(unittest.TestCase):
 		expectedMisses = set((self.one_a_b,))
 
 		
-		self.assertEqual(newHits, expectedHits)
-		self.assertEqual(newMisses, expectedMisses)
+		self.assertEqual(newPaths.hits, expectedHits)
+		self.assertEqual(newPaths.misses, expectedMisses)
 		
 
 	def testUpdateHitMiss2(self):
@@ -163,16 +164,17 @@ class TestExpressions(unittest.TestCase):
 		b0 = False
 		b1 = True
 
-		newHits, newMisses = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, b0, b1, slot, hits, misses)
+		paths = self.sys.canonical.paths(hits, misses)
+		newPaths = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, b0, b1, slot, paths)
 
 		# HACK precision lost if RHS and LHS conflict
 		#expectedHits = set((self.zero_b,))
 		# TODO improve precision
-		expectedHits = set()
+		expectedHits = None
 		expectedMisses = set((self.one_a_b,))
 
-		self.assertEqual(newHits, expectedHits)
-		self.assertEqual(newMisses, expectedMisses)
+		self.assertEqual(newPaths.hits, expectedHits)
+		self.assertEqual(newPaths.misses, expectedMisses)
 
 
 	def testUpdateHitMiss3(self):
@@ -185,16 +187,17 @@ class TestExpressions(unittest.TestCase):
 		b0 = True
 		b1 = False
 
-		newHits, newMisses = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, b0, b1, slot, hits, misses)
+		paths = self.sys.canonical.paths(hits, misses)
+		newPaths = analysis.shape.transferfunctions.updateHitMiss(self.sys, e0, e1, b0, b1, slot, paths)
 
 		# HACK precision lost if RHS and LHS conflict
 		#expectedHits = set((self.zero, self.zero_b))
 		# TODO improve precision
-		expectedHits = set()
+		expectedHits = None
 		expectedMisses = set((self.one_a_b,))
 
-		self.assertEqual(newHits, expectedHits)
-		self.assertEqual(newMisses, expectedMisses)
+		self.assertEqual(newPaths.hits, expectedHits)
+		self.assertEqual(newPaths.misses, expectedMisses)
 
 
 class TestReferenceCounts(unittest.TestCase):

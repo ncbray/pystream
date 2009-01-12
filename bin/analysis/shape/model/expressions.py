@@ -40,7 +40,7 @@ class NullExpr(Expression):
 	def path(self):
 		return 'null'
 
-	def refersTo(self, sys, index, hits, misses):
+	def refersTo(self, sys, index, paths):
 		return NoAlias
 
 	def isTrivial(self):
@@ -63,7 +63,7 @@ class LocalExpr(Expression):
 		#assert slot.isSlot(), slot		
 
 		# TODO self will never be in stable values, as it would be trivial?
-		if self.slot == slot and self not in stableValues:
+		if self.slot == slot and (stableValues is None or self not in stableValues):
 			return False
 		else:
 			return True
@@ -79,7 +79,7 @@ class LocalExpr(Expression):
 	def path(self):
 		return str(self.slot)
 
-	def refersTo(self, sys, index, hits, misses):
+	def refersTo(self, sys, index, paths):
 		if index.referedToBySlot(self.slot):
 			return MustAlias
 		else:
@@ -104,7 +104,7 @@ class FieldExpr(Expression):
 		return self.parent.stableValue(sys, slot, stableValues)
 
 	def stableValue(self, sys, slot, stableValues):
-		if self.slot == slot and self not in stableValues:
+		if self.slot == slot and (stableValues is None or self not in stableValues):
 			return False
 		else:
 			return self.parent.stableValue(sys, slot, stableValues)
@@ -136,18 +136,20 @@ class FieldExpr(Expression):
 		return "%s.%s" % (self.parent.path(), str(self.slot))
 
 
-	def refersTo(self, sys, index, hits, misses):
+	def refersTo(self, sys, index, paths):
 		# TODO can we make this more precise?
 
 		# Check reference points to this index
 		if not index.referedToBySlot(self.slot):
 			return NoAlias
 
-		# A known miss
-		if self in misses: return NoAlias
+		mustHit, mustMiss = paths.classifyHitMiss(self)
 
 		# A known hit
-		if self in hits: return MustAlias
+		if mustHit: return MustAlias
+
+		# A known miss
+		if mustMiss: return NoAlias
 
 		# No idea if it matches...
 		return MayAlias

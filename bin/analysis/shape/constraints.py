@@ -40,7 +40,7 @@ class AssignmentConstraint(Constraint):
 
 
 	def evaluate(self, sys, point, context, configuration, secondary):
-		transferfunctions.assignmentConstraint(sys, self.outputPoint, context, self.sourceExpr, self.destinationExpr, configuration, secondary.hits, secondary.misses, secondary.externalReferences)
+		transferfunctions.assignmentConstraint(sys, self.outputPoint, context, self.sourceExpr, self.destinationExpr, configuration, secondary.paths, secondary.externalReferences)
 
 
 class CopyConstraint(Constraint):
@@ -106,14 +106,15 @@ class SplitConstraint(Constraint):
 
 		# Create the local data
 		localconfig    = sys.canonical.configuration(configuration.object, configuration.region, configuration.entrySet, localRC)
-		localsecondary = sys.canonical.secondary(None, None, secondary.externalReferences)
+		localpaths     = sys.canonical.paths(None, None)
+		localsecondary = sys.canonical.secondary(localpaths, secondary.externalReferences)
 
 		self.info.registerLocal(sys, remoteRC, localconfig, localsecondary)
 
 
 		# Create the remote data
 		remoteconfig    = sys.canonical.configuration(configuration.object, configuration.region, remoteRC, remoteRC)
-		remotesecondary = sys.canonical.secondary(secondary.hits, secondary.misses, secondary.externalReferences or bool(localRC))
+		remotesecondary = sys.canonical.secondary(secondary.paths.copy(), secondary.externalReferences or bool(localRC))
 		
 		remotecontext   = context # HACK
 		transferfunctions.gcMerge(sys, self.outputPoint, remotecontext, remoteconfig, remotesecondary)
@@ -134,6 +135,6 @@ class MergeConstraint(Constraint):
 		mergedRC = sys.canonical.rcm.merge(localIndex.currentSet, remoteIndex.currentSet)
 		mergedIndex = sys.canonical.configuration(localIndex.object, localIndex.region, localIndex.entrySet, mergedRC)
 
-		mergedSecondary = sys.canonical.secondary(remoteSecondary.hits, remoteSecondary.misses, localSecondary.externalReferences)
+		mergedSecondary = sys.canonical.secondary(remoteSecondary.paths.copy(), localSecondary.externalReferences)
 
 		transferfunctions.gcMerge(sys, self.outputPoint, context, mergedIndex, mergedSecondary)

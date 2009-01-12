@@ -44,8 +44,11 @@ class TestConstraintBase(unittest.TestCase):
 		hits = util.compressedset.copy(hits)
 		misses = util.compressedset.copy(misses)
 		external = False
-		
-		return self.sys.canonical.configuration(type_, region, entry, current), self.sys.canonical.secondary(hits, misses, external)
+
+		index = self.sys.canonical.configuration(type_, region, entry, current)
+		paths = self.sys.canonical.paths(hits, misses)
+		secondary = self.sys.canonical.secondary(paths, external)
+		return index,secondary 
 
 	def countOutputs(self):
 		count = 0
@@ -81,8 +84,8 @@ class TestConstraintBase(unittest.TestCase):
 			secondary = self.sys.environment.secondary(outputPoint, context, econf)
 
 			self.assertNotEqual(secondary, None, "Expected output %r not found." % econf)
-			self.assertEqual(secondary.hits, esecondary.hits)
-			self.assertEqual(secondary.misses, esecondary.misses)	
+			self.assertEqual(secondary.paths.hits, esecondary.paths.hits)
+			self.assertEqual(secondary.paths.misses, esecondary.paths.misses)	
 
 
 class TestCompoundConstraintBase(TestConstraintBase):
@@ -110,13 +113,13 @@ class TestCompoundConstraintBase(TestConstraintBase):
 			print conf.object, conf.region
 			print conf.entrySet
 			print conf.currentSet
-			if secondary.hits:
+			if secondary.paths.hits:
 				print "hits"
-				for hit in secondary.hits:
+				for hit in secondary.paths.hits:
 					print '\t', hit
-			if secondary.misses:
+			if secondary.paths.misses:
 				print "misses"
-				for miss in secondary.misses:
+				for miss in secondary.paths.misses:
 					print '\t', miss
 			print "externalReferences: %r" % secondary.externalReferences
 			print

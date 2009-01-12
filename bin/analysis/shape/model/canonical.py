@@ -5,6 +5,7 @@ from . import slots
 from . import referencecount
 from . import configuration
 from . import secondary
+from . import pathinformation
 
 class CanonicalObjects(object):
 	def __init__(self, ):
@@ -29,8 +30,8 @@ class CanonicalObjects(object):
 			cache[key] = c
 		return c
 
-
-	def secondary(self, hits, misses, external):
+	def paths(self, hits, misses):
+		# Validate
 		if hits:
 			for hit in hits:
 				assert hit.isExpression(), hit
@@ -38,9 +39,12 @@ class CanonicalObjects(object):
 			for miss in misses:
 				assert miss.isExpression(), miss
 
-		assert isinstance(external, bool)
+		return pathinformation.PathInformation(hits, misses)
 
-		return secondary.SecondaryInformation(hits, misses, external)
+	def secondary(self, paths, external):
+		assert isinstance(external, bool)
+		# TODO a non-copy create?
+		return secondary.SecondaryInformation(paths.copy(), external)
 
 	def localExpr(self, lcl):
 		assert isinstance(lcl, slots.Slot), lcl

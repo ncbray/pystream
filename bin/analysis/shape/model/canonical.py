@@ -11,6 +11,7 @@ class CanonicalObjects(object):
 	def __init__(self, ):
 		self.localExprCache = {}
 		self.fieldExprCache = {}
+		self.extendedParameterCache = {}
 		
 		self.localSlotCache = {}
 		self.fieldSlotCache = {}
@@ -56,6 +57,18 @@ class CanonicalObjects(object):
 			e = expressions.LocalExpr(lcl)
 			cache[key] = e
 		return e
+
+	def extendedParameter(self, expr):
+		assert isinstance(expr, expressions.Expression), expr
+
+		key = expr
+		cache = self.extendedParameterCache
+		e = cache.get(key)
+		if not e:
+			e = expressions.ExtendedParameter(expr)
+			cache[key] = e
+		return e
+
 
 	def localSlot(self, lcl):
 		assert not isinstance(lcl, slots.Slot), lcl

@@ -51,7 +51,10 @@ class CopyConstraint(Constraint):
 		transferfunctions.gcMerge(sys, self.outputPoint, context, configuration, secondary)
 
 class SplitMergeInfo(object):
-	def __init__(self):
+	def __init__(self, parameters):
+		self.parameters = parameters
+		self.extendedParameters = set()
+		
 		self.remoteLUT = {}
 		self.localLUT  = {}
 
@@ -101,8 +104,16 @@ class SplitConstraint(Constraint):
 		self.info = info
 		
 	def evaluate(self, sys, point, context, configuration, secondary):
+		# All the parameters assignments should have been performed.
 
 		localRC, remoteRC = sys.canonical.rcm.split(configuration.currentSet, self.info.srcLocals)
+
+		# TODO filter out bad extended parameters
+		epaths = secondary.paths.copy()
+		epaths.extendParameters(sys, self.info)
+
+		print "1"*40
+		epaths.dump()
 
 		# Create the local data
 		localconfig    = sys.canonical.configuration(configuration.object, configuration.region, configuration.entrySet, localRC)
@@ -114,7 +125,7 @@ class SplitConstraint(Constraint):
 
 		# Create the remote data
 		remoteconfig    = sys.canonical.configuration(configuration.object, configuration.region, remoteRC, remoteRC)
-		remotesecondary = sys.canonical.secondary(secondary.paths.copy(), secondary.externalReferences or bool(localRC))
+		remotesecondary = sys.canonical.secondary(epaths, secondary.externalReferences or bool(localRC))
 		
 		remotecontext   = context # HACK
 		transferfunctions.gcMerge(sys, self.outputPoint, remotecontext, remoteconfig, remotesecondary)
@@ -134,6 +145,10 @@ class MergeConstraint(Constraint):
 	def combine(self, sys, context, localIndex, localSecondary, remoteIndex, remoteSecondary):
 		mergedRC = sys.canonical.rcm.merge(localIndex.currentSet, remoteIndex.currentSet)
 		mergedIndex = sys.canonical.configuration(localIndex.object, localIndex.region, localIndex.entrySet, mergedRC)
+
+		print "2"*40
+		remoteSecondary.paths.dump()
+
 
 		mergedSecondary = sys.canonical.secondary(remoteSecondary.paths.copy(), localSecondary.externalReferences)
 

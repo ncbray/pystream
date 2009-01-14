@@ -306,3 +306,30 @@ class PathInformation(object):
 		self.misses = self.canonicalSet(misses)
 
 		return self, changed
+
+	def extendParameters(self, sys, info):
+		def extendSet(s):
+			if s:
+				for path in s:
+					eparam = path.makeExtendedParameter(sys, info.parameters)
+					if eparam:
+						self.equivalence.union(path, eparam)
+						info.extendedParameters.add(eparam)
+
+		extendSet(self.equivalence.parents.keys())
+		extendSet(self.hits)
+		extendSet(self.misses)
+
+		self._rebuildHitMiss()
+
+
+	def dump(self):
+		print "HITS"
+		print self.hits
+		print
+		print "MISSES"
+		print self.misses
+		print
+		print "EQUIVALENCES"
+		self.equivalence.dump()
+		print

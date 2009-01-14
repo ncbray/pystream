@@ -244,7 +244,7 @@ class ShapeConstraintBuilder(object):
 		# so defer linking until after all the functions have been processed.
 
 
-		splitMergeInfo = constraints.SplitMergeInfo() 
+		splitMergeInfo = constraints.SplitMergeInfo(self.functionLocalExprs[dstFunc]) 
 		splitMergeInfo.srcLocals = self.functionLocalSlots[self.function]
 		splitMergeInfo.dstLocals = self.functionLocalSlots[dstFunc]
 

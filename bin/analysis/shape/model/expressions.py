@@ -41,6 +41,11 @@ class Expression(object):
 		# No idea if it matches...
 		return MayAlias
 
+	def makeExtendedParameter(self, sys, parameters):
+		if self.hasParameterRoot(parameters):
+			return sys.canonical.extendedParameter(self)
+		else:
+			return None
 
 ##	def split(self):
 ##		return None, self.slot
@@ -75,6 +80,9 @@ class NullExpr(Expression):
 	def __len__(self):
 		return 0
 
+	def hasParameterRoot(self, parameters):
+		return False
+	
 null = NullExpr()
 
 class LocalExpr(Expression):
@@ -112,6 +120,9 @@ class LocalExpr(Expression):
 
 	def __len__(self):
 		return 1
+
+	def hasParameterRoot(self, parameters):
+		return self in parameters
 
 
 class FieldExpr(Expression):
@@ -178,6 +189,9 @@ class FieldExpr(Expression):
 	def __len__(self):
 		return self._length
 
+	def hasParameterRoot(self, parameters):
+		return self.parent.hasParameterRoot(parameters)
+
 class ExtendedParameter(Expression):
 	__slots__ = 'expr'
 	def __init__(self, expr):
@@ -210,3 +224,6 @@ class ExtendedParameter(Expression):
 
 	def __len__(self):
 		return 1
+
+	def hasParameterRoot(self, parameters):
+		return False

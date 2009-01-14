@@ -20,6 +20,9 @@ class Expression(object):
 	def isSlot(self):
 		return False
 
+	def isNull(self):
+		return False
+
 	def split(self):
 		return None, self.slot
 
@@ -48,6 +51,9 @@ class NullExpr(Expression):
 		return NoAlias
 
 	def isTrivial(self):
+		return True
+
+	def isNull(self):
 		return True
 
 	def __len__(self):

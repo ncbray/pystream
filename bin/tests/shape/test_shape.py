@@ -89,9 +89,8 @@ class TestExpressions(unittest.TestCase):
 		#expectedMisses = set((self.one_a_b, self.zero_a))
 		expectedMisses = set((self.one_a_b,))
 
-		
-		self.assertEqual(newPaths.hits, expectedHits)
-		self.assertEqual(newPaths.misses, expectedMisses)
+		self.checkHitMiss(newPaths, expectedHits, expectedMisses)
+
 		
 
 	def testUpdateHitMiss2(self):
@@ -113,8 +112,7 @@ class TestExpressions(unittest.TestCase):
 		expectedHits = None
 		expectedMisses = set((self.one_a_b,))
 
-		self.assertEqual(newPaths.hits, expectedHits)
-		self.assertEqual(newPaths.misses, expectedMisses)
+		self.checkHitMiss(newPaths, expectedHits, expectedMisses)
 
 
 	def testUpdateHitMiss3(self):
@@ -136,8 +134,16 @@ class TestExpressions(unittest.TestCase):
 		expectedHits = None
 		expectedMisses = set((self.one_a_b,))
 
-		self.assertEqual(newPaths.hits, expectedHits)
-		self.assertEqual(newPaths.misses, expectedMisses)
+		self.checkHitMiss(newPaths, expectedHits, expectedMisses)
+
+	def checkHitMiss(self, newPaths, hits, misses):
+		if hits:
+			for hit in hits:
+				self.assertEqual(newPaths.classifyHitMiss(hit), (True, False))
+
+		if misses:
+			for miss in misses:
+				self.assertEqual(newPaths.classifyHitMiss(miss), (False, True))
 
 
 ##class TestFilterUnstable(unittest.TestCase):
@@ -426,7 +432,7 @@ class TestLocalAssignConstraint(TestConstraintBase):
 		# x(b.x|) -> x(|)
 		argument = (self.xRef, (self.bxExpr,), None)
 		results = [
-			(self.xRef, None, None),
+			(self.xRef, None, None, (self.bxExpr,)),
 			]
 		self.checkTransfer(argument, results)
 
@@ -442,7 +448,7 @@ class TestLocalAssignConstraint(TestConstraintBase):
 		# x(|b.x) -> x(|)
 		argument = (self.xRef, None, (self.bxExpr,))
 		results = [
-			(self.xRef, None, None),
+			(self.xRef, None, None, (self.bxExpr,)),
 			]
 		self.checkTransfer(argument, results)
 
@@ -620,6 +626,8 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		# bx(b.x|) -> b
 		argument = (self.bxRef, (self.bxExpr,), None)
 		results = [
+			#(self.bRef, None, None, (self.bxExpr,)),
+			# HACK bxExpr should not be a miss, as it is trivially computable...
 			(self.bRef, None, None),
 			]
 		self.checkTransfer(argument, results)	

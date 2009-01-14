@@ -113,6 +113,8 @@ class TestSimpleCase(TestCompoundConstraintBase):
 			]
 		self.checkTransfer(argument, results)
 
+		#self.dump()
+
 	def testLocal2(self):
 		self.setInOut(self.funcInput, self.funcOutput)
 
@@ -122,6 +124,9 @@ class TestSimpleCase(TestCompoundConstraintBase):
 			]
 		self.checkTransfer(argument, results)
 
+		#self.dump()
+
+
 	def testLocal3(self):
 		self.setInOut(self.funcInput, self.funcOutput)
 
@@ -130,6 +135,9 @@ class TestSimpleCase(TestCompoundConstraintBase):
 			(self.nRef, None, None),
 			]
 		self.checkTransfer(argument, results)
+
+		#self.dump()
+
 
 	def testLocal4(self):
 		self.setInOut(self.funcInput, self.funcOutput)

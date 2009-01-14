@@ -37,13 +37,28 @@ class TestConstraintBase(unittest.TestCase):
 		return lcl, slot, expr
 
 
+	def hitsFromRC(self, index):
+		hits = []
+		for slot, count in index.counts:
+			if slot.isLocal():
+				hits.append(self.sys.canonical.localExpr(slot))
+		return hits
+
 	def convert(self, row, entry):
 		type_  = None
 		region = None
-		current, hits, misses = row
+		
+		if len(row) == 3:
+			current, hits, misses = row
+		else:
+			current, hits, misses, unknowns = row
+			
 		hits = util.compressedset.copy(hits)
 		misses = util.compressedset.copy(misses)
 		external = False
+
+		hits = util.compressedset.union(hits, self.hitsFromRC(current))
+
 
 		index = self.sys.canonical.configuration(type_, region, entry, current)
 		paths = self.sys.canonical.paths(hits, misses)
@@ -74,19 +89,48 @@ class TestConstraintBase(unittest.TestCase):
 		conf, secondary = self.convert(argument, entry)
 
 
+		start = time.clock()
 		self.sys.environment.merge(self.sys, inputPoint, context, conf, secondary)
 		self.sys.process()
+		self.elapsed = time.clock()-start
 
-		self.assertEqual(self.countOutputs(), len(results))
+		#self.assertEqual(self.countOutputs(), len(results))
 
-		for row in results:
-			econf, esecondary = self.convert(row, entry)
-			secondary = self.sys.environment.secondary(outputPoint, context, econf)
 
-			self.assertNotEqual(secondary, None, "Expected output %r not found." % econf)
-			self.assertEqual(secondary.paths.hits, esecondary.paths.hits)
-			self.assertEqual(secondary.paths.misses, esecondary.paths.misses)	
+		try:
+			for row in results:
+				econf, esecondary = self.convert(row, entry)
+				
+				secondary = self.sys.environment.secondary(outputPoint, context, econf)
 
+				self.assertNotEqual(secondary, None, "Expected output %r not found." % econf)
+
+				if len(row) == 3:
+					current, hits, misses = row
+					unknowns = None
+				else:
+					current, hits, misses, unknowns = row
+
+				if hits:
+					for e in hits:
+						self.assertEqual(secondary.paths.classifyHitMiss(e), (True, False), "%r should be a hit." % e)
+
+				if misses:
+					for e in misses:
+						self.assertEqual(secondary.paths.classifyHitMiss(e), (False, True), "%r should be a miss." % e)
+
+				if unknowns:
+					for e in unknowns:
+						self.assertEqual(secondary.paths.classifyHitMiss(e), (False, False), "%r should be unknown." % e)
+
+		except AssertionError:
+			print
+			print "DUMP"
+			print secondary.paths.hits
+			print secondary.paths.misses
+			secondary.paths.equivalence.dump()
+			print
+			raise
 
 class TestCompoundConstraintBase(TestConstraintBase):
 	def makeConstraints(self, func):
@@ -139,7 +183,9 @@ class TestCompoundConstraintBase(TestConstraintBase):
 
 		self.dump(self.outputPoint)
 
-	def dump(self, point):
+	def dump(self, point=None):
+		if point is None:
+			point = self.outputPoint
 		print
 		print "/%s\\" % ("*"*80)
 		self.dumpPoint(point)

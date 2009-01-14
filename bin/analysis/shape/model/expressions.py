@@ -23,11 +23,30 @@ class Expression(object):
 	def isNull(self):
 		return False
 
-	def split(self):
-		return None, self.slot
+	def isExtendedParameter(self):
+		return False
 
-	def __iter__(self):
-		return iter(self.split())
+	def isTrivial(self):
+		return len(self) <= 1
+
+	def _pathAlias(self, paths):
+		mustHit, mustMiss = paths.classifyHitMiss(self)
+
+		# A known hit
+		if mustHit: return MustAlias
+
+		# A known miss
+		if mustMiss: return NoAlias
+
+		# No idea if it matches...
+		return MayAlias
+
+
+##	def split(self):
+##		return None, self.slot
+##
+##	def __iter__(self):
+##		return iter(self.split())
 
 class NullExpr(Expression):
 	__slots__ = ()
@@ -50,9 +69,6 @@ class NullExpr(Expression):
 	def refersTo(self, sys, index, paths):
 		return NoAlias
 
-	def isTrivial(self):
-		return True
-
 	def isNull(self):
 		return True
 
@@ -69,13 +85,9 @@ class LocalExpr(Expression):
 		self.slot = slot
 
 	def stableLocation(self, sys, slot, stableValues):
-		#assert slot.isSlot(), slot
 		return True
 
 	def stableValue(self, sys, slot, stableValues):
-		#assert slot.isSlot(), slot		
-
-		# TODO self will never be in stable values, as it would be trivial?
 		if self.slot == slot and (stableValues is None or self not in stableValues):
 			return False
 		else:
@@ -97,9 +109,6 @@ class LocalExpr(Expression):
 			return MustAlias
 		else:
 			return NoAlias
-
-	def isTrivial(self):
-		return True
 
 	def __len__(self):
 		return 1
@@ -160,23 +169,44 @@ class FieldExpr(Expression):
 		if not index.referedToBySlot(self.slot):
 			return NoAlias
 
-		mustHit, mustMiss = paths.classifyHitMiss(self)
-
-		# A known hit
-		if mustHit: return MustAlias
-
-		# A known miss
-		if mustMiss: return NoAlias
-
-		# No idea if it matches...
-		return MayAlias
-
-	def isTrivial(self):
-		return False
-
-	def split(self):
-		return self.parent, self.slot
+		return self._pathAlias(paths)
+		
+##	def split(self):
+##		return self.parent, self.slot
 
 
 	def __len__(self):
 		return self._length
+
+class ExtendedParameter(Expression):
+	__slots__ = 'expr'
+	def __init__(self, expr):
+		assert expr.isExpression()
+		self.expr = expr
+		self.slot = expr.slot # HACK
+
+	def stableLocation(self, sys, slot, stableValues):
+		return True
+
+	def stableValue(self, sys, slot, stableValues):
+		if self.slot == slot and (stableValues is None or self not in stableValues):
+			return False
+		else:
+			return True
+
+
+	# Assumes eNew is a stableLocation.
+	def substitute(self, sys, eOld, eNew, unstableSlot=None, first=True):
+		if self == eOld:
+			return eNew
+		else:
+			return None
+		
+	def path(self):
+		return "ext(%s)" % self.expr.path()
+
+	def refersTo(self, sys, index, paths):
+		return self._pathAlias(paths)
+
+	def __len__(self):
+		return 1

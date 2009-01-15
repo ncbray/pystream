@@ -474,7 +474,7 @@ class EquivalenceClass(object):
 			else:
 				eq.absorb(existing)
 
-	def copy(self, lut, kill):
+	def copy(self, lut, kill, keepHits=False, keepMisses=False):
 		if self in lut:
 			return lut[self]
 		else:
@@ -486,9 +486,11 @@ class EquivalenceClass(object):
 			cls.forward = None
 
 			for attr, next in self:
-				if attr not in kill:
-					other = next.copy(lut, kill)
-					cls.setAttr(attr, other)		
+				if attr in kill:
+					if not (keepHits and next.hit or keepMisses and next.miss):
+						continue
+				other = next.copy(lut, kill, keepHits, keepMisses)
+				cls.setAttr(attr, other)		
 			return cls
 
 	def dump(self, processed):
@@ -554,13 +556,6 @@ class EquivalenceClass(object):
 class PathInformation(object):
 	__slots__ = 'hits', 'misses', 'root'
 
-##	@classmethod
-##	def fromHitMiss(cls, hits, misses, bogus):
-##		p = PathInformation()
-##		if hits: p.union(*hits)
-##		return p.unionHitMiss(hits, misses)
-
-
 	def __init__(self, root=None):
 		self.hits   = None
 		self.misses = None
@@ -572,11 +567,11 @@ class PathInformation(object):
 			self.root  = root
 	
 
-	def copy(self, kill=None):
+	def copy(self, kill=None, keepHits=False, keepMisses=False):
 		if kill is None:
 			kill = set()
 		lut = {}
-		root = self.root.copy(lut, kill)
+		root = self.root.copy(lut, kill, keepHits, keepMisses)
 		return PathInformation(root)
 
 	def equivalenceClass(self, expr, create=False):
@@ -620,20 +615,6 @@ class PathInformation(object):
 		else:
 			return False
 
-##	def enumerateMustAlias(self, paths):
-##		# Assumes paths in canonical...
-##		paths = self.canonicalSet(paths) # HACK?
-##		if paths:
-##			return paths.union([path for path in self.equivalence if self.equivalence[path] in paths])
-##		else:
-##			return None
-##
-##	def canonicalSet(self, paths):
-##		if paths:
-##			return set([self.equivalence[path] for path in paths])
-##		else:
-##			return None
-
 	def classifyHitMiss(self, e):
 		cls = self.equivalenceClass(e)
 		if cls:
@@ -656,34 +637,58 @@ class PathInformation(object):
 					# may be recursively absorbed.
 					largest.absorb(eq.getForward())
 
-	def markHit(self, path):
+	def _markHit(self, path):
 		cls = self.equivalenceClass(path, True)
 		cls.hit = True
 
-	def markMiss(self, path):
+	def _markMiss(self, path):
 		cls = self.equivalenceClass(path, True)
 		cls.miss = True
 
 	def unionHitMiss(self, additionalHits, additionalMisses):
 		outp = self.copy()
+		outp.inplaceUnionHitMiss(additionalHits, additionalMisses)
+		return outp
 
+	def inplaceUnionHitMiss(self, additionalHits, additionalMisses):
 		# HACK should really be unioning misses?
 		if additionalHits:
+			#self.union(*additionalHits)
 			for path in additionalHits:
-				outp.markHit(path)
+				self._markHit(path)
 
 		if additionalMisses:
 			for path in additionalMisses:
-				outp.markMiss(path)
-		return outp
+				self._markMiss(path)
+		return self
 
 
-	def unify(self, sys, e1, e0):
+	def inplaceUnify(self, sys, e1, e0):
 		self.union(e1, e0)
 
+	def stableLocation(self, expr, slot, keepHits=False, keepMisses=False):
+		path = expr.path()
+		cls  = self.root
+
+		# The :-1 due to the stable location.
+		for attr in path[:-1]:
+			if cls:
+				next = cls.getAttr(attr)
+				if attr is slot:
+					if next and (keepHits and next.hit or keepMisses and next.miss):
+						pass
+					else:
+						return False
+				cls = next
+			
+			elif attr is slot:
+				return False
+
+		return True
+
 	# Deletes set elements, therefore problematic.
-	def filterUnstable(self, sys, slot, stableValues):
-		outp = self.copy(set([slot]))
+	def filterUnstable(self, slot, keepHits=False, keepMisses=False):
+		outp = self.copy(set([slot]), keepHits, keepMisses)
 		return outp
 		
 

@@ -36,11 +36,11 @@ class TestPathInformation(TestPathInformationBase):
 		info = pathinformation.PathInformation()
 		info = info.unionHitMiss((self.an,self.bn), ())
 
-		filtera = info.filterUnstable(None, self.a.slot, ())
+		filtera = info.filterUnstable(self.a.slot)
 		self.assertEqual(filtera.classifyHitMiss(self.an), (False, False))
 		self.assertEqual(filtera.classifyHitMiss(self.bn), (True,  False))
 
-		filterb = info.filterUnstable(None, self.b.slot, ())
+		filterb = info.filterUnstable(self.b.slot)
 		self.assertEqual(filterb.classifyHitMiss(self.an), (True,   False))
 		self.assertEqual(filterb.classifyHitMiss(self.bn), (False,  False))
 

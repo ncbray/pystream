@@ -63,10 +63,14 @@ def updateHitMiss(sys, e0, e1, b0, b1, slot, paths):
 
 
 	stableValues = paths.misses if b0 else paths.hits	
-	e0StableLocation = e0.stableLocation(sys, slot, stableValues)
-	e1StableLocation = e1.stableLocation(sys, slot, stableValues)
 
-	newPaths = paths.filterUnstable(sys, slot, stableValues)
+
+	hitsStable = not b0
+	missesStable = b0
+	e0StableLocation = paths.stableLocation(e0, slot, keepHits=hitsStable, keepMisses=missesStable)
+	e1StableLocation = paths.stableLocation(e1, slot, keepHits=hitsStable, keepMisses=missesStable)
+
+	newPaths = paths.filterUnstable(slot, keepHits=hitsStable, keepMisses=missesStable)
 
 
 	# For "store" like statements... 
@@ -76,13 +80,13 @@ def updateHitMiss(sys, e0, e1, b0, b1, slot, paths):
 		# Does the cell hit or miss the LHS?
 		# Depends on if it hits or misses the RHS
 		hitmiss = ((e0,),()) if b1 else ((), (e0,))
-		newPaths = newPaths.unionHitMiss(*hitmiss)
+		newPaths = newPaths.inplaceUnionHitMiss(*hitmiss)
 
 
 	# Substitutes *e0 where *e1 occurs.
 	# Should this occur before filtering?
 	if e0StableLocation and e1StableLocation and not e1.isNull():		
-		newPaths.unify(sys, e1, e0)
+		newPaths.inplaceUnify(sys, e1, e0)
 
 	return newPaths
 

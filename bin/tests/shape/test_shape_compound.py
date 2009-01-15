@@ -125,18 +125,17 @@ class TestSimpleCase(TestCompoundConstraintBase):
 		#self.dump()
 
 
-##	def testLocal4(self):
-##		self.setInOut(self.funcInput, self.funcOutput)
-##
-##		argument = (self.n2Ref, None, None)
-##		results = [
-##			(self.nRef, None, None),
-##			(self.n2Ref, None, None),
-##			(self.n3Ref, None, None),
-##			]
-##		self.checkTransfer(argument, results)
-##
-##		self.dump()
+	def testLocal4(self):
+		self.setInOut(self.funcInput, self.funcOutput)
+
+		argument = (self.n2Ref, None, None)
+		results = [
+			(self.nRef, None, None),
+			(self.n2Ref, None, None),
+			(self.n3Ref, None, None),
+			]
+		self.checkTransfer(argument, results)
+		#self.dump()
 		
 	def testCall1(self):		
 		argument = (self.aRef, None, None)

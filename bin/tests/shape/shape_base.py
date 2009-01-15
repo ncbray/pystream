@@ -72,6 +72,19 @@ class TestConstraintBase(unittest.TestCase):
 				count += 1
 		return count
 
+	def dumpOutputs(self):
+		print
+		print "DUMP"
+		for (point, context, index), secondary in self.sys.environment._secondary.iteritems():
+			if point == self.outputPoint:
+				print ">"*40
+				print index
+				print
+				secondary.paths.dump()
+				print "<"*40
+				print
+
+
 	def setInOut(self, inp, outp):
 		self.inputPoint = inp
 		self.outputPoint = outp
@@ -128,9 +141,15 @@ class TestConstraintBase(unittest.TestCase):
 				print
 				secondary.paths.dump()
 				print
+			else:
+				self.dumpOutputs()
 			raise
 
-		self.assertEqual(self.countOutputs(), len(results))
+		try:
+			self.assertEqual(self.countOutputs(), len(results))
+		except AssertionError:
+			self.dumpOutputs()
+			raise
 
 
 	def dumpPoint(self, givenPoint):

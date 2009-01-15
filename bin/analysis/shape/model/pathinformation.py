@@ -510,14 +510,55 @@ class EquivalenceClass(object):
 			for k, v in self:
 				v.dump(processed)
 
+	def inplaceIntersect(self, other, lut):
+		key = (self, other)
+		if key in lut:
+			# HACK changed flag?
+			return lut[key], False
+
+		# Has the equivalence class been split into two?
+		changed = self in lut
+
+		eq = EquivalenceClass()
+		# Cache it
+		lut[key] = eq
+
+		# Mark it as being visited
+		lut[self] = True
+
+		# Transfer hit
+		if self.hit:
+			if other.hit:
+				eq.hit = True
+			else:
+				changed = True
+
+		# Transfer miss
+		if self.miss:
+			if other.miss:
+				eq.miss = True
+			else:
+				changed = True
+
+		for k, v in self:
+			ov = other.getAttr(k)
+			if ov:
+				newV, newChanged = v.inplaceIntersect(ov, lut)
+				eq.setAttr(k, newV)
+				changed |= newChanged
+			else:
+				changed = True
+
+		return eq, changed
+
 class PathInformation(object):
 	__slots__ = 'hits', 'misses', 'root'
 
-	@classmethod
-	def fromHitMiss(cls, hits, misses, bogus):
-		p = PathInformation()
-		if hits: p.union(*hits)
-		return p.unionHitMiss(hits, misses)
+##	@classmethod
+##	def fromHitMiss(cls, hits, misses, bogus):
+##		p = PathInformation()
+##		if hits: p.union(*hits)
+##		return p.unionHitMiss(hits, misses)
 
 
 	def __init__(self, root=None):
@@ -646,48 +687,32 @@ class PathInformation(object):
 		return outp
 		
 
-##	# Intersects equivilence sets, therefore problematic
-##	def inplaceMerge(self, other):
-##		newEquivalence = UnionFind()
-##
-##		pairs  = {}
-##		hits   = set()
-##		misses = set()
-##		changed = False
-##
-##		for k in self.equivalence.parents.iterkeys():
-##			if k in other.equivalence.parents.iterkeys():
-##				selfg  = self.equivalence[k]
-##				otherg = self.equivalence[k]
-##				pairKey = (selfg, otherg)
-##				if not pairKey in pairs:
-##					pairs[pairKey] = k
-##				else:
-##					newEquivalence.union(pairs[pairKey], k)
-##
-##				selfHit,  selfMiss = self.classifyHitMiss(k)
-##				otherHit, otherMiss = other.classifyHitMiss(k)
-##
-##				if selfHit:
-##					if otherHit:
-##						hits.add(k)
-##					else:
-##						changed = True		
-##				if selfMiss:
-##					if otherMiss:
-##						if not k.slot.isLocal() or k in newEquivalence.parents:
-##							misses.add(k)
-##					else:
-##						changed = True
-##			else:
-##				# HACK not sound
-##				changed = True
-##
-##		self.equivalence = newEquivalence
-##		self.hits   = self.canonicalSet(hits)
-##		self.misses = self.canonicalSet(misses)
-##
-##		return self, changed
+	# Intersects equivilence sets, therefore problematic
+	def inplaceMerge(self, other):
+		lut = {}
+
+##		print
+##		print "MERGE"
+##		print
+##		print "SELF"
+##		self.root.dump(set())
+##		print
+##		print "OTHER"
+##		other.root.dump(set())
+##		print
+
+		
+		newRoot, changed = self.root.inplaceIntersect(other.root, lut)
+
+##		print "CHILD", changed
+##		newRoot.dump(set())
+##		print
+##		print
+
+		if changed:
+			self.root = newRoot
+
+		return self, changed
 
 	def extendParameters(self, sys, info):
 		for param in info.parameters:

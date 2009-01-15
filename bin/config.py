@@ -7,10 +7,11 @@ outputDirectory = "c:/projects/pystream/summaries"
 if True:
 	limitedTest = [
 		'tests.shape.test_shape',
+		'tests.shape.test_shape_examples',
 		'tests.shape.test_shape_compound',
 		#'tests.shape.test_shape_paths',
 		'tests.shape.test_shape_pathinfo',
-		'tests.test_database',
+		#'tests.test_database',
 		#'tests.test_compressedset',
 		#'tests.test_full',
 		#'tests.test_lattice',

@@ -31,6 +31,7 @@ class CanonicalObjects(object):
 			cache[key] = c
 		return c
 
+	# This is a hack to seed the analysis.
 	def paths(self, hits, misses):
 		# Validate
 		if hits:
@@ -40,7 +41,9 @@ class CanonicalObjects(object):
 			for miss in misses:
 				assert miss.isExpression(), miss
 
-		return pathinformation.PathInformation.fromHitMiss(hits, misses, self.fieldExpr)
+		paths = pathinformation.PathInformation()
+		paths = paths.unionHitMiss(hits, misses)
+		return paths
 
 	def secondary(self, paths, external):
 		assert isinstance(external, bool)

@@ -116,3 +116,33 @@ class TestPathInformation(TestPathInformationBase):
 		self.assert_(info.mustAlias(self.dn, self.dnn))
 
 		self.assert_(info.mustAlias(self.an, self.bnn))
+
+
+	def testIntersect1(self):
+		info1 = pathinformation.PathInformation()
+		info1.union(self.a, self.an)
+		self.assert_(info1.mustAlias(self.a, self.an))
+		self.assert_(info1.mustAlias(self.a, self.ann))
+
+
+		info2 = pathinformation.PathInformation()
+		info2.union(self.a, self.ann)
+		self.assert_(not info2.mustAlias(self.a, self.an))
+		self.assert_(info2.mustAlias(self.a, self.ann))
+
+
+		info3, changed = info1.inplaceMerge(info2)
+
+		self.assert_(changed)
+		self.assert_(not info3.mustAlias(self.a, self.an))
+		self.assert_(info3.mustAlias(self.a, self.ann))
+
+		info3, changed = info3.inplaceMerge(info1)
+		self.assert_(not changed)
+		self.assert_(not info3.mustAlias(self.a, self.an))
+		self.assert_(info3.mustAlias(self.a, self.ann))
+
+		info3, changed = info3.inplaceMerge(info2)
+		self.assert_(not changed)
+		self.assert_(not info3.mustAlias(self.a, self.an))
+		self.assert_(info3.mustAlias(self.a, self.ann))

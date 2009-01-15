@@ -441,12 +441,11 @@ class EquivalenceClass(object):
 		else:
 			return None
 
-	def setAttr(self, attr, eq):
-		if self.attrs is None:
-			self.attrs = {}
+	def setAttr(self, attr, eq, steal=False):
+		if self.attrs is None: self.attrs = {}
 		assert not attr in self.attrs
 		self.attrs[attr] = eq
-		eq.weight += 1
+		if not steal: eq.weight += 1
 		return eq
 
 	def absorb(self, other):
@@ -455,6 +454,24 @@ class EquivalenceClass(object):
 		self.weight += other.weight
 		other.forward = self
 
+		# Recursively absorb attributes...
+		# NOTE other is forwarded, so the attributes of other won't change...
+		for k, v in other:
+			self.absorbAttr(k, v)
+
+			# We might have gotten absorbed?
+			self = self.getForward()
+
+	def absorbAttr(self, attr, eq):
+		existing = self.getAttr(attr)
+
+		if existing is None:
+			self.setAttr(attr, eq, steal=True)
+		elif existing is not eq:
+			if existing.weight >= eq:
+				existing.absorb(eq)
+			else:
+				eq.absorb(existing)
 
 	def copy(self, lut, kill):
 		if self in lut:
@@ -595,7 +612,9 @@ class PathInformation(object):
 
 				eqs.remove(largest)
 				for eq in eqs:
-					largest.absorb(eq)
+					# Get forward is critical, as equivilence classes
+					# may be recursively absorbed.
+					largest.absorb(eq.getForward())
 
 	def markHit(self, path):
 		cls = self.equivalenceClass(path, True)

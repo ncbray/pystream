@@ -21,6 +21,7 @@ class TestPathInformationBase(unittest.TestCase):
 		self.a, self.an, self.ann = self.makeExprs('a')
 		self.b, self.bn, self.bnn = self.makeExprs('b')
 		self.c, self.cn, self.cnn = self.makeExprs('c')
+		self.d, self.dn, self.dnn = self.makeExprs('d')
 
 		self.x, self.xn, self.xnn = self.makeExprs('x')
 		self.y, self.yn, self.ynn = self.makeExprs('y')
@@ -69,3 +70,49 @@ class TestPathInformation(TestPathInformationBase):
 
 		self.assert_(info.mustAlias(self.a, self.an))
 		self.assert_(info.mustAlias(self.an, self.ann))
+
+
+	def testTricky1(self):
+		info = pathinformation.PathInformation()
+		info.union(self.an, self.bn)
+		info.union(self.cn, self.dn)
+		info.union(self.b, self.c)
+
+		self.assert_(not info.mustAlias(self.a, self.b))
+		self.assert_(info.mustAlias(self.b, self.c))
+		self.assert_(not info.mustAlias(self.c, self.d))
+
+		self.assert_(info.mustAlias(self.an, self.bn))
+		self.assert_(info.mustAlias(self.an, self.cn))
+		self.assert_(info.mustAlias(self.an, self.dn))
+		self.assert_(info.mustAlias(self.bn, self.cn))
+		self.assert_(info.mustAlias(self.bn, self.dn))
+		self.assert_(info.mustAlias(self.cn, self.dn))
+
+
+	def testTricky2(self):
+		info = pathinformation.PathInformation()
+		info.union(self.an, self.ann)
+		info.union(self.dn, self.dnn)
+
+		info.union(self.an, self.bn)
+		info.union(self.cn, self.dn)
+		info.union(self.b, self.c)
+
+		self.assert_(not info.mustAlias(self.a, self.b))
+		self.assert_(info.mustAlias(self.b, self.c))
+		self.assert_(not info.mustAlias(self.c, self.d))
+
+		self.assert_(info.mustAlias(self.an, self.bn))
+		self.assert_(info.mustAlias(self.an, self.cn))
+		self.assert_(info.mustAlias(self.an, self.dn))
+		self.assert_(info.mustAlias(self.bn, self.cn))
+		self.assert_(info.mustAlias(self.bn, self.dn))
+		self.assert_(info.mustAlias(self.cn, self.dn))
+
+		self.assert_(info.mustAlias(self.an, self.ann))
+		self.assert_(info.mustAlias(self.bn, self.bnn))
+		self.assert_(info.mustAlias(self.cn, self.cnn))
+		self.assert_(info.mustAlias(self.dn, self.dnn))
+
+		self.assert_(info.mustAlias(self.an, self.bnn))

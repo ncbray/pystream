@@ -146,3 +146,58 @@ class TestPathInformation(TestPathInformationBase):
 		self.assert_(not changed)
 		self.assert_(not info3.mustAlias(self.a, self.an))
 		self.assert_(info3.mustAlias(self.a, self.ann))
+
+
+
+class TestPathInfoSplit(unittest.TestCase):
+	def makeLocalExpr(self, lcl):
+		lclSlot = self.canonical.localSlot(lcl)
+		lclExpr = self.canonical.localExpr(lclSlot)
+		return lclExpr
+
+	def makeExpr(self, root, *fields):
+		expr = root
+		for slot in fields:
+			expr = self.canonical.fieldExpr(expr, slot)
+		return expr
+
+	def setUp(self):
+		self.canonical = canonical.CanonicalObjects()
+		self.f = self.canonical.fieldSlot(None, 'f')
+		self.l = self.canonical.fieldSlot(None, 'l')
+		self.r = self.canonical.fieldSlot(None, 'r')
+
+		self.x    = self.makeLocalExpr('x')
+		self.y    = self.makeLocalExpr('y')
+		self.z    = self.makeLocalExpr('z')
+		self.this = self.makeLocalExpr('this')
+
+		self.xf  = self.makeExpr(self.x, self.f)
+		self.yr  = self.makeExpr(self.y, self.r)
+		self.yrl = self.makeExpr(self.y, self.r, self.l)
+		self.zf  = self.makeExpr(self.z, self.f)
+		self.zfl  = self.makeExpr(self.z, self.f, self.l)
+
+		self.tr = self.makeExpr(self.this, self.r)
+		self.trl = self.makeExpr(self.this, self.r, self.l)
+	
+		self.paths = self.makeBase()
+
+
+	def makeBase(self):
+		paths = pathinformation.PathInformation()
+		paths.union(self.xf, self.yrl)
+		paths.union(self.yr, self.zf)
+		paths.union(self.this, self.y)
+		paths.inplaceUnionHitMiss((self.xf,), None)
+		return paths
+		
+	def testHits(self):
+		self.assertEqual(self.paths.classifyHitMiss(self.xf),  (True, False))
+		self.assertEqual(self.paths.classifyHitMiss(self.yrl), (True, False))
+		self.assertEqual(self.paths.classifyHitMiss(self.trl), (True, False))
+
+		self.assertEqual(self.paths.classifyHitMiss(self.yr), (False, False))
+		self.assertEqual(self.paths.classifyHitMiss(self.zf), (False, False))
+
+		

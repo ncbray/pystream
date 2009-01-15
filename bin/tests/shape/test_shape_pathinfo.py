@@ -200,4 +200,14 @@ class TestPathInfoSplit(unittest.TestCase):
 		self.assertEqual(self.paths.classifyHitMiss(self.yr), (False, False))
 		self.assertEqual(self.paths.classifyHitMiss(self.zf), (False, False))
 
-		
+	def testExtendParameters(self):
+		parameterSlots = set((self.this.slot,))
+		self.paths.extendParameters(self.canonical, parameterSlots)
+
+		eparam = self.canonical.extendedParameter(self.trl)
+		self.assertEqual(self.paths.classifyHitMiss(eparam),  (True, False))
+
+		eparam = self.canonical.extendedParameter(self.tr)
+		self.assert_(self.paths.mustAlias(eparam, self.tr))
+		self.assert_(self.paths.mustAlias(eparam, self.yr))
+		self.assert_(self.paths.mustAlias(eparam, self.zf))

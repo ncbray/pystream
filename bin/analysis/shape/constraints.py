@@ -51,8 +51,9 @@ class CopyConstraint(Constraint):
 		transferfunctions.gcMerge(sys, self.outputPoint, context, configuration, secondary)
 
 class SplitMergeInfo(object):
-	def __init__(self, parameters):
+	def __init__(self, parameters, parameterSlots):
 		self.parameters = parameters
+		self.parameterSlots = parameterSlots
 		self.extendedParameters = set()
 		
 		self.remoteLUT = {}
@@ -110,7 +111,8 @@ class SplitConstraint(Constraint):
 
 		# TODO filter out bad extended parameters
 		epaths = secondary.paths.copy()
-		epaths.extendParameters(sys, self.info)
+		eparams = epaths.extendParameters(sys.canonical, self.info.parameterSlots)
+		self.info.extendedParameters.update(eparams)
 
 		# Create the local data
 		localconfig    = sys.canonical.configuration(configuration.object, configuration.region, configuration.entrySet, localRC)

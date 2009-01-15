@@ -153,6 +153,35 @@ class EquivalenceClass(object):
 
 		return eq, changed
 
+	def findExtended(self, canonical, path, newParam, processed):
+		if self not in processed:
+			processed.add(self)
+			eparam = canonical.extendedParameterFromPath(path)
+			newParam[eparam] = self
+			for slot, eq in self:
+				eq.findExtended(canonical, path+(slot,), newParam, processed)
+			processed.remove(self)
+
+	def extendParameters(self, canonical, parameters):
+		for param in parameters:
+			assert param.isSlot(), param
+			
+		processed = set()
+		newParam  = {}
+
+		# Find the extended parameters
+		for slot, eq in self:
+			if slot in parameters:
+				eq.findExtended(canonical, (slot,), newParam, processed)
+
+		# Root them
+		# Done is a seperate stage to prevent wacking the previous iterator
+		for eparam, eq in newParam.iteritems():
+			self.setAttr(eparam, eq)
+
+		# Report the new roots
+		return set(newParam.iterkeys())
+
 class PathInformation(object):
 	__slots__ = 'hits', 'root'
 
@@ -304,14 +333,8 @@ class PathInformation(object):
 
 		return self, changed
 
-	def extendParameters(self, sys, info):
-		for param in info.parameters:
-			eparam = param.makeExtendedParameter(sys, info.parameters)
-			info.extendedParameters.add(eparam)
-			self.union(param, eparam)
-
-		# TODO reach for dotted paths?
-
+	def extendParameters(self, canonical, parameterSlots):
+		return self.root.extendParameters(canonical, parameterSlots)
 
 	def dump(self):
 		processed = set()

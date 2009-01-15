@@ -216,10 +216,10 @@ class FieldExpr(Expression):
 		return self.parent.hasParameterRoot(parameters)
 
 class ExtendedParameter(Expression):
-	__slots__ = 'expr'
-	def __init__(self, expr):
-		assert expr.isExpression()
-		self.expr = expr
+	__slots__ = '_path'
+	def __init__(self, path):
+		assert isinstance(path, tuple)
+		self._path = path
 		self.slot = self # HACK?
 
 	def stableLocation(self, sys, slot, stableValues):
@@ -245,8 +245,8 @@ class ExtendedParameter(Expression):
 		else:
 			return None
 	
-	def pathString(self):
-		return "ext(%s)" % self.expr.path()
+	def __repr__(self):
+		return "ext(%s)" % ".".join([str(slot) for slot in self._path])
 
 	def refersTo(self, sys, index, paths):
 		return self._pathAlias(paths)

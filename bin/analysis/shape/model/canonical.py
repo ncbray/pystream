@@ -63,15 +63,18 @@ class CanonicalObjects(object):
 
 	def extendedParameter(self, expr):
 		assert isinstance(expr, expressions.Expression), expr
+		return self.extendedParameterFromPath(expr.path())
 
-		key = expr
+	def extendedParameterFromPath(self, path):
+		assert isinstance(path, tuple), path
+
+		key = path
 		cache = self.extendedParameterCache
 		e = cache.get(key)
 		if not e:
-			e = expressions.ExtendedParameter(expr)
+			e = expressions.ExtendedParameter(path)
 			cache[key] = e
 		return e
-
 
 	def localSlot(self, lcl):
 		assert not isinstance(lcl, slots.Slot), lcl

@@ -9,6 +9,7 @@ if True:
 		'tests.shape.test_shape',
 		'tests.shape.test_shape_compound',
 		#'tests.shape.test_shape_paths',
+		'tests.shape.test_shape_pathinfo',
 		'tests.test_database',
 		#'tests.test_compressedset',
 		#'tests.test_full',

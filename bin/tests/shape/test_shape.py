@@ -602,7 +602,9 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		# x(a.x | b.x) -> x(a.x, b.x.x | b.x)
 		argument = (self.xRef, (self.axExpr,), (self.bxExpr,))
 		results = [
-			(self.xRef, (self.axExpr,self.bxxExpr), (self.bxExpr,)),
+			# TODO depends on if "stable" paths are preserved
+			#(self.xRef, (self.axExpr,self.bxxExpr), (self.bxExpr,)),
+			(self.xRef, (), (self.bxExpr,)),
 			]
 		self.checkTransfer(argument, results)	
 

@@ -12,7 +12,7 @@ class Expression(object):
 		pass
 
 	def __repr__(self):
-		return "expr(%s)" % self.path()
+		return "expr(%s)" % self.pathString()
 
 	def isExpression(self):
 		return True
@@ -47,6 +47,9 @@ class Expression(object):
 		else:
 			return None
 
+	def path(self):
+		return (self.slot,)
+
 ##	def split(self):
 ##		return None, self.slot
 ##
@@ -66,9 +69,12 @@ class NullExpr(Expression):
 		return True
 
 	def substitute(self, sys, eOld, eNew, unstableSlot=None, first=True):
-		return self
+		return None
 
-	def path(self):
+	def substituteSet(self, sys, eOld, eNew):
+		return None
+
+	def pathString(self):
 		return 'null'
 
 	def refersTo(self, sys, index, paths):
@@ -109,7 +115,13 @@ class LocalExpr(Expression):
 		else:
 			return None
 
-	def path(self):
+	def substituteSet(self, sys, eOld, eNew):
+		if self == eOld:
+			return eNew
+		else:
+			return None
+
+	def pathString(self):
 		return str(self.slot)
 
 	def refersTo(self, sys, index, paths):
@@ -123,6 +135,7 @@ class LocalExpr(Expression):
 
 	def hasParameterRoot(self, parameters):
 		return self in parameters
+
 
 
 class FieldExpr(Expression):
@@ -168,8 +181,15 @@ class FieldExpr(Expression):
 		return None
 
 
+	def substituteSet(self, sys, eOld, eNew):
+		subs = self.parent.substituteSet(sys, eOld, eNew)
+		if subs:
+			return [sys.canonical.fieldExpr(expr, self.slot) for expr in subs]
+		else:
+			return None
 
-	def path(self):
+
+	def pathString(self):
 		return "%s.%s" % (self.parent.path(), str(self.slot))
 
 
@@ -185,6 +205,9 @@ class FieldExpr(Expression):
 ##	def split(self):
 ##		return self.parent, self.slot
 
+	def path(self):
+		return self.parent.path() + (self.slot,)
+
 
 	def __len__(self):
 		return self._length
@@ -197,7 +220,7 @@ class ExtendedParameter(Expression):
 	def __init__(self, expr):
 		assert expr.isExpression()
 		self.expr = expr
-		self.slot = expr.slot # HACK
+		self.slot = self # HACK?
 
 	def stableLocation(self, sys, slot, stableValues):
 		return True
@@ -215,8 +238,14 @@ class ExtendedParameter(Expression):
 			return eNew
 		else:
 			return None
-		
-	def path(self):
+
+	def substituteSet(self, sys, eOld, eNew):
+		if self == eOld:
+			return eNew
+		else:
+			return None
+	
+	def pathString(self):
 		return "ext(%s)" % self.expr.path()
 
 	def refersTo(self, sys, index, paths):
@@ -227,3 +256,6 @@ class ExtendedParameter(Expression):
 
 	def hasParameterRoot(self, parameters):
 		return False
+
+	def path(self):
+		return (self,)

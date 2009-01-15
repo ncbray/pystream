@@ -94,9 +94,6 @@ class TestConstraintBase(unittest.TestCase):
 		self.sys.process()
 		self.elapsed = time.clock()-start
 
-		#self.assertEqual(self.countOutputs(), len(results))
-
-
 		try:
 			for row in results:
 				econf, esecondary = self.convert(row, entry)
@@ -124,29 +121,17 @@ class TestConstraintBase(unittest.TestCase):
 						self.assertEqual(secondary.paths.classifyHitMiss(e), (False, False), "%r should be unknown." % e)
 
 		except AssertionError:
-			print
-			print "DUMP"
-			print secondary.paths.hits
-			print secondary.paths.misses
-			secondary.paths.equivalence.dump()
-			print
+			if secondary:
+				print
+				print "DUMP"
+				print econf
+				print
+				secondary.paths.dump()
+				print
 			raise
 
-class TestCompoundConstraintBase(TestConstraintBase):
-	def makeConstraints(self, func):
-		builder = self.sys.constraintbuilder
-		builder.process(func)
-		return builder.statementPre[func], builder.statementPost[func]
+		self.assertEqual(self.countOutputs(), len(results))
 
-
-	def createInput(self, ref):
-		entry = ref if self.cs else None
-		argument = (ref, None, None)
-		conf, secondary = self.convert(argument, entry)
-		self.setInput(conf, secondary)
-
-	def setInput(self, conf, secondary):
-		self.sys.environment.merge(self.sys, self.inputPoint, self.context, conf, secondary)
 
 	def dumpPoint(self, givenPoint):
 		mapping = self.sys.environment._secondary
@@ -175,14 +160,6 @@ class TestCompoundConstraintBase(TestConstraintBase):
 		print "Steps:", "%d/%d" % (self.sys.worklist.usefulSteps, self.sys.worklist.steps)
 
 
-	def process(self):
-		start = time.clock()
-		self.sys.process()
-		end = time.clock()
-		self.elapsed = end-start
-
-		self.dump(self.outputPoint)
-
 	def dump(self, point=None):
 		if point is None:
 			point = self.outputPoint
@@ -198,3 +175,29 @@ class TestCompoundConstraintBase(TestConstraintBase):
 			print "Time: %.1f s" % (self.elapsed)
 		print "\\%s/" % ("*"*80)
 		print
+
+class TestCompoundConstraintBase(TestConstraintBase):
+	def makeConstraints(self, func):
+		builder = self.sys.constraintbuilder
+		builder.process(func)
+		return builder.statementPre[func], builder.statementPost[func]
+
+
+	def createInput(self, ref):
+		entry = ref if self.cs else None
+		argument = (ref, None, None)
+		conf, secondary = self.convert(argument, entry)
+		self.setInput(conf, secondary)
+
+	def setInput(self, conf, secondary):
+		self.sys.environment.merge(self.sys, self.inputPoint, self.context, conf, secondary)
+
+##	def process(self):
+##		start = time.clock()
+##		self.sys.process()
+##		end = time.clock()
+##		self.elapsed = end-start
+##
+##		self.dump(self.outputPoint)
+
+

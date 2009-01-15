@@ -365,10 +365,11 @@ class ShapeConstraintBuilder(object):
 
 		self.current = self.returnPoint
 
-		# Generate a kill constraint for the locals.
-		returnExpr = self.sys.canonical.localExpr(self.sys.canonical.localSlot(node.code.returnparam))
-		lcls = self.functionLocalExprs[self.function] - set((returnExpr,))
-		self.forgetAll(lcls)
+		if True:
+			# Generate a kill constraint for the locals.
+			returnExpr = self.sys.canonical.localExpr(self.sys.canonical.localSlot(node.code.returnparam))
+			lcls = self.functionLocalExprs[self.function] - set((returnExpr,))
+			self.forgetAll(lcls)
 
 		post = self.post(node)
 

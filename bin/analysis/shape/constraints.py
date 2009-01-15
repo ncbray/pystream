@@ -112,9 +112,6 @@ class SplitConstraint(Constraint):
 		epaths = secondary.paths.copy()
 		epaths.extendParameters(sys, self.info)
 
-		print "1"*40
-		epaths.dump()
-
 		# Create the local data
 		localconfig    = sys.canonical.configuration(configuration.object, configuration.region, configuration.entrySet, localRC)
 		localpaths     = sys.canonical.paths(None, None)
@@ -129,6 +126,12 @@ class SplitConstraint(Constraint):
 		
 		remotecontext   = context # HACK
 		transferfunctions.gcMerge(sys, self.outputPoint, remotecontext, remoteconfig, remotesecondary)
+
+		print "1"*40
+		print remoteconfig
+		print
+		epaths.dump()
+
 
 
 class MergeConstraint(Constraint):
@@ -146,10 +149,17 @@ class MergeConstraint(Constraint):
 		mergedRC = sys.canonical.rcm.merge(localIndex.currentSet, remoteIndex.currentSet)
 		mergedIndex = sys.canonical.configuration(localIndex.object, localIndex.region, localIndex.entrySet, mergedRC)
 
+
+		kill = set([p.slot for p in self.info.parameters])
+		kill.update([ep.slot for ep in self.info.extendedParameters])
+		paths = remoteSecondary.paths.copy(kill)
+
 		print "2"*40
-		remoteSecondary.paths.dump()
+		print remoteIndex
+		print
+		paths.dump()
 
 
-		mergedSecondary = sys.canonical.secondary(remoteSecondary.paths.copy(), localSecondary.externalReferences)
+		mergedSecondary = sys.canonical.secondary(paths, localSecondary.externalReferences)
 
 		transferfunctions.gcMerge(sys, self.outputPoint, context, mergedIndex, mergedSecondary)

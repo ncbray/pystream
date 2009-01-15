@@ -453,6 +453,7 @@ class EquivalenceClass(object):
 		self.miss   |= other.miss
 		self.weight += other.weight
 		other.forward = self
+		other.weight  = 0
 
 		# Recursively absorb attributes...
 		# NOTE other is forwarded, so the attributes of other won't change...
@@ -480,16 +481,14 @@ class EquivalenceClass(object):
 			cls = EquivalenceClass()
 			lut[self] = cls
 
-			for attr, next in self:
-				if attr not in kill:
-					other = next.copy(lut, kill)
-					cls.setAttr(attr, other)
-			
 			cls.hit     = self.hit
 			cls.miss    = self.miss
 			cls.forward = None
-			cls.weight  = self.weight
 
+			for attr, next in self:
+				if attr not in kill:
+					other = next.copy(lut, kill)
+					cls.setAttr(attr, other)		
 			return cls
 
 	def dump(self, processed):
@@ -503,7 +502,7 @@ class EquivalenceClass(object):
 			else:
 				hm = ''
 			
-			print id(self), hm
+			print "%d (%d) %s" % (id(self), self.weight, hm)
 			for k, v in self:
 				print '\t', k, id(v)
 			print

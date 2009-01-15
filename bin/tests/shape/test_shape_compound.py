@@ -241,8 +241,13 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 		
 		argument = (self.nRef, None, None)
 		results = [
-			(self.nRef, None, (self.xnExpr,)),
-			(self.retnRef, (self.xnExpr,), None),
+			#(self.nRef, None, (self.xnExpr,)),
+			#(self.retnRef, (self.xnExpr,), None),
+
+			# No information about x/y/etc as there's no extended parameters...
+			(self.nRef, None, None),
+			(self.retnRef, None, None),
+
 			]
 		self.checkTransfer(argument, results)
 

@@ -127,10 +127,10 @@ class SplitConstraint(Constraint):
 		remotecontext   = context # HACK
 		transferfunctions.gcMerge(sys, self.outputPoint, remotecontext, remoteconfig, remotesecondary)
 
-		print "1"*40
-		print remoteconfig
-		print
-		epaths.dump()
+##		print "1"*40
+##		print remoteconfig
+##		print
+##		epaths.dump()
 
 
 
@@ -154,10 +154,10 @@ class MergeConstraint(Constraint):
 		kill.update([ep.slot for ep in self.info.extendedParameters])
 		paths = remoteSecondary.paths.copy(kill)
 
-		print "2"*40
-		print remoteIndex
-		print
-		paths.dump()
+##		print "2"*40
+##		print remoteIndex
+##		print
+##		paths.dump()
 
 
 		mergedSecondary = sys.canonical.secondary(paths, localSecondary.externalReferences)

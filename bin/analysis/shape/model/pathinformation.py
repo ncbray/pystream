@@ -372,23 +372,33 @@ class PathInformation(object):
 		else:
 			return False, False
 
-	def union(self, *paths):
-		if len(paths) > 1:
-			eqs = set([self.equivalenceClass(path, True) for path in paths])
-			if len(eqs) > 1:
-				largest = None
-				for eq in eqs:
-					if largest is None or eq.weight > largest.weight:
-						largest = eq
+	def union(self, a, b, *paths):
+		# TODO Can create a prunable branch... eliminate?
 
-				eqs.remove(largest)
-				for eq in eqs:
-					# Get forward is critical, as equivilence classes
-					# may be recursively absorbed.
-					largest = largest.absorb(eq.getForward())
-				return largest
-			else:
-				return eqs.pop()
+		# Get the equivalence classes of all the paths
+		eqs = set()
+		eqs.add(self.equivalenceClass(a, True))
+		eqs.add(self.equivalenceClass(b, True))
+		for path in paths:
+			eqs.add(self.equivalenceClass(path, True))
+
+		if len(eqs) > 1:			
+			# Choose the biggest equivalence class as the new class
+			# This minimizes forwarding (unless there's wierd cycles)
+			largest = None
+			for eq in eqs:
+				if largest is None or eq.weight > largest.weight:
+					largest = eq
+
+			# Merge the equivalence classes
+			eqs.remove(largest)
+			for eq in eqs:
+				# Get forward is critical, as equivilence classes
+				# may be recursively absorbed.
+				largest = largest.absorb(eq.getForward())
+			return largest
+		else:
+			return eqs.pop()
 
 	def _markHit(self, path):
 		cls = self.equivalenceClass(path, True)

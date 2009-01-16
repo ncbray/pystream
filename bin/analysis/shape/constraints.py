@@ -68,12 +68,15 @@ class ForgetConstraint(Constraint):
 
 class SplitMergeInfo(object):
 	def __init__(self, parameters, parameterSlots):
-		self.parameters = parameters
+		#self.parameters = parameters
 		self.parameterSlots = parameterSlots
 		self.extendedParameters = set()
 		
 		self.remoteLUT = {}
 		self.localLUT  = {}
+
+		# Return value transfer and extended parameter killing
+		self.mapping   = {}
 
 	def _mergeLUT(self, splitIndex, index, secondary, lut):
 		if splitIndex not in lut:
@@ -113,54 +116,61 @@ class SplitMergeInfo(object):
 				for localIndex, localSecondary in local.iteritems():
 					self.merge.combine(sys, context, localIndex, localSecondary, remoteIndex, remoteSecondary)
 
+	def addExtendedParameters(self, eparam):
+		newParam = eparam-self.extendedParameters
+		if newParam:
+			for p in newParam:
+				self.mapping[p] = None
+			self.extendedParameters.update(newParam)
+			
 class SplitConstraint(Constraint):
 	__slots__ = 'info'
 
 	def __init__(self, sys, inputPoint, outputPoint, info):
 		Constraint.__init__(self, sys, inputPoint, outputPoint)
 		self.info = info
-		
+
+	def _accessedCallback(self, slot):
+		if slot.isExpression():
+			# Extended parameter
+			return False
+		if slot.isSlot() and slot.isLocal():
+			return slot in self.info.parameterSlots
+		else:
+			return True
+
 	def evaluate(self, sys, point, context, configuration, secondary):
 		# All the parameters assignments should have been performed.
 
+		# Split the reference count into accessed and non-accessed portions
 		localRC, remoteRC = sys.canonical.rcm.split(configuration.currentSet, self.info.srcLocals)
 
-		# TODO filter out bad extended parameters
+		# TODO filter out bad extended parameters (from self-recursive calls?)
+
+		# Add extended parameters to paths
 		epaths = secondary.paths.copy()
-		
 		eparams = epaths.extendParameters(sys.canonical, self.info.parameterSlots)
-		self.info.extendedParameters.update(eparams)
+		self.info.addExtendedParameters(eparams)
 
-		def callback(slot):
-			if slot.isExpression():
-				return False # Extended parameter
-			if slot.isSlot() and slot.isLocal():
-				return slot in self.info.parameterSlots
-			else:
-				return True
-
-		remotepaths, localpaths = epaths.split(eparams, callback)
+		# Split the paths into accessed and non-accessed portions
+		remotepaths, localpaths = epaths.split(eparams, self._accessedCallback)
 
 
 		# Create the local data
 		localconfig    = sys.canonical.configuration(configuration.object, configuration.region, configuration.entrySet, localRC)
 		localsecondary = sys.canonical.secondary(localpaths, secondary.externalReferences)
 
+		# Output the local data
 		self.info.registerLocal(sys, remoteRC, localconfig, localsecondary)
 
 
 		# Create the remote data
 		remoteconfig    = sys.canonical.configuration(configuration.object, configuration.region, remoteRC, remoteRC)
 		remotesecondary = sys.canonical.secondary(remotepaths, secondary.externalReferences or bool(localRC))
-		
+
+		# Output the remote data
 		remotecontext   = context # HACK
 		transferfunctions.gcMerge(sys, self.outputPoint, remotecontext, remoteconfig, remotesecondary)
-
-##		print "1"*40
-##		print remoteconfig
-##		print
-##		epaths.dump()
-
 
 
 class MergeConstraint(Constraint):
@@ -175,27 +185,15 @@ class MergeConstraint(Constraint):
 		self.info.registerRemote(sys, configuration.entrySet, configuration, secondary)
 
 	def combine(self, sys, context, localIndex, localSecondary, remoteIndex, remoteSecondary):
-		# Build remapping dict
-		mapping = {}
-		for ep in self.info.extendedParameters:
-			mapping[ep] = None
-			
-		mapping[self.info.targetSlot] = None
-		mapping[self.info.returnSlot] = self.info.targetSlot
-
+		# Merge the index
 		mergedRC = sys.canonical.rcm.merge(localIndex.currentSet, remoteIndex.currentSet)
-		mergedRC = mergedRC.remap(sys, mapping)
-
+		mergedRC = mergedRC.remap(sys, self.info.mapping)
 		mergedIndex = sys.canonical.configuration(localIndex.object, localIndex.region, localIndex.entrySet, mergedRC)
 
+		# Merge the secondary
 		paths = remoteSecondary.paths.join(localSecondary.paths)
-		paths = paths.remap(mapping)
-
-##		print "2"*40
-##		print remoteIndex
-##		print
-##		paths.dump()
-
+		paths = paths.remap(self.info.mapping)
 		mergedSecondary = sys.canonical.secondary(paths, localSecondary.externalReferences)
 
+		# Output
 		transferfunctions.gcMerge(sys, self.outputPoint, context, mergedIndex, mergedSecondary)

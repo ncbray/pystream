@@ -245,26 +245,31 @@ class ShapeConstraintBuilder(object):
 		splitMergeInfo.srcLocals = self.functionLocalSlots[self.function]
 		splitMergeInfo.dstLocals = self.functionLocalSlots[dstFunc]
 
-		splitMergeInfo.returnSlot = calleeparams.returnparam.slot
-		splitMergeInfo.targetSlot = callerargs.returnarg.slot
+		# Create a mapping to transfer the return value.
+		returnSlot = calleeparams.returnparam.slot
+		targetSlot = callerargs.returnarg.slot
+		splitMergeInfo.mapping[targetSlot] = None
+		splitMergeInfo.mapping[returnSlot] = targetSlot
 		
 
-		# Call invoke
+		# Call invoke: split the information
 		self.current = callPoint
 		self.mapArguments(callerargs, calleeparams, info)
 
-
+		# Make the constraint
 		# TODO context sensitive copy?
 		pre = self.current
 		post = self.functionCallPoint[dstFunc]
 		constraint = constraints.SplitConstraint(self.sys, pre, post, splitMergeInfo)
 		self.constraints.append(constraint)
 
-		# Call return
+		# Call return: merge the information
 		pre  = self.functionReturnPoint[dstFunc]
 		post = returnPoint
 		constraint = constraints.MergeConstraint(self.sys, pre, post, splitMergeInfo)
 		self.constraints.append(constraint)
+
+		self.current = returnPoint
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, target):

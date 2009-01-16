@@ -23,3 +23,7 @@ class Configuration(object):
 	def decrementRef(self, sys, slot):
 		newrefs = sys.canonical.decrementRef(self.currentSet, slot)
 		return [sys.canonical.configuration(self.object, self.region, self.entrySet, current) for current in newrefs]
+
+	def forget(self, sys, kill):
+		currentSet = self.currentSet.forget(sys, kill)
+		return sys.canonical.configuration(self.object, self.region, self.entrySet, currentSet)

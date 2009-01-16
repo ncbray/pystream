@@ -50,6 +50,22 @@ class CopyConstraint(Constraint):
 		# Simply changes the program point.
 		transferfunctions.gcMerge(sys, self.outputPoint, context, configuration, secondary)
 
+class ForgetConstraint(Constraint):
+	__slots__ = 'forget'
+
+	def __init__(self, sys, inputPoint, outputPoint, forget):
+		Constraint.__init__(self, sys, inputPoint, outputPoint)
+
+		for slot in forget:
+			assert slot.isSlot(), slot
+		self.forget = forget
+
+	def evaluate(self, sys, point, context, configuration, secondary):
+		newSecondary = secondary.forget(sys, self.forget)
+		newConfig    = configuration.forget(sys, self.forget)
+		transferfunctions.gcMerge(sys, self.outputPoint, context, newConfig, newSecondary)
+
+
 class SplitMergeInfo(object):
 	def __init__(self, parameters, parameterSlots):
 		self.parameters = parameters

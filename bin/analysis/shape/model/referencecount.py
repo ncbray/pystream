@@ -173,3 +173,13 @@ class ReferenceCount(object):
 
 	def __len__(self):
 		return len(self.counts)+len(self.radius)
+
+	def forget(self, sys, kill):
+		newcounts = {}
+		for slot, count in self.counts.iteritems():
+			if slot not in kill:
+				newcounts[slot] = count
+
+		newradius = frozenset([slot for slot in self.radius if slot not in kill])
+
+		return sys.canonical.rcm.getCanonical(newcounts, newradius)

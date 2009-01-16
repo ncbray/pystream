@@ -275,7 +275,6 @@ class EquivalenceClass(object):
 		for slot in kills:
 			self.delAttr(slot)
 
-
 class PathInformation(object):
 	__slots__ = 'hits', 'root'
 
@@ -298,6 +297,9 @@ class PathInformation(object):
 
 	def forgetRoots(self, kill):
 		self.root.forgetRoots(kill)
+
+	def forget(self, kill):
+		return self.copy(kill)
 
 	def equivalenceClass(self, expr, create=False):
 		path = expr.path()

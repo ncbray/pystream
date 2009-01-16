@@ -99,11 +99,13 @@ class ShapeConstraintBuilder(object):
 		self.constraints.append(constraint)
 
 	def forget(self, lcl):
-		self.assign(expressions.null, lcl)
+		self.forgetAll((lcl.slot,))
 
-	def forgetAll(self, exprs):
-		for expr in exprs:
-			self.forget(expr)
+	def forgetAll(self, slots):
+		pre = self.current
+		post = self.advance()
+		constraint = constraints.ForgetConstraint(self.sys, pre, post, frozenset(slots))
+		self.constraints.append(constraint)
 
 	def copy(self, src, dst):
 		constraint = constraints.CopyConstraint(self.sys, src, dst)
@@ -368,8 +370,8 @@ class ShapeConstraintBuilder(object):
 
 		if True:
 			# Generate a kill constraint for the locals.
-			returnExpr = self.sys.canonical.localExpr(self.sys.canonical.localSlot(node.code.returnparam))
-			lcls = self.functionLocalExprs[self.function] - set((returnExpr,))
+			returnSlot = self.sys.canonical.localSlot(node.code.returnparam)
+			lcls = self.functionLocalSlots[self.function] - set((returnSlot,))
 			self.forgetAll(lcls)
 
 		post = self.post(node)

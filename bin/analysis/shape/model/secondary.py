@@ -24,3 +24,6 @@ class SecondaryInformation(object):
 
 	def copy(self):
 		return SecondaryInformation(self.paths.copy(), self.externalReferences)
+
+	def forget(self, sys, kill):
+		return sys.canonical.secondary(self.paths.forget(kill), self.externalReferences)

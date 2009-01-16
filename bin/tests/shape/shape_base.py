@@ -161,15 +161,12 @@ class TestConstraintBase(unittest.TestCase):
 			print conf.object, conf.region
 			print conf.entrySet
 			print conf.currentSet
-			if secondary.paths.hits:
-				print "hits"
-				for hit in secondary.paths.hits:
-					print '\t', hit
-			if secondary.paths.misses:
-				print "misses"
-				for miss in secondary.paths.misses:
-					print '\t', miss
+			print
+			print "PATHS"
+			print
+			secondary.paths.dump()
 			print "externalReferences: %r" % secondary.externalReferences
+			print "|%s|" % ("="*80)
 			print
 
 	def dumpStatistics(self):

@@ -15,6 +15,9 @@ class EquivalenceClass(object):
 			for k in self.attrs.iterkeys():
 				yield k, self.getAttr(k)
 
+	def isTrivial(self, ignoreMiss=False):
+		return not (self.attrs or self.hit or (self.miss and not ignoreMiss) or self.weight > 1)
+
 	def getForward(self):
 		if self.forward:
 			forward = self.forward.getForward()
@@ -52,6 +55,17 @@ class EquivalenceClass(object):
 		del self.attrs[attr]
 		eq.weight -= 1
 		
+	def _prune(self):
+		kill = []
+		for attr, eq in self:
+			eq._prune()
+			if eq.isTrivial():
+				kill.append(attr)
+		for attr in kill:
+			self.delAttr(attr)		
+
+	def prune(self):
+		self._prune()
 
 	def absorb(self, other):
 		self.hit    |= other.hit
@@ -96,6 +110,8 @@ class EquivalenceClass(object):
 				if attr in kill:
 					if not (keepHits and next.hit or keepMisses and next.miss):
 						continue
+				if next.isTrivial(): continue
+
 				other = next.copy(lut, kill, keepHits, keepMisses)
 				cls.setAttr(attr, other)		
 			return cls
@@ -413,4 +429,5 @@ class PathInformation(object):
 		# parameters but that may be mutated will be seperated from those that cannot
 		# be mutated.
 		# Example {s.n, t.m} will be lost if only n is accessed.
-		return self, PathInformation(self.root.splitHidden(extendedParameters, accessedCallback))
+		hidden = PathInformation(self.root.splitHidden(extendedParameters, accessedCallback))
+		return self, hidden

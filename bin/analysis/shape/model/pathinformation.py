@@ -46,6 +46,13 @@ class EquivalenceClass(object):
 		if not steal: eq.weight += 1
 		return eq
 
+	def delAttr(self, attr):
+		eq = self.getAttr(attr)
+		assert eq is not None, "Attribute not found."
+		del self.attrs[attr]
+		eq.weight -= 1
+		
+
 	def absorb(self, other):
 		self.hit    |= other.hit
 		self.miss   |= other.miss
@@ -181,6 +188,61 @@ class EquivalenceClass(object):
 
 		# Report the new roots
 		return set(newParam.iterkeys())
+
+	def _splitHidden(self, extendedParameters, sharedEq, accessedCallback, lut):
+		# NOTE will not prune pure non-accessed cycles
+		# This is because the function assumes that all recursive cycles are non-pure.
+		if self in lut:
+			# Recurse
+			return lut[self]
+		else:
+			# Shared nodes are considered pure, as they will be re-merged.
+			initalPure = self in sharedEq
+			
+			eq = EquivalenceClass()
+			eq.hit  = self.hit
+			eq.miss = self.miss
+			lut[self] = (eq, initalPure)
+
+			# Copy unaccessable paths
+			pure = True
+			kill = []
+			for slot, next in self:
+				if accessedCallback(slot):
+					# Node is impure
+					pure = False
+				else:
+					newNext, newPure = next._splitHidden(extendedParameters, sharedEq, accessedCallback, lut)
+					pure &= newPure
+					eq.setAttr(slot, newNext)
+					
+					if newPure and slot not in extendedParameters:
+						kill.append(slot)
+
+			# Kill all of the pure paths.
+			for slot in kill:
+				self.delAttr(slot)
+
+			# Are we pure, and didn't already know it?
+			if pure and not initalPure:
+				lut[self] = (eq, pure)
+			
+			return lut[self]
+
+	def splitHidden(self, extendedParameters, accessedCallback):
+		sharedEq = set()
+		#sharedEq.add(self)
+		for ep in extendedParameters:
+			eq = self.getAttr(ep)
+			if eq: sharedEq.add(eq)
+
+		lut = {}
+
+		hidden, pure = self._splitHidden(extendedParameters, sharedEq, accessedCallback, {})		
+		return hidden
+
+
+
 
 class PathInformation(object):
 	__slots__ = 'hits', 'root'
@@ -339,3 +401,11 @@ class PathInformation(object):
 	def dump(self):
 		processed = set()
 		self.root.dump(processed)
+
+	def split(self, extendedParameters, accessedCallback):
+		# NOTE mutates structure
+		# NOTE is lossy, some equivalences that are not obviously accessable from
+		# parameters but that may be mutated will be seperated from those that cannot
+		# be mutated.
+		# Example {s.n, t.m} will be lost if only n is accessed.
+		return self, PathInformation(self.root.splitHidden(extendedParameters, accessedCallback))

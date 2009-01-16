@@ -170,7 +170,7 @@ class TestPathInfoSplit(unittest.TestCase):
 		self.x    = self.makeLocalExpr('x')
 		self.y    = self.makeLocalExpr('y')
 		self.z    = self.makeLocalExpr('z')
-		self.this = self.makeLocalExpr('this')
+		self.t = self.makeLocalExpr('this')
 
 		self.xf  = self.makeExpr(self.x, self.f)
 		self.yr  = self.makeExpr(self.y, self.r)
@@ -178,8 +178,12 @@ class TestPathInfoSplit(unittest.TestCase):
 		self.zf  = self.makeExpr(self.z, self.f)
 		self.zfl  = self.makeExpr(self.z, self.f, self.l)
 
-		self.tr = self.makeExpr(self.this, self.r)
-		self.trl = self.makeExpr(self.this, self.r, self.l)
+		self.tr = self.makeExpr(self.t, self.r)
+		self.trl = self.makeExpr(self.t, self.r, self.l)
+
+		self.et = self.canonical.extendedParameter(self.t)
+		self.etr = self.canonical.extendedParameter(self.tr)
+		self.etrl = self.canonical.extendedParameter(self.trl)
 	
 		self.paths = self.makeBase()
 
@@ -188,9 +192,13 @@ class TestPathInfoSplit(unittest.TestCase):
 		paths = pathinformation.PathInformation()
 		paths.union(self.xf, self.yrl)
 		paths.union(self.yr, self.zf)
-		paths.union(self.this, self.y)
+		paths.union(self.t, self.y)
 		paths.inplaceUnionHitMiss((self.xf,), None)
 		return paths
+
+	def extendBase(self):
+		parameterSlots = set((self.t.slot,))
+		self.extendedParams = self.paths.extendParameters(self.canonical, parameterSlots)
 		
 	def testHits(self):
 		self.assertEqual(self.paths.classifyHitMiss(self.xf),  (True, False))
@@ -201,13 +209,34 @@ class TestPathInfoSplit(unittest.TestCase):
 		self.assertEqual(self.paths.classifyHitMiss(self.zf), (False, False))
 
 	def testExtendParameters(self):
-		parameterSlots = set((self.this.slot,))
-		self.paths.extendParameters(self.canonical, parameterSlots)
+		self.extendBase()
 
-		eparam = self.canonical.extendedParameter(self.trl)
-		self.assertEqual(self.paths.classifyHitMiss(eparam),  (True, False))
+		self.assertEqual(self.paths.classifyHitMiss(self.etrl),  (True, False))
 
-		eparam = self.canonical.extendedParameter(self.tr)
-		self.assert_(self.paths.mustAlias(eparam, self.tr))
-		self.assert_(self.paths.mustAlias(eparam, self.yr))
-		self.assert_(self.paths.mustAlias(eparam, self.zf))
+		self.assert_(self.paths.mustAlias(self.etr, self.tr))
+		self.assert_(self.paths.mustAlias(self.etr, self.yr))
+		self.assert_(self.paths.mustAlias(self.etr, self.zf))
+
+	def testSplit(self):
+		self.extendBase()
+
+		accessed = set([self.l, self.r, self.t.slot])
+		def accessedCallback(slot):
+			return slot in accessed
+
+		self.assert_(self.paths.mustAlias(self.yr, self.zf))
+		
+		accessed, hidden = self.paths.split(self.extendedParams, accessedCallback)
+
+		self.assert_(accessed.mustAlias(self.tr, self.etr))
+		self.assert_(accessed.mustAlias(self.trl, self.etrl))
+		self.assert_(not accessed.mustAlias(self.y, self.et))
+
+		self.assert_(not accessed.mustAlias(self.yr, self.zf))
+		
+
+		self.assert_(hidden.mustAlias(self.zf, self.etr))
+		self.assert_(hidden.mustAlias(self.xf, self.etrl))
+		self.assert_(hidden.mustAlias(self.y, self.et))
+
+		self.assert_(not hidden.mustAlias(self.yr, self.zf))

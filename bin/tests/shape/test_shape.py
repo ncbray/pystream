@@ -220,7 +220,7 @@ class TestReferenceCounts(unittest.TestCase):
 		self.localz = self.sys.canonical.localSlot('zero')
 		self.localo = self.sys.canonical.localSlot('one')
 
-		self.null = self.sys.canonical.rcm.getCanonical([])
+		self.null = self.sys.canonical.rcm.getCanonical({}, frozenset())
 
 	def scalarIncrement(self, rc, slot):
 		next = self.sys.canonical.incrementRef(rc, slot)
@@ -229,41 +229,44 @@ class TestReferenceCounts(unittest.TestCase):
 
 	def testIncrementSaturate(self):
 		current = None
+		slot = self.fielda
 
 		# HACK to get the refcount k
 		for i in range(self.sys.canonical.rcm.k+1):
-			next = self.scalarIncrement(current, self.localz)
+			next = self.scalarIncrement(current, slot)
 
 			self.assertNotEqual(current, next)
 
 			self.assertEqual(len(next.counts), 1)
-			slot, count = tuple(next.counts)[0]
-			self.assertEqual(slot, self.localz)
-			self.assertEqual(count, i+1)
+			for cslot, count in next.counts.iteritems():
+				self.assertEqual(cslot, slot)
+				self.assertEqual(count, i+1)
 			
 			current = next
 	
-		next = self.scalarIncrement(current, self.localz)
+		next = self.scalarIncrement(current, slot)
 		self.assertEqual(current, next)
 
 	def testDecrement(self):
 		current = None
 
-		inc1 = self.scalarIncrement(None, self.localz)
-		inc2 = self.scalarIncrement(inc1, self.localz)
-		inc3 = self.scalarIncrement(inc2, self.localz)
+		slot = self.fielda
+
+		inc1 = self.scalarIncrement(None, slot)
+		inc2 = self.scalarIncrement(inc1, slot)
+		inc3 = self.scalarIncrement(inc2, slot)
 
 		# Decrementing infinity can yield two different configurations
-		dec2 = self.sys.canonical.decrementRef(inc3, self.localz)		
+		dec2 = self.sys.canonical.decrementRef(inc3, slot)		
 		self.assertEqual(set(dec2), set((inc2,inc3)))
 
 		# Decrementing an "intermediate" value will result in a single 
-		dec1 = self.sys.canonical.decrementRef(inc2, self.localz)
+		dec1 = self.sys.canonical.decrementRef(inc2, slot)
 		self.assertEqual(dec1, (inc1,))
 
 		# Decrementing one can eliminate the reference count
 		# A "null" object is still returned, however.
-		dec0 = self.sys.canonical.decrementRef(inc1, self.localz)
+		dec0 = self.sys.canonical.decrementRef(inc1, slot)
 		self.assertEqual(dec0, (self.null,))
 
 

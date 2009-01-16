@@ -39,7 +39,7 @@ class TestConstraintBase(unittest.TestCase):
 
 	def hitsFromRC(self, index):
 		hits = []
-		for slot, count in index.counts:
+		for slot in index.radius:
 			if slot.isLocal():
 				hits.append(self.sys.canonical.localExpr(slot))
 		return hits

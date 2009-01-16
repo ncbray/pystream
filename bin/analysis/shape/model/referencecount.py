@@ -32,122 +32,144 @@ class ReferenceCountManager(object):
 
 
 	def makeIncrement(self, rc, slot):
-		newrc = []
-		exists = False
-
 		if rc:
 			assert isinstance(rc, ReferenceCount), type(rc)
-			
-			for existingslot, count in rc.counts:
-				if existingslot == slot:
-					newcount = min(count+1, self.infinity)
-					newrc.append((existingslot, newcount))
-					exists = True
-				else:
-					newrc.append((existingslot, count))
+			counts = rc.counts
+			radius = rc.radius
+		else:
+			counts = {}
+			radius = frozenset()
+		
+		if slot.isHeap():
+			newrc = dict(counts)
+			newRadius = radius
+			newrc[slot] = min(newrc.get(slot, 0)+1, self.infinity)
+		elif slot.isLocal():
+			newrc = counts
+			assert slot not in radius, radius
+			newRadius = radius.union((slot,))
+		else:
+			assert False, slot
 
-		if not exists:
-			newrc.append((slot, 1))
-
-		canonical = self.getCanonical(newrc)
+		canonical = self.getCanonical(newrc, newRadius)
 
 		assert canonical is not None
+		assert canonical.referedToBySlot(slot), slot
 
 		return (canonical,)
 
 
 	def makeDecrement(self, rc, slot):
-		newrc = []
-		exists = False
-		saturated = False
-
 		assert isinstance(rc, ReferenceCount), type(rc)
+		assert rc.referedToBySlot(slot), slot
+		counts = rc.counts
+		radius = rc.radius
 
-		for existingslot, count in rc.counts:
-			if existingslot == slot:
-				if count == self.infinity:
-					newrc.append((existingslot, self.k))
-					saturated = True
-				elif count > 1:
-					newrc.append((existingslot, count-1))
+		if slot.isHeap():
+			newrc = dict(counts)
+			newRadius = radius
+			exists = False
+			saturated = False
 
 
-				exists = True
+			count = newrc[slot]
+			if count == self.infinity:
+				newrc[slot] = self.k
+				saturated = True
+			elif count > 1:
+				newrc[slot] = count-1
 			else:
-				newrc.append((existingslot, count))
+			      del newrc[slot]
 
-		assert exists
+			canonical = self.getCanonical(newrc, newRadius)
 
-		
-		canonical = self.getCanonical(newrc)
-
-		if saturated:
-			return (canonical, rc)
+			if saturated:
+				return (canonical, rc)
+			else:
+				# Even if canonical is empty.
+				return (canonical,)		
+		elif slot.isLocal():
+			assert slot in radius, radius
+			canonical = self.getCanonical(counts, radius-frozenset((slot,)))
+			return (canonical,)
 		else:
-			# Even if canonical is empty.
-			return (canonical,)		
+			assert False, slot
 
-	def getCanonical(self, rc):
-##		if not len(rc):
-##			return None
-
+	def getCanonical(self, rc, radius):
 		# Validate the reference counts
-		fields = set()
-		for slot, count in rc:
-			if slot in fields:
-				assert False, "Two counts for the same field: %r" % slot
-			else:
-				fields.add(slot)
+		for slot, count in rc.iteritems():
+			assert slot.isHeap(), slot
+			assert count > 0 and count <= self.infinity, count
 
-		rc = frozenset(rc)
+		for slot in radius:
+			assert slot.isLocal(), slot
+
+		radius = frozenset(radius) 
+		key = (frozenset(rc.iteritems()), radius)
 		
-		if not rc in self.absoluteLUT:
-			obj = ReferenceCount(rc)
-			self.absoluteLUT[rc] = obj
+		if key not in self.absoluteLUT:
+			obj = ReferenceCount(rc, radius)
+			self.absoluteLUT[key] = obj
 		else:
-			obj = self.absoluteLUT[rc]
-
+			obj = self.absoluteLUT[key]
 		return obj
 
 
 	def split(self, rc, valid):
-		validrc   = []
-		invalidrc = []
+		validrc   = {}
+		invalidrc = {}
 		
-		for slot, count in rc.counts:
+		for slot, count in rc.counts.iteritems():
 			if slot in valid:
-				validrc.append((slot, count))
+				validrc[slot] = count
 			else:
-				invalidrc.append((slot, count))
+				invalidrc[slot] = count
 
-		return self.getCanonical(validrc), self.getCanonical(invalidrc)
+		validradius = []
+		invalidradius = []
+
+		for slot in rc.radius:
+			if slot in valid:
+				validradius.append(slot)
+			else:
+				invalidradius.append(slot)
+
+		a = self.getCanonical(validrc, validradius)
+		b = self.getCanonical(invalidrc, invalidradius)
+
+		#assert self.merge(a, b) is rc
+		return a, b
 
 	def merge(self, a, b):
 		# Assumes the reference counts are disjoint.
-		newrc = []
-		if a: newrc.extend(a.counts)
-		if b: newrc.extend(b.counts)
-		return self.getCanonical(newrc)
+		newrc = {}
+		if a: newrc.update(a.counts)
+		if b: newrc.update(b.counts)
+		return self.getCanonical(newrc, a.radius.union(b.radius))
 
 class ReferenceCount(object):
-	__slots__ = 'counts'
+	__slots__ = 'counts', 'radius'
 
-	def __init__(self, counts):
+	def __init__(self, counts, radius):
+		assert isinstance(counts, dict), type(counts)
 		self.counts = counts
+		self.radius = radius
 
 	def __repr__(self):
-		return "rc(%s)" % ", ".join(["%s=%s" % rc for rc in self.counts])
+		rc = ["%s=%s" % p for p in self.counts.iteritems()]
+		rc.extend([str(r) for r in self.radius])
+		return "rc(%s)" % ", ".join(rc)
 
 	def referedToBySlot(self, slot):
-		#assert slot.isSlot(), slot
-		# Ugly and slow.
-		for rslot, count in self.counts:
-			if rslot == slot:
-				return True
-		return False
+		if slot.isHeap():
+			return slot in self.counts
+		elif slot.isLocal():
+			return slot in self.radius
+		else:
+			assert False, slot
 
 	def isExpression(self):
 		return False
 
 	def __len__(self):
-		return len(self.counts)
+		return len(self.counts)+len(self.radius)

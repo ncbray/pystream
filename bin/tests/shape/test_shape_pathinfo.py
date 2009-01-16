@@ -148,8 +148,7 @@ class TestPathInformation(TestPathInformationBase):
 		self.assert_(info3.mustAlias(self.a, self.ann))
 
 
-
-class TestPathInfoSplit(unittest.TestCase):
+class PathInfoBase(unittest.TestCase):
 	def makeLocalExpr(self, lcl):
 		lclSlot = self.canonical.localSlot(lcl)
 		lclExpr = self.canonical.localExpr(lclSlot)
@@ -161,6 +160,7 @@ class TestPathInfoSplit(unittest.TestCase):
 			expr = self.canonical.fieldExpr(expr, slot)
 		return expr
 
+class TestPathInfoSplit(PathInfoBase):
 	def setUp(self):
 		self.canonical = canonical.CanonicalObjects()
 		self.f = self.canonical.fieldSlot(None, 'f')
@@ -240,3 +240,71 @@ class TestPathInfoSplit(unittest.TestCase):
 		self.assert_(hidden.mustAlias(self.y, self.et))
 
 		self.assert_(not hidden.mustAlias(self.yr, self.zf))
+
+class TestUglyPathInfoSplit(PathInfoBase):
+	def setUp(self):
+		self.canonical = canonical.CanonicalObjects()
+		self.l = self.canonical.fieldSlot(None, 'l')
+		self.r = self.canonical.fieldSlot(None, 'r')
+
+		self.x    = self.makeLocalExpr('x')
+		self.y    = self.makeLocalExpr('y')
+
+		self.xl  = self.makeExpr(self.x, self.l)
+		self.xlr  = self.makeExpr(self.x, self.l, self.r)
+		self.xlrr  = self.makeExpr(self.x, self.l, self.r, self.r)
+
+		self.yr  = self.makeExpr(self.y, self.r)
+		self.yrr  = self.makeExpr(self.y, self.r, self.r)
+		self.yrrr  = self.makeExpr(self.y, self.r, self.r, self.r)
+
+	
+		self.paths = self.makeBase()
+
+
+	def makeBase(self):
+		paths = pathinformation.PathInformation()
+		paths.union(self.xl, self.yr)
+		paths.inplaceUnionHitMiss((self.xlrr,), None)
+		return paths
+
+	def extendBase(self):
+		parameterSlots = set()
+		self.extendedParams = self.paths.extendParameters(self.canonical, parameterSlots)
+		
+	def testHits(self):
+		self.assertEqual(self.paths.classifyHitMiss(self.xlrr),  (True, False))
+		self.assertEqual(self.paths.classifyHitMiss(self.yrrr), (True, False))
+
+		self.assertEqual(self.paths.classifyHitMiss(self.xlr), (False, False))
+		self.assertEqual(self.paths.classifyHitMiss(self.yrr), (False, False))
+
+		self.assertEqual(self.paths.classifyHitMiss(self.xl), (False, False))
+		self.assertEqual(self.paths.classifyHitMiss(self.yr), (False, False))
+
+		self.assertEqual(self.paths.classifyHitMiss(self.x), (False, False))
+		self.assertEqual(self.paths.classifyHitMiss(self.y), (False, False))
+
+		self.assert_(self.paths.mustAlias(self.xlr, self.yrr))
+
+	def testSplit(self):
+		self.extendBase() # Should do nothing?
+
+		accessed = set([self.l])
+		def accessedCallback(slot):
+			return slot in accessed
+
+		accessed, hidden = self.paths.split(self.extendedParams, accessedCallback)
+
+
+		self.assertEqual(accessed.classifyHitMiss(self.xlrr),  (True, False))
+		self.assertEqual(accessed.classifyHitMiss(self.yrrr), (False, False))
+		self.assert_(not accessed.mustAlias(self.xlr, self.yrr))
+
+		self.assertEqual(hidden.classifyHitMiss(self.xlrr),  (False, False))
+		self.assertEqual(hidden.classifyHitMiss(self.yrrr), (True, False))
+		self.assert_(not hidden.mustAlias(self.xlr, self.yrr))
+	
+##		accessed.dump()
+##		print "="*80
+##		hidden.dump()

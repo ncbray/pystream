@@ -189,7 +189,7 @@ class EquivalenceClass(object):
 		# Report the new roots
 		return set(newParam.iterkeys())
 
-	def _splitHidden(self, extendedParameters, sharedEq, accessedCallback, lut):
+	def _splitHidden(self, extendedParameters, sharedEq, accessedCallback, lut, noKill):
 		# NOTE will not prune pure non-accessed cycles
 		# This is because the function assumes that all recursive cycles are non-pure.
 		if self in lut:
@@ -204,6 +204,10 @@ class EquivalenceClass(object):
 			eq.miss = self.miss
 			lut[self] = (eq, initalPure)
 
+			# It's unsound to kill pure paths if there's more
+			# than one way to get here, as one of the ways may be impure...
+			noKill |= self.weight > 1
+
 			# Copy unaccessable paths
 			pure = True
 			kill = []
@@ -212,7 +216,7 @@ class EquivalenceClass(object):
 					# Node is impure
 					pure = False
 				else:
-					newNext, newPure = next._splitHidden(extendedParameters, sharedEq, accessedCallback, lut)
+					newNext, newPure = next._splitHidden(extendedParameters, sharedEq, accessedCallback, lut, noKill)
 					pure &= newPure
 					eq.setAttr(slot, newNext)
 					
@@ -220,8 +224,9 @@ class EquivalenceClass(object):
 						kill.append(slot)
 
 			# Kill all of the pure paths.
-			for slot in kill:
-				self.delAttr(slot)
+			if not noKill:
+				for slot in kill:
+					self.delAttr(slot)
 
 			# Are we pure, and didn't already know it?
 			if pure and not initalPure:
@@ -238,7 +243,7 @@ class EquivalenceClass(object):
 
 		lut = {}
 
-		hidden, pure = self._splitHidden(extendedParameters, sharedEq, accessedCallback, {})		
+		hidden, pure = self._splitHidden(extendedParameters, sharedEq, accessedCallback, {}, False)		
 		return hidden
 
 

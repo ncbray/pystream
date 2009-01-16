@@ -183,3 +183,21 @@ class ReferenceCount(object):
 		newradius = frozenset([slot for slot in self.radius if slot not in kill])
 
 		return sys.canonical.rcm.getCanonical(newcounts, newradius)
+
+	def remap(self, sys, slotMapping):
+		newcounts = {}
+		for slot, count in self.counts.iteritems():
+			newslot = slotMapping.get(slot, slot)
+			if newslot:
+				newcounts[newslot] = count
+
+		newradius = []
+		for slot in self.radius:
+			newslot = slotMapping.get(slot, slot)
+			if newslot:
+				newradius.append(newslot)
+
+		newradius = frozenset(newradius)
+
+		return sys.canonical.rcm.getCanonical(newcounts, newradius)
+		

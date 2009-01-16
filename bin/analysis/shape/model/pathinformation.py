@@ -116,6 +116,24 @@ class EquivalenceClass(object):
 				cls.setAttr(attr, other)		
 			return cls
 
+	def remap(self, lut, mapping):
+		if self in lut:
+			return lut[self]
+		else:
+			cls = EquivalenceClass()
+			lut[self] = cls
+
+			cls.hit     = self.hit
+			cls.miss    = self.miss
+			cls.forward = None
+
+			for slot, next in self:
+				newslot = mapping.get(slot, slot)
+				if newslot and not next.isTrivial():
+					other = next.remap(lut, mapping)
+					cls.setAttr(newslot, other)		
+			return cls
+
 	def dump(self, processed):
 		if not self in processed:
 			processed.add(self)
@@ -300,6 +318,11 @@ class PathInformation(object):
 
 	def forget(self, kill):
 		return self.copy(kill)
+
+	def remap(self, slotRemapping):
+		lut = {}
+		root = self.root.remap(lut, slotRemapping)
+		return PathInformation(root)
 
 	def equivalenceClass(self, expr, create=False):
 		path = expr.path()

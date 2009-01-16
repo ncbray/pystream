@@ -229,12 +229,6 @@ class ShapeConstraintBuilder(object):
 			assert False, "Can't handle vparams?"
 			print argID, '->', paramID
 		
-
-	def mapReturnValue(self, callerargs, calleeparams, info):
-		if callerargs.returnarg:
-			self.assign(calleeparams.returnparam, callerargs.returnarg)
-		self.forget(calleeparams.returnparam)
-
 	def handleInvocation(self, callPoint, returnPoint, srcContext, callerargs, dstFunc, dstContext):
 		calleeparams = self.getCalleeParams(dstFunc)
 		
@@ -251,6 +245,10 @@ class ShapeConstraintBuilder(object):
 		splitMergeInfo.srcLocals = self.functionLocalSlots[self.function]
 		splitMergeInfo.dstLocals = self.functionLocalSlots[dstFunc]
 
+		splitMergeInfo.returnSlot = calleeparams.returnparam.slot
+		splitMergeInfo.targetSlot = callerargs.returnarg.slot
+		
+
 		# Call invoke
 		self.current = callPoint
 		self.mapArguments(callerargs, calleeparams, info)
@@ -262,15 +260,11 @@ class ShapeConstraintBuilder(object):
 		constraint = constraints.SplitConstraint(self.sys, pre, post, splitMergeInfo)
 		self.constraints.append(constraint)
 
-
 		# Call return
 		pre  = self.functionReturnPoint[dstFunc]
-		post = self.advance()
+		post = returnPoint
 		constraint = constraints.MergeConstraint(self.sys, pre, post, splitMergeInfo)
 		self.constraints.append(constraint)
-
-		self.mapReturnValue(callerargs, calleeparams, info)
-		self.copy(self.current, returnPoint) # TODO eliminate?
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, target):

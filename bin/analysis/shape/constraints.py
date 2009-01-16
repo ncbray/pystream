@@ -175,15 +175,21 @@ class MergeConstraint(Constraint):
 		self.info.registerRemote(sys, configuration.entrySet, configuration, secondary)
 
 	def combine(self, sys, context, localIndex, localSecondary, remoteIndex, remoteSecondary):
+		# Build remapping dict
+		mapping = {}
+		for ep in self.info.extendedParameters:
+			mapping[ep] = None
+			
+		mapping[self.info.targetSlot] = None
+		mapping[self.info.returnSlot] = self.info.targetSlot
+
 		mergedRC = sys.canonical.rcm.merge(localIndex.currentSet, remoteIndex.currentSet)
+		mergedRC = mergedRC.remap(sys, mapping)
+
 		mergedIndex = sys.canonical.configuration(localIndex.object, localIndex.region, localIndex.entrySet, mergedRC)
 
 		paths = remoteSecondary.paths.join(localSecondary.paths)
-
-		# HACK forget
-		kill = set([p.slot for p in self.info.parameters])
-		kill.update(self.info.extendedParameters)
-		paths.forgetRoots(kill)
+		paths = paths.remap(mapping)
 
 ##		print "2"*40
 ##		print remoteIndex

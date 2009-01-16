@@ -111,12 +111,23 @@ class SplitConstraint(Constraint):
 
 		# TODO filter out bad extended parameters
 		epaths = secondary.paths.copy()
+		
 		eparams = epaths.extendParameters(sys.canonical, self.info.parameterSlots)
 		self.info.extendedParameters.update(eparams)
 
+		def callback(slot):
+			if slot.isExpression():
+				return False # Extended parameter
+			if slot.isSlot() and slot.isLocal():
+				return slot in self.info.parameterSlots
+			else:
+				return True
+
+		remotepaths, localpaths = epaths.split(eparams, callback)
+
+
 		# Create the local data
 		localconfig    = sys.canonical.configuration(configuration.object, configuration.region, configuration.entrySet, localRC)
-		localpaths     = sys.canonical.paths(None, None)
 		localsecondary = sys.canonical.secondary(localpaths, secondary.externalReferences)
 
 		self.info.registerLocal(sys, remoteRC, localconfig, localsecondary)
@@ -124,7 +135,7 @@ class SplitConstraint(Constraint):
 
 		# Create the remote data
 		remoteconfig    = sys.canonical.configuration(configuration.object, configuration.region, remoteRC, remoteRC)
-		remotesecondary = sys.canonical.secondary(epaths, secondary.externalReferences or bool(localRC))
+		remotesecondary = sys.canonical.secondary(remotepaths, secondary.externalReferences or bool(localRC))
 		
 		remotecontext   = context # HACK
 		transferfunctions.gcMerge(sys, self.outputPoint, remotecontext, remoteconfig, remotesecondary)
@@ -151,16 +162,17 @@ class MergeConstraint(Constraint):
 		mergedRC = sys.canonical.rcm.merge(localIndex.currentSet, remoteIndex.currentSet)
 		mergedIndex = sys.canonical.configuration(localIndex.object, localIndex.region, localIndex.entrySet, mergedRC)
 
+		paths = remoteSecondary.paths.join(localSecondary.paths)
 
+		# HACK forget
 		kill = set([p.slot for p in self.info.parameters])
-		kill.update([ep.slot for ep in self.info.extendedParameters])
-		paths = remoteSecondary.paths.copy(kill)
+		kill.update(self.info.extendedParameters)
+		paths.forgetRoots(kill)
 
 ##		print "2"*40
 ##		print remoteIndex
 ##		print
 ##		paths.dump()
-
 
 		mergedSecondary = sys.canonical.secondary(paths, localSecondary.externalReferences)
 

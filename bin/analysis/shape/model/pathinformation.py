@@ -228,7 +228,7 @@ class EquivalenceClass(object):
 			pure = True
 			kill = []
 			for slot, next in self:
-				if accessedCallback(slot):
+				if slot not in extendedParameters and accessedCallback(slot):
 					# Node is impure
 					pure = False
 				else:
@@ -262,7 +262,18 @@ class EquivalenceClass(object):
 		hidden, pure = self._splitHidden(extendedParameters, sharedEq, accessedCallback, {}, False)		
 		return hidden
 
+	def forgetRoots(self, kill):
+		# Find what we need to forget
+		kills = []
+		if self.attrs:
+			for slot in self.attrs.iterkeys():
+				if slot in kill:
+					kills.append(slot)
 
+		# Forget it
+		# Avoids interfering with the previous iterator
+		for slot in kills:
+			self.delAttr(slot)
 
 
 class PathInformation(object):
@@ -284,6 +295,9 @@ class PathInformation(object):
 		lut = {}
 		root = self.root.copy(lut, kill, keepHits, keepMisses)
 		return PathInformation(root)
+
+	def forgetRoots(self, kill):
+		self.root.forgetRoots(kill)
 
 	def equivalenceClass(self, expr, create=False):
 		path = expr.path()
@@ -431,3 +445,10 @@ class PathInformation(object):
 		# Example {s.n, t.m} will be lost if only n is accessed.
 		hidden = PathInformation(self.root.splitHidden(extendedParameters, accessedCallback))
 		return self, hidden
+
+	def join(self, other):
+		# HACK if would be more efficient to do the absorb on the fly?
+		a = self.copy()
+		b = other.copy()
+		a.root = a.root.absorb(b.root)
+		return a

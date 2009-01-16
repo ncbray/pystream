@@ -27,6 +27,19 @@ class EquivalenceClass(object):
 		else:
 			return self
 
+	def incRef(self):
+		self.weight += 1
+
+	def decRef(self):
+		self.weight -= 1
+		if self.weight == 0:
+			# GC
+			if self.attrs:
+				attrs = self.attrs
+				self.attrs = None
+				for eq in attrs.itervalues():
+					eq.decRef()
+
 	def getAttr(self, attr, create=False):
 		if self.attrs and attr in self.attrs:
 			eq = self.attrs[attr]
@@ -46,14 +59,14 @@ class EquivalenceClass(object):
 		if self.attrs is None: self.attrs = {}
 		assert not attr in self.attrs
 		self.attrs[attr] = eq
-		if not steal: eq.weight += 1
+		if not steal: eq.incRef()
 		return eq
 
 	def delAttr(self, attr):
 		eq = self.getAttr(attr)
 		assert eq is not None, "Attribute not found."
 		del self.attrs[attr]
-		eq.weight -= 1
+		eq.decRef()
 		
 	def _prune(self):
 		kill = []
@@ -68,19 +81,25 @@ class EquivalenceClass(object):
 		self._prune()
 
 	def absorb(self, other):
-		self.hit    |= other.hit
-		self.miss   |= other.miss
-		self.weight += other.weight
-		other.forward = self
-		other.weight  = 0
+		assert not self.forward
+		assert not other.forward
+		
+		if self is not other:
+			self.hit    |= other.hit
+			self.miss   |= other.miss
+			self.weight += other.weight
+			other.forward = self
+			other.weight  = 0
 
-		# Recursively absorb attributes...
-		# NOTE other is forwarded, so the attributes of other won't change...
-		for k, v in other:
-			self.absorbAttr(k, v)
+			# Recursively absorb attributes...
+			# NOTE other is forwarded, so the attributes of other won't change...
+			for k, v in other:
+				self.absorbAttr(k, v)
 
-			# We might have gotten absorbed?
-			self = self.getForward()
+				# We might have gotten absorbed?
+				self = self.getForward()
+
+			other.attrs = None
 
 		return self
 
@@ -88,12 +107,27 @@ class EquivalenceClass(object):
 		existing = self.getAttr(attr)
 
 		if existing is None:
-			self.setAttr(attr, eq, steal=True)
-		elif existing is not eq:
-			if existing.weight >= eq:
-				existing.absorb(eq)
+			# Steal the reference, as we don't have one.
+			result = self.setAttr(attr, eq, steal=True)
+		else:
+			if existing is not eq:
+				# Merge the two equivalence classes
+				if existing.weight >= eq:
+					result = existing.absorb(eq)
+				else:
+					result = eq.absorb(existing)
+
+				# Make sure we're pointing to the newest equivalence class.  A minor optimization?
+				self.attrs[attr] = result
 			else:
-				eq.absorb(existing)
+				# Both point to the same thing, do nothing
+				result = existing
+
+			# Eliminate the reference from the equivalence class being absorbed.
+			assert result.weight > 1
+			result.decRef()
+
+		return result
 
 	def copy(self, lut, kill, keepHits=False, keepMisses=False):
 		if self in lut:

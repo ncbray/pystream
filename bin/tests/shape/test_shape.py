@@ -2,34 +2,31 @@ from __future__ import absolute_import
 
 from tests.shape.shape_base import *
 
-class TestExpressions(unittest.TestCase):
-	def setUp(self):
-		self.db = MockDB()
-		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
-
+class TestExpressions(TestConstraintBase):
+	def shapeSetUp(self):
 		self.fielda = self.sys.canonical.fieldSlot(None, 'a')
 		self.fieldb = self.sys.canonical.fieldSlot(None, 'b')
 
 		self.localz = self.sys.canonical.localSlot('zero')
 		self.localo = self.sys.canonical.localSlot('one')
 
-		self.zero = self.sys.canonical.localExpr(self.localz)
-		self.zero_a = self.sys.canonical.fieldExpr(self.zero,   self.fielda)
-		self.zero_a_a = self.sys.canonical.fieldExpr(self.zero_a, self.fielda)
-		self.zero_a_b = self.sys.canonical.fieldExpr(self.zero_a, self.fieldb)
+		self.zero     = self.sys.canonical.localExpr(self.localz)
+		self.zero_a   = self.expr(self.zero, self.fielda)
+		self.zero_a_a = self.expr(self.zero, self.fielda, self.fielda)
+		self.zero_a_b = self.expr(self.zero, self.fielda, self.fieldb)
 
-		self.zero_b = self.sys.canonical.fieldExpr(self.zero,   self.fieldb)
-		self.zero_b_a = self.sys.canonical.fieldExpr(self.zero_b, self.fielda)
-		self.zero_b_b = self.sys.canonical.fieldExpr(self.zero_b, self.fieldb)
+		self.zero_b   = self.expr(self.zero, self.fieldb)
+		self.zero_b_a = self.expr(self.zero, self.fieldb, self.fielda)
+		self.zero_b_b = self.expr(self.zero, self.fieldb, self.fieldb)
 
-		self.one = self.sys.canonical.localExpr(self.localo)		
-		self.one_a = self.sys.canonical.fieldExpr(self.one,   self.fielda)
-		self.one_a_a = self.sys.canonical.fieldExpr(self.one_a, self.fielda)
-		self.one_a_b = self.sys.canonical.fieldExpr(self.one_a, self.fieldb)
+		self.one     = self.sys.canonical.localExpr(self.localo)		
+		self.one_a   = self.expr(self.one, self.fielda)
+		self.one_a_a = self.expr(self.one, self.fielda, self.fielda)
+		self.one_a_b = self.expr(self.one, self.fielda, self.fieldb)
 		
-		self.one_b = self.sys.canonical.fieldExpr(self.one,   self.fieldb)
-		self.one_b_a = self.sys.canonical.fieldExpr(self.one_b,   self.fielda)
-		self.one_b_b = self.sys.canonical.fieldExpr(self.one_b,   self.fieldb)
+		self.one_b   = self.expr(self.one, self.fieldb)
+		self.one_b_a = self.expr(self.one, self.fieldb, self.fielda)
+		self.one_b_b = self.expr(self.one, self.fieldb, self.fieldb)
 
 		self.allExpr = set((self.zero, self.zero_a, self.zero_a_b, self.one, self.one_a, self.one_a_b))
 
@@ -146,74 +143,9 @@ class TestExpressions(unittest.TestCase):
 				self.assertEqual(newPaths.classifyHitMiss(miss), (False, True))
 
 
-##class TestFilterUnstable(unittest.TestCase):
-##	def setUp(self):
-##		self.db = MockDB()
-##		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
-##
-##		self.fielda = self.sys.canonical.fieldSlot(None, 'a')
-##		self.fieldb = self.sys.canonical.fieldSlot(None, 'b')
-##
-##		self.localz = self.sys.canonical.localSlot('zero')
-##		self.localo = self.sys.canonical.localSlot('one')
-##
-##		self.zero = self.sys.canonical.localExpr(self.localz)
-##		self.zero_a = self.sys.canonical.fieldExpr(self.zero,   self.fielda)
-##		self.zero_a_a = self.sys.canonical.fieldExpr(self.zero_a, self.fielda)
-##		self.zero_a_b = self.sys.canonical.fieldExpr(self.zero_a, self.fieldb)
-##
-##		self.zero_b = self.sys.canonical.fieldExpr(self.zero,   self.fieldb)
-##		self.zero_b_a = self.sys.canonical.fieldExpr(self.zero_b, self.fielda)
-##		self.zero_b_b = self.sys.canonical.fieldExpr(self.zero_b, self.fieldb)
-##
-##		self.one = self.sys.canonical.localExpr(self.localo)		
-##		self.one_a = self.sys.canonical.fieldExpr(self.one,   self.fielda)
-##		self.one_a_a = self.sys.canonical.fieldExpr(self.one_a, self.fielda)
-##		self.one_a_b = self.sys.canonical.fieldExpr(self.one_a, self.fieldb)
-##		
-##		self.one_b = self.sys.canonical.fieldExpr(self.one,   self.fieldb)
-##		self.one_b_a = self.sys.canonical.fieldExpr(self.one_b,   self.fielda)
-##		self.one_b_b = self.sys.canonical.fieldExpr(self.one_b,   self.fieldb)
-##
-##		self.allExpr = set((self.zero, self.zero_a, self.zero_a_b, self.one, self.one_a, self.one_a_b))
-##
-##	def testFilterUnstable1(self):
-##		stableValues = frozenset()
-##		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.localz, stableValues)
-##
-##		expected = set((self.one, self.one_a, self.one_a_b))
-##		self.assertEqual(result, expected)
-##
-##	def testFilterUnstable3(self):
-##		# Preserve location stable
-##		stableValues = frozenset()
-##		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.fielda, stableValues)
-##
-##		expected = set((self.zero, self.one))
-##		self.assertEqual(result, expected)
-##
-##	def testFilterUnstable5(self):
-##		# Preserve location stable
-##		stableValues = frozenset()
-##		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.fieldb, stableValues)
-##
-##		expected = set((self.zero, self.one, self.zero_a, self.one_a))
-##		self.assertEqual(result, expected)
-##
-##	def testFilterUnstable6(self):
-##		# Preserve location stable
-##		stableValues = frozenset((self.zero_a_b, self.one_a_b))
-##		result = analysis.shape.transferfunctions.filterUnstable(self.sys, self.allExpr, self.fieldb, stableValues)
-##		
-##		expected = self.allExpr
-##		self.assertEqual(result, expected)
 
-
-class TestReferenceCounts(unittest.TestCase):
-	def setUp(self):
-		self.db = MockDB()
-		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
-
+class TestReferenceCounts(TestConstraintBase):
+	def shapeSetUp(self):
 		self.fielda = self.sys.canonical.fieldSlot(None, 'a')
 		self.fieldb = self.sys.canonical.fieldSlot(None, 'b')
 
@@ -252,7 +184,7 @@ class TestReferenceCounts(unittest.TestCase):
 
 		slot = self.fielda
 
-		inc1 = self.scalarIncrement(None, slot)
+		inc1 = self.refs(slot)
 		inc2 = self.scalarIncrement(inc1, slot)
 		inc3 = self.scalarIncrement(inc2, slot)
 
@@ -271,73 +203,10 @@ class TestReferenceCounts(unittest.TestCase):
 
 
 
-##class TestForgetConstraint(TestConstraintBase):
-##	def setUp(self):
-##		self.sys  = analysis.shape.RegionBasedShapeAnalysis()
-##
-##		self.aLcl, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
-##		self.bLcl, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
-##		self.cLcl, self.cSlot, self.cExpr  = self.makeLocalObjs('c')
-##		self.xAttr = self.sys.canonical.fieldSlot(None, 'x')
-##
-##		self.axExpr = self.sys.canonical.fieldExpr(self.aExpr, self.xAttr)
-##		self.bxExpr = self.sys.canonical.fieldExpr(self.bExpr, self.xAttr)
-##		self.cxExpr = self.sys.canonical.fieldExpr(self.cExpr, self.xAttr)
-##
-##
-##		self.aRef = self.scalarIncrement(None, self.aSlot)
-##		self.bRef = self.scalarIncrement(None, self.bSlot)
-##		self.cRef = self.scalarIncrement(None, self.cSlot)
-##
-##		self.abRef = self.scalarIncrement(self.aRef, self.bSlot)
-##		self.bcRef = self.scalarIncrement(self.bRef, self.cSlot)
-##
-##		self.axRef = self.scalarIncrement(self.aRef, self.xAttr)
-##		self.bxRef = self.scalarIncrement(self.bRef, self.xAttr)
-##		self.cxRef = self.scalarIncrement(self.cRef, self.xAttr)
-##
-##
-##		dataflow = analysis.shape.dataflow
-##		self.entryShape = dataflow.DataflowStore()
-##		self.exitShape  = dataflow.DataflowStore()
-##
-##
-##		self.inputPoint = 0
-##		self.outputPoint = 1
-##
-##		# b = a
-##		self.constraint = analysis.shape.constraints.ForgetConstraint(self.inputPoint, self.outputPoint, self.aExpr, self.bExpr)
-##		self.constraint.connect(self.entryShape, self.exitShape)
-##
-##	def testRemember(self):
-##		# c -> c
-##
-##		argument = (self.cRef, (self.axExpr,), None)
-##		results = [
-##			(self.cRef, None, None),
-##			]
-##		self.checkTransfer(argument, results)
-##
-##
-##	def testForget(self):
-##		# a -> nil
-##
-##		argument = (self.aRef, None, None)
-##		results = [
-##			]
-##		self.checkTransfer(argument, results)
-
-
 class TestCopyConstraint(TestConstraintBase):
-	def setUp(self):
-		self.db = MockDB()
-		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
-		
+	def shapeSetUp(self):
 		self.cLcl, self.cSlot, self.cExpr  = self.makeLocalObjs('c')
-		self.cRef = self.scalarIncrement(None, self.cSlot)
-
-		self.inputPoint  = (None, 0)
-		self.outputPoint = (None, 1)
+		self.cRef = self.refs(self.cSlot)
 
 		# b = a
 		self.setConstraint(analysis.shape.constraints.CopyConstraint(self.sys, self.inputPoint, self.outputPoint))
@@ -353,29 +222,23 @@ class TestCopyConstraint(TestConstraintBase):
 
 
 class TestLocalAssignConstraint(TestConstraintBase):
-	def setUp(self):
-		self.db = MockDB()
-		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
-	
+	def shapeSetUp(self):
 		self.aLcl, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
 		self.bLcl, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
 		self.cLcl, self.cSlot, self.cExpr  = self.makeLocalObjs('c')
 		self.xAttr = self.sys.canonical.fieldSlot(None, 'x')
 		self.yAttr = self.sys.canonical.fieldSlot(None, 'y')
 
-		self.axExpr = self.sys.canonical.fieldExpr(self.aExpr, self.xAttr)
-		self.bxExpr = self.sys.canonical.fieldExpr(self.bExpr, self.xAttr)
+		self.axExpr = self.expr(self.aExpr, self.xAttr)
+		self.bxExpr = self.expr(self.bExpr, self.xAttr)
 
-		self.aRef = self.scalarIncrement(None, self.aSlot)
-		self.bRef = self.scalarIncrement(None, self.bSlot)
-		self.cRef = self.scalarIncrement(None, self.cSlot)
-		self.abRef = self.scalarIncrement(self.aRef, self.bSlot)
-		self.bcRef = self.scalarIncrement(self.bRef, self.cSlot)
+		self.aRef  = self.refs(self.aSlot)
+		self.bRef  = self.refs(self.bSlot)
+		self.cRef  = self.refs(self.cSlot)
+		self.abRef = self.refs(self.aSlot, self.bSlot)
+		self.bcRef = self.refs(self.bSlot, self.cSlot)
 
-		self.xRef = self.scalarIncrement(None, self.xAttr)
-
-		self.inputPoint  = (None, 0)
-		self.outputPoint = (None, 1)
+		self.xRef = self.refs(self.xAttr)
 
 		# b = a
 		self.setConstraint(analysis.shape.constraints.AssignmentConstraint(self.sys, self.inputPoint, self.outputPoint, self.aExpr, self.bExpr))
@@ -456,31 +319,26 @@ class TestLocalAssignConstraint(TestConstraintBase):
 		self.checkTransfer(argument, results)
 
 class TestLoadAssignConstraint(TestConstraintBase):
-	def setUp(self):
-		self.db = MockDB()
-		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
-		
+	def shapeSetUp(self):
 		self.aLcl, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
 		self.bLcl, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
 		self.xAttr = self.sys.canonical.fieldSlot(None, 'x')
 		self.yAttr = self.sys.canonical.fieldSlot(None, 'y')
 
-		self.axExpr = self.sys.canonical.fieldExpr(self.aExpr, self.xAttr)
-		self.bxExpr = self.sys.canonical.fieldExpr(self.bExpr, self.xAttr)
-		self.axxExpr = self.sys.canonical.fieldExpr(self.axExpr, self.xAttr)
+		self.axExpr  = self.expr(self.aExpr, self.xAttr)
+		self.axxExpr = self.expr(self.aExpr, self.xAttr, self.xAttr)
+		
+		self.bxExpr  = self.expr(self.bExpr, self.xAttr)
 
 
-		self.aRef = self.scalarIncrement(None, self.aSlot)
-		self.bRef = self.scalarIncrement(None, self.bSlot)
-		self.xRef = self.scalarIncrement(None, self.xAttr)
-		self.yRef = self.scalarIncrement(None, self.yAttr)
+		self.aRef = self.refs(self.aSlot)
+		self.bRef = self.refs(self.bSlot)
+		self.xRef = self.refs(self.xAttr)
+		self.yRef = self.refs(self.yAttr)
 
-		self.axRef = self.scalarIncrement(self.aRef, self.xAttr)
-		self.bxRef = self.scalarIncrement(self.bRef, self.xAttr)
-		self.abxRef = self.scalarIncrement(self.bxRef, self.aSlot)
-
-		self.inputPoint = (None, 0)
-		self.outputPoint = (None, 1)
+		self.axRef  = self.refs(self.aSlot, self.xAttr)
+		self.bxRef  = self.refs(self.bSlot, self.xAttr)
+		self.abxRef = self.refs(self.aSlot, self.bSlot, self.xAttr)
 
 		# b = a.x
 		self.setConstraint(analysis.shape.constraints.AssignmentConstraint(self.sys, self.inputPoint, self.outputPoint, self.axExpr, self.bExpr))
@@ -549,36 +407,28 @@ class TestLoadAssignConstraint(TestConstraintBase):
 
 
 class TestStoreAssignConstraint(TestConstraintBase):
-	def setUp(self):
-		self.db = MockDB()
-		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
-		
+	def shapeSetUp(self):
 		self.aLcl, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
 		self.bLcl, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
 
 		self.xAttr = self.sys.canonical.fieldSlot(None, 'x')
 		self.yAttr = self.sys.canonical.fieldSlot(None, 'y')
 
-		self.axExpr = self.sys.canonical.fieldExpr(self.aExpr, self.xAttr)
+		self.axExpr  = self.expr(self.aExpr, self.xAttr)
 
-		self.bxExpr = self.sys.canonical.fieldExpr(self.bExpr, self.xAttr)
-		self.bxxExpr = self.sys.canonical.fieldExpr(self.bxExpr, self.xAttr)
+		self.bxExpr  = self.expr(self.bExpr, self.xAttr)
+		self.bxxExpr = self.expr(self.bExpr, self.xAttr, self.xAttr)
 
+		self.aRef = self.refs(self.aSlot)
+		self.bRef = self.refs(self.bSlot)
+		self.xRef = self.refs(self.xAttr)
+		self.yRef = self.refs(self.yAttr)
 
-		self.aRef = self.scalarIncrement(None, self.aSlot)
-		self.bRef = self.scalarIncrement(None, self.bSlot)
-		self.xRef = self.scalarIncrement(None, self.xAttr)
-		self.yRef = self.scalarIncrement(None, self.yAttr)
+		self.axRef  = self.refs(self.aSlot, self.xAttr)
+		self.bxRef  = self.refs(self.bSlot, self.xAttr)
+		self.bxxRef = self.refs(self.bSlot, self.xAttr, self.xAttr)
 
-		self.axRef = self.scalarIncrement(self.aRef, self.xAttr)
-		self.bxRef = self.scalarIncrement(self.bRef, self.xAttr)
-		self.bxxRef = self.scalarIncrement(self.bxRef, self.xAttr)
-
-		self.abxRef = self.scalarIncrement(self.bxRef, self.aSlot)
-
-
-		self.inputPoint = (None, 0)
-		self.outputPoint = (None, 1)
+		self.abxRef = self.refs(self.aSlot, self.bSlot, self.xAttr)
 
 		# b.x = a
 		self.setConstraint(analysis.shape.constraints.AssignmentConstraint(self.sys, self.inputPoint, self.outputPoint, self.aExpr, self.bxExpr))

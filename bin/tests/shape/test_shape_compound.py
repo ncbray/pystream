@@ -3,10 +3,7 @@ from __future__ import absolute_import
 from tests.shape.shape_base import *
 
 class TestSimpleCase(TestCompoundConstraintBase):
-	def setUp(self):
-		self.db = MockDB()
-		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
-		
+	def shapeSetUp(self):
 		# Splice example from paper
 		x, self.xSlot, self.xExpr  = self.makeLocalObjs('x')
 		y, self.ySlot, self.yExpr  = self.makeLocalObjs('y')
@@ -15,14 +12,15 @@ class TestSimpleCase(TestCompoundConstraintBase):
 		q, self.qSlot, self.qExpr  = self.makeLocalObjs('q')
 		ret, self.retSlot, self.retExpr  = self.makeLocalObjs('internal_return')
 
-		self.xRef = self.scalarIncrement(None, self.xSlot)
-		self.yRef = self.scalarIncrement(None, self.ySlot)
-		self.retRef = self.scalarIncrement(None, self.retSlot)
-		self.nSlot = self.sys.canonical.fieldSlot(None, ('LowLevel', 'n'))
+		self.nSlot  = self.sys.canonical.fieldSlot(None, ('LowLevel', 'n'))
 
-		self.nRef = self.scalarIncrement(None, self.nSlot)
-		self.n2Ref = self.scalarIncrement(self.nRef, self.nSlot)
-		self.n3Ref = self.scalarIncrement(self.n2Ref, self.nSlot)
+		self.xRef   = self.refs(self.xSlot)
+		self.yRef   = self.refs(self.ySlot)
+		self.retRef = self.refs(self.retSlot)
+
+		self.nRef  = self.refs(self.nSlot)
+		self.n2Ref = self.refs(self.nSlot, self.nSlot)
+		self.n3Ref = self.refs(self.nSlot, self.nSlot, self.nSlot)
 
 
 		# t = x
@@ -69,12 +67,12 @@ class TestSimpleCase(TestCompoundConstraintBase):
 		b, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
 		c, self.cSlot, self.cExpr  = self.makeLocalObjs('c')
 
-		self.aRef = self.scalarIncrement(None, self.aSlot)
-		self.bRef = self.scalarIncrement(None, self.bSlot)
-		self.cRef = self.scalarIncrement(None, self.cSlot)
-		self.bcRef = self.scalarIncrement(self.bRef, self.cSlot)
+		self.aRef  = self.refs(self.aSlot)
+		self.bRef  = self.refs(self.bSlot)
+		self.cRef  = self.refs(self.cSlot)
+		self.bcRef = self.refs(self.bSlot, self.cSlot)
 
-		self.anRef = self.scalarIncrement(self.aRef, self.nSlot)
+		self.anRef = self.refs(self.aSlot, self.nSlot)
 
 		dc = ast.DirectCall(self.func, None, [a,b], [], None, None)
 		self.caller = ast.Suite([
@@ -163,22 +161,19 @@ class TestSimpleCase(TestCompoundConstraintBase):
 
 
 class TestCallLoadCase(TestCompoundConstraintBase):
-	def setUp(self):
-		self.db = MockDB()
-		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
-		
+	def shapeSetUp(self):
 		x, self.xSlot, self.xExpr  = self.makeLocalObjs('x')
 		y, self.ySlot, self.yExpr  = self.makeLocalObjs('y')
 		ret, self.retSlot, self.retExpr  = self.makeLocalObjs('internal_return')
-
-		self.xRef = self.scalarIncrement(None, self.xSlot)
-		self.retRef = self.scalarIncrement(None, self.retSlot)
 		self.nSlot = self.sys.canonical.fieldSlot(None, ('LowLevel', 'n'))
-		self.nRef = self.scalarIncrement(None, self.nSlot)
+
+		self.xRef   = self.refs(self.xSlot)
+		self.retRef = self.refs(self.retSlot)
+		self.nRef   = self.refs(self.nSlot)
 
 
-		self.retnRef = self.scalarIncrement(self.retRef, self.nSlot)
-		self.xnExpr = self.sys.canonical.fieldExpr(self.xExpr, self.nSlot)
+		self.retnRef = self.refs(self.retSlot, self.nSlot)
+		self.xnExpr  = self.expr(self.xExpr, self.nSlot)
 
 		
 		body = ast.Suite([
@@ -195,13 +190,13 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 		b, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
 		c, self.cSlot, self.cExpr  = self.makeLocalObjs('c')
 
-		self.aRef = self.scalarIncrement(None, self.aSlot)
-		self.bRef = self.scalarIncrement(None, self.bSlot)
-		self.cRef = self.scalarIncrement(None, self.cSlot)
-		self.cnRef = self.scalarIncrement(self.cRef, self.nSlot)
+		self.aRef  = self.refs(self.aSlot)
+		self.bRef  = self.refs(self.bSlot)
+		self.cRef  = self.refs(self.cSlot)
+		self.cnRef = self.refs(self.cSlot, self.nSlot)
 
-		self.anRef = self.scalarIncrement(self.aRef, self.nSlot)
-		self.anExpr = self.sys.canonical.fieldExpr(self.aExpr, self.nSlot)
+		self.anRef  = self.refs(self.aSlot, self.nSlot)
+		self.anExpr = self.expr(self.aExpr, self.nSlot)
 
 		dc = ast.DirectCall(self.func, None, [a], [], None, None)
 		self.caller = ast.Suite([

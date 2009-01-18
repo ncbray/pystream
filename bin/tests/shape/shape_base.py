@@ -25,10 +25,21 @@ class MockDB(object):
 		return self.invokeLUT[(function, context, op)]
 
 class TestConstraintBase(unittest.TestCase):
-	def scalarIncrement(self, rc, slot):
-		next = self.sys.canonical.incrementRef(rc, slot)
-		self.assertEqual(len(next), 1)
-		return next[0]	
+	def setUp(self):
+		self.db  = MockDB()
+		self.sys = analysis.shape.RegionBasedShapeAnalysis(self.db)
+		self.setInOut((None, 0), (None, 1))
+
+		self.shapeSetUp()
+
+	def shapeSetUp(self):
+		raise NotImplementedError
+		
+	def refs(self, *args):
+		return self.sys.canonical.refs(*args)
+
+	def expr(self, *args):
+		return self.sys.canonical.expr(*args)
 
 	def makeLocalObjs(self, name):
 		lcl = ast.Local(name)
@@ -192,12 +203,12 @@ class TestConstraintBase(unittest.TestCase):
 		print "\\%s/" % ("*"*80)
 		print
 
+
 class TestCompoundConstraintBase(TestConstraintBase):
 	def makeConstraints(self, func):
 		builder = self.sys.constraintbuilder
 		builder.process(func)
 		return builder.statementPre[func], builder.statementPost[func]
-
 
 	def createInput(self, ref):
 		entry = ref if self.cs else None
@@ -207,13 +218,3 @@ class TestCompoundConstraintBase(TestConstraintBase):
 
 	def setInput(self, conf, secondary):
 		self.sys.environment.merge(self.sys, self.inputPoint, self.context, conf, secondary)
-
-##	def process(self):
-##		start = time.clock()
-##		self.sys.process()
-##		end = time.clock()
-##		self.elapsed = end-start
-##
-##		self.dump(self.outputPoint)
-
-

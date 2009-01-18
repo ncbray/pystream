@@ -110,9 +110,19 @@ class CanonicalObjects(object):
 			cache[key] = e
 		return e
 			
+	def expr(self, root, *fields):
+		for field in fields:
+			root = self.fieldExpr(root, field)
+		return root
 
 	def incrementRef(self, refs, slot):
 		return self.rcm.increment(refs, slot)
 
 	def decrementRef(self, refs, slot):
 		return self.rcm.decrement(refs, slot)
+
+	def refs(self, *slots):
+		refs = None
+		for slot in slots:
+			refs = self.rcm.increment(refs, slot)[0]
+		return refs

@@ -3,16 +3,7 @@ from __future__ import absolute_import
 from tests.shape.shape_base import *
 
 class FirstExampleBase(TestConstraintBase):
-	def makeRef(self, *slots):
-		ref = None
-		for slot in slots:
-			ref = self.scalarIncrement(ref, slot)
-		return ref
-
-	def setUp(self):
-		self.db = MockDB()
-		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.db)
-
+	def shapeSetUp(self):
 		x, self.xSlot, self.xExpr  = self.makeLocalObjs('x')
 		y, self.ySlot, self.yExpr  = self.makeLocalObjs('y')
 		z, self.zSlot, self.zExpr  = self.makeLocalObjs('z')
@@ -21,35 +12,28 @@ class FirstExampleBase(TestConstraintBase):
 		self.nSlot = self.sys.canonical.fieldSlot(None, ('LowLevel', 'n'))
 
 
-		self.xRef = self.makeRef(self.xSlot)
-		self.yRef = self.makeRef(self.ySlot)
-		self.zRef = self.makeRef(self.zSlot)
-		self.tRef = self.makeRef(self.tSlot)
-		self.qRef = self.makeRef(self.qSlot)
-		self.nRef = self.makeRef(self.nSlot)
+		self.xRef = self.refs(self.xSlot)
+		self.yRef = self.refs(self.ySlot)
+		self.zRef = self.refs(self.zSlot)
+		self.tRef = self.refs(self.tSlot)
+		self.qRef = self.refs(self.qSlot)
+		self.nRef = self.refs(self.nSlot)
 
-		self.nnRef = self.makeRef(self.nSlot, self.nSlot)
-		self.ynnRef = self.makeRef(self.ySlot, self.nSlot, self.nSlot)
+		self.nnRef = self.refs(self.nSlot, self.nSlot)
+		self.ynnRef = self.refs(self.ySlot, self.nSlot, self.nSlot)
 
-		self.xyRef = self.makeRef(self.xSlot, self.ySlot)
-		self.xtRef = self.makeRef(self.xSlot, self.tSlot)
-		self.yzRef = self.makeRef(self.ySlot, self.zSlot)
+		self.xyRef = self.refs(self.xSlot, self.ySlot)
+		self.xtRef = self.refs(self.xSlot, self.tSlot)
+		self.yzRef = self.refs(self.ySlot, self.zSlot)
 
-		self.xnRef = self.makeRef(self.xSlot, self.nSlot)
-		self.ynRef = self.makeRef(self.ySlot, self.nSlot)
-		self.tnRef = self.makeRef(self.tSlot, self.nSlot)
-		self.xynRef = self.makeRef(self.xSlot, self.ySlot, self.nSlot)
-		self.ytnRef = self.makeRef(self.ySlot, self.tSlot, self.nSlot)
+		self.xnRef  = self.refs(self.xSlot, self.nSlot)
+		self.ynRef  = self.refs(self.ySlot, self.nSlot)
+		self.tnRef  = self.refs(self.tSlot, self.nSlot)
+		self.xynRef = self.refs(self.xSlot, self.ySlot, self.nSlot)
+		self.ytnRef = self.refs(self.ySlot, self.tSlot, self.nSlot)
 
-
-
-		self.ynExpr = self.sys.canonical.fieldExpr(self.yExpr, self.nSlot)
-		self.tnExpr = self.sys.canonical.fieldExpr(self.tExpr, self.nSlot)
-	
-		self.inputPoint  = (None, 0)
-		self.outputPoint = (None, 1)
-
-		# t = x
+		self.ynExpr = self.expr(self.yExpr, self.nSlot)
+		self.tnExpr = self.expr(self.tExpr, self.nSlot)
 
 	def assign(self, rhs, lhs):
 		self.setConstraint(analysis.shape.constraints.AssignmentConstraint(self.sys, self.inputPoint, self.outputPoint, rhs, lhs))

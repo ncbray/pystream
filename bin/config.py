@@ -13,7 +13,7 @@ if True:
 		'tests.shape.test_shape_pathinfo',
 		#'tests.test_database',
 		#'tests.test_compressedset',
-		#'tests.test_full',
+		'tests.test_full',
 		#'tests.test_lattice',
 		]
 else:

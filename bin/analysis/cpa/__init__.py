@@ -71,7 +71,6 @@ class InterproceduralDataflow(object):
 		# Information for contextual operations.
 		self.opReads          = collections.defaultdict(set)
 		self.opModifies       = collections.defaultdict(set)
-		self.opAllocates      = collections.defaultdict(set)
 		self.opInvokes        = collections.defaultdict(set)
 
 		self.functionContexts = collections.defaultdict(set)
@@ -93,6 +92,8 @@ class InterproceduralDataflow(object):
 		self.dictionaryClass = self.extractor.getObject(dict)
 		self.extractor.ensureLoaded(self.dictionaryClass)
 
+	def allocation(self, op, context, obj):
+		self.allocations.add((context, obj))
 
 	def dependsRead(self, constraint, slot):
 		self.reads[slot].add(constraint)
@@ -117,7 +118,14 @@ class InterproceduralDataflow(object):
 	def canonicalContext(self, path, func, selfparam, params, vparams):
 		vparamObj, kparamObj = self.extendedParamObjects(path, func)
 		context = self.canonical._canonicalContext(path, func, selfparam, params, vparams, vparamObj, kparamObj)
+
+		# Mark that we create the context.
 		self.functionContexts[func].add(context)
+
+		# Mark that we implicitly allocated these objects
+		if vparamObj: self.allocation(None, context, vparamObj)
+		if kparamObj: self.allocation(None, context, kparamObj)
+		
 		return context
 
 	def setTypePointer(self, cobj):

@@ -68,6 +68,19 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 					modifyDB = self.db.lifetime.modifyDB
 					modifyDB[function].merge(newast, modifyDB[function][original])
 
+	def trackContextTransfer(self, srcFunc, dstFunc, contexts):
+		if hasattr(self.db, 'lifetime'):
+			live = self.db.lifetime.live
+			killed = self.db.lifetime.contextKilled
+
+			for context in contexts:
+				data = live.get((srcFunc, context))
+				if data: live[(dstFunc, context)] = data
+
+				data = killed.get((srcFunc, context))
+				if data: killed[(dstFunc, context)] = data
+
+
 	def trackOpTransfer(self, srcFunc, srcOp, dstFunc, dstOp, contexts, invokeMap=None):
 		assert isinstance(srcOp, (ast.Expression, ast.Statement)), srcOp
 		assert isinstance(dstOp, (ast.Expression, ast.Statement)), dstOp

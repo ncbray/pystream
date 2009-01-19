@@ -142,8 +142,8 @@ class AllocateConstraint(Constraint):
 					# Return the allocated object.
 					sys.update(self.target, (contextInst,))
 
-					sys.allocations.add((self.type_.context, contextInst))
-					sys.opAllocates[self.op].add(contextInst)
+					#sys.allocation(self.op, self.type_.context, contextInst)
+					sys.allocation(self.op.op, self.op.context, contextInst)
 
 	def attach(self, sys):
 		sys.dependsRead(self, self.type_)

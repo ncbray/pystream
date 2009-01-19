@@ -144,6 +144,10 @@ class ProgramCloner(object):
 		for func, groups in self.groups.iteritems():
 			for group in groups:
 				f = newfunc[func][id(group)]
+
+				# Transfer information that is tied to the context.
+				self.adb.trackContextTransfer(func, f, group)
+
 				fc = FunctionCloner(self.adb, newfunc, self.groupLUT, func, f, group)			
 				f.code = fc(func.code)
 

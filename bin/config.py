@@ -4,23 +4,20 @@ usePsyco        = True
 # may be called from different working directories...
 outputDirectory = "c:/projects/pystream/summaries"
 
-if True:
+if False:
 	limitedTest = [
 		'tests.shape.test_shape',
 		'tests.shape.test_shape_examples',
 		'tests.shape.test_shape_compound',
-		#'tests.shape.test_shape_paths',
 		'tests.shape.test_shape_pathinfo',
 		#'tests.test_database',
-		#'tests.test_compressedset',
 		'tests.test_full',
-		#'tests.test_lattice',
+		'tests.cpa.test_cpa',
 		]
 else:
 	testExclude = [
 		# Time consuming
 		#'tests.test_full',
-		'tests.shape.test_shape',
 
 		# Old, slightly buggy.
 		'tests.test_sese',

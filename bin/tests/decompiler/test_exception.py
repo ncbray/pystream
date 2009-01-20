@@ -104,9 +104,9 @@ def testswitchthrow(ex1, ex2, s):
 		else:
 			raise ex2, 7
 	except ex1, val:
-		v = 2*val.message
+		v = 2*val.args[0]
 	except ex2, val:
-		v = 3*val.message
+		v = 3*val.args[0]
 	return v
 """
 	inputs = [[TestException, TestException2, False], [TestException, TestException2, True]]

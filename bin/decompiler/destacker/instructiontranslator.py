@@ -450,8 +450,16 @@ class InstructionTranslator(object):
 		self.pushOp(BuildList(self.getArgs(count)))
 
 	def op_BUILD_MAP(self, count):
-		assert count == 0
+		# TODO count is a size hint... we should preserve it?
 		self.pushOp(BuildMap())
+
+	def op_STORE_MAP(self):
+		# HACK reduce STORE_MAP into a subscript
+		key   = self.getArg()
+		value = self.getArg()
+		expr  = self.peek() # Dictionary not popped
+
+		self.emit(SetSubscript(value, expr, key))		
 
 	def op_BUILD_SLICE(self, count):
 		assert count == 2 or count == 3

@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pybind", "pybind\pybind.vcproj", "{1ACF32C3-14E3-46E6-B936-98A9EC1ED65C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "_pystream", "_pystream\_pystream.vcproj", "{341E64BF-B8EC-4BD5-A9C6-D9C96FAB8170}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1ACF32C3-14E3-46E6-B936-98A9EC1ED65C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{1ACF32C3-14E3-46E6-B936-98A9EC1ED65C}.Debug|Win32.Build.0 = Debug|Win32
+		{1ACF32C3-14E3-46E6-B936-98A9EC1ED65C}.Release|Win32.ActiveCfg = Release|Win32
+		{1ACF32C3-14E3-46E6-B936-98A9EC1ED65C}.Release|Win32.Build.0 = Release|Win32
+		{341E64BF-B8EC-4BD5-A9C6-D9C96FAB8170}.Debug|Win32.ActiveCfg = Debug|Win32
+		{341E64BF-B8EC-4BD5-A9C6-D9C96FAB8170}.Debug|Win32.Build.0 = Debug|Win32
+		{341E64BF-B8EC-4BD5-A9C6-D9C96FAB8170}.Release|Win32.ActiveCfg = Release|Win32
+		{341E64BF-B8EC-4BD5-A9C6-D9C96FAB8170}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

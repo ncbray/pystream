@@ -1,6 +1,6 @@
 from . import base
 
-import util.namedtuple
+import collections
 
 class WildcardSchema(base.Schema):
 	__slots__ = ()
@@ -36,7 +36,7 @@ class StructureSchema(base.Schema):
 
 		# HACK no typename, just 'structure'?
 		names = [name for name, field in fields]
-		self.type_ = util.namedtuple.namedtuple('structure', names)
+		self.type_ = collections.namedtuple('structure', names)
 
 	def instance(self):
 		raise base.SchemaError, "Cannot directly create instances of structures."

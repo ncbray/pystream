@@ -1,0 +1,14 @@
+# Visual Studio
+*.exp
+*.lib
+*.pdb
+*.idb
+*.suo
+*.ncb
+*.user
+*.manifest
+*.obj
+*.pch
+*.dep
+*.htm
+*.res

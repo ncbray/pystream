@@ -16,7 +16,7 @@ import inspect
 from . import errors
 
 import sys
-
+import dis
 
 from decompiler.mutateimage import finishExtraction, setupLowLevel
 
@@ -551,18 +551,19 @@ class Extractor(object):
 		except IrreducibleGraphException:
 			raise Exception, ("Cannot reduce graph for %s" % repr(func))
 		except errors.UnsupportedOpcodeError, e:
-			if self.verbose: print "ERROR decompiling %s. %s" % (repr(func), e.message)
-			self.badopcodes[e.message] += 1
+			if self.verbose: print "ERROR decompiling %s. %r" % (repr(func), e)
+			if False:
+				dis.dis(func)
+			self.badopcodes[e.args[0]] += 1
 			self.errors += 1
 		except InternalError, e:
-			if self.verbose: print "Internal Error: %s prevented the decompilation of %s." % (repr(e.message), repr(func))
+			if self.verbose: print "Internal Error: %r prevented the decompilation of %s." % (e, repr(func))
 			self.failiures += 1
 		except TemporaryLimitation, e:
-			if self.verbose: print "Temporary limitation: %s prevented the decompilation of %s." % (repr(e.message), repr(func))
+			if self.verbose: print "Temporary limitation: %r prevented the decompilation of %s." % (e, repr(func))
 			self.failiures += 1
 		except Exception, e:
 			print "Unhandled %s prevented the decompilation of %s." % (type(e).__name__, repr(func))
-			#print e.message
 			self.failiures += 1
 			raise
 		else:

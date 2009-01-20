@@ -30,6 +30,14 @@ def llast(f):
 	return ast
 
 
+_cfuncptr = cfuncptr
+
+def cfuncptr(obj):
+	try:
+		return _cfuncptr(obj)
+	except TypeError:
+		raise TypeError, "Cannot get pointer from %r" % type(obj)
+
 ### Attachment functions ###
 
 def attachAttrPtr(t, attr):

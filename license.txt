@@ -1,0 +1,21 @@
+This software:
+
+Copyright (c) 2007-2009 Nick Bray
+All Rights Reserved.
+
+============================================================
+
+Used in this software:
+
+Python
+Copyright (c) 2001-2008 Python Software Foundation
+All Rights Reserved.
+
+ANTLR
+Copyright (c) 2003-2008 Terence Parr
+All Rights Reserved.
+
+PADS
+Public Domain
+
+CUDD/PyCUDD are also used, but slated for removal.

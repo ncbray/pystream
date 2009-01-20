@@ -105,29 +105,6 @@ class Memoizer(object):
 		return self.cache[args]
 
 
-def __explodeCombonations(callback, limit, args, current, index):
-	if index >= len(args):
-		callback(*current)
-	else:
-		if limit and len(args[index]) > limit:
-			# Don't explode a parameter that has a
-			# multiplicity greater than "limit"
-			current[index] = tuple(args[index])
-			__explodeCombonations(callback, limit, args, current, index+1)			
-		else:
-			# For parameters with low multiplicity,
-			# generate all possible combinations.
-			for arg in args[index]:
-				current[index] = arg
-				__explodeCombonations(callback, limit, args, current, index+1)
-
-
-def explodeCombonations(callback, limit, *args):
-	current = [None for i in range(len(args))]
-	index = 0
-	__explodeCombonations(callback, limit, args, current, index)
-
-
 # Assumes that the same arguments will create the same object,
 # and different arguments will create different objects.
 class Canonical(object):

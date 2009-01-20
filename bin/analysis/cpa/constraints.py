@@ -1,10 +1,8 @@
-from util import explodeCombonations
-#from base import LocalSlot
-
-# HACK
-from programIR.python import program
-
+import itertools
 import base
+
+# HACK to testing if a object is a bool True/False...
+from programIR.python import program
 
 class Constraint(object):
 	__slots__ = 'dirty', 'path'
@@ -20,15 +18,17 @@ class Constraint(object):
 	def update(self, sys):
 		raise NotImplementedError
 
-	def clean(self):
-		assert self.dirty
-		self.dirty = True
-
 	def mark(self, sys):
 		if not self.dirty:
 			self.dirty = True
 			sys.dirty.append(self)
 
+
+class CachedConstraint(Constraint):
+	__slots__ = 'cache'
+	def __init__(self):
+		Constraint.__init__(self)
+		self.cache = set()
 
 class AssignmentConstraint(Constraint):
 	__slots__ = 'sourceslot', 'destslot'
@@ -49,33 +49,30 @@ class AssignmentConstraint(Constraint):
 		sys.dependsRead(self, self.sourceslot)
 
 
-class LoadConstraint(Constraint):
-	__slots__ = 'op', 'expr', 'slottype', 'key', 'target', 'cache'
+class LoadConstraint(CachedConstraint):
+	__slots__ = 'op', 'expr', 'slottype', 'key', 'target'
 	def __init__(self, op, expr, slottype, key, target):
-		Constraint.__init__(self)
+		CachedConstraint.__init__(self)
 		self.op       = op
 		self.expr     = expr
 		self.slottype = slottype
 		self.key      = key
 		self.target   = target
 
-		self.cache = set()
-
 	def update(self, sys):
 		exprs = sys.read(self.expr)
 		keys = sys.read(self.key)
-		
-		explodeCombonations(self.concreteCombination, 0, (sys,), exprs, keys)
 
-	def concreteCombination(self, sys, expr, key):
+		for args in itertools.product(exprs, keys):
+			if not args in self.cache:
+				self.cache.add(args)			
+			self.concreteUpdate(sys, *args)
+
+	def concreteUpdate(self, sys, expr, key):
 		slot = sys.canonical.objectSlot(expr, self.slottype, key.obj)
-		
-		if not slot in self.cache:
-			self.cache.add(slot)
-
-			sys.createAssign(slot, self.target)
-			sys.contextReads.add((self.expr.context, slot))
-			sys.opReads[self.op].add(slot)
+		sys.createAssign(slot, self.target)
+		sys.contextReads.add((self.expr.context, slot))
+		sys.opReads[self.op].add(slot)
 
 	def attach(self, sys):
 		sys.dependsRead(self, self.expr)
@@ -83,77 +80,74 @@ class LoadConstraint(Constraint):
 
 
 
-class StoreConstraint(Constraint):
-	__slots__ = 'op', 'expr', 'slottype', 'key', 'value', 'cache'
+class StoreConstraint(CachedConstraint):
+	__slots__ = 'op', 'expr', 'slottype', 'key', 'value'
 	def __init__(self, op, expr, slottype, key, value):
-		Constraint.__init__(self)
+		CachedConstraint.__init__(self)
 		self.op       = op
 		self.expr     = expr
 		self.slottype = slottype
 		self.key      = key
 		self.value    = value
 
-		self.cache = set()
-
 	def update(self, sys):
 		exprs = sys.read(self.expr)
 		keys = sys.read(self.key)
-		explodeCombonations(self.concreteCombination, 0, (sys,), exprs, keys)
 
-	def concreteCombination(self, sys, expr, key):
+		for args in itertools.product(exprs, keys):
+			if not args in self.cache:
+				self.cache.add(args)
+				self.concreteUpdate(sys, *args)
+
+	def concreteUpdate(self, sys, expr, key):	
 		slot = sys.canonical.objectSlot(expr, self.slottype, key.obj)
-		
-		if not slot in self.cache:
-			self.cache.add(slot)
-
-			sys.createAssign(self.value, slot)
-			sys.contextModifies.add((self.expr.context, slot))
-			sys.opModifies[self.op].add(slot)
-
-
+		sys.createAssign(self.value, slot)
+		sys.contextModifies.add((self.expr.context, slot))
+		sys.opModifies[self.op].add(slot)
 
 	def attach(self, sys):
 		sys.dependsRead(self, self.expr)
 		sys.dependsRead(self, self.key)
 
 
-class AllocateConstraint(Constraint):
-	__slots__ = 'op', 'path', 'type_', 'target', 'allocated'
+class AllocateConstraint(CachedConstraint):
+	__slots__ = 'op', 'path', 'type_', 'target'
 	def __init__(self, op, path, type_, target):
-		Constraint.__init__(self)
+		CachedConstraint.__init__(self)
 		self.op     = op
 		self.path   = path
 		self.type_  = type_
 		self.target = target
-
-		self.allocated = set()
 		
 	def update(self, sys):
 		types = sys.read(self.type_)
+		
 		for type_ in types:
-			if not type_ in self.allocated:
-				self.allocated.add(type_)
+			if not type_ in self.cache:
+				self.cache.add(type_)
+				self.concreteUpdate(sys, type_)
 
-				if type_.obj.isType():
-					sys.extractor.ensureLoaded(type_.obj)
-					inst = type_.obj.abstractInstance()
-					contextInst = sys.allocatedObject(self.path, inst)
-					
-					# Return the allocated object.
-					sys.update(self.target, (contextInst,))
+	def concreteUpdate(self, sys, type_):
+		if type_.obj.isType():
+			sys.extractor.ensureLoaded(type_.obj)
+			inst = type_.obj.abstractInstance()
+			contextInst = sys.allocatedObject(self.path, inst)
+			
+			# Return the allocated object.
+			sys.update(self.target, (contextInst,))
 
-					#sys.allocation(self.op, self.type_.context, contextInst)
-					sys.allocation(self.op.op, self.op.context, contextInst)
+			#sys.allocation(self.op, self.type_.context, contextInst)
+			sys.allocation(self.op.op, self.op.context, contextInst)
 
 	def attach(self, sys):
 		sys.dependsRead(self, self.type_)
 
 
 # Resolves the type of the expression, varg, and karg
-class AbstractCallConstraint(Constraint):
-	__slots__ = 'op', 'path', 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'target', 'calls'
+class AbstractCallConstraint(CachedConstraint):
+	__slots__ = 'op', 'path', 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'target'
 	def __init__(self, op, path, selfarg, args, kwds, vargs, kargs, target):
-		Constraint.__init__(self)
+		CachedConstraint.__init__(self)
 
 		assert isinstance(args, (list, tuple)), args
 		assert not kwds, kwds
@@ -168,49 +162,56 @@ class AbstractCallConstraint(Constraint):
 		
 		self.target  = target
 
-		self.calls = set()
-
 	def update(self, sys):
-		selfarg = sys.read(self.selfarg) if self.selfarg else (None,)
+		selfargs = sys.read(self.selfarg) if self.selfarg else (None,)
 		vargs = sys.read(self.vargs) if self.vargs else (None,)
 		kargs = sys.read(self.kargs) if self.kargs else (None,)
-		explodeCombonations(self.concreteCombination, 0, (sys,), selfarg, vargs, kargs)
 
-	def concreteCombination(self, sys, expr, vargs, kargs):
+		for selfarg, varg, karg in itertools.product(selfargs, vargs, kargs):
+			self.concreteUpdate(sys, selfarg, varg, karg)
+
+	def getVArgLengths(self, sys, vargs):
 		if vargs is not None:
-			lengthStr = sys.extractor.getObject('length')
+			lengthStr  = sys.extractor.getObject('length')
 			lengthSlot = sys.canonical.objectSlot(vargs, 'LowLevel', sys.existingObject(lengthStr).obj)
+
+			lengths = []
 
 			for vlengthObj in sys.read(lengthSlot):
 				vlength = vlengthObj.obj.pyobj
 				assert isinstance(vlength, int), vlength
-				self.finalCombination(sys, expr, vargs, kargs, vlength)
+				lengths.append(vlength)
+
+			return lengths
 		else:
-			self.finalCombination(sys, expr, vargs, kargs, 0)
+			return (0,)
+		
+
+	def concreteUpdate(self, sys, expr, vargs, kargs):
+		for vlength in self.getVArgLengths(sys, vargs):
+			key = (expr, vargs, kargs, vlength)
+			if not key in self.cache:
+				self.cache.add(key)
+				self.finalCombination(sys, expr, vargs, kargs, vlength)
 
 	def finalCombination(self, sys, expr, vargs, kargs, vlength):
-		key = (expr, vargs, kargs, vlength)
+		func = self.getFunc(sys, expr)
 
-		if not key in self.calls:
-			self.calls.add(key)
+		assert func, "Attempted to call uncallable object:\n%r\n\nat op:\n%r\n\nwith args:\n%r\n\n" % (expr.obj, self.op, vargs)
 
-			func = self.getFunc(sys, expr)
 
-			if func:
-				allslots = list(self.args)
-				for i in range(vlength):
-					index = sys.extractor.getObject(i)
-					vslot = sys.canonical.objectSlot(vargs, 'Array', sys.existingObject(index).obj)
-					allslots.append(vslot)
+		allslots = list(self.args)
+		for i in range(vlength):
+			index = sys.extractor.getObject(i)
+			vslot = sys.canonical.objectSlot(vargs, 'Array', sys.existingObject(index).obj)
+			allslots.append(vslot)
 
-				division = len(func.code.parameters)
-				argslots =  allslots[:division]
-				vargslots = allslots[division:]
-				
-				con = SimpleCallConstraint(self.op, self.path, func, expr, allslots, argslots, vargslots, self.target)
-				con.attach(sys)			
-			else:
-				assert func, "Attempted to call uncallable object:\n%r\n\nat op:\n%r\n\nwith args:\n%r\n\n" % (expr.obj, self.op, vargs)
+		division = len(func.code.parameters)
+		argslots =  allslots[:division]
+		vargslots = allslots[division:]
+		
+		con = SimpleCallConstraint(self.op, self.path, func, expr, allslots, argslots, vargslots, self.target)
+		con.attach(sys)			
 
 
 	def attach(self, sys):
@@ -249,13 +250,13 @@ class DirectCallConstraint(AbstractCallConstraint):
 # Resolves argument types, given and exact function, self type,
 # and list of argument slots.
 
-class SimpleCallConstraint(Constraint):
-	__slots__ = 'op', 'path', 'func', 'selftype', 'slots', 'argslots', 'vargslots', 'target', 'invocations'
+class SimpleCallConstraint(CachedConstraint):
+	__slots__ = 'op', 'path', 'func', 'selftype', 'slots', 'argslots', 'vargslots', 'target'
 	
 	def __init__(self, op, path, func, selftype, slots, argslots, vargslots, target):
-		assert selftype is None or isinstance(selftype, base.ContextObject), selftype
+		CachedConstraint.__init__(self)
 
-		Constraint.__init__(self)
+		assert selftype is None or isinstance(selftype, base.ContextObject), selftype
 
 		self.op   = op
 		self.path = path
@@ -270,22 +271,16 @@ class SimpleCallConstraint(Constraint):
 				
 		self.target = target
 
-		self.invocations = set()
-
 	def update(self, sys):
-		# TODO use util.calling to generate args
-		args = [sys.read(arg) for arg in self.slots]
-		explodeCombonations(self.concreteCombination, 0, (sys,), *args)
+		for args in itertools.product(*[sys.read(arg) for arg in self.slots]):
+			self.concreteUpdate(sys, args)
 
-	def concreteCombination(self, sys, *args):
+	def concreteUpdate(self, sys, args):
 		numParams = len(self.func.code.parameters)
-		params  = args[:numParams]
-		vparams = args[numParams:]
+		targetcontext = sys.canonicalContext(self.path, self.func, self.selftype, args[:numParams], args[numParams:])
 		
-		targetcontext = sys.canonicalContext(self.path, self.func, self.selftype, params, vparams)
-		
-		if not targetcontext in self.invocations:
-			self.invocations.add(targetcontext)
+		if targetcontext not in self.cache:
+			self.cache.add(targetcontext)
 			
 			sys.bindCall(self.target, targetcontext)
 
@@ -314,21 +309,26 @@ class DeferedSwitchConstraint(Constraint):
 		self.tDefered = True
 		self.fDefered = True
 
+	def getLiveness(self, sys):
+		# Figure if either branch is taken.
+		tLive, fLive = False, False
+		
+		cond = sys.read(self.cond)
+		for cobj in cond:
+			obj = cobj.obj
+			if isinstance(obj, program.Object) and isinstance(obj.pyobj, (bool, int, long, float, str)):
+				if obj.pyobj:
+					tLive = True
+				else:
+					fLive = True
+			else:
+				tLive, fLive =  True, True
+
+		return tLive, fLive
+
 	def update(self, sys):
 		if self.tDefered or self.fDefered:
-			# Figure if either branch is taken.
-			tLive, fLive = False, False
-			
-			cond = sys.read(self.cond)
-			for cobj in cond:
-				obj = cobj.obj
-				if isinstance(obj, program.Object) and isinstance(obj.pyobj, (bool, int, long, float, str)):
-					if obj.pyobj:
-						tLive = True
-					else:
-						fLive = True
-				else:
-					tLive, fLive =  True, True
+			tLive, fLive = self.getLiveness(sys)
 
 			# Process defered branches, if they're taken.
 			if tLive and self.tDefered:

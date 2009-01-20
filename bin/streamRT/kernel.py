@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-import new
+import types
 
 def shouldIterate(o, role):
 	return isinstance(o, stream) and role != 'uniform'
@@ -77,7 +77,7 @@ class kernel(object):
 			return self.f(*args)
 
 	def __get__(self, instance, owner):
-		return new.instancemethod(self, instance, owner)
+		return types.MethodType(self, instance, owner)
 
 uniform = 'uniform'
 default = 'default'
@@ -109,7 +109,7 @@ class KernelConfigAccumulator(object):
 		self._roles = kargs
 		
 	def __call__(self, f):
-		assert callable(f)
+		assert hasattr(f, '__call__')
 		return kernelcls(f, self.__createConfig(f))
 
 	def __createConfig(self, f):
@@ -142,7 +142,7 @@ class KernelDecorator(object):
 	def __call__(self, *args, **kargs):
 		accum = KernelConfigAccumulator()
 		
-		if len(args) == 1 and len(kargs) == 0 and callable(args[0]):
+		if len(args) == 1 and len(kargs) == 0 and hasattr(args[0], '__call__'):
 			# decorator called directly on function.
 			return accum(args[0])
 		elif len(args) == 0 and len(kargs) > 0:

@@ -112,7 +112,7 @@ class EquivalenceClass(object):
 		else:
 			if existing is not eq:
 				# Merge the two equivalence classes
-				if existing.weight >= eq:
+				if existing.weight >= eq.weight:
 					result = existing.absorb(eq)
 				else:
 					result = eq.absorb(existing)

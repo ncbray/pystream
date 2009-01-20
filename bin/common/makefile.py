@@ -89,8 +89,9 @@ class Makefile(object):
 			   'config':self.declConfig,
 			   'entryPoint':self.declEntryPoint,
 			   'output':self.declOutput}
-		
-		execfile(self.filename, makeDSL)
+
+		f = open(self.filename)
+		exec f in makeDSL
 
 	def pystreamCompile(self):
 		print

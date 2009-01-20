@@ -450,7 +450,8 @@ class DestackVisitor(StandardVisitor):
 
 	def visitEndFinally(self, block, stack):
 		assert isinstance(stack, PythonStack), stack
-		assert stack.size >= 2
+		#assert stack.size() >= 2, stack.size()
+		assert stack.size() >= 1, stack.size()
 
 		if stack.peek() == pythonstack.exceptionType:
 			# End finally is, without a doubt, reraising an exception.

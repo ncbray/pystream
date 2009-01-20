@@ -1,27 +1,35 @@
-from _pystream import bijection
-
 from programIR.python import program, ast
 
 import util
 import util.calling
 
-# Things
-#	context
-#	function
-#	heap object
-#	slot
-#	op
-#	invocation
+class CanonicalObject(object):
+	__slots__ = 'canonical', 'hash'
 
+	def __init__(self, *args):
+		self.setCanonical(*args)
+
+	def setCanonical(self, *args):
+		self.canonical = args
+		self.hash = id(type(self))^hash(args)
+
+	def __hash__(self):
+		return self.hash
+
+	def __eq__(self, other):
+		return type(self) == type(other) and self.canonical == other.canonical
+
+	def __repr__(self):
+		return "%s(%s)" % (type(self).__name__, ", ".join([repr(obj) for obj in self.canonical]))
 
 ###########################
 ### Evaluation Contexts ###
 ###########################
 
-class ObjectContext(object):
+class ObjectContext(CanonicalObject):
 	__slots__ = ()
 
-class AnalysisContext(object):
+class AnalysisContext(CanonicalObject):
 	__slots__ = ()
 
 class CallPath(ObjectContext):
@@ -34,15 +42,11 @@ class CallPath(ObjectContext):
 		else:
 			self.path = oldpath.path[1:]+(op,)
 
+		self.setCanonical(*self.path)
+
 	def __repr__(self):
 		#return "callpath(%s)" % ", ".join([str(id(op)) for op in self.path])
 		return "callpath(%s)" % ", ".join([type(op).__name__+"/"+str(id(op)) for op in self.path])
-
-	def __eq__(self, other):
-		return type(self) == type(other) and self.path == other.path
-
-	def __hash__(self):
-		return hash(self.path)
 
 	def advance(self, op):
 		return CallPath(op, self)
@@ -50,7 +54,7 @@ class CallPath(ObjectContext):
 
 
 class CPAContext(AnalysisContext):
-	__slots__ = 'path', 'func', 'selfparam', 'params', 'vparams', 'vparamObj', 'kparamObj', 'callee', 'info', 'hash'
+	__slots__ = 'path', 'func', 'selfparam', 'params', 'vparams', 'vparamObj', 'kparamObj', 'callee', 'info'
 
 	def __init__(self, path, func, selfparam, params, vparams, vparamObj, kparamObj):
 		assert not isinstance(func, (AbstractSlot, ContextObject)), func
@@ -85,20 +89,10 @@ class CPAContext(AnalysisContext):
 			print self.args
 			print
 
-		subhash = [hash(p) for p in params]
-		subhash.extend([hash(p) for p in vparams])
-
-		self.hash = bijection(hash(self.path), hash(func), hash(selfparam), *subhash)
 		# Note that the vargObj and kargObj are considered to be "derived values"
 		# (although they are created externally, as they require access to the system)
 		# and as such aren't part of the hash or equality computations.
-
-	def __hash__(self):
-		return self.hash
-
-	def __eq__(self, other):
-		return self is other or type(self) == type(other) and self.path == other.path and self.func == other.func \
-		       and self.selfparam == other.selfparam and self.params == other.params and self.vparams == other.vparams
+		self.setCanonical(self.path, self.func, self.selfparam, self.params, self.vparams)
 
 	def __repr__(self):
 		return "%s(%r, %r, %r, %r, %r)" % (type(self).__name__, self.path, self.func.name, self.selfparam, self.params, self.vparams)
@@ -144,25 +138,17 @@ externalFunction = ast.Function('external', ast.Code(None, [], [], None, None, a
 class ExternalFunctionContext(AnalysisContext):
 	__slots__ = ()
 		
-	def __repr__(self):
-		return "%s()" % (type(self).__name__)
-
 externalFunctionContext = ExternalFunctionContext()
 
 class ExternalOp(object):
 	__slots__ = '__weakref__'
 		
-	def __repr__(self):
-		return "%s()" % (type(self).__name__)
-
 externalOp = ExternalOp()
 
 class ExternalObjectContext(ObjectContext):
 	__slots__ = ()
-		
-	def __repr__(self):
-		return "%s()" % (type(self).__name__)
 
+		
 externalObjectContext = ExternalObjectContext()
 
 
@@ -179,23 +165,18 @@ existingObjectContext = ExistingObjectContext()
 ### Heap Names ###
 ##################
 
-class ContextObject(object):
-	__slots__ = 'context', 'obj', 'hash'
+class ContextObject(CanonicalObject):
+	__slots__ = 'context', 'obj'
 
 	
 	def __init__(self, context, obj):
 		assert isinstance(context, ObjectContext), context
 		assert isinstance(obj, program.AbstractObject), obj
+
+		self.setCanonical(context, obj)
 		
 		self.context 	= context
 		self.obj 	= obj
-		self.hash 	= bijection(hash(self.context), hash(self.obj))
-
-	def __hash__(self):
-		return self.hash
-
-	def __eq__(self, other):
-		return type(self) == type(other) and self.context == other.context and self.obj == other.obj
 
 	def __repr__(self):
 		return "%s(%r, %r)" % (type(self).__name__, id(self.context), self.obj)
@@ -204,46 +185,30 @@ class ContextObject(object):
 		return self.obj
 
 
-class ContextOp(object):
-	__slots__ = 'context', 'function', 'op', 'hash'
+class ContextOp(CanonicalObject):
+	__slots__ = 'context', 'function', 'op'
 	def __init__(self, context, function, op):
 		assert isinstance(context, AnalysisContext), context
 		assert isinstance(function, ast.Function), function
 		#assert ast.isPythonAST(op), op
 
+		self.setCanonical(context, function, op)
+
 		self.context  = context
 		self.function = function
 		self.op       = op
-		self.hash     = bijection(hash(context), hash(function), hash(op))
+		
 
-	def __hash__(self):
-		return self.hash
-
-	def __eq__(self, other):
-		return self is other or type(self) == type(other) and self.context == other.context and self.function == other.function and self.op == other.op
-
-	def __repr__(self):
-		return "%s(%r, %r, %r)" % (type(self).__name__, self.context, self.function.name, self.op)
-
-
-class ContextFunction(object):
-	__slots__ = 'context', 'function', 'hash'
+class ContextFunction(CanonicalObject):
+	__slots__ = 'context', 'function'
 	def __init__(self, context, function):
 		assert isinstance(context, AnalysisContext), context
 		assert isinstance(function, ast.Function), function
+
+		self.setCanonical(context, function)
 		
 		self.context  = context
 		self.function = function
-		self.hash     = bijection(hash(context), hash(function))
-
-	def __hash__(self):
-		return self.hash
-
-	def __eq__(self, other):
-		return self is other or type(self) == type(other) and self.context == other.context and self.function == other.function
-
-	def __repr__(self):
-		return "%s(%r, %r)" % (type(self).__name__, self.context, self.function.name)
 
 	def decontextualize(self):
 		return self.function
@@ -253,7 +218,7 @@ class ContextFunction(object):
 ### Slot Names ###
 ##################
 
-class AbstractSlot(object):
+class AbstractSlot(CanonicalObject):
 	__slots__ = ()
 	
 	def isLocalSlot(self):
@@ -270,22 +235,14 @@ class ObjectSlot(AbstractSlot):
 		assert isinstance(slottype, str)
 		assert isinstance(key, program.AbstractObject), key
 
+		self.setCanonical(obj, slottype, key)
+
 		self.obj      = obj
 		self.slottype = slottype
 		self.key      = key
-		self.hash = bijection(hash(self.obj), hash(self.slottype), hash(self.key))
 
 	def isObjectSlot(self):
 		return True
-
-	def __repr__(self):
-		return "%s(%r, %r, %r)" % (type(self).__name__, self.obj, self.slottype, self.key)
-
-	def __eq__(self, other):
-		return id(self) == id(other) or type(self) == type(other) and self.obj == other.obj and self.slottype == other.slottype and self.key == other.key
-
-	def __hash__(self):
-		return self.hash
 
 	def createInital(self, sys):
 		extractor = sys.extractor
@@ -329,22 +286,17 @@ class LocalSlot(AbstractSlot):
 	__slots__ = 'context', 'function', 'local', 'hash'
 	
 	def __init__(self, context, function, local):
+		self.setCanonical(context, function, local)
+		
 		self.context  = context
 		self.function = function
 		self.local    = local
-		self.hash     = bijection(hash(self.context), hash(self.function), hash(self.local))
 
 	def isLocalSlot(self):
 		return True
 	
 	def __repr__(self):
 		return "%s(%d, %r, %r)" % (type(self).__name__, id(self.context), self.function.name, self.local)
-
-	def __eq__(self, other):
-		return id(self) == id(other) or type(self) == type(other) and self.context == other.context and self.function == other.function and self.local == other.local
-
-	def __hash__(self):
-		return self.hash
 
 	def createInital(self, sys):
 		return set()

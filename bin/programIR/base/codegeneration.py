@@ -78,9 +78,9 @@ def makeGetFields(fields):
 
 
 def makeHash(fields):
-	children = ', '.join(["asthash(self.%s)" % field for field in fields])
+	children = ' '.join(["self.%s," % field for field in fields])	
 	code = """def asthash(self):
-	return bijection(id(type(self)), %s)
+	return id(type(self))^hash((%s))
 """ % (children)
 
 	return code

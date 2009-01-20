@@ -1,10 +1,8 @@
 __all__ = ['astnode', 'Symbol', 'children',
 	   'reconstruct', 'makeASTManifest',
-	   'bijection', 'astequal', 'asthash',]
+	   'astequal', 'asthash',]
 
 # A metaclass for generating AST node classes.
-
-from _pystream import bijection
 
 import sys
 
@@ -203,7 +201,7 @@ def asthash(node):
 	if isinstance(node, LeafTypes):
 		return hash(node)
 	else:
-		return bijection(id(type(node)), *[asthash(child) for child in children(node)])
+		return id(type(node))^hash(tuple(node.children))
 
 class Symbol(object):
 	__metaclass__ = astnode

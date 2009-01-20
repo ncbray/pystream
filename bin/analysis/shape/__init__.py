@@ -1,7 +1,5 @@
 from __future__ import absolute_import
 
-from _pystream import bijection
-
 # The model for the analysis
 
 from . model import canonical

@@ -60,7 +60,7 @@ class ProgramCloner(object):
 		different = self.different[func]
 
 		for context in self.adb.functionContexts(func):
-			assert context.func is func, (context, func)
+			assert context.signature.function is func, (context, func)
 			for group in groups:
 				assert context in different
 				if not different[context].intersection(group):
@@ -89,7 +89,7 @@ class ProgramCloner(object):
 				# helps avoid a problem where the edges in one context
 				# May be a subset of another context.
 				for context in contexts:
-					assert context.func is func, (context, func)
+					assert context.signature.function is func, (context, func)
 					
 					invocations = self.adb.invocationsForContextOp(func, op, context)
 					translated = [self.groupLUT[dst] for dst in invocations]

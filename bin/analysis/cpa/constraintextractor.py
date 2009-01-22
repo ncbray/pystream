@@ -40,12 +40,15 @@ class ExtractDataflow(object):
 	def contextOp(self, node):
 		return self.system.canonical.contextOp(self.context, self.function, node)
 
+	def opPath(self, node):
+		return self.context.signature.path.advance(node)
+
 	def directCall(self, node, func, selfarg, args, vargs=None, kargs=None):
 		result = self.contextual(node)
 		
 		if self.doOnce(node):
 			op   = self.contextOp(node)
-			path = self.context.path.advance(node)
+			path = self.opPath(node)
 			kwds = [] # HACK
 			con = DirectCallConstraint(op, path, func, selfarg, args, kwds, vargs, kargs, result)
 			con.attach(self.system) # TODO move inside constructor?
@@ -67,7 +70,7 @@ class ExtractDataflow(object):
 		result = self.contextual(node)
 		if self.doOnce(node):
 			op   = self.contextOp(node)
-			path = self.context.path.advance(node)
+			path = self.opPath(node)
 			con = CallConstraint(op, path, expr, args, kwds, vargs, kargs, result)
 			con.attach(self.system) # TODO move inside constructor?
 		return result
@@ -89,7 +92,7 @@ class ExtractDataflow(object):
 		result = self.contextual(node)
 		if self.doOnce(node):
 			op   = self.contextOp(node)			
-			path = self.context.path.advance(node)
+			path = self.opPath(node)
 			con = AllocateConstraint(op, path, expr, result)
 			con.attach(self.system) # TODO move inside constructor?
 		return result

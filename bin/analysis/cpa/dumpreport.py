@@ -237,17 +237,22 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.begin('p')
 			out.begin('table')
 
-			if context.selfparam is not None:
-				tableRow('self', context.selfparam)
 
-			for arg in context.params:
-				tableRow('param', arg)
+			sig = context.signature
+			if sig.selfparam is not None:
+				tableRow('self', sig.selfparam)
+
+			for i, arg in enumerate(sig.params):
+				tableRow('param %d' % i, arg)
+
+			for i, arg in enumerate(sig.vparams):
+				tableRow('vparam %d' % i, arg)
 
 			if context.vparamObj is not None:
-				tableRow('vparams', context.vparamObj)
+				tableRow('vparamObj', context.vparamObj)
 
 			if context.kparamObj is not None:
-				tableRow('kparams', context.kparamObj)
+				tableRow('kparamObj', context.kparamObj)
 
 			returnSlot = func.code.returnparam
 			values = info.localInfo(returnSlot).context(context).references

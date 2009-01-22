@@ -193,22 +193,21 @@ class InterproceduralDataflow(object):
 		def notConst(obj):
 			return obj is not None and not obj.obj.isConstant()
 		
-		func = targetcontext.func
+		sig = targetcontext.signature
+		func = sig.function
 		
 		if func in foldLUT:
 			# It's foldable.
 
 			# TODO folding with constant vargs?
-			if notConst(targetcontext.selfparam): return False
-			for param in targetcontext.params:
+			if notConst(sig.selfparam): return False
+			for param in sig.params:
 				if notConst(param): return False
-			if notConst(targetcontext.vparamObj): return False
-			if notConst(targetcontext.kparamObj): return False
 
 			assert targetcontext.vparamObj is None, targetcontext.vparamObj
 			assert targetcontext.kparamObj is None, targetcontext.kparamObj
 
-			params = [param.obj for param in targetcontext.params]
+			params = [param.obj for param in sig.params]
 			result = foldFunctionIR(self.extractor, foldLUT[func], params)
 			result = self.existingObject(result)
 
@@ -233,8 +232,8 @@ class InterproceduralDataflow(object):
 
 	def bindCall(self, target, targetcontext):
 			
-
-		func = targetcontext.func
+		sig = targetcontext.signature
+		func = sig.function
 
 
 		info = self.db.functionInfo(func)
@@ -247,7 +246,7 @@ class InterproceduralDataflow(object):
 		if target is not None:
 			# Record the invocation			
 			# HACK recoving op from callpath, may not work in the future.
-			op = targetcontext.path.path[-1]
+			op = sig.path.path[-1]
 
 			sourceop = self.canonical.contextOp(target.context, target.function, op)
 			dstfunc = self.canonical.contextFunction(targetcontext, func)

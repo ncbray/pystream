@@ -1,8 +1,8 @@
 from programIR.python import program, ast
 
 import util
+import util.cpa
 import util.calling
-
 import util.canonical
 CanonicalObject = util.canonical.CanonicalObject
 
@@ -38,7 +38,7 @@ class CallPath(ObjectContext):
 
 
 class CPAContext(AnalysisContext):
-	__slots__ = 'path', 'func', 'selfparam', 'params', 'vparams', 'vparamObj', 'kparamObj', 'callee', 'info'
+	__slots__ = 'signature', 'vparamObj', 'kparamObj', 'callee', 'info'
 
 	def __init__(self, path, func, selfparam, params, vparams, vparamObj, kparamObj):
 		assert not isinstance(func, (AbstractSlot, ContextObject)), func
@@ -50,14 +50,8 @@ class CPAContext(AnalysisContext):
 		for param in vparams:
 			assert isinstance(param, ContextObject), param
 
-
-		self.path  = path
-		self.func  = func
-		
-		self.selfparam = selfparam
-		self.params  = tuple(params)
-		self.vparams = tuple(vparams)
-		
+		self.signature = util.cpa.CPASignature(func, path, selfparam, params, vparams)
+				
 		self.vparamObj = vparamObj
 		self.kparamObj = kparamObj
 
@@ -76,13 +70,11 @@ class CPAContext(AnalysisContext):
 		# Note that the vargObj and kargObj are considered to be "derived values"
 		# (although they are created externally, as they require access to the system)
 		# and as such aren't part of the hash or equality computations.
-		self.setCanonical(self.path, self.func, self.selfparam, self.params, self.vparams)
-
-	def __repr__(self):
-		return "%s(%r, %r, %r, %r, %r)" % (type(self).__name__, self.path, self.func.name, self.selfparam, self.params, self.vparams)
+		self.setCanonical(self.signature)
 
 	def bindParameters(self, sys):
-		func = self.func
+		sig = self.signature
+		func = sig.function
 		context = self
 
 		def bindObjToLocal(obj, lcl):
@@ -91,11 +83,10 @@ class CPAContext(AnalysisContext):
 		
 		# Local binding done after creating constraints,
 		# to ensure the variables are dirty.
-		bindObjToLocal(context.selfparam,   func.code.selfparam)
+		bindObjToLocal(sig.selfparam,   func.code.selfparam)
 
 
-		assert len(context.params) == len(func.code.parameters)
-		for arg, param in zip(self.params, func.code.parameters):
+		for arg, param in zip(sig.params, func.code.parameters):
 			bindObjToLocal(arg, param)
 
 		bindObjToLocal(context.vparamObj, func.code.vparam)
@@ -104,14 +95,14 @@ class CPAContext(AnalysisContext):
 
 		if context.vparamObj is not None:
 			# Bind the vargs
-			for i, param in enumerate(self.vparams):
+			for i, param in enumerate(sig.vparams):
 				index = sys.extractor.getObject(i)
 				target = sys.canonical.objectSlot(context.vparamObj, 'Array', sys.existingObject(index).obj)
 				sys.update(target, (param,))
 
 
 			# Set the length of the vparam tuple.
-			length     = sys.existingObject(sys.extractor.getObject(len(self.vparams)))
+			length     = sys.existingObject(sys.extractor.getObject(len(sig.vparams)))
 			lengthStr  = sys.extractor.getObject('length')
 			lengthSlot = sys.canonical.objectSlot(context.vparamObj, 'LowLevel', sys.existingObject(lengthStr).obj)
 			sys.update(lengthSlot, (length,)) 

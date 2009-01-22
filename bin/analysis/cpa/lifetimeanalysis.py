@@ -126,7 +126,7 @@ class ReadModifyAnalysis(object):
 		self.dirty = set()
 		
 		for context, values in self.contextReads.iteritems():
-			if values: self.dirty.add((context.func, context))
+			if values: self.dirty.add((context.signature.function, context))
 
 
 		while self.dirty:
@@ -159,7 +159,7 @@ class ReadModifyAnalysis(object):
 		self.dirty = set()
 		
 		for context, values in self.contextModifies.iteritems():
-			if values: self.dirty.add((context.func, context))
+			if values: self.dirty.add((context.signature.function, context))
 
 		while self.dirty:
 			current = self.dirty.pop()
@@ -301,7 +301,7 @@ class LifetimeAnalysis(object):
 		# Seed the inital dirty set
 		self.dirty = set()
 		for context, objs in self.allocations.iteritems():
-			func = context.func # HACK
+			func = context.signature.function # HACK
 			self.live[(func, context)].update(objs-self.escapes)
 			self.dirty.update(self.invokedBy[func][context])
 

@@ -1,9 +1,4 @@
-MustAlias = 'MustAlias'
-MayAlias  = 'MayAlias'
-NoAlias   = 'NoAlias'
-
-Unknown = 'Unknown'
-
+from util.tvl import *
 
 class Expression(object):
 	__slots__ = 'slot'
@@ -30,16 +25,7 @@ class Expression(object):
 		return len(self) <= 1
 
 	def _pathAlias(self, paths):
-		mustHit, mustMiss = paths.classifyHitMiss(self)
-
-		# A known hit
-		if mustHit: return MustAlias
-
-		# A known miss
-		if mustMiss: return NoAlias
-
-		# No idea if it matches...
-		return MayAlias
+		return paths.hit(self)
 
 	def makeExtendedParameter(self, sys, parameters):
 		if self.hasParameterRoot(parameters):
@@ -77,8 +63,8 @@ class NullExpr(Expression):
 	def pathString(self):
 		return 'null'
 
-	def refersTo(self, sys, index, paths):
-		return NoAlias
+	def hit(self, sys, index, paths):
+		return TVLFalse
 
 	def isNull(self):
 		return True
@@ -124,11 +110,8 @@ class LocalExpr(Expression):
 	def pathString(self):
 		return str(self.slot)
 
-	def refersTo(self, sys, index, paths):
-		if index.referedToBySlot(self.slot):
-			return MustAlias
-		else:
-			return NoAlias
+	def hit(self, sys, index, paths):
+		return index.slotHit(self.slot)
 
 	def __len__(self):
 		return 1
@@ -193,12 +176,12 @@ class FieldExpr(Expression):
 		return "%s.%s" % (self.parent.path(), str(self.slot))
 
 
-	def refersTo(self, sys, index, paths):
+	def hit(self, sys, index, paths):
 		# TODO can we make this more precise?
 
 		# Check reference points to this index
-		if not index.referedToBySlot(self.slot):
-			return NoAlias
+		if index.slotHit(self.slot).mustBeFalse():
+			return TVLFalse
 
 		return self._pathAlias(paths)
 		
@@ -248,7 +231,7 @@ class ExtendedParameter(Expression):
 	def __repr__(self):
 		return "ext(%s)" % ".".join([str(slot) for slot in self._path])
 
-	def refersTo(self, sys, index, paths):
+	def hit(self, sys, index, paths):
 		return self._pathAlias(paths)
 
 	def __len__(self):

@@ -2,6 +2,8 @@ from __future__ import absolute_import
 
 from tests.shape.shape_base import *
 
+from util.tvl import *
+
 class TestExpressions(TestConstraintBase):
 	def shapeSetUp(self):
 		self.fielda = self.sys.canonical.fieldSlot(None, 'a')
@@ -136,11 +138,11 @@ class TestExpressions(TestConstraintBase):
 	def checkHitMiss(self, newPaths, hits, misses):
 		if hits:
 			for hit in hits:
-				self.assertEqual(newPaths.classifyHitMiss(hit), (True, False))
+				self.assertEqual(newPaths.hit(hit), TVLTrue)
 
 		if misses:
 			for miss in misses:
-				self.assertEqual(newPaths.classifyHitMiss(miss), (False, True))
+				self.assertEqual(newPaths.hit(miss), TVLFalse)
 
 
 

@@ -1,4 +1,4 @@
-usePsyco        = True
+usePsyco        = False
 
 # Absolute path, as durring development the script
 # may be called from different working directories...
@@ -11,8 +11,8 @@ if False:
 		'tests.shape.test_shape_compound',
 		'tests.shape.test_shape_pathinfo',
 		#'tests.test_database',
-		'tests.test_full',
-		'tests.cpa.test_cpa',
+		#'tests.test_full',
+		#'tests.cpa.test_cpa',
 		]
 else:
 	testExclude = [

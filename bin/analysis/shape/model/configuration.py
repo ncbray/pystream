@@ -7,8 +7,8 @@ class Configuration(object):
 		self.entrySet   = entrySet
 		self.currentSet = currentSet
 
-	def referedToBySlot(self, slot):
-		return self.currentSet.referedToBySlot(slot)
+	def slotHit(self, slot):
+		return self.currentSet.slotHit(slot)
 
 	def isConfiguration(self):
 		return True

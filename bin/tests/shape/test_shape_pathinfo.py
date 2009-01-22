@@ -5,6 +5,7 @@ import unittest
 import analysis.shape.model.canonical as canonical
 import analysis.shape.model.pathinformation as pathinformation
 
+from util.tvl import *
 
 class TestPathInformationBase(unittest.TestCase):
 	def makeExprs(self, lcl):
@@ -37,12 +38,12 @@ class TestPathInformation(TestPathInformationBase):
 		info = info.unionHitMiss((self.an,self.bn), ())
 
 		filtera = info.filterUnstable(self.a.slot)
-		self.assertEqual(filtera.classifyHitMiss(self.an), (False, False))
-		self.assertEqual(filtera.classifyHitMiss(self.bn), (True,  False))
+		self.assertEqual(filtera.hit(self.an), TVLMaybe)
+		self.assertEqual(filtera.hit(self.bn), TVLTrue)
 
 		filterb = info.filterUnstable(self.b.slot)
-		self.assertEqual(filterb.classifyHitMiss(self.an), (True,   False))
-		self.assertEqual(filterb.classifyHitMiss(self.bn), (False,  False))
+		self.assertEqual(filterb.hit(self.an), TVLTrue)
+		self.assertEqual(filterb.hit(self.bn), TVLMaybe)
 
 
 	def testHits2(self):
@@ -58,8 +59,8 @@ class TestPathInformation(TestPathInformationBase):
 		self.assert_(info.mustAlias(self.a, self.b))
 		self.assert_(info.mustAlias(self.an, self.bn))
 
-		self.assertEqual(info.classifyHitMiss(self.an), (True, False))
-		self.assertEqual(info.classifyHitMiss(self.bn), (True, False))
+		self.assertEqual(info.hit(self.an), TVLTrue)
+		self.assertEqual(info.hit(self.bn), TVLTrue)
 
 
 	def testLoop(self):
@@ -201,17 +202,17 @@ class TestPathInfoSplit(PathInfoBase):
 		self.extendedParams = self.paths.extendParameters(self.canonical, parameterSlots)
 		
 	def testHits(self):
-		self.assertEqual(self.paths.classifyHitMiss(self.xf),  (True, False))
-		self.assertEqual(self.paths.classifyHitMiss(self.yrl), (True, False))
-		self.assertEqual(self.paths.classifyHitMiss(self.trl), (True, False))
+		self.assertEqual(self.paths.hit(self.xf),  TVLTrue)
+		self.assertEqual(self.paths.hit(self.yrl), TVLTrue)
+		self.assertEqual(self.paths.hit(self.trl), TVLTrue)
 
-		self.assertEqual(self.paths.classifyHitMiss(self.yr), (False, False))
-		self.assertEqual(self.paths.classifyHitMiss(self.zf), (False, False))
+		self.assertEqual(self.paths.hit(self.yr), TVLMaybe)
+		self.assertEqual(self.paths.hit(self.zf), TVLMaybe)
 
 	def testExtendParameters(self):
 		self.extendBase()
 
-		self.assertEqual(self.paths.classifyHitMiss(self.etrl),  (True, False))
+		self.assertEqual(self.paths.hit(self.etrl),  TVLTrue)
 
 		self.assert_(self.paths.mustAlias(self.etr, self.tr))
 		self.assert_(self.paths.mustAlias(self.etr, self.yr))
@@ -273,17 +274,17 @@ class TestUglyPathInfoSplit(PathInfoBase):
 		self.extendedParams = self.paths.extendParameters(self.canonical, parameterSlots)
 		
 	def testHits(self):
-		self.assertEqual(self.paths.classifyHitMiss(self.xlrr),  (True, False))
-		self.assertEqual(self.paths.classifyHitMiss(self.yrrr), (True, False))
+		self.assertEqual(self.paths.hit(self.xlrr),  TVLTrue)
+		self.assertEqual(self.paths.hit(self.yrrr), TVLTrue)
 
-		self.assertEqual(self.paths.classifyHitMiss(self.xlr), (False, False))
-		self.assertEqual(self.paths.classifyHitMiss(self.yrr), (False, False))
+		self.assertEqual(self.paths.hit(self.xlr), TVLMaybe)
+		self.assertEqual(self.paths.hit(self.yrr), TVLMaybe)
 
-		self.assertEqual(self.paths.classifyHitMiss(self.xl), (False, False))
-		self.assertEqual(self.paths.classifyHitMiss(self.yr), (False, False))
+		self.assertEqual(self.paths.hit(self.xl), TVLMaybe)
+		self.assertEqual(self.paths.hit(self.yr), TVLMaybe)
 
-		self.assertEqual(self.paths.classifyHitMiss(self.x), (False, False))
-		self.assertEqual(self.paths.classifyHitMiss(self.y), (False, False))
+		self.assertEqual(self.paths.hit(self.x), TVLMaybe)
+		self.assertEqual(self.paths.hit(self.y), TVLMaybe)
 
 		self.assert_(self.paths.mustAlias(self.xlr, self.yrr))
 
@@ -297,12 +298,12 @@ class TestUglyPathInfoSplit(PathInfoBase):
 		accessed, hidden = self.paths.split(self.extendedParams, accessedCallback)
 
 
-		self.assertEqual(accessed.classifyHitMiss(self.xlrr),  (True, False))
-		self.assertEqual(accessed.classifyHitMiss(self.yrrr), (False, False))
+		self.assertEqual(accessed.hit(self.xlrr),  TVLTrue)
+		self.assertEqual(accessed.hit(self.yrrr), TVLMaybe)
 		self.assert_(not accessed.mustAlias(self.xlr, self.yrr))
 
-		self.assertEqual(hidden.classifyHitMiss(self.xlrr),  (False, False))
-		self.assertEqual(hidden.classifyHitMiss(self.yrrr), (True, False))
+		self.assertEqual(hidden.hit(self.xlrr),  TVLMaybe)
+		self.assertEqual(hidden.hit(self.yrrr), TVLTrue)
 		self.assert_(not hidden.mustAlias(self.xlr, self.yrr))
 	
 ##		accessed.dump()

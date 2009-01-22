@@ -1,12 +1,12 @@
 import util.compressedset
+from util.tvl import *
 
 class EquivalenceClass(object):
-	__slots__ = 'attrs', 'hit', 'miss', 'forward', 'weight'
+	__slots__ = 'attrs', 'hit', 'forward', 'weight'
 
 	def __init__(self):
 		self.attrs   = None
-		self.hit     = False
-		self.miss    = False
+		self.hit     = TVLMaybe
 		self.forward = None
 		self.weight  = 0
 
@@ -16,7 +16,7 @@ class EquivalenceClass(object):
 				yield k, self.getAttr(k)
 
 	def isTrivial(self, ignoreMiss=False):
-		return not (self.attrs or self.hit or (self.miss and not ignoreMiss) or self.weight > 1)
+		return not (self.attrs or self.hit.certain() or self.weight > 1)
 
 	def getForward(self):
 		if self.forward:
@@ -83,10 +83,11 @@ class EquivalenceClass(object):
 	def absorb(self, other):
 		assert not self.forward
 		assert not other.forward
-		
+		assert not (self.hit^other.hit).mustBeTrue(), "Cannot merge a hit with a miss..."
+
 		if self is not other:
-			self.hit    |= other.hit
-			self.miss   |= other.miss
+			if other.hit.certain() and not self.hit.certain():
+				self.hit = other.hit
 			self.weight += other.weight
 			other.forward = self
 			other.weight  = 0
@@ -137,12 +138,11 @@ class EquivalenceClass(object):
 			lut[self] = cls
 
 			cls.hit     = self.hit
-			cls.miss    = self.miss
 			cls.forward = None
 
 			for attr, next in self:
 				if attr in kill:
-					if not (keepHits and next.hit or keepMisses and next.miss):
+					if not (keepHits and next.hit.mustBeTrue() or keepMisses and next.hit.mustBeFalse()):
 						continue
 				if next.isTrivial(): continue
 
@@ -158,7 +158,6 @@ class EquivalenceClass(object):
 			lut[self] = cls
 
 			cls.hit     = self.hit
-			cls.miss    = self.miss
 			cls.forward = None
 
 			for slot, next in self:
@@ -172,9 +171,9 @@ class EquivalenceClass(object):
 		if not self in processed:
 			processed.add(self)
 
-			if self.hit:
+			if self.hit.mustBeTrue():
 				hm = 'hit'
-			elif self.miss:
+			elif self.hit.mustBeFalse():
 				hm = 'miss'
 			else:
 				hm = ''
@@ -204,16 +203,16 @@ class EquivalenceClass(object):
 		lut[self] = True
 
 		# Transfer hit
-		if self.hit:
-			if other.hit:
-				eq.hit = True
+		if self.hit.mustBeTrue():
+			if other.hit.mustBeTrue():
+				eq.hit = TVLTrue
 			else:
 				changed = True
 
 		# Transfer miss
-		if self.miss:
-			if other.miss:
-				eq.miss = True
+		if self.hit.mustBeFalse():
+			if other.hit.mustBeFalse():
+				eq.hit = TVLFalse
 			else:
 				changed = True
 
@@ -269,7 +268,6 @@ class EquivalenceClass(object):
 			
 			eq = EquivalenceClass()
 			eq.hit  = self.hit
-			eq.miss = self.miss
 			lut[self] = (eq, initalPure)
 
 			# It's unsound to kill pure paths if there's more
@@ -399,12 +397,10 @@ class PathInformation(object):
 		else:
 			return False
 
-	def classifyHitMiss(self, e):
+	def hit(self, e):
 		cls = self.equivalenceClass(e)
-		if cls:
-			return cls.hit, cls.miss
-		else:
-			return False, False
+		return cls.hit if cls else TVLMaybe
+
 
 	def union(self, a, b, *paths):
 		# TODO Can create a prunable branch... eliminate?
@@ -436,11 +432,11 @@ class PathInformation(object):
 
 	def _markHit(self, path):
 		cls = self.equivalenceClass(path, True)
-		cls.hit = True
+		cls.hit = TVLTrue
 
 	def _markMiss(self, path):
 		cls = self.equivalenceClass(path, True)
-		cls.miss = True
+		cls.hit = TVLFalse
 
 	def unionHitMiss(self, additionalHits, additionalMisses):
 		outp = self.copy()
@@ -472,7 +468,7 @@ class PathInformation(object):
 			if cls:
 				next = cls.getAttr(attr)
 				if attr is slot:
-					if next and (keepHits and next.hit or keepMisses and next.miss):
+					if next and (keepHits and next.hit.mustBeTrue() or keepMisses and next.hit.mustBeFalse()):
 						pass
 					else:
 						return False

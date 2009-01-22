@@ -12,6 +12,7 @@ from programIR.python import ast
 
 
 import util.compressedset
+from util.tvl import *
 
 class MockDB(object):
 	def __init__(self):
@@ -134,15 +135,15 @@ class TestConstraintBase(unittest.TestCase):
 
 				if hits:
 					for e in hits:
-						self.assertEqual(secondary.paths.classifyHitMiss(e), (True, False), "%r should be a hit." % e)
+						self.assertEqual(secondary.paths.hit(e), TVLTrue, "%r should be a hit." % e)
 
 				if misses:
 					for e in misses:
-						self.assertEqual(secondary.paths.classifyHitMiss(e), (False, True), "%r should be a miss." % e)
+						self.assertEqual(secondary.paths.hit(e), TVLFalse, "%r should be a miss." % e)
 
 				if unknowns:
 					for e in unknowns:
-						self.assertEqual(secondary.paths.classifyHitMiss(e), (False, False), "%r should be unknown." % e)
+						self.assertEqual(secondary.paths.hit(e), TVLMaybe, "%r should be unknown." % e)
 
 		except AssertionError:
 			if secondary:

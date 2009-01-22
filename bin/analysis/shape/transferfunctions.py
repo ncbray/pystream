@@ -2,6 +2,8 @@ from __future__ import absolute_import
 
 from . model import expressions
 
+from util.tvl import *
+
 
 def reachable(index, secondary):
 	return index.currentSet or secondary.externalReferences
@@ -35,7 +37,7 @@ def updateHitMiss(sys, e0, e1, b0, b1, slot, paths):
 	assert slot.isSlot(), slot
 
 	
- 	# Only retain valid expressions
+	# Only retain valid expressions
 	# 	The value of the expression does not change
 	# 	or the location is stable, and "the assigned value misses the tracked location"
 
@@ -117,26 +119,24 @@ def assignmentConstraint(sys, outpoint, context, e1, e0, index, paths, external)
 	assert e0.isExpression(), e0
 	assert not e0.isNull(), "Can't assign to 'null'"
 	
-	v0 = e0.refersTo(sys, index, paths)
-	e0Uncertain = v0 is expressions.MayAlias
-	e0Must      = v0 is expressions.MustAlias
+	v0     = e0.hit(sys, index, paths)
+	e0Must = v0.mustBeTrue()
 
-	v1 = e1.refersTo(sys, index, paths)
-	e1Uncertain = v1 is expressions.MayAlias
-	e1Must      = v1 is expressions.MustAlias
+	v1     = e1.hit(sys, index, paths)
+	e1Must = v1.mustBeTrue()
 
-	assert not (e0Uncertain and e0.isNull())
-	assert not (e1Uncertain and e1.isNull())
+	assert not (v0.uncertain() and e0.isNull())
+	assert not (v1.uncertain() and e1.isNull())
 
-	if not e0Uncertain:
-		if not e1Uncertain:
+	if v0.certain():
+		if v1.certain():
 			assign(sys, outpoint, context, e0, e1, e0Must, e1Must, index, paths, external)
 		else:
 			assign(sys, outpoint, context, e0, e1, e0Must, True,  index, paths.unionHitMiss((e1,), ()), external)
 			assign(sys, outpoint, context, e0, e1, e0Must, False, index, paths.unionHitMiss((), (e1,)), external)
 
 	else:
-		if not e1Uncertain:
+		if v1.certain():
 			assign(sys, outpoint, context, e0, e1, True,  e1Must, index, paths.unionHitMiss((e0,), ()), external)
 			assign(sys, outpoint, context, e0, e1, False, e1Must, index, paths.unionHitMiss((), (e0,)), external)
 

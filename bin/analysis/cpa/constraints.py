@@ -4,6 +4,8 @@ import base
 # HACK to testing if a object is a bool True/False...
 from programIR.python import program
 
+import util.tvl
+
 class Constraint(object):
 	__slots__ = 'dirty', 'path'
 	
@@ -309,36 +311,27 @@ class DeferedSwitchConstraint(Constraint):
 		self.tDefered = True
 		self.fDefered = True
 
-	def getLiveness(self, sys):
-		# Figure if either branch is taken.
-		tLive, fLive = False, False
-		
-		cond = sys.read(self.cond)
-		for cobj in cond:
-			obj = cobj.obj
-			if isinstance(obj, program.Object) and isinstance(obj.pyobj, (bool, int, long, float, str)):
-				if obj.pyobj:
-					tLive = True
-				else:
-					fLive = True
-			else:
-				tLive, fLive =  True, True
+	def getBranch(self, cobj):
+		obj = cobj.obj
+		if isinstance(obj, program.Object) and isinstance(obj.pyobj, (bool, int, long, float, str)):
+			return util.tvl.tvl(obj.pyobj)
+		else:
+			return util.tvl.TVLMaybe
 
-		return tLive, fLive
+	def updateBranching(self, branch):
+		# Process defered branches, if they will be taken.
+		if branch.maybeTrue() and self.tDefered:
+			self.tDefered = False
+			self.extractor(self.t)
+
+		if branch.maybeFalse() and self.fDefered:
+			self.fDefered = False
+			self.extractor(self.f)
 
 	def update(self, sys):
 		if self.tDefered or self.fDefered:
-			tLive, fLive = self.getLiveness(sys)
-
-			# Process defered branches, if they're taken.
-			if tLive and self.tDefered:
-				self.tDefered = False
-				self.extractor(self.t)
-
-			if fLive and self.fDefered:
-				self.fDefered = False
-				self.extractor(self.f)
-
+			for cond in sys.read(self.cond):
+				self.updateBranching(self.getBranch(cond))
 
 	def attach(self, sys):
 		sys.dependsRead(self, self.cond)

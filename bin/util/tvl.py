@@ -1,4 +1,4 @@
-__all__ = ('TVLType', 'TVLTrue', 'TVLFalse', 'TVLMaybe')
+__all__ = ('TVLType', 'TVLTrue', 'TVLFalse', 'TVLMaybe', 'tvl')
 
 # Three-valued logic: True/Maybe/False
 
@@ -9,6 +9,9 @@ class TVLType(object):
 	def __nonzero__(self):
 		#return self.maybeTrue()
 		raise TypeError, ("%r cannot be directly converted a boolean value." % self)
+
+	def certain(self):   return True
+	def uncertain(self): return False
 
 class TVLTrueType(TVLType):
 	def maybeTrue(self):   return True
@@ -71,6 +74,10 @@ class TVLMaybeType(TVLType):
 	def maybeFalse(self):  return True
 	def mustBeTrue(self):  return False
 	def mustBeFalse(self): return False
+
+	def certain(self):     return False
+	def uncertain(self):   return True
+
 	def __repr__(self):    return 'TVLMaybe'
 	def __invert__(self):  return self
 
@@ -108,3 +115,8 @@ TVLTrue     = TVLTrueType()
 TVLFalse    = TVLFalseType()
 TVLMaybe    = TVLMaybeType()
 
+def tvl(obj):
+	if isinstance(obj, TVLType):
+		return obj
+	else:
+		return TVLTrue if obj else TVLFalse

@@ -1,3 +1,5 @@
+from util.tvl import *
+
 class ReferenceCountManager(object):
 	def __init__(self):
 		self.absoluteLUT = {}
@@ -54,14 +56,14 @@ class ReferenceCountManager(object):
 		canonical = self.getCanonical(newrc, newRadius)
 
 		assert canonical is not None
-		assert canonical.referedToBySlot(slot), slot
+		assert canonical.slotHit(slot).mustBeTrue(), slot
 
 		return (canonical,)
 
 
 	def makeDecrement(self, rc, slot):
 		assert isinstance(rc, ReferenceCount), type(rc)
-		assert rc.referedToBySlot(slot), slot
+		assert rc.slotHit(slot).mustBeTrue(), slot
 		counts = rc.counts
 		radius = rc.radius
 
@@ -160,11 +162,11 @@ class ReferenceCount(object):
 		rc.extend([str(r) for r in self.radius])
 		return "rc(%s)" % ", ".join(rc)
 
-	def referedToBySlot(self, slot):
+	def slotHit(self, slot):
 		if slot.isHeap():
-			return slot in self.counts
+			return tvl(slot in self.counts)
 		elif slot.isLocal():
-			return slot in self.radius
+			return tvl(slot in self.radius)
 		else:
 			assert False, slot
 

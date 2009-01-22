@@ -30,14 +30,14 @@ class TestTypeDisbatch(unittest.TestCase):
 
 
 import util.calling
+from util.tvl import *
 class TestCallingUtility(unittest.TestCase):
 	def testExact(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, None)
 		info = util.calling.callStackToParamsInfo(callee, 2, False, 0, False)
 
 
-		self.assertEqual(info.willAlwaysSucceed, True)
-		self.assertEqual(info.willAlwaysFail,    False)
+		self.assertEqual(info.willSucceed, TVLTrue)
 
 		self.assertTransfer(info.argParam, 0, 2, 0, 2, 2)
 		self.assertEqual(info.argVParam.active, False)
@@ -46,9 +46,7 @@ class TestCallingUtility(unittest.TestCase):
 		self.assertEqual(info.uncertainVParam, False)
 
 	def assertHardFail(self, info):
-		self.assertEqual(info.willAlwaysSucceed, False)
-		self.assertEqual(info.willAlwaysFail,    True)
-
+		self.assertEqual(info.willSucceed, TVLFalse)
 
 		self.assertEqual(info.argParam.active,    False)
 		self.assertEqual(info.argVParam.active,    False)
@@ -57,9 +55,7 @@ class TestCallingUtility(unittest.TestCase):
 		self.assertEqual(info.uncertainVParam, False)
 
 	def assertHardSucceed(self, info):
-		self.assertEqual(info.willAlwaysSucceed, True)
-		self.assertEqual(info.willAlwaysFail,    False)
-
+		self.assertEqual(info.willSucceed, TVLTrue)
 
 	def assertTransfer(self, transfer, sourceBegin, sourceEnd, destinationBegin, destinationEnd, count):
 		self.assertEqual(transfer.active, True)
@@ -101,8 +97,7 @@ class TestCallingUtility(unittest.TestCase):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], 2, None, None)
 		info = util.calling.callStackToParamsInfo(callee, 1, True, 0, False)
 
-		self.assertEqual(info.willAlwaysSucceed, False)
-		self.assertEqual(info.willAlwaysFail,    False)
+		self.assertEqual(info.willSucceed, TVLMaybe)
 
 		self.assertTransfer(info.argParam, 0, 1, 0, 1, 1)
 		self.assertEqual(info.argVParam.active, False)
@@ -117,8 +112,7 @@ class TestCallingUtility(unittest.TestCase):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, None)
 		info = util.calling.callStackToParamsInfo(callee, 1, True, 0, False)
 
-		self.assertEqual(info.willAlwaysSucceed, False)
-		self.assertEqual(info.willAlwaysFail,    False)
+		self.assertEqual(info.willSucceed, TVLMaybe)
 
 		self.assertTransfer(info.argParam, 0, 1, 0, 1, 1)
 		self.assertEqual(info.argVParam.active, False)
@@ -180,6 +174,7 @@ class TestCallingUtility(unittest.TestCase):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [2], None, None, None)
 		info = util.calling.callStackToParamsInfo(callee, 1, False, (), False)
 
+		self.assertEqual(info.willSucceed, TVLTrue)
 		self.assertTransfer(info.argParam, 0, 1, 0, 1, 1)
 		self.assertEqual(info.argVParam.active, False)
 		self.assertEqual(info.uncertainParam, False)
@@ -191,12 +186,13 @@ class TestCallingUtility(unittest.TestCase):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [2], None, None, None)
 		info = util.calling.callStackToParamsInfo(callee, 2, False, (), False)
 
+		self.assertEqual(info.willSucceed, TVLTrue)
 		self.assertTransfer(info.argParam, 0, 2, 0, 2, 2)
 		self.assertEqual(info.argVParam.active, False)
 		self.assertEqual(info.uncertainParam, False)
 		self.assertEqual(info.uncertainVParam, False)
 
-		self.assert_(not info.defaults)
+		self.assert_(not info.defaults, info.defaults)
 
 		
 ##from cStringIO import StringIO

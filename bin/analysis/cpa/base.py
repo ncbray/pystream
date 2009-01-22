@@ -58,8 +58,8 @@ class CPAContext(AnalysisContext):
 		self.callee = util.calling.CalleeParams.fromFunction(func)
 		self.info   = util.calling.callStackToParamsInfo(self.callee, len(params)+len(vparams), False, 0, False)
 
-		if not self.info.willAlwaysSucceed:
-			if self.info.willAlwaysFail:
+		if self.info.willSucceed.maybeFalse():
+			if self.info.willSucceed.mustBeFalse():
 				print "Call will always fail."
 			else:
 				print "Call may fail."

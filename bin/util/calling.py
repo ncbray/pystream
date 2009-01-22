@@ -1,5 +1,7 @@
 __all__ = ['CallerArgs', 'CalleeParams', 'CallInfo', 'Maybe', 'callStackToParamsInfo']
 
+from util.tvl import *
+
 class CallerArgs(object):
 	__slots__ = 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'returnarg'
 	
@@ -40,8 +42,6 @@ class CalleeParams(object):
 # kwd  -> param / kparam
 # karg -> param / kparam
 
-Maybe = 'maybe'
-
 class PositionalTransfer(object):
 	def __init__(self):
 		self.reset()
@@ -76,8 +76,7 @@ class PositionalTransfer(object):
 		
 class CallInfo(object):
 	def __init__(self):
-		self.willAlwaysFail    = False
-		self.willAlwaysSucceed = False
+		self.willSucceed = TVLMaybe
 		
 		self.argParam   = PositionalTransfer()
 		self.argVParam  = PositionalTransfer()
@@ -95,19 +94,18 @@ class CallInfo(object):
 
 	def isBound(self, param):
 		if param < self.argParam.count:
-			return True
+			return TVLTrue
 		elif param in self.certainKeywords:
-			return True
+			return TVLTrue
 		elif param in self.defaults:
-			return True
+			return TVLTrue
 		elif self.uncertainParam:
-			return Maybe
+			return TVLMaybe
 		else:
-			return False
+			return TVLFalse
 
 	def _mustFail(self):
-		self.willAlwaysFail    = True
-		self.willAlwaysSucceed = False
+		self.willSucceed = TVLFalse
 
 		self.argParam.reset()
 		self.argVParam.reset()
@@ -128,7 +126,7 @@ def bindDefaults(callee, info):
 	for i in range(defaultOffset, numParams):
 		bound = info.isBound(i)
 		# If it isn't bound for sure, it may default.
-		if bound is not True:
+		if bound.maybeFalse():
 			info.defaults.add(i)
 
 def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncertainKwds):
@@ -147,7 +145,7 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 	param  = 0
 	vparam = 0
 
-	mayFail = False
+	cleanTransfer = TVLTrue
 
 	# arg -> param
 	count = min(numArgs, numParams)
@@ -182,9 +180,7 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 		else:
 			# Without a vparam, the uncertain arguments may overflow.
 			info.exceptions.add(TypeError)
-			mayFail = True
-
-
+			cleanTransfer &= TVLMaybe
 
 	### Handle keywords that we are certain will be passed ###
 	if certainKwds:
@@ -196,20 +192,19 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 			if kwd in paramMap:
 				param = paramMap[kwd]
 				bound = info.isBound(param)
-				if bound is False:
+				if bound.mustBeFalse():
 					info.certainKeywords.add(param)
-				elif bound is Maybe:
-					# POSSIBLE: got multiple values for keyword argument '%s'
-					info.certainKeywords.add(param)
-					info.exceptions.add(TypeError)
-					mayFail = True
-					# TODO may no fail 
-				else:
+				elif bound.mustBeTrue():
 					# got multiple values for keyword argument '%s'
 					info.exceptions.add(TypeError)
 					return info._mustFail()
+				else:
+					# POSSIBLE: got multiple values for keyword argument '%s'
+					info.certainKeywords.add(param)
+					cleanTransfer &= TVLMaybe
+					# TODO may no fail 
 			elif callee.kparam is None:
-				# got an nexpected keyword argument '%s'
+				# got an unexpected keyword argument '%s'
 				info.exceptions.add(TypeError)
 				return info._mustFail()
 			else:
@@ -218,17 +213,17 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 	bindDefaults(callee, info)
 
 	# Validate binding
-	completelyBound = True
-	#for i in range(info.argParam.count, numParams):
+	completelyBound = TVLTrue
 	for i in range(numParams):
-		bound = info.isBound(i)
-		if bound is False:
-			info.exceptions.add(TypeError)
-			return info._mustFail()
-		elif bound is Maybe:
-			completelyBound = False
-			info.exceptions.add(TypeError)
+		completelyBound &= info.isBound(i)
 
-	info.willAlwaysSucceed = completelyBound and not mayFail
+
+	info.willSucceed = completelyBound & cleanTransfer
+
+	if info.willSucceed.maybeFalse():
+		info.exceptions.add(TypeError)
+
+	if info.willSucceed.mustBeFalse():
+		info._mustFail()
 	
 	return info

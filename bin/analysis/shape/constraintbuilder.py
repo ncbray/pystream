@@ -234,7 +234,7 @@ class ShapeConstraintBuilder(object):
 		
 		info = self.computeTransfer(callerargs, calleeparams)
 
-		if info.willAlwaysFail: return
+		if info.willSucceed.mustBeFalse(): return
 
 		# We may not know the program point for the function entry,
 		# so defer linking until after all the functions have been processed.

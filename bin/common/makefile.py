@@ -5,7 +5,7 @@ import os.path
 
 #import optimization
 
-from util import CallPath, assureDirectoryExists
+from util import assureDirectoryExists
 
 from decompiler.programextractor import extractProgram
 
@@ -40,7 +40,6 @@ class Makefile(object):
 	def __init__(self, filename):
 		self.filename = filename
 
-		self.rootPath = CallPath(0)
 		self.moduleName = None
 		self.module = None
 		self.moduleStruct = None

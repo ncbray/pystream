@@ -3,24 +3,8 @@ from programIR.python import program, ast
 import util
 import util.calling
 
-class CanonicalObject(object):
-	__slots__ = 'canonical', 'hash'
-
-	def __init__(self, *args):
-		self.setCanonical(*args)
-
-	def setCanonical(self, *args):
-		self.canonical = args
-		self.hash = id(type(self))^hash(args)
-
-	def __hash__(self):
-		return self.hash
-
-	def __eq__(self, other):
-		return type(self) == type(other) and self.canonical == other.canonical
-
-	def __repr__(self):
-		return "%s(%s)" % (type(self).__name__, ", ".join([repr(obj) for obj in self.canonical]))
+import util.canonical
+CanonicalObject = util.canonical.CanonicalObject
 
 ###########################
 ### Evaluation Contexts ###
@@ -304,12 +288,12 @@ class LocalSlot(AbstractSlot):
 
 class CanonicalObjects(object):
 	def __init__(self):
-		self.local             = util.Canonical(LocalSlot)
-		self.objectSlot        = util.Canonical(ObjectSlot)
-		self.contextObject     = util.Canonical(ContextObject)
-		self._canonicalContext = util.Canonical(CPAContext)
-		self.contextOp         = util.Canonical(ContextOp)
-		self.contextFunction   = util.Canonical(ContextFunction)
+		self.local             = util.canonical.CanonicalCache(LocalSlot)
+		self.objectSlot        = util.canonical.CanonicalCache(ObjectSlot)
+		self.contextObject     = util.canonical.CanonicalCache(ContextObject)
+		self._canonicalContext = util.canonical.CanonicalCache(CPAContext)
+		self.contextOp         = util.canonical.CanonicalCache(ContextOp)
+		self.contextFunction   = util.canonical.CanonicalCache(ContextFunction)
 
 	def externalObject(self, obj):
 		return self.contextObject(externalObjectContext, obj)

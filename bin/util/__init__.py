@@ -103,25 +103,3 @@ class Memoizer(object):
 		
 		assert args in self.cache, args
 		return self.cache[args]
-
-
-# Assumes that the same arguments will create the same object,
-# and different arguments will create different objects.
-class Canonical(object):
-	def __init__(self, create):
-		self.create = create
-		self.cache = {}
-
-	def __call__(self, *args):
-		if args not in self.cache:
-			obj = self.create(*args)
-			self.cache[args] = obj
-			return obj
-		else:
-			return self.cache[args]
-
-	def get(self, *args):
-		return self(*args)
-
-	def exists(self, *args):
-		return args in self.cache

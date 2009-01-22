@@ -1,3 +1,13 @@
+class Sentinel(object):
+	__slots__ = 'name'
+
+	def __init__(self, name):
+		self.name = name
+		
+	def __repr__(self):
+		return self.name
+
+
 # An object that is equivalent if its "canonical values" are equivalent.
 class CanonicalObject(object):
 	__slots__ = 'canonical', 'hash'

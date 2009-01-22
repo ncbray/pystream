@@ -4,6 +4,8 @@ import PADS.DFS
 
 from . import cycleequivalence
 
+from util.canonical import Sentinel
+
 class Searcher(object):
 	def search(self, G, start):
 		"""Perform a depth first search of graph G."""
@@ -19,10 +21,6 @@ class Searcher(object):
 
 	def backedge(self,source,destination):
 		pass
-
-
-class Sentinel(object):
-	__slots__ = ()
 
 
 class SESERegion(object):
@@ -65,8 +63,8 @@ class FindRegions(Searcher):
 		self.head = head
 		self.tail = tail
 
-		self.dummyHead = Sentinel()
-		self.dummyTail = Sentinel()
+		self.dummyHead = Sentinel('<head>')
+		self.dummyTail = Sentinel('<tail>')
 		
 		
 		self.start = 'start'

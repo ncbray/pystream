@@ -25,7 +25,7 @@ class InstWrapper(object):
 
 		typeobj = extractor.getObject(self.typeobj)
 		extractor.ensureLoaded(typeobj)
-		
+
 		return typeobj.abstractInstance()
 
 class ObjWrapper(object):
@@ -54,12 +54,12 @@ class Makefile(object):
 
 	def declModule(self, name):
 		self.moduleName = name
-		
+
 		oldpath = sys.path
 		newpath = copy.copy(sys.path)
 		newpath[0] = self.workingdir
-		
-		sys.path = newpath		
+
+		sys.path = newpath
 		self.module = __import__(name)
 		sys.path = oldpath
 
@@ -103,13 +103,13 @@ class Makefile(object):
 		if len(self.rawEntryPoints) <= 0:
 			print "No entry points, nothing to do."
 			return
-		
+
 		assert self.outdir, "No output directory declared."
 
 		e, entryPoints = extractProgram(self.moduleName, self.module, self.rawEntryPoints)
 
 		common.pipeline.evaluate(e, entryPoints)
-		
+
 ##		# Output
 		assureDirectoryExists(self.outdir)
 		self.outfile = os.path.join(self.outdir, self.moduleName+'.py')

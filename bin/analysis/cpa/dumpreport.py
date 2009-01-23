@@ -21,7 +21,7 @@ class LinkManager(object):
 		self.contextName = {}
 
 		self.cid = 0
-		
+
 	def contextRef(self, context):
 		if not context in self.contextName:
 			self.contextName[context] = "c%d" % self.cid
@@ -85,7 +85,7 @@ def functionShortName(out, func, links=None, context = None):
 	else:
 		link = None
 
-		
+
 	if link: out.begin('a', href=link)
 	out << "%s(%s)" % (name, ", ".join(args))
 	if link: out.end('a')
@@ -96,7 +96,7 @@ def heapShortName(out, heap, links=None):
 		link = links.objectRef(heap)
 	else:
 		link = None
-	
+
 	if link:
 		out.begin('a', href=link)
 	out << repr(heap)
@@ -108,7 +108,7 @@ def heapLink(out, heap, links=None):
 		link = links.objectRef(heap)
 	else:
 		link = None
-	
+
 	if link:
 		out.begin('a', href=link)
 	out << repr(heap)
@@ -161,6 +161,15 @@ def dumpHeader(out):
 	out << "]"
 	out.tag('br')
 
+def itergroupings(iterable, key):
+	grouping = {}
+	for i in iterable:
+		group, data = key(i)
+		if not group in grouping:
+			grouping[group] = [data]
+		else:
+			grouping[group].append(data)
+	return grouping.iteritems()
 
 def dumpFunctionInfo(func, data, links, out, scg):
 	out.begin('h3')
@@ -197,10 +206,10 @@ def dumpFunctionInfo(func, data, links, out, scg):
 
 	for context in data.functionContexts(func):
 		out.tag('hr')
-		
+
 		cref = links.contextRef(context)
 		out.tag('a', name=cref)
-		
+
 		out.begin('p')
 		out << context
 		out.end('p')
@@ -266,7 +275,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		ops  = []
 		lcls = []
 		other = []
-		
+
 		for slot in data.functionContextSlots(func, context):
 			if isinstance(slot.local, ast.Local):
 				lcls.append(slot)
@@ -281,12 +290,12 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.endl()
 
 			for value in values:
-				out << '\t\t'				
+				out << '\t\t'
 				link = links.objectRef(value)
 				if link: out.begin('a', href=link)
 				out << value
 				if link: out.end('a')
-				out.endl()	
+				out.endl()
 
 
 		out.begin('pre')
@@ -304,7 +313,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				if modify: out << "M"
 				out.end('i')
 				out.endl()
-		
+
 		out.endl()
 
 		for lcl in funcLocals:
@@ -357,8 +366,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.end('ul')
 			out.end('p')
 
-		
-		#reads = data.inter.la.rm.contextReads[context]
+
 		reads = data.funcReads[func][context]
 
 		if reads:
@@ -367,15 +375,22 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.end('h3')
 			out.begin('p')
 			out.begin('ul')
-			for obj in reads:
+			for obj, slots in itergroupings(reads, lambda slot: (slot.obj, (slot.slottype, slot.key))):
 				out.begin('li')
 				heapLink(out, obj, links)
+
+				out.begin('ul')
+				for slot in slots:
+					out.begin('li')
+					out << "%s - %r" % slot
+					out.end('li')
+				out.end('ul')
+
 				out.end('li')
 			out.end('ul')
 			out.end('p')
 
 
-		#modifies = data.inter.la.rm.contextModifies[context]
 		modifies = data.funcModifies[func][context]
 
 		if modifies:
@@ -384,9 +399,17 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.end('h3')
 			out.begin('p')
 			out.begin('ul')
-			for obj in modifies:
+			for obj, slots in itergroupings(modifies, lambda slot: (slot.obj, (slot.slottype, slot.key))):
 				out.begin('li')
 				heapLink(out, obj, links)
+
+				out.begin('ul')
+				for slot in slots:
+					out.begin('li')
+					out << "%s - %r" % slot
+					out.end('li')
+				out.end('ul')
+
 				out.end('li')
 			out.end('ul')
 			out.end('p')
@@ -475,34 +498,31 @@ def makeHeapTree(data):
 def dumpReport(data, entryPoints):
 	reportDir = makeReportDirectory('cpa')
 
-	liveHeap = data.liveHeap()
-
-	heapToFile = {}
-	uid = 0
-
 	links = LinkManager()
 
-	for heap in liveHeap:
-		fn = "h%07d.html" % uid
+	heapToFile = {}
+	funcToFile = {}
+
+	# HACK for closure
+	uid = [0,0]
+
+	def makeHeapFile(heap):
+		fn = "h%07d.html" % uid[0]
 		links.objectFile[heap] = fn
 		heapToFile[heap] = fn
-		uid += 1
+		uid[0] += 1
+		return fn
 
-
-	liveFunctions, liveInvocations = programculler.findLiveFunctions(data.db, entryPoints)
-
-	#liveFunctions = data.liveFunctions()
-
-	funcToFile = {}
-	uid = 0
-
-	for func in liveFunctions:
-		fn = "f%07d.html" % uid
+	def makeFunctionFile(func):
+		fn = "f%07d.html" % uid[1]
 		links.functionFile[func] = fn
 		funcToFile[func] = fn
-		uid += 1
+		uid[1] += 1
+		return fn
 
 
+	liveHeap = data.liveHeap()
+	liveFunctions, liveInvocations = programculler.findLiveFunctions(data.db, entryPoints)
 
 	out, scg = makeOutput(reportDir, 'function_index.html')
 	dumpHeader(out)
@@ -510,9 +530,7 @@ def dumpReport(data, entryPoints):
 	out.begin('h2')
 	out << "Function Index"
 	out.end('h2')
-	
 
-	#tree, head = makeFunctionTree(data)
 
 	head =  None
 	tree = util.graphalgorithim.dominator.dominatorTree(liveInvocations, head)
@@ -521,25 +539,16 @@ def dumpReport(data, entryPoints):
 		children = tree.get(node)
 		if children:
 			out.begin('ul')
-			for func in children:
+			for func in sorted(children, key=lambda f: f.name):
 				out.begin('li')
+				makeFunctionFile(func)
 				functionShortName(out, func, links)
 				printChildren(func)
 				out.end('li')
 			out.end('ul')
-			out.endl() 	
-			
+			out.endl()
+
 	printChildren(head)
-
-
-##	out.begin('ul')
-##	for func in liveFunctions:
-##		out.begin('li')
-##		functionShortName(out, func, links)
-##		out.end('li')
-##	out.end('ul')
-##	out.endl()
-
 
 	out, scg = makeOutput(reportDir, 'object_index.html')
 	dumpHeader(out)
@@ -556,8 +565,9 @@ def dumpReport(data, entryPoints):
 		children = tree.get(node)
 		if children:
 			out.begin('ul')
-			for heap in children:
+			for heap in sorted(children, key=lambda o: repr(o)):
 				out.begin('li')
+				makeHeapFile(heap)
 				link = links.objectRef(heap)
 				if link: out.begin('a', href=link)
 				out << heap
@@ -568,7 +578,7 @@ def dumpReport(data, entryPoints):
 			out.end('ul')
 			out.endl()
 		return count
-			
+
 	count = printHeapChildren(head)
 
 	if count != len(liveHeap):
@@ -595,7 +605,7 @@ def dumpReport(data, entryPoints):
 ##		out.end('a')
 ##		out.end('li')
 ##	out.end('ul')
-##	out.endl() 	
+##	out.endl()
 
 	out.close()
 
@@ -603,7 +613,7 @@ def dumpReport(data, entryPoints):
 		out, scg = makeOutput(reportDir, funcToFile[func])
 		dumpHeader(out)
 		dumpFunctionInfo(func, data, links, out, scg)
-		out.endl() 	
+		out.endl()
 		out.close()
 
 
@@ -611,7 +621,7 @@ def dumpReport(data, entryPoints):
 		out, scg = makeOutput(reportDir, heapToFile[heap])
 		dumpHeader(out)
 		dumpHeapInfo(heap, data, links, out)
-		out.endl() 	
+		out.endl()
 		out.close()
 
 
@@ -624,7 +634,7 @@ class CPAData(object):
 
 		self.db = db
 		self.inter = inter
-		
+
 		self.lcls = collections.defaultdict(lambda: collections.defaultdict(set))
 		self.objs = collections.defaultdict(lambda: collections.defaultdict(set))
 
@@ -642,7 +652,7 @@ class CPAData(object):
 		# Derived
 		self.invokeDestination = collections.defaultdict(set)
 		self.invokeSource      = collections.defaultdict(set)
-		
+
 		for func, funcinfo in self.db.functionInfos.iteritems():
 			ops, lcls = getOps(func)
 			for op in ops:
@@ -652,7 +662,7 @@ class CPAData(object):
 					for dstC, dstF in opinfo.invokes:
 						dst = (dstF, dstC)
 						self.invokeDestination[src].add(dst)
-						self.invokeSource[dst].add(src)		
+						self.invokeSource[dst].add(src)
 
 
 	def calcReadModify(self):
@@ -670,7 +680,7 @@ class CPAData(object):
 				for context, modifies in contexts:
 					if modifies:
 						self.funcModifies[func][context].update(modifies)
-				
+
 
 
 	def liveFunctions(self):
@@ -681,7 +691,7 @@ class CPAData(object):
 
 	def functionContextSlots(self, function, context):
 		return self.lcls[function][context]
-		
+
 	def callers(self, function, context):
 		return self.invokeSource[(function, context)]
 

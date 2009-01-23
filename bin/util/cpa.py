@@ -4,7 +4,7 @@ import util.canonical
 Any  = util.canonical.Sentinel('<Any>')
 Slop = util.canonical.Sentinel('<Slop>')
 
-
+# A canonical name for a CPA context.
 class CPASignature(util.canonical.CanonicalObject):
 	__slots__ = 'function', 'path', 'selfparam', 'params', 'vparams'
 
@@ -31,12 +31,34 @@ class CPASignature(util.canonical.CanonicalObject):
 			vparams = len(vparams)
 		return (self.function, self.path, len(self.params), vparams)
 
+	def subsumes(self, other):
+		if self.classification() == other.classification():
+			subsume = False
+			for sparam, oparam in zip(self.params, other.params):
+				if sparam is Any and oparam is not Any:
+					subsume = True
+				elif sparam != oparam:
+					return False
+
+			if self.vparam is not None and self.vparam is not Slop:
+				for sparam, oparam in zip(self.vparams, other.vparams):
+					if sparam is Any and oparam is not Any:
+						subsume = True
+					elif sparam != oparam:
+						return False
+			return subsume
+		else:
+			return False
+
+	def vparamSlop(self):
+		return self.vparams is Slop
+
 	def __repr__(self):
 		return "{0}(function={1}, path={2}, self={3}, params={4}, vparams={5})".format(type(self).__name__, self.function.name, id(self.path), self.selfparam, self.params, self.vparams)
 
-# Abstract base class 
+# Abstract base class
 class CPAInfoProvider(object):
-	# In the worst case, expr may be a user object with multiple 
+	# In the worst case, expr may be a user object with multiple
 	# possible __call__ attibutes.  This is not likely, as classes should
 	# be immutable, but there's no point in not futureproofing...
 	def functions(self, expr):
@@ -44,10 +66,10 @@ class CPAInfoProvider(object):
 
 	def objects(self, node):
 		raise NotImplementedError
-		
+
 	def vargLengths(self, obj):
 		raise NotImplementedError
-		
+
 	def vargValues(self, obj, length):
 		raise NotImplementedError
 
@@ -76,20 +98,20 @@ class CPAIterator(object):
 	def marshalArgs(self, args, varg, length):
 		# TODO transfer...
 		linear = [self.objects(callee.arg) for arg in args]
-		
+
 		slop = None
-		
+
 		if length < 0:
 			pass #???
 		else:
 			for i in range(length):
 				linear.append(self.vargValues(varg, i))
 
-		return linear,	
+		return linear,
 
 	def call(self, *args):
 		assert not case.kargs
-		
+
 #		for expr, func in info.iterExprFunc(case.expr):
 #			for varg, length in info.iterVArgLength(case.vargs):
 #			# copy?

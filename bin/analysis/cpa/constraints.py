@@ -8,7 +8,7 @@ import util.tvl
 
 class Constraint(object):
 	__slots__ = 'dirty', 'path'
-	
+
 	def __init__(self):
 		self.dirty = False
 
@@ -37,7 +37,7 @@ class AssignmentConstraint(Constraint):
 	def __init__(self, sourceslot, destslot):
 		assert isinstance(sourceslot, base.AbstractSlot), sourceslot
 		assert isinstance(destslot, base.AbstractSlot), destslot
-		
+
 		Constraint.__init__(self)
 		self.sourceslot = sourceslot
 		self.destslot   = destslot
@@ -67,7 +67,7 @@ class LoadConstraint(CachedConstraint):
 
 		for args in itertools.product(exprs, keys):
 			if not args in self.cache:
-				self.cache.add(args)			
+				self.cache.add(args)
 			self.concreteUpdate(sys, *args)
 
 	def concreteUpdate(self, sys, expr, key):
@@ -101,7 +101,7 @@ class StoreConstraint(CachedConstraint):
 				self.cache.add(args)
 				self.concreteUpdate(sys, *args)
 
-	def concreteUpdate(self, sys, expr, key):	
+	def concreteUpdate(self, sys, expr, key):
 		slot = sys.canonical.objectSlot(expr, self.slottype, key.obj)
 		sys.createAssign(self.value, slot)
 		sys.contextModifies.add((self.expr.context, slot))
@@ -120,10 +120,10 @@ class AllocateConstraint(CachedConstraint):
 		self.path   = path
 		self.type_  = type_
 		self.target = target
-		
+
 	def update(self, sys):
 		types = sys.read(self.type_)
-		
+
 		for type_ in types:
 			if not type_ in self.cache:
 				self.cache.add(type_)
@@ -134,7 +134,7 @@ class AllocateConstraint(CachedConstraint):
 			sys.extractor.ensureLoaded(type_.obj)
 			inst = type_.obj.abstractInstance()
 			contextInst = sys.allocatedObject(self.path, inst)
-			
+
 			# Return the allocated object.
 			sys.update(self.target, (contextInst,))
 
@@ -161,7 +161,7 @@ class AbstractCallConstraint(CachedConstraint):
 		self.kwds    = kwds
 		self.vargs   = vargs
 		self.kargs   = kargs
-		
+
 		self.target  = target
 
 	def update(self, sys):
@@ -187,7 +187,7 @@ class AbstractCallConstraint(CachedConstraint):
 			return lengths
 		else:
 			return (0,)
-		
+
 
 	def concreteUpdate(self, sys, expr, vargs, kargs):
 		for vlength in self.getVArgLengths(sys, vargs):
@@ -211,9 +211,9 @@ class AbstractCallConstraint(CachedConstraint):
 		division = len(func.code.parameters)
 		argslots =  allslots[:division]
 		vargslots = allslots[division:]
-		
+
 		con = SimpleCallConstraint(self.op, self.path, func, expr, allslots, argslots, vargslots, self.target)
-		con.attach(sys)			
+		con.attach(sys)
 
 
 	def attach(self, sys):
@@ -224,7 +224,7 @@ class AbstractCallConstraint(CachedConstraint):
 		if not self.selfarg and not self.vargs and not self.kargs:
 			# Nothing to resolve, so execute imediately
 			self.mark(sys)
-		else:		
+		else:
 			if self.selfarg: sys.dependsRead(self, self.selfarg)
 			if self.vargs: sys.dependsRead(self, self.vargs)
 			if self.kargs: sys.dependsRead(self, self.kargs)
@@ -235,7 +235,7 @@ class CallConstraint(AbstractCallConstraint):
 	__slots__ = ()
 	def getFunc(self, sys, selfType):
 		return sys.extractor.getCall(selfType.obj)
-	
+
 #TODO If there's no selfv, vargs, or kargs, turn into a simple call?
 class DirectCallConstraint(AbstractCallConstraint):
 	__slots__ = ('func',)
@@ -254,7 +254,7 @@ class DirectCallConstraint(AbstractCallConstraint):
 
 class SimpleCallConstraint(CachedConstraint):
 	__slots__ = 'op', 'path', 'func', 'selftype', 'slots', 'argslots', 'vargslots', 'target'
-	
+
 	def __init__(self, op, path, func, selftype, slots, argslots, vargslots, target):
 		CachedConstraint.__init__(self)
 
@@ -270,7 +270,7 @@ class SimpleCallConstraint(CachedConstraint):
 		self.slots     = slots
 		self.argslots  = argslots
 		self.vargslots = vargslots
-				
+
 		self.target = target
 
 	def update(self, sys):
@@ -280,10 +280,10 @@ class SimpleCallConstraint(CachedConstraint):
 	def concreteUpdate(self, sys, args):
 		numParams = len(self.func.code.parameters)
 		targetcontext = sys.canonicalContext(self.path, self.func, self.selftype, args[:numParams], args[numParams:])
-		
+
 		if targetcontext not in self.cache:
 			self.cache.add(targetcontext)
-			
+
 			sys.bindCall(self.target, targetcontext)
 
 			# Only used for lifetime analysis?
@@ -295,7 +295,7 @@ class SimpleCallConstraint(CachedConstraint):
 				sys.dependsRead(self, arg)
 		else:
 			# If there's no arguments, the constraint should start dirty.
-			self.mark(sys) 
+			self.mark(sys)
 
 
 

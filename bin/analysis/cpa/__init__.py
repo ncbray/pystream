@@ -266,7 +266,7 @@ class InterproceduralDataflow(object):
 			if not self.fold(targetcontext):
 				# Extract the constraints
 				# Don't bother if the call can never happen.
-				if targetcontext.info.willSucceed.maybeTrue():
+				if targetcontext.invocationMaySucceed(self):
 					exdf = ExtractDataflow(self, targetcontext, func)
 					exdf(func)
 					targetcontext.bindParameters(self)

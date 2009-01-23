@@ -35,84 +35,109 @@ class CallPath(ObjectContext):
 	def advance(self, op):
 		return CallPath(op, self)
 
+def localSlot(sys, func, context, lcl):
+	if lcl:
+		return sys.canonical.local(context, func, lcl)
+	else:
+		return None
+
+def calleeSlotsFromContext(sys, context):
+	func = context.signature.function
+	code = func.code
+	assert not hasattr(func, 'defaults'), "Temporary limitation"
+
+	selfparam   = localSlot(sys, func, context, code.selfparam)
+	parameters  = tuple([localSlot(sys, func, context, p) for p in code.parameters])
+	defaults    = []
+	vparam      = localSlot(sys, func, context, code.vparam)
+	kparam      = localSlot(sys, func, context, code.kparam)
+	returnparam = localSlot(sys, func, context, code.returnparam)
+
+	return util.calling.CalleeParams(selfparam, parameters,
+		code.parameternames, defaults, vparam, kparam, returnparam)
 
 
 class CPAContext(AnalysisContext):
 	__slots__ = 'signature', 'vparamObj', 'kparamObj', 'callee', 'info'
 
 	def __init__(self, path, func, selfparam, params, vparams, vparamObj, kparamObj):
+		# Validate
 		assert not isinstance(func, (AbstractSlot, ContextObject)), func
 		assert selfparam is None or isinstance(selfparam, ContextObject), selfparam
+		for param in params: assert isinstance(param, ContextObject), param
+		for param in vparams: assert isinstance(param, ContextObject), param
 
-		for param in params:
-			assert isinstance(param, ContextObject), param
-
-		for param in vparams:
-			assert isinstance(param, ContextObject), param
-
+		# Build
 		self.signature = util.cpa.CPASignature(func, path, selfparam, params, vparams)
-
 		self.vparamObj = vparamObj
 		self.kparamObj = kparamObj
-
-		self.callee = util.calling.CalleeParams.fromFunction(func)
-
-		# info is not actually intrinsic to the context?
-		self.info   = util.calling.callStackToParamsInfo(self.callee,
-			selfparam is not None,len(params)+len(vparams),
-			False, 0, False)
-
-		if self.info.willSucceed.maybeFalse():
-			if self.info.willSucceed.mustBeFalse():
-				print "Call to %s will always fail." % func.name
-			else:
-				print "Call to %s may fail." % func.name
-			print func.name
-			print selfparam
-			print params
-			print vparams
-			print
 
 		# Note that the vargObj and kargObj are considered to be "derived values"
 		# (although they are created externally, as they require access to the system)
 		# and as such aren't part of the hash or equality computations.
 		self.setCanonical(self.signature)
 
+	def _bindObjToSlot(self, sys, obj, slot):
+		assert not ((obj is None) ^ (slot is None)), (obj, slot)
+		if obj is not None and slot is not None:
+			sys.update(slot, (obj,))
+
+	def setVParamLength(self, sys):
+		context = self
+
+		# Set the length of the vparam tuple.
+		length     = sys.existingObject(sys.extractor.getObject(len(self.signature.vparams)))
+		lengthStr  = sys.extractor.getObject('length')
+		lengthSlot = sys.canonical.objectSlot(context.vparamObj, 'LowLevel', sys.existingObject(lengthStr).obj)
+		self._bindObjToSlot(sys, length, lengthSlot)
+
+	def _bindObjToVParamIndex(self, sys, obj, index):
+		context = self
+		index  = sys.extractor.getObject(index)
+		slot = sys.canonical.objectSlot(context.vparamObj, 'Array', sys.existingObject(index).obj)
+		self._bindObjToSlot(sys, obj, slot)
+
+	def invocationMaySucceed(self, sys):
+		sig = self.signature
+		callee = calleeSlotsFromContext(sys, self)
+
+		# info is not actually intrinsic to the context?
+		info = util.calling.callStackToParamsInfo(callee,
+			sig.selfparam is not None, len(sig.params)+len(sig.vparams),
+			False, 0, False)
+
+		if info.willSucceed.maybeFalse():
+			if info.willSucceed.mustBeFalse():
+				print "Call to %s will always fail." % func.name
+			else:
+				print "Call to %s may fail." % func.name
+
+		return info.willSucceed.maybeTrue()
+
 	def bindParameters(self, sys):
 		sig = self.signature
 		func = sig.function
 		context = self
 
-		def bindObjToLocal(obj, lcl):
-			if obj is not None and lcl is not None:
-				sys.update(sys.canonical.local(context, func, lcl), (obj,))
+		callee = calleeSlotsFromContext(sys, self)
 
 		# Local binding done after creating constraints,
 		# to ensure the variables are dirty.
-		bindObjToLocal(sig.selfparam,   func.code.selfparam)
+		self._bindObjToSlot(sys, sig.selfparam, callee.selfparam)
 
+		for arg, param in zip(sig.params, callee.params):
+			self._bindObjToSlot(sys, arg, param)
 
-		for arg, param in zip(sig.params, func.code.parameters):
-			bindObjToLocal(arg, param)
+		self._bindObjToSlot(sys, context.vparamObj, callee.vparam)
+		self._bindObjToSlot(sys, context.kparamObj, callee.kparam)
 
-		bindObjToLocal(context.vparamObj, func.code.vparam)
-		bindObjToLocal(context.kparamObj, func.code.kparam)
+		if self.vparamObj is not None:
+			# Set the length
+			self.setVParamLength(sys)
 
-
-		if context.vparamObj is not None:
 			# Bind the vargs
 			for i, param in enumerate(sig.vparams):
-				index = sys.extractor.getObject(i)
-				target = sys.canonical.objectSlot(context.vparamObj, 'Array', sys.existingObject(index).obj)
-				sys.update(target, (param,))
-
-
-			# Set the length of the vparam tuple.
-			length     = sys.existingObject(sys.extractor.getObject(len(sig.vparams)))
-			lengthStr  = sys.extractor.getObject('length')
-			lengthSlot = sys.canonical.objectSlot(context.vparamObj, 'LowLevel', sys.existingObject(lengthStr).obj)
-			sys.update(lengthSlot, (length,))
-
+				self._bindObjToVParamIndex(sys, param, i)
 
 externalFunction = ast.Function('external', ast.Code(None, [], [], None, None, ast.Local('internal_return'), ast.Suite([])))
 
@@ -208,6 +233,7 @@ class AbstractSlot(CanonicalObject):
 	def isObjectSlot(self):
 		return False
 
+
 class ObjectSlot(AbstractSlot):
 	__slots__ = 'obj', 'slottype', 'key', 'hash'
 
@@ -262,6 +288,7 @@ class ObjectSlot(AbstractSlot):
 			result = set()
 
 		return result
+
 
 class LocalSlot(AbstractSlot):
 	__slots__ = 'context', 'function', 'local', 'hash'

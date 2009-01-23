@@ -46,7 +46,7 @@ def foldFunctionIR(extractor, func, vargs=(), kargs={}):
 class InterproceduralDataflow(object):
 	def __init__(self, extractor):
 		self.extractor = extractor
-		
+
 		self.functions = {}
 		self.objects   = {}
 
@@ -63,7 +63,7 @@ class InterproceduralDataflow(object):
 
 		self.invocations = set()
 		self.allocations = set()
-		
+
 		self.contextReads    = set()
 		self.contextModifies = set()
 
@@ -125,14 +125,14 @@ class InterproceduralDataflow(object):
 		# Mark that we implicitly allocated these objects
 		if vparamObj: self.allocation(None, context, vparamObj)
 		if kparamObj: self.allocation(None, context, kparamObj)
-		
+
 		return context
 
 	def setTypePointer(self, cobj):
 		# Makes sure the type pointer is valid.
 		typestr = self.extractor.getObject('type')
 		slot    = self.canonical.objectSlot(cobj, 'LowLevel', typestr)
-		
+
 		if not self.read(slot):
 			self.extractor.ensureLoaded(cobj.obj)
 			type_ = self.existingObject(cobj.obj.type)
@@ -145,7 +145,7 @@ class InterproceduralDataflow(object):
 			self.setTypePointer(cobj)
 			self.heapContexts[obj].add(context)
 		return cobj
-	
+
 	def externalObject(self, obj):
 		return self.contextObject(externalObjectContext, obj)
 
@@ -192,15 +192,16 @@ class InterproceduralDataflow(object):
 	def fold(self, targetcontext):
 		def notConst(obj):
 			return obj is not None and not obj.obj.isConstant()
-		
+
 		sig = targetcontext.signature
 		func = sig.function
-		
+
 		if func in foldLUT:
 			# It's foldable.
 
 			# TODO folding with constant vargs?
-			if notConst(sig.selfparam): return False
+			# HACK the internal selfparam is usually not "constant" as it's a function, so we ignore it?
+			#if notConst(sig.selfparam): return False
 			for param in sig.params:
 				if notConst(param): return False
 
@@ -214,7 +215,7 @@ class InterproceduralDataflow(object):
 			# Set the return value
 			returnSource = self.canonical.local(targetcontext, func, func.code.returnparam)
 			self.update(returnSource, (result,))
-			
+
 			return True
 
 		return False
@@ -231,7 +232,7 @@ class InterproceduralDataflow(object):
 		return targetcontext
 
 	def bindCall(self, target, targetcontext):
-			
+
 		sig = targetcontext.signature
 		func = sig.function
 
@@ -244,13 +245,13 @@ class InterproceduralDataflow(object):
 		# Done early, so constant folding makes the constraint dirty
 		# Target may be done for the entrypoints.
 		if target is not None:
-			# Record the invocation			
+			# Record the invocation
 			# HACK recoving op from callpath, may not work in the future.
 			op = sig.path.path[-1]
 
 			sourceop = self.canonical.contextOp(target.context, target.function, op)
 			dstfunc = self.canonical.contextFunction(targetcontext, func)
-			
+
 			self.invocations.add((sourceop, dstfunc))
 
 			# Copy the return value
@@ -259,9 +260,9 @@ class InterproceduralDataflow(object):
 
 
 		# Caller-independant initalization.
-		if not targetcontext in self.live:			
+		if not targetcontext in self.live:
 			self.live.add(targetcontext)
-			
+
 			if not self.fold(targetcontext):
 				# Extract the constraints
 				# Don't bother if the call can never happen.
@@ -269,7 +270,7 @@ class InterproceduralDataflow(object):
 					exdf = ExtractDataflow(self, targetcontext, func)
 					exdf(func)
 					targetcontext.bindParameters(self)
-		
+
 
 	def addEntryPoint(self, func, funcobj, args):
 		context = self.getContext(self.rootPath, func, funcobj, args)
@@ -285,12 +286,12 @@ class InterproceduralDataflow(object):
 
 def evaluate(extractor, entryPoints):
 	dataflow = InterproceduralDataflow(extractor)
-	
+
 	for funcast, funcobj, args in entryPoints:
 		assert isinstance(funcast, ast.Function), type(funcast)
 		assert isinstance(funcobj, program.Object), type(funcobj)
 		assert isinstance(args, (list, tuple)), type(args)
-		
+
 		dataflow.addEntryPoint(funcast, funcobj, args)
 
 

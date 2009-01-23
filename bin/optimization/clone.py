@@ -28,8 +28,8 @@ class ProgramCloner(object):
 			for context in adb.functionContexts(func):
 				different[context]
 
-		
-		
+
+
 
 	def makeGroups(self):
 		# Create groups of contexts
@@ -39,7 +39,7 @@ class ProgramCloner(object):
 
 			if len(groups) > 1:
 				print func.name, len(groups), "groups"
-			
+
 			self.groups[func] = groups
 
 		# Create context -> group mapping
@@ -68,11 +68,11 @@ class ProgramCloner(object):
 					break
 			else:
 				groups.append(set((context,)))
-		return groups			
+		return groups
 
 	def findConflicts(self):
 		self.realizable = True
-		for func in self.adb.liveFunctions():		
+		for func in self.adb.liveFunctions():
 			# Two contexts should not be the same if they contain an op that
 			# invokes different sets of functions.
 			for op in self.adb.functionOps(func):
@@ -90,7 +90,7 @@ class ProgramCloner(object):
 				# May be a subset of another context.
 				for context in contexts:
 					assert context.signature.function is func, (context, func)
-					
+
 					invocations = self.adb.invocationsForContextOp(func, op, context)
 					translated = [self.groupLUT[dst] for dst in invocations]
 
@@ -99,11 +99,13 @@ class ProgramCloner(object):
 					if len(translated) >= 2:
 						u.union(*translated)
 
+						print "Conflict"
 						print func.name
 						print type(op)
 						for inv in invocations:
 							print '\t*', self.groupLUT[inv], inv
-						
+						print
+
 						# More that one call target.
 						self.realizable = False
 
@@ -118,10 +120,10 @@ class ProgramCloner(object):
 
 					# Contexts not in the current group
 					diff = contexts-group
-					
+
 					for context in group:
-						different[context].update(diff)		
-		
+						different[context].update(diff)
+
 
 
 	def rewriteProgram(self, extractor, entryPoints):
@@ -136,10 +138,10 @@ class ProgramCloner(object):
 					name = "%s_clone_%d" % (func.name, uid)
 				else:
 					name = func.name
-					
+
 				newfunc[func][id(group)] = ast.Function(name, None)
 				uid += 1
-					
+
 		# Clone all of the functions.
 		for func, groups in self.groups.iteritems():
 			for group in groups:
@@ -148,7 +150,7 @@ class ProgramCloner(object):
 				# Transfer information that is tied to the context.
 				self.adb.trackContextTransfer(func, f, group)
 
-				fc = FunctionCloner(self.adb, newfunc, self.groupLUT, func, f, group)			
+				fc = FunctionCloner(self.adb, newfunc, self.groupLUT, func, f, group)
 				f.code = fc(func.code)
 
 
@@ -161,7 +163,7 @@ class ProgramCloner(object):
 			clonefunc = groups.items()[0][1]
 			newEP.append((clonefunc, funcobj, args))
 
-		
+
 		# HACK Mutate the list.
 		# Used so everyone gets the update version
 		entryPoints[:] = newEP
@@ -173,14 +175,14 @@ class ProgramCloner(object):
 
 		for func in funcs:
 			simplify(extractor, self.adb, func)
-			
+
 		return funcs
 
-		
+
 
 class FunctionCloner(object):
 	__metaclass__ = typedispatcher
-	
+
 	def __init__(self, adb, newfuncLUT, groupLUT, sourcefunction, destfunction, group):
 		self.adb = adb
 		self.newfuncLUT = newfuncLUT
@@ -235,7 +237,9 @@ class FunctionCloner(object):
 		if invocations:
 			# We do this computation after transfer, as it can reduce the number of invocations.
 			func = self.adb.singleCall(self.destfunction, tempresult)
-			assert func, invocations
+			if not func:
+				names = [inv.name for inv in invocations]
+				raise Exception, "Cannot clone the direct call, as it has multiple targets. %r" % names
 			result = ast.DirectCall(func, *tempresult.children()[1:])
 
 			self.adb.trackRewrite(self.destfunction, tempresult, result)
@@ -256,9 +260,9 @@ class FunctionCloner(object):
 		def mapper(target):
 			c, func = target
 			return self.translateFunctionContext(func, c)
-		
+
 		self.adb.trackOpTransfer(self.sourcefunction, original, self.destfunction, replacement, self.group, mapper)
-			
+
 	def transferLocal(self, original, replacement):
 		self.adb.trackLocalTransfer(self.sourcefunction, original, self.destfunction, replacement, self.group)
 
@@ -273,9 +277,9 @@ def clone(extractor, entryPoints, adb):
 
 	while numGroups > oldNumGroups:
 		oldNumGroups = numGroups
-		
+
 		cloner.findConflicts()
-			
+
 		print "=== Split ==="
 		print cloner.realizable
 		numGroups = cloner.makeGroups()

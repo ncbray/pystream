@@ -18,7 +18,7 @@ class AnalysisContext(CanonicalObject):
 
 class CallPath(ObjectContext):
 	__slots__ = 'path'
-	
+
 	def __init__(self, op, oldpath=None):
 		if oldpath is None:
 			# 6 seems to be the minimum?
@@ -46,25 +46,31 @@ class CPAContext(AnalysisContext):
 
 		for param in params:
 			assert isinstance(param, ContextObject), param
-			
+
 		for param in vparams:
 			assert isinstance(param, ContextObject), param
 
 		self.signature = util.cpa.CPASignature(func, path, selfparam, params, vparams)
-				
+
 		self.vparamObj = vparamObj
 		self.kparamObj = kparamObj
 
 		self.callee = util.calling.CalleeParams.fromFunction(func)
-		self.info   = util.calling.callStackToParamsInfo(self.callee, len(params)+len(vparams), False, 0, False)
+
+		# info is not actually intrinsic to the context?
+		self.info   = util.calling.callStackToParamsInfo(self.callee,
+			selfparam is not None,len(params)+len(vparams),
+			False, 0, False)
 
 		if self.info.willSucceed.maybeFalse():
 			if self.info.willSucceed.mustBeFalse():
-				print "Call will always fail."
+				print "Call to %s will always fail." % func.name
 			else:
-				print "Call may fail."
-			print self.func.name
-			print self.args
+				print "Call to %s may fail." % func.name
+			print func.name
+			print selfparam
+			print params
+			print vparams
 			print
 
 		# Note that the vargObj and kargObj are considered to be "derived values"
@@ -80,7 +86,7 @@ class CPAContext(AnalysisContext):
 		def bindObjToLocal(obj, lcl):
 			if obj is not None and lcl is not None:
 				sys.update(sys.canonical.local(context, func, lcl), (obj,))
-		
+
 		# Local binding done after creating constraints,
 		# to ensure the variables are dirty.
 		bindObjToLocal(sig.selfparam,   func.code.selfparam)
@@ -105,25 +111,25 @@ class CPAContext(AnalysisContext):
 			length     = sys.existingObject(sys.extractor.getObject(len(sig.vparams)))
 			lengthStr  = sys.extractor.getObject('length')
 			lengthSlot = sys.canonical.objectSlot(context.vparamObj, 'LowLevel', sys.existingObject(lengthStr).obj)
-			sys.update(lengthSlot, (length,)) 
+			sys.update(lengthSlot, (length,))
 
 
 externalFunction = ast.Function('external', ast.Code(None, [], [], None, None, ast.Local('internal_return'), ast.Suite([])))
 
 class ExternalFunctionContext(AnalysisContext):
 	__slots__ = ()
-		
+
 externalFunctionContext = ExternalFunctionContext()
 
 class ExternalOp(object):
 	__slots__ = '__weakref__'
-		
+
 externalOp = ExternalOp()
 
 class ExternalObjectContext(ObjectContext):
 	__slots__ = ()
 
-		
+
 externalObjectContext = ExternalObjectContext()
 
 
@@ -143,13 +149,13 @@ existingObjectContext = ExistingObjectContext()
 class ContextObject(CanonicalObject):
 	__slots__ = 'context', 'obj'
 
-	
+
 	def __init__(self, context, obj):
 		assert isinstance(context, ObjectContext), context
 		assert isinstance(obj, program.AbstractObject), obj
 
 		self.setCanonical(context, obj)
-		
+
 		self.context 	= context
 		self.obj 	= obj
 
@@ -172,7 +178,7 @@ class ContextOp(CanonicalObject):
 		self.context  = context
 		self.function = function
 		self.op       = op
-		
+
 
 class ContextFunction(CanonicalObject):
 	__slots__ = 'context', 'function'
@@ -181,7 +187,7 @@ class ContextFunction(CanonicalObject):
 		assert isinstance(function, ast.Function), function
 
 		self.setCanonical(context, function)
-		
+
 		self.context  = context
 		self.function = function
 
@@ -195,7 +201,7 @@ class ContextFunction(CanonicalObject):
 
 class AbstractSlot(CanonicalObject):
 	__slots__ = ()
-	
+
 	def isLocalSlot(self):
 		return False
 
@@ -204,7 +210,7 @@ class AbstractSlot(CanonicalObject):
 
 class ObjectSlot(AbstractSlot):
 	__slots__ = 'obj', 'slottype', 'key', 'hash'
-	
+
 	def __init__(self, obj, slottype, key):
 		assert isinstance(obj, ContextObject), obj
 		assert isinstance(slottype, str)
@@ -254,22 +260,22 @@ class ObjectSlot(AbstractSlot):
 				result = set()
 		else:
 			result = set()
-		
+
 		return result
 
 class LocalSlot(AbstractSlot):
 	__slots__ = 'context', 'function', 'local', 'hash'
-	
+
 	def __init__(self, context, function, local):
 		self.setCanonical(context, function, local)
-		
+
 		self.context  = context
 		self.function = function
 		self.local    = local
 
 	def isLocalSlot(self):
 		return True
-	
+
 	def __repr__(self):
 		return "%s(%d, %r, %r)" % (type(self).__name__, id(self.context), self.function.name, self.local)
 

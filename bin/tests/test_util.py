@@ -23,7 +23,7 @@ class TestTypeDisbatch(unittest.TestCase):
 
 
 		foo = FooBar()
-		
+
 		self.assertEqual(foo(1),     'number')
 		self.assertEqual(foo(2**70), 'number')
 		self.assertEqual(foo(1.0),   'default')
@@ -34,7 +34,7 @@ from util.tvl import *
 class TestCallingUtility(unittest.TestCase):
 	def testExact(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 2, False, 0, False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 2, False, 0, False)
 
 
 		self.assertEqual(info.willSucceed, TVLTrue)
@@ -64,16 +64,16 @@ class TestCallingUtility(unittest.TestCase):
 		self.assertEqual(transfer.destinationBegin, destinationBegin)
 		self.assertEqual(transfer.destinationEnd, destinationEnd)
 		self.assertEqual(transfer.count, count)
-		
+
 
 	def testTooManyArgs(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 3, False, 0, False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 3, False, 0, False)
 		self.assertHardFail(info)
 
 	def testTooFewArgs(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 1, False, 0, False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 1, False, 0, False)
 		self.assertHardFail(info)
 
 
@@ -81,7 +81,7 @@ class TestCallingUtility(unittest.TestCase):
 
 	def testExactSpill(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], 2, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 4, False, 0, False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 4, False, 0, False)
 
 		self.assertHardSucceed(info)
 
@@ -95,7 +95,7 @@ class TestCallingUtility(unittest.TestCase):
 
 	def testUncertainPullVargs(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], 2, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 1, True, 0, False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 1, True, 0, False)
 
 		self.assertEqual(info.willSucceed, TVLMaybe)
 
@@ -105,34 +105,34 @@ class TestCallingUtility(unittest.TestCase):
 
 		self.assertEqual(info.uncertainParam, True)
 		self.assertEqual(info.uncertainParamStart, 1)
-		
+
 		self.assertEqual(info.uncertainVParam, True)
 
 	def testUncertainPull(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 1, True, 0, False)
+		info = util.calling.callStackToParamsInfo(callee, False, 1, True, 0, False)
 
 		self.assertEqual(info.willSucceed, TVLMaybe)
 
 		self.assertTransfer(info.argParam, 0, 1, 0, 1, 1)
 		self.assertEqual(info.argVParam.active, False)
-		
+
 		self.assertEqual(info.uncertainParam, True)
 		self.assertEqual(info.uncertainParamStart, 1)
-		
+
 		self.assertEqual(info.uncertainVParam, False)
 
 	### Known keywords ###
 
 	def testSemiKeyword(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 1, False, ('b',), False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 1, False, ('b',), False)
 
 		self.assertHardSucceed(info)
 
 		self.assertTransfer(info.argParam, 0, 1, 0, 1, 1)
 		self.assertEqual(info.argVParam.active, False)
-		
+
 		self.assertEqual(info.uncertainParam, False)
 		self.assertEqual(info.uncertainVParam, False)
 
@@ -141,7 +141,7 @@ class TestCallingUtility(unittest.TestCase):
 
 	def testAllKeyword(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 0, False, ('a', 'b',), False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 0, False, ('a', 'b',), False)
 
 		self.assertHardSucceed(info)
 
@@ -155,24 +155,24 @@ class TestCallingUtility(unittest.TestCase):
 
 	def testRedundantKeyword(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 1, False, ('a',), False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 1, False, ('a',), False)
 		self.assertHardFail(info)
 
 	def testBogusKeyword(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 2, False, ('c',), False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 2, False, ('c',), False)
 		self.assertHardFail(info)
 
 	### Deaults ###
 
 	def testIncompleteDefaults(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [2], None, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 0, False, (), False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 0, False, (), False)
 		self.assertHardFail(info)
 
 	def testUsedDefaults(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [2], None, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 1, False, (), False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 1, False, (), False)
 
 		self.assertEqual(info.willSucceed, TVLTrue)
 		self.assertTransfer(info.argParam, 0, 1, 0, 1, 1)
@@ -184,7 +184,7 @@ class TestCallingUtility(unittest.TestCase):
 
 	def testUnusedDefaults(self):
 		callee = util.calling.CalleeParams(None, [0, 1], ['a', 'b'], [2], None, None, None)
-		info = util.calling.callStackToParamsInfo(callee, 2, False, (), False)
+		info = util.calling.callStackToParamsInfo(callee,  False, 2, False, (), False)
 
 		self.assertEqual(info.willSucceed, TVLTrue)
 		self.assertTransfer(info.argParam, 0, 2, 0, 2, 2)
@@ -194,7 +194,7 @@ class TestCallingUtility(unittest.TestCase):
 
 		self.assert_(not info.defaults, info.defaults)
 
-		
+
 ##from cStringIO import StringIO
 ##from common.simplecodegen import SimpleCodeGen
 ##from optimization.simplify import simplify
@@ -204,10 +204,10 @@ class TestCallingUtility(unittest.TestCase):
 ##	def processFunc(self, func):
 ##
 ##		func = replaceGlobals(func, {})
-##		
+##
 ##		f = extractor.decompileFunction(func, ssa=False)
 ##		extractor.process()
-##	
+##
 ##		f = simplify(extractor, None, f)
 ##
 ####		sio = StringIO()
@@ -366,7 +366,7 @@ class TestCallingUtility(unittest.TestCase):
 ##				a += 1
 ##			else:
 ##				a *= 2
-##				
+##
 ##			return a
 ##
 ##		f = self.processFunc(func)
@@ -389,7 +389,7 @@ class TestCallingUtility(unittest.TestCase):
 ##				res = a
 ##			else:
 ##				res = a/2
-##			
+##
 ##			return res
 ##
 ##		f = self.processFunc(func)
@@ -413,7 +413,7 @@ class TestCallingUtility(unittest.TestCase):
 ##				res = a
 ##			else:
 ##				res = a/2
-##			
+##
 ##			return res
 ##
 ##		f = self.processFunc(func)

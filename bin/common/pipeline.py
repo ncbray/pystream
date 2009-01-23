@@ -27,7 +27,7 @@ from stubs.stubcollector import descriptiveLUT
 def codeConditioning(extractor, entryPoints, dataflow):
 	print "Code conditioning"
 
-	
+
 	db = dataflow.db
 	adb = analysis.cpa.analysisdatabase.CPAAnalysisDatabase(db)
 

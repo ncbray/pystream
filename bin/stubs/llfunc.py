@@ -10,10 +10,27 @@ function = xtypes.FunctionType
 from . stubcollector import llast, descriptive, attachPtr, attachAttrPtr, highLevelStub, replaceObject, replaceAttr, export, fold
 from . llutil import simpleDescriptor, allocate, getType, returnNone, call, operation, type_lookup, inst_lookup
 
-	
+
 ##############
 ### Object ###
 ##############
+
+@attachAttrPtr(object, '__init__')
+@descriptive
+@llast
+def object__init__():
+	# Param
+	selfp = Local('internal_self')
+	self  = Local('self')
+	vargs = Local('vargs')
+	retp  = Local('internal_return')
+
+	b = Suite()
+	returnNone(b)
+	code = Code(selfp, [self], ['self'], vargs, None, retp, b)
+
+	f = Function('object__init__', code)
+	return f
 
 # Low level?
 
@@ -42,7 +59,7 @@ from . llutil import simpleDescriptor, allocate, getType, returnNone, call, oper
 ##	# None vs. wrapped None?
 ##
 ##	f = desc.__get__
-##	
+##
 ##	if f:
 ##		s = desc.__set__
 ##		if s:
@@ -70,7 +87,7 @@ from . llutil import simpleDescriptor, allocate, getType, returnNone, call, oper
 ##		# Probabally should create a special purpose tracer.
 ##		#raise AttributeError, "'%.50s' object has no attribute '%.400s'" % (cls.__name__, field)
 ##		return NotImplemented
-	
+
 
 ##def type_lookup(cls, field):
 ##	# HACK, possible due to flattened classes
@@ -121,14 +138,14 @@ def object__getattribute__(self, field):
 		# Probabally should create a special purpose tracer.
 		#raise AttributeError, "'%.50s' object has no attribute '%.400s'" % (cls.__name__, field)
 		return NotImplemented
-	
+
 
 ##@attachAttrPtr(object, '__getattribute__')
 ##@descriptive
 ##@llast
 ##def object__getattribute__():
 ##	# Param
-##	self = Local('self')	
+##	self = Local('self')
 ##	field = Local('field')
 ##
 ##	# Locals
@@ -167,7 +184,8 @@ def object__getattribute__(self, field):
 @llast
 def object__getattribute__():
 	# Param
-	self = Local('self')	
+	selfp = Local('internal_self')
+	self = Local('self')
 	field = Local('field')
 
 	# Locals
@@ -196,7 +214,7 @@ def object__getattribute__():
 
 
 	f = Suite([])
-	
+
 	# No descriptor
 	d = Local('dict')
 	f.append(Assign(Load(self, 'LowLevel', Existing('dictionary')), d))
@@ -213,7 +231,7 @@ def object__getattribute__():
 	b.append(Return(result))
 
 
-	code = Code(None, [self, field], ['self', 'field'], None, None, retp, b)
+	code = Code(selfp, [self, field], ['self', 'field'], None, None, retp, b)
 	f = Function('object__getattribute__', code)
 
 	return f
@@ -226,7 +244,7 @@ def object__getattribute__():
 ##
 ##	cls = type(self)
 ##	desc = cls.lookup(field)
-##	
+##
 ##	if desc and isDataDescriptor(desc):
 ##		return desc.__get__(self, cls)
 ##	elif self.__dict__ and field in self.__dict__:
@@ -237,7 +255,7 @@ def object__getattribute__():
 ##		return desc
 ##	else:
 ## 		raise AttributeError, "'%.50s' object has no attribute '%.400s'" % (cls.__name__, field)
-	
+
 @export
 @highLevelStub
 def default__get__(self, inst, cls):
@@ -249,6 +267,7 @@ def default__get__(self, inst, cls):
 @descriptive
 @llast
 def object__setattr__():
+	selfp = Local('internal_self')
 	self = Local('self')
 
 	# Param
@@ -269,10 +288,10 @@ def object__setattr__():
 
 	returnNone(b)
 
-	code = Code(None, [self, field, value], ['self', 'field', 'value'], None, None, retp, b)
+	code = Code(selfp, [self, field, value], ['self', 'field', 'value'], None, None, retp, b)
 	f = Function('object__setattr__', code)
 
-	return f	
+	return f
 
 ############
 ### Type ###
@@ -322,7 +341,7 @@ def type__call__():
 	vargs = Local('vargs')
 
 	# Temporaries
-	new_method = Local('new_method')	
+	new_method = Local('new_method')
 	inst = Local('inst')
 	init = Local('init')
 
@@ -331,7 +350,7 @@ def type__call__():
 	b = Suite()
 
 	# Call __new__
-	type_lookup(b, self, Existing('__new__'), new_method)		    
+	type_lookup(b, self, Existing('__new__'), new_method)
 	call(b, new_method, [self], vargs, None, inst)
 
 	# TODO Do the isinstance check?
@@ -351,7 +370,7 @@ def type__call__():
 ##	# No override to new or init - no args
 ##	# Override new or init - args must match overriden
 ##	# Override both - just call both with given arguments?
-##	
+##
 ##	inst = cls.__new__(*args, **kargs)
 ##
 ##	if type(inst) == cls:
@@ -395,7 +414,7 @@ def method__init__(self, func, inst, cls):
 @llast
 def method__call__():
 	self = Local('self')
-	
+
 	im_self = Local('im_self')
 	im_func = Local('im_func')
 	temp 	= Local('temp')
@@ -431,6 +450,7 @@ def method__call__():
 def methoddescriptor__get__():
 
 	# Param
+	selfp = Local('internal_self')
 	self = Local('self')
 	inst = Local('inst')
 	cls = Local('cls')
@@ -446,7 +466,7 @@ def methoddescriptor__get__():
 	b.append(Return(result))
 
 
-	code = Code(None, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
+	code = Code(selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
 	func = Function('methoddescriptor__get__', code)
 
 	return func
@@ -461,6 +481,7 @@ def methoddescriptor__get__():
 @llast
 def memberdescriptor__get__():
 	# Param
+	selfp = Local('internal_self')
 	self = Local('self')
 	inst = Local('inst')
 	cls = Local('cls')
@@ -471,12 +492,12 @@ def memberdescriptor__get__():
 	result = Local('result')
 
 	b = Suite()
-	b.append(Assign(Load(self, 'LowLevel', Existing('slot')), slot))	
+	b.append(Assign(Load(self, 'LowLevel', Existing('slot')), slot))
 	b.append(Assign(Load(inst, 'Attribute', slot), result))
 	b.append(Return(result))
 
 
-	code = Code(None, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
+	code = Code(selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
 	f = Function('memberdescriptor__get__', code)
 	return f
 
@@ -486,6 +507,7 @@ def memberdescriptor__get__():
 @llast
 def memberdescriptor__set__():
 	# Self
+	selfp = Local('internal_self')
 	self = Local('self')
 
 	# Param
@@ -500,7 +522,7 @@ def memberdescriptor__set__():
 	b.append(Discard(Store(inst, 'Attribute', slot, value)))
 	returnNone(b)
 
-	code = Code(None, [self, inst, value], ['self', 'inst', 'value'], None, None, retp, b)
+	code = Code(selfp, [self, inst, value], ['self', 'inst', 'value'], None, None, retp, b)
 	f = Function('memberdescriptor__set__', code)
 
 	return f
@@ -517,6 +539,7 @@ def memberdescriptor__set__():
 @llast
 def property__get__():
 	# Param
+	selfp = Local('internal_self')
 	self = Local('self')
 	inst = Local('inst')
 	cls = Local('cls')
@@ -531,7 +554,7 @@ def property__get__():
 	call(b, func, [inst], None, None, result)
 	b.append(Return(result))
 
-	code = Code(None, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
+	code = Code(selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
 	func = Function('property__get__', code)
 
 	return func
@@ -546,6 +569,7 @@ def property__get__():
 @descriptive
 @llast
 def dummyBinaryOperation():
+	selfp = Local('internal_self')
 	t = Local('type_')
 	inst = Local('inst')
 	retp = Local('internal_return')
@@ -562,7 +586,7 @@ def dummyBinaryOperation():
 	# Return the allocated object
 	b.append(Return(inst))
 
-	code = Code(None, args, ['self', 'other'], None, None, retp, b)
+	code = Code(selfp, args, ['self', 'other'], None, None, retp, b)
 	f = Function('dummyBinaryOperation', code)
 
 	return f
@@ -571,6 +595,7 @@ def dummyBinaryOperation():
 @descriptive
 @llast
 def dummyUnaryOperation():
+	selfp = Local('internal_self')
 	t = Local('type_')
 	inst = Local('inst')
 	retp = Local('internal_return')
@@ -586,7 +611,7 @@ def dummyUnaryOperation():
 	# Return the allocated object
 	b.append(Return(inst))
 
-	code = Code(None, args, ['self'], None, None, retp, b)
+	code = Code(selfp, args, ['self'], None, None, retp, b)
 	f = Function('dummyUnaryOperation', code)
 
 	return f
@@ -638,7 +663,7 @@ def tuple__getitem__():
 	result  = Local('result')
 
 	# Instructions
-	b = Suite()	
+	b = Suite()
 	b.append(Assign(Load(inst, 'Array', key), result))
 	b.append(Return(result))
 
@@ -680,9 +705,10 @@ def isinstance_stub():
 	result  = Local('result')
 
 	# Instructions
-	b = Suite()	
+	b = Suite()
 	getType(b, obj, type_)
-	b.append(Assign(DirectCall(issubclass_stub, None, [type_, classinfo], [], None, None), result))
+	# HACK we don't actually know the real "self" for issubclass, so we use our own to prevent the call from failing.
+	b.append(Assign(DirectCall(issubclass_stub, self, [type_, classinfo], [], None, None), result))
 	b.append(Return(result))
 
 	code = Code(self, [obj, classinfo], ['object', 'classinfo'], None, None, retp, b)

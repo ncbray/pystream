@@ -4,7 +4,7 @@ from util.tvl import *
 
 class CallerArgs(object):
 	__slots__ = 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'returnarg'
-	
+
 	def __init__(self, selfarg, args, kwds, vargs, kargs, returnarg):
 		self.selfarg   = selfarg
 		self.args      = args
@@ -73,16 +73,18 @@ class PositionalTransfer(object):
 
 	def __len__(self):
 		return self.count
-		
+
 class CallInfo(object):
 	def __init__(self):
 		self.willSucceed = TVLMaybe
-		
+
+		self.selfTransfer = False
+
 		self.argParam   = PositionalTransfer()
 		self.argVParam  = PositionalTransfer()
 
 		self.exceptions = set()
-		
+
 		self.uncertainParam = False
 		self.uncertainParamStart = 0
 
@@ -107,12 +109,14 @@ class CallInfo(object):
 	def _mustFail(self):
 		self.willSucceed = TVLFalse
 
+		self.selfTransfer = False
+
 		self.argParam.reset()
 		self.argVParam.reset()
-		
+
 		self.uncertainParam  = False
 		self.uncertainVParam = False
-		
+
 		self.certainKeywords.clear()
 		self.defaults.clear()
 
@@ -129,7 +133,7 @@ def bindDefaults(callee, info):
 		if bound.maybeFalse():
 			info.defaults.add(i)
 
-def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncertainKwds):
+def callStackToParamsInfo(callee, selfarg, numArgs, uncertainVArgs, certainKwds, isUncertainKwds):
 	assert isinstance(callee, CalleeParams), callee
 	assert isinstance(numArgs, int) and numArgs >= 0, numArgs
 
@@ -137,6 +141,13 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 
 	info = CallInfo()
 
+	if callee.selfparam and selfarg:
+		info.selfTransfer = True
+	elif callee.selfparam is None and not selfarg:
+		info.selfTransfer = False
+	else:
+		info.exceptions.add(TypeError)
+		return info._mustFail()
 
 	# Exactly known parameters [0, exact)
 	numParams = len(callee.params)
@@ -187,7 +198,7 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 		paramMap = {}
 		for i, name in enumerate(callee.paramnames):
 			paramMap[name] = i
-			
+
 		for kwd in certainKwds:
 			if kwd in paramMap:
 				param = paramMap[kwd]
@@ -202,7 +213,7 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 					# POSSIBLE: got multiple values for keyword argument '%s'
 					info.certainKeywords.add(param)
 					cleanTransfer &= TVLMaybe
-					# TODO may no fail 
+					# TODO may no fail
 			elif callee.kparam is None:
 				# got an unexpected keyword argument '%s'
 				info.exceptions.add(TypeError)
@@ -225,5 +236,5 @@ def callStackToParamsInfo(callee, numArgs, uncertainVArgs, certainKwds, isUncert
 
 	if info.willSucceed.mustBeFalse():
 		info._mustFail()
-	
+
 	return info

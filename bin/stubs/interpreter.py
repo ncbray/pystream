@@ -9,7 +9,7 @@ from . llutil import simpleDescriptor, allocate, getType, call, returnNone, type
 # 	__nonzero__
 # 	__len__
 # 	True
-fold(bool)(export(llast(simpleDescriptor('convertToBool', ('o',), bool))))
+fold(bool)(export(llast(simpleDescriptor('convertToBool', ('o',), bool, hasSelfParam=False))))
 
 
 # BUG recursive definition.  Needs HasAttr instead.
@@ -19,7 +19,7 @@ fold(bool)(export(llast(simpleDescriptor('convertToBool', ('o',), bool))))
 ##@llast
 ##def convertToBool():
 ##	# Param
-##	self = Local('self')	
+##	self = Local('self')
 ##	field = Local('field')
 ##
 ##	# Locals
@@ -80,9 +80,9 @@ fold(bool)(export(llast(simpleDescriptor('convertToBool', ('o',), bool))))
 ##
 ##	# Instructions
 ##	b = Suite()
-##	
+##
 ##	allocate(b, Existing(tuple), inst)
-##	
+##
 ##	for i in range(8):
 ##		b.append(Discard(Store(inst, 'Array', Existing(i), a[i])))
 ##
@@ -121,7 +121,7 @@ def buildTuple():
 ### A low-level stub (multiple return values?)
 ### Abstract (no iteration)
 ##@export
-##@llast	
+##@llast
 ##def unpackSequence():
 ##	# Self
 ##	self = Local('self')
@@ -134,7 +134,7 @@ def buildTuple():
 ##
 ##
 ##	# Instructions
-##	b = Suite()	
+##	b = Suite()
 ##	for i in range(8):
 ##		b.append(Assign(temps[i], Load(inst, 'Array', Existing(i))))
 ##
@@ -147,10 +147,8 @@ def buildTuple():
 ##	return f
 
 # TODO accept arguments
-export(llast(simpleDescriptor('buildList', (), list)))
-
-export(llast(simpleDescriptor('buildMap', (), dict)))
-
+export(llast(simpleDescriptor('buildList', (), list, hasSelfParam=False)))
+export(llast(simpleDescriptor('buildMap', (), dict, hasSelfParam=False)))
 
 
 @export
@@ -204,12 +202,12 @@ def simpleAttrCall(name, attr, argnames):
 	assert isinstance(name, str), name
 	assert isinstance(attr, str), attr
 	assert isinstance(argnames, (tuple, list)), argnames
-	
+
 	def simpleAttrCallBuilder():
 		# Param
 		args = [Local(argname) for argname in argnames]
 
-		
+
 
 		# Temporaries
 		attrtemp = Local('attrtemp')
@@ -221,14 +219,14 @@ def simpleAttrCall(name, attr, argnames):
 		# Instructions
 		b = Suite()
 
-		inst_lookup(b, args[0], Existing(attr), func)		
+		inst_lookup(b, args[0], Existing(attr), func)
 		call(b, func, args, None, None, retval)
 		b.append(Return(retval))
 
 		code = Code(None, args, list(argnames), None, None, retp, b)
 		f = Function(name, code)
 		return f
-	
+
 	return simpleAttrCallBuilder
 
 

@@ -9,7 +9,7 @@ import util.xtypes
 import stubs.stubcollector
 
 import optimization.simplify
-import analysis.analysisdatabase 
+import analysis.analysisdatabase
 analysis.analysisdatabase.DummyAnalysisDatabase
 
 def contextsThatOnlyInvoke(adb, funcs, invocations):
@@ -31,8 +31,8 @@ def contextsThatOnlyInvoke(adb, funcs, invocations):
 					match = invokes.intersection(invocations)
 
 					# There must be invocations, and they must all be to fget.
-					if match and match == invokes:					
-						output.add((func, context))	
+					if match and match == invokes:
+						output.add((func, context))
 	return output
 
 def opThatInvokes(adb, func):
@@ -49,12 +49,12 @@ def opThatInvokes(adb, func):
 
 class MethodPatternFinder(object):
 	__metaclass__ = typedispatcher
-	
+
 	def findOriginals(self, extractor):
 		exports = stubs.stubcollector.exports
 		self.iget = exports['interpreter_getattribute']
 		self.oget = exports['object__getattribute__']
-		
+
 		fgetpyobj = exports['function__get__']
 		fgetobj = extractor.getObject(fgetpyobj)
 		self.fget = extractor.getCall(fgetobj)
@@ -62,13 +62,12 @@ class MethodPatternFinder(object):
 		self.mdget = exports['methoddescriptor__get__']
 
 		self.mcall = exports['method__call__']
-		
+
 
 
 
 	def findExisting(self, adb):
 		db = adb.db
-
 
 		self.fgets = set()
 		self.ogets = set()
@@ -84,9 +83,11 @@ class MethodPatternFinder(object):
 
 	def findContexts(self, adb):
 		db = adb.db
-		if not self.fgets: return
+		if not self.fgets: return False
 
 		self.fgetsC = set()
+		self.ogetsC = set()
+		self.igetsC = set()
 		for func in self.fgets:
 			funcinfo = db.functionInfo(func)
 			for context in funcinfo.contexts:
@@ -94,26 +95,25 @@ class MethodPatternFinder(object):
 
 		# HACK There's only one op in the object getter that will invoke?
 		self.ogetsC = contextsThatOnlyInvoke(adb, self.ogets, self.fgetsC)
-		if not self.ogetsC: return
-	
+		if not self.ogetsC: return False
+
 
 		self.igetsC = contextsThatOnlyInvoke(adb, self.igets, self.ogetsC)
-		if not self.igetsC: return
+		if not self.igetsC: return False
+
+		return True
+
 
 	def preprocess(self, extractor, adb):
 		self.findOriginals(extractor)
 		self.findExisting(adb)
-		self.findContexts(adb)
-		
+		return self.findContexts(adb)
 
 
-
-
-	
 	def isMethodGetter(self, node, invokes):
 		#invokes = self.info.opInfo(node).merged.invokes
 		invokes = frozenset([(f, c) for c, f in invokes]) # Flip the info.
-		
+
 		marked = invokes.intersection(self.igetsC)
 
 		if marked and marked == invokes:
@@ -129,7 +129,7 @@ class MethodPatternFinder(object):
 	def visitCall(self, node, invokes):
 		if len(node.args) == 2 and not node.kwds and not node.vargs and not node.kargs:
 			if self.isMethodGetter(node, invokes):
-				return True, node.args[0], node.args[1] 
+				return True, node.args[0], node.args[1]
 		return False, None, None
 
 	@dispatch(ast.GetAttr)
@@ -179,7 +179,7 @@ class MethodAnalysis(object):
 
 		check = self.flow.lookup(('meth', meth))
 		assert check == key, (check, key)
-		
+
 		self.flow.undefine(('expr', expr))
 		self.flow.undefine(('name', name))
 		self.flow.undefine(('meth', meth))
@@ -205,7 +205,7 @@ class MethodAnalysis(object):
 	def visitMayLeak(self, node):
 		xform.visitAllChildren(self, node)
 		return node
-				
+
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		self(node.expr)
@@ -288,10 +288,10 @@ class MethodRewrite(object):
 		rewrite = ast.MethodCall(expr, name, node.args, node.kwds, node.vargs, node.kargs)
 		self.transferOpInfo(node, rewrite)
 
-		self.rewritten.add(id(node))	
+		self.rewritten.add(id(node))
 		return rewrite
 
-		
+
 
 	@dispatch(ast.Call)
 	def visitCall(self, node):
@@ -313,7 +313,7 @@ class MethodRewrite(object):
 
 def methodMeet(values):
 	return dataflow.forward.undefined
-	
+
 ##	prototype = values[0]
 ##	for value in values[1:]:
 ##		if value != prototype:
@@ -322,7 +322,9 @@ def methodMeet(values):
 
 def methodCall(extractor, adb):
 	pattern = MethodPatternFinder()
-	pattern.preprocess(extractor, adb)
+	if not pattern.preprocess(extractor, adb):
+		print "No method calls for fuse."
+		return
 
 	db = adb.db
 
@@ -340,7 +342,7 @@ def methodCall(extractor, adb):
 		# HACK
 		analyze.flow = traverse.flow
 		rewrite.flow = traverse.flow
-		
+
 		t(func)
 
 		# HACK to turn attribute access assignments into discards.

@@ -18,12 +18,12 @@ def returnNone(b):
 
 def operation(b, attr, expr, args, vargs, kargs, result=None):
 	type_ 	= ast.Local('type%s' % attr)
-	func 	= ast.Local('func%s' % attr)	
+	func 	= ast.Local('func%s' % attr)
 
 	inst_lookup(b, expr, ast.Existing(attr), func)
 
 	newargs = [expr]
-	newargs.extend(args)	
+	newargs.extend(args)
 	call(b, func, newargs, vargs, kargs, result)
 
 def call(b, expr, args, vargs, kargs, result=None):
@@ -44,7 +44,7 @@ def type_lookup(b, cls, field, result):
 	clsDict 	= ast.Local('clsDict')
 	b.append(ast.Assign(ast.Load(cls, 'LowLevel', ast.Existing('dictionary')), clsDict))
 	b.append(ast.Assign(ast.Load(clsDict, 'Dictionary', field), result))
-	
+
 
 def inst_lookup(b, expr, field, result):
 	cls = ast.Local('cls')
@@ -52,16 +52,21 @@ def inst_lookup(b, expr, field, result):
 	type_lookup(b, cls, field, result)
 
 
-def simpleDescriptor(name, argnames, rt):
+def simpleDescriptor(name, argnames, rt, hasSelfParam=True):
 	assert isinstance(name, str), name
 	assert isinstance(argnames, (tuple, list)), argnames
 	assert isinstance(rt, type), rt
-	
+
 	def simpleDescriptorBuilder():
-		args = [ast.Local(argname) for argname in argnames]
-		inst = ast.Local('inst')
-		retp = ast.Local('internal_return')
-		
+		if hasSelfParam:
+			selfp = ast.Local('internal_self')
+		else:
+			selfp = None
+
+		args  = [ast.Local(argname) for argname in argnames]
+		inst  = ast.Local('inst')
+		retp  = ast.Local('internal_return')
+
 		b = ast.Suite()
 		t = ast.Existing(rt)
 		allocate(b, t, inst)
@@ -70,14 +75,12 @@ def simpleDescriptor(name, argnames, rt):
 		# Return the allocated object
 		b.append(ast.Return(inst))
 
-
-		code = ast.Code(None, args, list(argnames), None, None, retp, b)
+		code = ast.Code(selfp, args, list(argnames), None, None, retp, b)
 		f = ast.Function(name, code)
-
 
 		descriptive(f)
 
 		return f
-	
+
 	return simpleDescriptorBuilder
 

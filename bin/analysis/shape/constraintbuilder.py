@@ -26,7 +26,7 @@ class GetLocals(object):
 def getLocals(node):
 	if isinstance(node, ast.Function):
 		node = node.code
-		
+
 	gl = GetLocals()
 	gl(node)
 	return gl.locals
@@ -165,7 +165,7 @@ class ShapeConstraintBuilder(object):
 		for child in node.blocks:
 			self(child)
 		self.post(node)
-	
+
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		self.pre(node)
@@ -202,9 +202,11 @@ class ShapeConstraintBuilder(object):
 	def computeTransfer(self, callerargs, calleeparams):
 		assert callerargs.vargs is None
 		assert callerargs.kargs is None
-		
+
+		selfArg  = callerargs.selfarg is not None
 		numVArgs = 0
-		info = util.calling.callStackToParamsInfo(calleeparams, len(callerargs.args)+numVArgs, False, callerargs.kwds.keys(), False)
+		numArgs  = len(callerargs.args)+numVArgs
+		info = util.calling.callStackToParamsInfo(calleeparams, selfArg, numArgs, False, callerargs.kwds.keys(), False)
 		return info
 
 	def mapArguments(self, callerargs, calleeparams, info):
@@ -228,10 +230,10 @@ class ShapeConstraintBuilder(object):
 		for argID, paramID in info.argVParam:
 			assert False, "Can't handle vparams?"
 			print argID, '->', paramID
-		
+
 	def handleInvocation(self, callPoint, returnPoint, srcContext, callerargs, dstFunc, dstContext):
 		calleeparams = self.getCalleeParams(dstFunc)
-		
+
 		info = self.computeTransfer(callerargs, calleeparams)
 
 		if info.willSucceed.mustBeFalse(): return
@@ -241,7 +243,7 @@ class ShapeConstraintBuilder(object):
 
 
 		# HACK shouldn't be all locals pased to SplitMerge info, just the slots?
-		splitMergeInfo = constraints.SplitMergeInfo(self.functionLocalExprs[dstFunc], self.functionLocalSlots[dstFunc]) 
+		splitMergeInfo = constraints.SplitMergeInfo(self.functionLocalExprs[dstFunc], self.functionLocalSlots[dstFunc])
 		splitMergeInfo.srcLocals = self.functionLocalSlots[self.function]
 		splitMergeInfo.dstLocals = self.functionLocalSlots[dstFunc]
 
@@ -250,7 +252,7 @@ class ShapeConstraintBuilder(object):
 		targetSlot = callerargs.returnarg.slot
 		splitMergeInfo.mapping[targetSlot] = None
 		splitMergeInfo.mapping[returnSlot] = targetSlot
-		
+
 
 		# Call invoke: split the information
 		self.current = callPoint
@@ -285,7 +287,7 @@ class ShapeConstraintBuilder(object):
 
 	@dispatch(ast.Delete)
 	def visitDelete(self, node):
-		self.pre(node)		
+		self.pre(node)
 		# HACK should also create a pointer to a null object.
 		lcl = node.lcl
 		# This is not a forget, as it is replaced will a null
@@ -293,11 +295,11 @@ class ShapeConstraintBuilder(object):
 		self.post(node)
 
 
-	
+
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
 		pre = self.pre(node)
-		
+
 		constraint = constraints.AssignmentConstraint(self.sys, pre, self.returnPoint, self.localExpr(node.expr), self.localExpr(self.returnValue))
 		self.constraints.append(constraint)
 
@@ -361,7 +363,7 @@ class ShapeConstraintBuilder(object):
 		self.returnValue = node.code.returnparam
 
 		self.returnPoint = self.newID()
-		
+
 		self(node.code.ast)
 
 
@@ -375,23 +377,23 @@ class ShapeConstraintBuilder(object):
 
 		post = self.post(node)
 
-		
+
 
 	def process(self, node):
 		self.context  = None # HACK
 
 		self.setFunction(node)
-		
+
 		self.functionLocals[node] =  frozenset(getLocals(node))
 
 		# TODO these are slots, not expressions?
 		self.functionLocalSlots[node] = frozenset([self.sys.canonical.localSlot(lcl) for lcl in self.functionLocals[node]])
 		self.functionLocalExprs[node] = frozenset([self.sys.canonical.localExpr(lcl) for lcl in self.functionLocalSlots[node]])
-		
+
 		self.advance()
 
 		self.functionCallPoint[node] = self.current
 		self(node)
 		self.functionReturnPoint[node] = self.current
-		
+
 		return self.statementPre[node], self.statementPost[node]

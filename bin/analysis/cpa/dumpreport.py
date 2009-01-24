@@ -2,7 +2,7 @@ from util.xmloutput  import XMLOutput
 from common import simplecodegen
 
 import os.path
-from util import assureDirectoryExists
+from util import assureDirectoryExists, itergroupings
 
 from programIR.python.ast import isPythonAST
 import programIR.python.ast as ast
@@ -163,15 +163,6 @@ def dumpHeader(out):
 	out << "]"
 	out.tag('br')
 
-def itergroupings(iterable, key):
-	grouping = {}
-	for i in iterable:
-		group, data = key(i)
-		if not group in grouping:
-			grouping[group] = [data]
-		else:
-			grouping[group].append(data)
-	return grouping.iteritems()
 
 def dumpFunctionInfo(func, data, links, out, scg):
 	out.begin('h3')
@@ -376,7 +367,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				out.end('h3')
 				out.begin('p')
 				out.begin('ul')
-				for obj, slots in itergroupings(reads, lambda slot: (slot.obj, (slot.slottype, slot.key))):
+				for obj, slots in itergroupings(reads, lambda slot: slot.obj, lambda slot: (slot.slottype, slot.key)):
 					out.begin('li')
 					heapLink(out, obj, links)
 
@@ -400,7 +391,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				out.end('h3')
 				out.begin('p')
 				out.begin('ul')
-				for obj, slots in itergroupings(modifies, lambda slot: (slot.obj, (slot.slottype, slot.key))):
+				for obj, slots in itergroupings(modifies, lambda slot: slot.obj, lambda slot: (slot.slottype, slot.key)):
 					out.begin('li')
 					heapLink(out, obj, links)
 

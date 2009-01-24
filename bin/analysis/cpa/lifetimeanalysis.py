@@ -48,6 +48,14 @@ invokedByStruct = structure.StructureSchema(
 	)
 invokedBySchema = wrapCodeContext(tupleset.TupleSetSchema(invokedByStruct))
 
+def forgetOp(dictset):
+	output = {}
+	for oldkey, values in dictset.iteritems():
+		newkey = oldkey.context
+		if newkey not in output:
+			output[newkey] = set()
+		output[newkey].update(values)
+	return output
 
 def invertInvokes(invokes):
 	invokedBy = invokedBySchema.instance()
@@ -192,9 +200,6 @@ class LifetimeAnalysis(object):
 		self.heapReferedToByCode = collections.defaultdict(set)
 
 		self.codeRefersToHeap = collections.defaultdict(set)
-
-		self.allocations = collections.defaultdict(set)
-
 
 		self.objects = {}
 
@@ -424,10 +429,7 @@ class LifetimeAnalysis(object):
 		self.invokes   = invokes
 		self.invokedBy = invokedBy
 
-
-		for context, obj in sys.contextAllocates:
-			self.allocations[context].add(obj)
-
+		self.allocations = forgetOp(sys.opAllocates)
 
 		self.propagateVisibility()
 		self.propagateHeld()

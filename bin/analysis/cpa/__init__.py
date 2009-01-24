@@ -47,26 +47,21 @@ class InterproceduralDataflow(object):
 	def __init__(self, extractor):
 		self.extractor = extractor
 
-		self.functions = {}
-		self.objects   = {}
+		# Has the context been constructed?
+		self.liveContexts = set()
 
-		self.returnVariables = collections.defaultdict(lambda: ast.Local('return_value'))
-
-		self.live = set()
-
+		# The value of every slot
 		self.slots = {}
-		self.reads   = collections.defaultdict(set)
-		self.writes  = collections.defaultdict(set)
+
+		# Constraint information
+		self.constraintReads   = collections.defaultdict(set)
+		self.constraintWrites  = collections.defaultdict(set)
 		self.constraints = set()
 
+		# The worklist
 		self.dirty = collections.deque()
 
 		self.canonical = CanonicalObjects()
-
-		# TODO compute after the fact.
-		self.contextAllocates = set()
-		self.contextReads     = set()
-		self.contextModifies  = set()
 
 		# Information for contextual operations.
 		self.opAllocates      = collections.defaultdict(set)
@@ -74,7 +69,7 @@ class InterproceduralDataflow(object):
 		self.opModifies       = collections.defaultdict(set)
 		self.opInvokes        = collections.defaultdict(set)
 
-		self.codeContexts = collections.defaultdict(set)
+		self.codeContexts     = collections.defaultdict(set)
 		self.heapContexts     = collections.defaultdict(set)
 
 		self.rootPath = CallPath(None)
@@ -94,27 +89,24 @@ class InterproceduralDataflow(object):
 		self.extractor.ensureLoaded(self.dictionaryClass)
 
 	def logAllocation(self, cop, cobj):
-		self.contextAllocates.add((cop.context, cobj))
 		self.opAllocates[cop].add(cobj)
 
 	def logRead(self, cop, slot):
-		self.contextReads.add((cop.context, slot))
 		self.opReads[cop].add(slot)
 
 	def logModify(self, cop, slot):
-		self.contextModifies.add((cop.context, slot))
 		self.opModifies[cop].add(slot)
 
 	def constraint(self, constraint):
 		self.constraints.add(constraint)
 
 	def dependsRead(self, constraint, slot):
-		self.reads[slot].add(constraint)
+		self.constraintReads[slot].add(constraint)
 		if self.read(slot):
 			constraint.mark(self)
 
 	def dependsWrite(self, constraint, slot):
-		self.writes[slot].add(constraint)
+		self.constraintWrites[slot].add(constraint)
 
 
 
@@ -206,7 +198,7 @@ class InterproceduralDataflow(object):
 		diff = set(values)-target
 		if diff:
 			self.slots[slot].update(diff)
-			for dep in self.reads[slot]:
+			for dep in self.constraintReads[slot]:
 				dep.mark(self)
 
 	def createAssign(self, source, dest):
@@ -283,8 +275,8 @@ class InterproceduralDataflow(object):
 				self.createAssign(returnSource, target)
 
 			# Caller-independant initalization.
-			if not targetcontext in self.live:
-				self.live.add(targetcontext)
+			if not targetcontext in self.liveContexts:
+				self.liveContexts.add(targetcontext)
 
 				if not self.fold(targetcontext):
 					# Extract the constraints

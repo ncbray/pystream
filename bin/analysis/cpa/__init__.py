@@ -24,6 +24,9 @@ from . cpadatabase import CPADatabase
 # HACK?
 from stubs.stubcollector import descriptiveLUT
 
+# For keeping track of how much time we spend decompiling.
+import time
+
 #########################
 ### Utility functions ###
 #########################
@@ -45,6 +48,7 @@ def foldFunctionIR(extractor, func, vargs=(), kargs={}):
 
 class InterproceduralDataflow(object):
 	def __init__(self, extractor):
+		self.decompileTime = 0
 		self.extractor = extractor
 
 		# Has the context been constructed?
@@ -76,17 +80,28 @@ class InterproceduralDataflow(object):
 
 		self.entryPointDescs = []
 
-
 		self.db = CPADatabase()
 		self.db.canonical = self.canonical # HACK so the canonical objects are accessable.
 
 		# For vargs
 		self.tupleClass = self.extractor.getObject(tuple)
-		self.extractor.ensureLoaded(self.tupleClass)
+		self.ensureLoaded(self.tupleClass)
 
 		# For kargs
 		self.dictionaryClass = self.extractor.getObject(dict)
-		self.extractor.ensureLoaded(self.dictionaryClass)
+		self.ensureLoaded(self.dictionaryClass)
+
+
+	def ensureLoaded(self, obj):
+		start = time.clock()
+		self.extractor.ensureLoaded(obj)
+		self.decompileTime += time.clock()-start
+
+	def getCall(self, obj):
+		start = time.clock()
+		result = self.extractor.getCall(obj).code
+		self.decompileTime += time.clock()-start
+		return result
 
 	def logAllocation(self, cop, cobj):
 		self.opAllocates[cop].add(cobj)
@@ -109,26 +124,35 @@ class InterproceduralDataflow(object):
 		self.constraintWrites[slot].add(constraint)
 
 
-
-	def extendedParamObjects(self, code, path):
-		if code.vparam is not None:
+	def extendedParamObjects(self, sig):
+		# Extended param objects are named by the context they appear in.
+		context = self.canonical.signatureContext(sig)
+		if sig.code.vparam is not None:
 			# Create tuple for vparam
-			# HACK should name per-context, rather than per-path, to maintain precision?
 			# TODO create this inside the context w/opcode?
-			vparamObj = self.allocatedObject(path, self.tupleClass.typeinfo.abstractInstance)
+			vparamObj = self.allocatedObject(context, self.tupleClass.typeinfo.abstractInstance)
 		else:
 			vparamObj = None
 
 		# Create dictionary for karg (disabled)
-		assert code.kparam is None
+		assert sig.code.kparam is None
 		kparamObj = None
 
 		return vparamObj, kparamObj
 
+	def _signature(self, code, path, selfparam, params, vparams):
+		assert not isinstance(code, (AbstractSlot, ContextObject)), code
+		assert selfparam is None or isinstance(selfparam, ContextObject), selfparam
+		for param in params: assert isinstance(param, ContextObject), param
+		for param in vparams: assert isinstance(param, ContextObject), param
+
+		return util.cpa.CPASignature(code, path, selfparam, params, vparams)
+
 	def canonicalContext(self, code, path, selfparam, params, vparams):
 		assert isinstance(code, ast.Code), type(code)
-		vparamObj, kparamObj = self.extendedParamObjects(code, path)
-		context = self.canonical._canonicalContext(code, path, selfparam, params, vparams, vparamObj, kparamObj)
+		sig = self._signature(code, path, selfparam, params, vparams)
+		vparamObj, kparamObj = self.extendedParamObjects(sig)
+		context = self.canonical._canonicalContext(sig, vparamObj, kparamObj)
 
 		# Mark that we create the context.
 		self.codeContexts[code].add(context)
@@ -146,7 +170,7 @@ class InterproceduralDataflow(object):
 		slot    = self.canonical.objectSlot(cobj, 'LowLevel', typestr)
 
 		if not self.read(slot):
-			self.extractor.ensureLoaded(cobj.obj)
+			self.ensureLoaded(cobj.obj)
 			type_ = self.existingObject(cobj.obj.type)
 			self.update(slot, (type_,))
 
@@ -299,9 +323,6 @@ class InterproceduralDataflow(object):
 		# Process
 		self.process()
 
-	def checkIntegrety(self):
-		print "%d constraints." % len(self.constraints)
-
 def evaluate(extractor, entryPoints):
 	dataflow = InterproceduralDataflow(extractor)
 
@@ -309,12 +330,9 @@ def evaluate(extractor, entryPoints):
 		assert isinstance(funcast, ast.Function), type(funcast)
 		assert isinstance(funcobj, program.Object), type(funcobj)
 		assert isinstance(args, (list, tuple)), type(args)
-
 		dataflow.addEntryPoint(funcast, funcobj, args)
 
-
 	dataflow.solve()
-	dataflow.checkIntegrety()
 
 	# HACK?
 	dataflow.db.load(dataflow)

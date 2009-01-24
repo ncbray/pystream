@@ -73,13 +73,22 @@ def codeConditioning(extractor, entryPoints, dataflow):
 		clone(extractor, entryPoints, adb)
 		print "Time: %.2e" % (time.clock()-start)
 
-def cpaPass(e, entryPoints):
+def cpaAnalyze(e, entryPoints):
 	print "Analyize"
 	start = time.clock()
 	result = analysis.cpa.evaluate(e, entryPoints)
-	print "Analysis Time: %.3f" % (time.clock()-start)
-
+	elapsed = time.clock()-start
+	print "Constraints: %d" % len(result.constraints)
+	print "Decompile:   %.3f s" % (result.decompileTime)
+	print "Analysis:    %.3f s" % (elapsed-result.decompileTime)
+	print "Total:       %.3f s" % (elapsed)
 	print
+
+	return result
+
+def cpaPass(e, entryPoints):
+	result = cpaAnalyze(e, entryPoints)
+
 	start = time.clock()
 	codeConditioning(e, entryPoints, result)
 	print "Optimize: %.3f" % (time.clock()-start)

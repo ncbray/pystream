@@ -10,7 +10,7 @@ class CPASignature(util.canonical.CanonicalObject):
 
 	def __init__(self, code, path, selfparam, params, vparams):
 		if len(params) != len(code.parameters):
-			raise TypeError, "Function has %d parameters, %d provided" % (len(code.parameters), len(params))
+			raise TypeError, "Function %s has %d parameters, %d provided" % (code.name, len(code.parameters), len(params))
 
 		params = tuple(params)
 

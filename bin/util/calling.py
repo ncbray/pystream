@@ -37,6 +37,11 @@ class CalleeParams(object):
 		assert not hasattr(func, 'defaults'), "Temporary limitation"
 		return cls(code.selfparam, code.parameters, code.parameternames, [], code.vparam, code.kparam, code.returnparam)
 
+	@classmethod
+	def fromCode(cls, code):
+		return cls(code.selfparam, code.parameters, code.parameternames, [], code.vparam, code.kparam, code.returnparam)
+
+
 # arg  -> param / vparam
 # varg -> param / vparam
 # kwd  -> param / kparam

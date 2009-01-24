@@ -40,7 +40,7 @@ class ExtractDataflow(object):
 		return self.system.canonical.opContext(self.code, node, self.context)
 
 	def opPath(self, node):
-		return self.context.signature.path.advance(node)
+		return self.system.canonical.path(self.context.signature.path, node)
 
 	def directCall(self, node, code, selfarg, args, vargs, kargs, target):
 		if self.doOnce(node):

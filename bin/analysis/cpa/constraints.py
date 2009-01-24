@@ -6,6 +6,9 @@ from programIR.python import ast, program
 
 import util.tvl
 
+# For allocation
+from util import xtypes
+
 class Constraint(object):
 	__slots__ = 'dirty', 'path'
 
@@ -116,17 +119,32 @@ class AllocateConstraint(CachedConstraint):
 		self.type_  = type_
 		self.target = target
 
+	def extendedType(self, sys, type_):
+		context = sys.canonical.pathContext(self.path)
+
+		pyobj = type_.obj.pyobj
+		if pyobj is xtypes.MethodType:
+			sig = self.op.context.signature
+			# TODO check that this is "new"?
+			if len(sig.params) == 1 and len(sig.vparams) == 3:
+				func = sig.vparams[0]
+				inst = sig.vparams[1]
+				context = sys.canonical.methodContext(func, inst)
+
+		sys.ensureLoaded(type_.obj)
+		instObj = type_.obj.abstractInstance()
+		contextInst = sys.allocatedObject(context, instObj)
+		return contextInst
+
+
 	def concreteUpdate(self, sys, type_):
 		if type_.obj.isType():
-			sys.extractor.ensureLoaded(type_.obj)
-			inst = type_.obj.abstractInstance()
-			contextInst = sys.allocatedObject(self.path, inst)
+			contextInst = self.extendedType(sys, type_)
+			sys.logAllocation(self.op, contextInst)
 
 			# Return the allocated object.
 			sys.update(self.target, (contextInst,))
 
-			#sys.allocation(self.op, self.type_.context, contextInst)
-			sys.logAllocation(self.op, contextInst)
 
 	def attach(self, sys):
 		CachedConstraint.attach(self, sys)
@@ -182,20 +200,25 @@ class AbstractCallConstraint(CachedConstraint):
 
 		assert code, "Attempted to call uncallable object:\n%r\n\nat op:\n%r\n\nwith args:\n%r\n\n" % (expr.obj, self.op, vargs)
 
-		allslots = list(self.args)
-		for i in range(vlength):
-			index = sys.extractor.getObject(i)
-			vslot = sys.canonical.objectSlot(vargs, 'Array', sys.existingObject(index).obj)
-			allslots.append(vslot)
+		callee = util.calling.CalleeParams.fromCode(code)
+		numArgs = len(self.args)+vlength
+		info = util.calling.callStackToParamsInfo(callee, expr is not None, numArgs, False, None, False)
 
-		con = SimpleCallConstraint(self.op, self.path, code, expr, allslots, self.target)
-		con.attach(sys)
+		if info.willSucceed.maybeTrue():
+			allslots = list(self.args)
+			for i in range(vlength):
+				index = sys.extractor.getObject(i)
+				vslot = sys.canonical.objectSlot(vargs, 'Array', sys.existingObject(index).obj)
+				allslots.append(vslot)
+
+			con = SimpleCallConstraint(self.op, self.path, code, expr, allslots, self.target)
+			con.attach(sys)
 
 
 class CallConstraint(AbstractCallConstraint):
 	__slots__ = ()
 	def getCode(self, sys, selfType):
-		return sys.extractor.getCall(selfType.obj).code
+		return sys.getCall(selfType.obj)
 
 #TODO If there's no selfv, vargs, or kargs, turn into a simple call?
 class DirectCallConstraint(AbstractCallConstraint):

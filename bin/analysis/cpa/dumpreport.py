@@ -292,6 +292,12 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		for op in funcOps:
 			printTabbed(op, info.opInfo(op).context(context).references)
 
+			callees = data.opCallees(func, op, context)
+			for dstC, dstF in callees:
+				out << '\t\t'
+				codeShortName(out, dstF, links, dstC)
+				out.endl()
+
 			if hasattr(data.db, 'lifetime'):
 				read   = data.db.lifetime.readDB[func][op][context]
 				modify = data.db.lifetime.modifyDB[func][op][context]
@@ -304,6 +310,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 					if modify: out << "M"
 					out.end('i')
 					out.endl()
+			out.endl()
 
 		out.endl()
 
@@ -690,6 +697,10 @@ class CPAData(object):
 
 	def callees(self, function, context):
 		return self.invokeDestination[(function, context)]
+
+	def opCallees(self, code, op, context):
+		return self.db.functionInfo(code).opInfo(op).context(context).invokes
+
 
 	def slot(self, slot):
 		return self.inter.slots[slot]

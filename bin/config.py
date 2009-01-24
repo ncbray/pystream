@@ -6,12 +6,12 @@ outputDirectory = "c:/projects/pystream/summaries"
 
 if False:
 	limitedTest = [
-		'tests.shape.test_shape',
-		'tests.shape.test_shape_examples',
-		'tests.shape.test_shape_compound',
-		'tests.shape.test_shape_pathinfo',
-		'tests.test_database',
-		#'tests.test_full',
+		#'tests.shape.test_shape',
+		#'tests.shape.test_shape_examples',
+		#'tests.shape.test_shape_compound',
+		#'tests.shape.test_shape_pathinfo',
+		#'tests.test_database',
+		'tests.test_full',
 		'tests.cpa.test_cpa',
 		]
 else:

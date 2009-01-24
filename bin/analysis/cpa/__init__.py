@@ -55,7 +55,9 @@ class InterproceduralDataflow(object):
 		self.live = set()
 
 		self.slots = {}
-		self.reads  = collections.defaultdict(set)
+		self.reads   = collections.defaultdict(set)
+		self.writes  = collections.defaultdict(set)
+		self.constraints = set()
 
 		self.dirty = collections.deque()
 
@@ -95,10 +97,18 @@ class InterproceduralDataflow(object):
 	def allocation(self, op, context, obj):
 		self.allocations.add((context, obj))
 
+	def constraint(self, constraint):
+		self.constraints.add(constraint)
+
 	def dependsRead(self, constraint, slot):
 		self.reads[slot].add(constraint)
 		if self.read(slot):
 			constraint.mark(self)
+
+	def dependsWrite(self, constraint, slot):
+		self.writes[slot].add(constraint)
+
+
 
 	def extendedParamObjects(self, code, path):
 		if code.vparam is not None:
@@ -169,9 +179,9 @@ class InterproceduralDataflow(object):
 		return self.slots[slot]
 
 	def update(self, slot, values):
-		assert isinstance(slot, AbstractSlot), slot
+		assert isinstance(slot, AbstractSlot), repr(slot)
 		for value in values:
-			assert isinstance(value, ContextObject), value
+			assert isinstance(value, ContextObject), repr(value)
 
 		# If the slot is unitialized, pull the inital value from the heap.
 		if not slot in self.slots:
@@ -232,7 +242,8 @@ class InterproceduralDataflow(object):
 		targetcontext = self.canonicalContext(code, path, funcobj, args, ())
 		return targetcontext
 
-	def bindCall(self, target, targetcontext):
+	def bindCall(self, cop, targetcontext, target):
+		assert isinstance(cop, base.OpContext), type(cop)
 		# HACK pulling context from target, and op from path.  Pass explicitly.
 
 		sig = targetcontext.signature
@@ -246,16 +257,12 @@ class InterproceduralDataflow(object):
 		# Caller-spesific initalization
 		# Done early, so constant folding makes the constraint dirty
 		# Target may be done for the entrypoints.
+
+		# Record the invocation
+		dst = self.canonical.codeContext(code, targetcontext)
+		self.invocations.add((cop, dst))
+
 		if target is not None:
-			# Record the invocation
-			# HACK recoving op from callpath, may not work in the future.
-			op = sig.path.path[-1]
-
-			sourceop = self.canonical.opContext(target.code, op, target.context)
-			dst      = self.canonical.codeContext(code, targetcontext)
-
-			self.invocations.add((sourceop, dst))
-
 			# Copy the return value
 			returnSource = self.canonical.local(code, code.returnparam, targetcontext)
 			self.createAssign(returnSource, target)
@@ -276,15 +283,18 @@ class InterproceduralDataflow(object):
 
 	def addEntryPoint(self, func, funcobj, args):
 		context = self.getContext(func.code, self.rootPath, funcobj, args)
+		dummyOp = self.canonical.opContext(externalFunction.code, None, externalFunctionContext)
 		dummy = ast.Local('external_escape')
 		dummyslot = self.canonical.local(externalFunction.code, dummy, externalFunctionContext)
-		self.bindCall(dummyslot, context)
+		self.bindCall(dummyOp, context, dummyslot)
 
 
 	def solve(self):
 		# Process
 		self.process()
 
+	def checkIntegrety(self):
+		print "%d constraints." % len(self.constraints)
 
 def evaluate(extractor, entryPoints):
 	dataflow = InterproceduralDataflow(extractor)
@@ -298,6 +308,7 @@ def evaluate(extractor, entryPoints):
 
 
 	dataflow.solve()
+	dataflow.checkIntegrety()
 
 	# HACK?
 	dataflow.db.load(dataflow)

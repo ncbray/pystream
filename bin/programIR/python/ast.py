@@ -491,7 +491,7 @@ class Load(LLExpression):
 	__fields__    = 'expr', 'fieldtype', 'name'
 	__types__     = {'expr':Reference, 'fieldtype':str, 'name':Reference}
 
-class Store(LLExpression):
+class Store(LLStatement):
 	__metaclass__ = astnode
 	__fields__    = 'expr', 'fieldtype', 'name', 'value'
 	__types__     = {'expr':Reference, 'fieldtype':str, 'name':Reference, 'value':Reference}

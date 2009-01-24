@@ -48,8 +48,9 @@ class AssignmentConstraint(Constraint):
 		sys.update(self.destslot, values)
 
 	def attach(self, sys):
+		sys.constraint(self)
 		sys.dependsRead(self, self.sourceslot)
-
+		sys.dependsWrite(self, self.destslot)
 
 class LoadConstraint(CachedConstraint):
 	__slots__ = 'op', 'expr', 'slottype', 'key', 'target'
@@ -72,14 +73,15 @@ class LoadConstraint(CachedConstraint):
 
 	def concreteUpdate(self, sys, expr, key):
 		slot = sys.canonical.objectSlot(expr, self.slottype, key.obj)
-		sys.createAssign(slot, self.target)
+		if self.target:
+			sys.createAssign(slot, self.target)
 		sys.contextReads.add((self.expr.context, slot))
 		sys.opReads[self.op].add(slot)
 
 	def attach(self, sys):
+		sys.constraint(self)
 		sys.dependsRead(self, self.expr)
 		sys.dependsRead(self, self.key)
-
 
 
 class StoreConstraint(CachedConstraint):
@@ -108,6 +110,7 @@ class StoreConstraint(CachedConstraint):
 		sys.opModifies[self.op].add(slot)
 
 	def attach(self, sys):
+		sys.constraint(self)
 		sys.dependsRead(self, self.expr)
 		sys.dependsRead(self, self.key)
 
@@ -142,8 +145,9 @@ class AllocateConstraint(CachedConstraint):
 			sys.allocation(self.op.op, self.op.context, contextInst)
 
 	def attach(self, sys):
+		sys.constraint(self)
 		sys.dependsRead(self, self.type_)
-
+		sys.dependsWrite(self, self.target)
 
 # Resolves the type of the expression, varg, and karg
 class AbstractCallConstraint(CachedConstraint):
@@ -153,6 +157,7 @@ class AbstractCallConstraint(CachedConstraint):
 
 		assert isinstance(args, (list, tuple)), args
 		assert not kwds, kwds
+		assert target is None or isinstance(target, base.AbstractSlot), type(target)
 
 		self.op      = op
 		self.path    = path
@@ -217,6 +222,8 @@ class AbstractCallConstraint(CachedConstraint):
 
 
 	def attach(self, sys):
+		sys.constraint(self)
+
 		# To figure out the calling convention,
 		# we must resolve the types of the expression, vargs, and kargs.
 
@@ -257,7 +264,9 @@ class SimpleCallConstraint(CachedConstraint):
 	__slots__ = 'op', 'path', 'code', 'selftype', 'slots', 'argslots', 'vargslots', 'target'
 
 	def __init__(self, op, path, code, selftype, slots, argslots, vargslots, target):
+		assert isinstance(op, base.OpContext), type(op)
 		assert isinstance(code, ast.Code), type(code)
+		assert target is None or isinstance(target, base.AbstractSlot), type(target)
 		CachedConstraint.__init__(self)
 
 		assert selftype is None or isinstance(selftype, base.ContextObject), selftype
@@ -286,12 +295,14 @@ class SimpleCallConstraint(CachedConstraint):
 		if targetcontext not in self.cache:
 			self.cache.add(targetcontext)
 
-			sys.bindCall(self.target, targetcontext)
+			sys.bindCall(self.op, targetcontext, self.target)
 
 			# Only used for lifetime analysis?
 			sys.opInvokes[self.op].add(targetcontext)
 
 	def attach(self, sys):
+		sys.constraint(self)
+
 		if self.slots:
 			for arg in self.slots:
 				sys.dependsRead(self, arg)
@@ -336,4 +347,5 @@ class DeferedSwitchConstraint(Constraint):
 				self.updateBranching(self.getBranch(cond))
 
 	def attach(self, sys):
+		sys.constraint(self)
 		sys.dependsRead(self, self.cond)

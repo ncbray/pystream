@@ -292,6 +292,7 @@ class LocalSlot(AbstractSlot):
 
 	def __init__(self, code, local, context):
 		assert isinstance(code,  ast.Code), code
+		assert not isinstance(local, AbstractSlot), local # This is obviously bad...
 		#assert isinstance(local, (ast.Local, program.Object, ast.Expression)), type(local) # HACK...
 		assert isinstance(context, AnalysisContext), context
 

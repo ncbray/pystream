@@ -58,41 +58,6 @@ fold(bool)(export(llast(simpleDescriptor('convertToBool', ('o',), bool, hasSelfP
 ##	return f
 
 
-### A low-level stub (directly manipulates array slots)
-##@export
-##@llast
-##def buildTuple():
-##	# Self
-##	#self = Local('self')
-##	vargs = Local('vargs')
-##
-##	# Param
-##	n = []
-##	a = []
-##	for i in range(8):
-##		name = 'a%d'%i
-##		n.append(name)
-##		a.append(Local(name))
-##
-##	# Temporaries
-##	inst 	= Local('inst')
-##	retp    = Local('internal_return')
-##
-##	# Instructions
-##	b = Suite()
-##
-##	allocate(b, Existing(tuple), inst)
-##
-##	for i in range(8):
-##		b.append(Discard(Store(inst, 'Array', Existing(i), a[i])))
-##
-##	b.append(Return(inst))
-##
-##	code = Code(None, a, n, None, None, retp, b)
-##	f = Function('buildTuple', code)
-##	return f
-
-
 # A low-level stub (directly manipulates array slots)
 # Horrible hack, as vargs depend on creating a tuple,
 # and creating a tuple depends on vargs.
@@ -191,7 +156,7 @@ def interpreterStoreGlobal():
 	# Instructions
 	b = Suite()
 	b.append(Assign(Load(function, 'Attribute', Existing('func_globals')), globalDict))
-	b.append(Discard(Store(globalDict, 'Dictionary', name, value)))
+	b.append(Store(globalDict, 'Dictionary', name, value))
 	returnNone(b)
 
 	fname = 'interpreterStoreGlobal'

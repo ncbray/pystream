@@ -525,7 +525,7 @@ def memberdescriptor__set__():
 	# Instructions
 	b = Suite()
 	b.append(Assign(Load(self, 'LowLevel', Existing('slot')), slot))
-	b.append(Discard(Store(inst, 'Attribute', slot, value)))
+	b.append(Store(inst, 'Attribute', slot, value))
 	returnNone(b)
 
 	name = 'memberdescriptor__set__'

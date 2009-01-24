@@ -21,19 +21,19 @@ class ASTNode(object):
 
 class Expression(ASTNode):
 	__slots__ = ()
-	
+
 	def returnsValue(self):
 		return True
 
 class LLExpression(Expression):
 	__slots__ = ()
-	
+
 	def returnsValue(self):
 		return True
 
 class Reference(Expression):
 	__slots__ = ()
-	
+
 	def isReference(self):
 		return True
 
@@ -41,6 +41,9 @@ class Statement(ASTNode):
 	__slots__ = ()
 
 class SimpleStatement(Statement):
+	__slots__ = ()
+
+class LLStatement(SimpleStatement):
 	__slots__ = ()
 
 class ControlFlow(SimpleStatement):

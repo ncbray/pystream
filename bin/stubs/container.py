@@ -25,7 +25,7 @@ def makeIterator(name, basetype, itertype):
 		b = Suite()
 		t = Existing(itertype)
 		allocate(b, t, inst)
-		b.append(Discard(Store(inst, 'LowLevel', Existing('parent'), self)))
+		b.append(Store(inst, 'LowLevel', Existing('parent'), self))
 		b.append(Return(inst))
 
 		code = Code(name, selfp, [self], ['self'], None, None, retp, b)
@@ -52,7 +52,7 @@ def listappend():
 	value = Local('value')
 
 	b = Suite()
-	b.append(Discard(Store(self, 'Array', Existing(-1), value)))
+	b.append(Store(self, 'Array', Existing(-1), value))
 	returnNone(b)
 
 	name = 'listappend'

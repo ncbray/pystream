@@ -120,8 +120,8 @@ class SimpleExprGen(StandardVisitor):
 	def visitLoad(self, node):
 		return ("<load>(%s, %r, %s)" % (self.process(node.expr, 24), node.fieldtype, self.process(node.name, 24))), 4
 
-	def visitStore(self, node):
-		return ("<store>(%s, %r, %s, %s)" % (self.process(node.expr, 24), node.fieldtype, self.process(node.name, 24), self.process(node.value, 24))), 4
+#	def visitStore(self, node):
+#		return ("<store>(%s, %r, %s, %s)" % (self.process(node.expr, 24), node.fieldtype, self.process(node.name, 24), self.process(node.value, 24))), 4
 
 
 	def visitGetAttr(self, node):
@@ -511,6 +511,10 @@ class SimpleCodeGen(StandardVisitor):
 
 	def visitDiscard(self, node):
 		stmt = self.seg.process(node.expr)
+		self.emitStatement(stmt)
+
+	def visitStore(self, node):
+		stmt = "<store>(%s, %r, %s, %s)" % (self.seg.process(node.expr, 24), node.fieldtype, self.seg.process(node.name, 24), self.seg.process(node.value, 24))
 		self.emitStatement(stmt)
 
 	def visitDelete(self, node):

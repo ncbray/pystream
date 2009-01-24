@@ -44,16 +44,13 @@ class GetOps(object):
 	def visitTuple(self, node):
 		return tuple([self(child) for child in node])
 
-	@dispatch(ast.Code)
-	def visitCode(self, node):
-		self(node.ast)
-
-	@dispatch(ast.Function)
-	def visitFunction(self, node):
-		self(node.code)
+	def process(self, node):
+		for child in node.children():
+			self(child)
+		return self.ops, self.locals
 
 
 def getOps(func):
 	go = GetOps()
-	go(func)
+	go.process(func)
 	return go.ops, go.locals

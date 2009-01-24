@@ -39,7 +39,7 @@ class ForwardFlowTraverse(object):
 	@dispatch(ast.Assign, ast.Discard,
 		  #ast.ConvertToBool,
 		  ast.Local, ast.Cell,
-		  ast.UnpackSequence, ast.SetAttr,
+		  ast.UnpackSequence, ast.SetAttr, ast.Store,
 		  ast.Print, ast.SetSubscript, ast.Delete, ast.SetSlice, ast.DeleteAttr,
 		  ast.SetGlobal, ast.DeleteGlobal, ast.DeleteSlice, ast.DeleteSubscript,
 		  ast.SetCellDeref)

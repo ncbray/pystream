@@ -425,7 +425,7 @@ class LifetimeAnalysis(object):
 		self.invokedBy = invokedBy
 
 
-		for context, obj in sys.allocations:
+		for context, obj in sys.contextAllocates:
 			self.allocations[context].add(obj)
 
 

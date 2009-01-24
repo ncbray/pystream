@@ -63,14 +63,13 @@ class InterproceduralDataflow(object):
 
 		self.canonical = CanonicalObjects()
 
-		self.invocations = set()
-		self.allocations = set()
-
-		self.contextReads    = set()
-		self.contextModifies = set()
-
+		# TODO compute after the fact.
+		self.contextAllocates = set()
+		self.contextReads     = set()
+		self.contextModifies  = set()
 
 		# Information for contextual operations.
+		self.opAllocates      = collections.defaultdict(set)
 		self.opReads          = collections.defaultdict(set)
 		self.opModifies       = collections.defaultdict(set)
 		self.opInvokes        = collections.defaultdict(set)
@@ -94,8 +93,17 @@ class InterproceduralDataflow(object):
 		self.dictionaryClass = self.extractor.getObject(dict)
 		self.extractor.ensureLoaded(self.dictionaryClass)
 
-	def allocation(self, op, context, obj):
-		self.allocations.add((context, obj))
+	def logAllocation(self, cop, cobj):
+		self.contextAllocates.add((cop.context, cobj))
+		self.opAllocates[cop].add(cobj)
+
+	def logRead(self, cop, slot):
+		self.contextReads.add((cop.context, slot))
+		self.opReads[cop].add(slot)
+
+	def logModify(self, cop, slot):
+		self.contextModifies.add((cop.context, slot))
+		self.opModifies[cop].add(slot)
 
 	def constraint(self, constraint):
 		self.constraints.add(constraint)
@@ -134,8 +142,9 @@ class InterproceduralDataflow(object):
 		self.codeContexts[code].add(context)
 
 		# Mark that we implicitly allocated these objects
-		if vparamObj: self.allocation(None, context, vparamObj)
-		if kparamObj: self.allocation(None, context, kparamObj)
+		cop = self.canonical.opContext(code, None, context)
+		if vparamObj: self.logAllocation(cop, vparamObj)
+		if kparamObj: self.logAllocation(cop, kparamObj)
 
 		return context
 
@@ -173,10 +182,16 @@ class InterproceduralDataflow(object):
 			current.process(self)
 
 	def read(self, slot):
-		assert isinstance(slot, AbstractSlot), slot
-		if not slot in self.slots:
-			self.slots[slot] = slot.createInital(self)
-		return self.slots[slot]
+		if slot is None:
+			# vargs, etc. can be none
+			# Returning an iterable None allows it to be
+			# used in a product transparently.
+			return (None,)
+		else:
+			assert isinstance(slot, AbstractSlot), slot
+			if not slot in self.slots:
+				self.slots[slot] = slot.createInital(self)
+			return self.slots[slot]
 
 	def update(self, slot, values):
 		assert isinstance(slot, AbstractSlot), repr(slot)
@@ -194,11 +209,9 @@ class InterproceduralDataflow(object):
 			for dep in self.reads[slot]:
 				dep.mark(self)
 
-
 	def createAssign(self, source, dest):
 		con = AssignmentConstraint(source, dest)
 		con.attach(self)
-		#con.mark(self)
 
 	def fold(self, targetcontext):
 		def notConst(obj):
@@ -250,6 +263,7 @@ class InterproceduralDataflow(object):
 		code = sig.code
 
 		# HACK still called functionInfo
+		# HACK should initalize elsewhere?
 		info = self.db.functionInfo(code)
 		info.descriptive = code in descriptiveLUT
 		info.returnSlot  = code.returnparam
@@ -258,27 +272,27 @@ class InterproceduralDataflow(object):
 		# Done early, so constant folding makes the constraint dirty
 		# Target may be done for the entrypoints.
 
-		# Record the invocation
 		dst = self.canonical.codeContext(code, targetcontext)
-		self.invocations.add((cop, dst))
+		if dst not in self.opInvokes[cop]:
+			# Record the invocation
+			self.opInvokes[cop].add(dst)
 
-		if target is not None:
 			# Copy the return value
-			returnSource = self.canonical.local(code, code.returnparam, targetcontext)
-			self.createAssign(returnSource, target)
+			if target is not None:
+				returnSource = self.canonical.local(code, code.returnparam, targetcontext)
+				self.createAssign(returnSource, target)
 
+			# Caller-independant initalization.
+			if not targetcontext in self.live:
+				self.live.add(targetcontext)
 
-		# Caller-independant initalization.
-		if not targetcontext in self.live:
-			self.live.add(targetcontext)
-
-			if not self.fold(targetcontext):
-				# Extract the constraints
-				# Don't bother if the call can never happen.
-				if targetcontext.invocationMaySucceed(self):
-					exdf = ExtractDataflow(self, code, targetcontext)
-					exdf(code)
-					targetcontext.bindParameters(self)
+				if not self.fold(targetcontext):
+					# Extract the constraints
+					# Don't bother if the call can never happen.
+					if targetcontext.invocationMaySucceed(self):
+						exdf = ExtractDataflow(self, code, targetcontext)
+						exdf(code)
+						targetcontext.bindParameters(self)
 
 
 	def addEntryPoint(self, func, funcobj, args):

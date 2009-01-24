@@ -27,10 +27,33 @@ class Constraint(object):
 
 
 class CachedConstraint(Constraint):
-	__slots__ = 'cache'
-	def __init__(self):
+	__slots__ = 'observing', 'cache'
+	def __init__(self, *args):
 		Constraint.__init__(self)
+		self.observing = args
 		self.cache = set()
+
+	def update(self, sys):
+		values = [sys.read(slot) for slot in self.observing]
+
+		for args in itertools.product(*values):
+			if not args in self.cache:
+				self.cache.add(args)
+			self.concreteUpdate(sys, *args)
+
+	def attach(self, sys):
+		sys.constraint(self)
+
+		depends = False
+		for slot in self.observing:
+			if slot is not None:
+				sys.dependsRead(self, slot)
+				depends = True
+
+		if not depends:
+			# Nothing will trigger this constraint...
+			self.mark(sys)
+
 
 class AssignmentConstraint(Constraint):
 	__slots__ = 'sourceslot', 'destslot'
@@ -42,7 +65,6 @@ class AssignmentConstraint(Constraint):
 		self.sourceslot = sourceslot
 		self.destslot   = destslot
 
-
 	def update(self, sys):
 		values = sys.read(self.sourceslot)
 		sys.update(self.destslot, values)
@@ -52,85 +74,47 @@ class AssignmentConstraint(Constraint):
 		sys.dependsRead(self, self.sourceslot)
 		sys.dependsWrite(self, self.destslot)
 
+
 class LoadConstraint(CachedConstraint):
 	__slots__ = 'op', 'expr', 'slottype', 'key', 'target'
 	def __init__(self, op, expr, slottype, key, target):
-		CachedConstraint.__init__(self)
+		CachedConstraint.__init__(self, expr, key)
 		self.op       = op
 		self.expr     = expr
 		self.slottype = slottype
 		self.key      = key
 		self.target   = target
 
-	def update(self, sys):
-		exprs = sys.read(self.expr)
-		keys = sys.read(self.key)
-
-		for args in itertools.product(exprs, keys):
-			if not args in self.cache:
-				self.cache.add(args)
-			self.concreteUpdate(sys, *args)
-
 	def concreteUpdate(self, sys, expr, key):
 		slot = sys.canonical.objectSlot(expr, self.slottype, key.obj)
-		if self.target:
-			sys.createAssign(slot, self.target)
-		sys.contextReads.add((self.expr.context, slot))
-		sys.opReads[self.op].add(slot)
-
-	def attach(self, sys):
-		sys.constraint(self)
-		sys.dependsRead(self, self.expr)
-		sys.dependsRead(self, self.key)
+		sys.logRead(self.op, slot)
+		if self.target: sys.createAssign(slot, self.target)
 
 
 class StoreConstraint(CachedConstraint):
 	__slots__ = 'op', 'expr', 'slottype', 'key', 'value'
 	def __init__(self, op, expr, slottype, key, value):
-		CachedConstraint.__init__(self)
+		CachedConstraint.__init__(self, expr, key)
 		self.op       = op
 		self.expr     = expr
 		self.slottype = slottype
 		self.key      = key
 		self.value    = value
 
-	def update(self, sys):
-		exprs = sys.read(self.expr)
-		keys = sys.read(self.key)
-
-		for args in itertools.product(exprs, keys):
-			if not args in self.cache:
-				self.cache.add(args)
-				self.concreteUpdate(sys, *args)
-
 	def concreteUpdate(self, sys, expr, key):
 		slot = sys.canonical.objectSlot(expr, self.slottype, key.obj)
+		sys.logModify(self.op, slot)
 		sys.createAssign(self.value, slot)
-		sys.contextModifies.add((self.expr.context, slot))
-		sys.opModifies[self.op].add(slot)
-
-	def attach(self, sys):
-		sys.constraint(self)
-		sys.dependsRead(self, self.expr)
-		sys.dependsRead(self, self.key)
 
 
 class AllocateConstraint(CachedConstraint):
 	__slots__ = 'op', 'path', 'type_', 'target'
 	def __init__(self, op, path, type_, target):
-		CachedConstraint.__init__(self)
+		CachedConstraint.__init__(self, type_)
 		self.op     = op
 		self.path   = path
 		self.type_  = type_
 		self.target = target
-
-	def update(self, sys):
-		types = sys.read(self.type_)
-
-		for type_ in types:
-			if not type_ in self.cache:
-				self.cache.add(type_)
-				self.concreteUpdate(sys, type_)
 
 	def concreteUpdate(self, sys, type_):
 		if type_.obj.isType():
@@ -142,18 +126,18 @@ class AllocateConstraint(CachedConstraint):
 			sys.update(self.target, (contextInst,))
 
 			#sys.allocation(self.op, self.type_.context, contextInst)
-			sys.allocation(self.op.op, self.op.context, contextInst)
+			sys.logAllocation(self.op, contextInst)
 
 	def attach(self, sys):
-		sys.constraint(self)
-		sys.dependsRead(self, self.type_)
+		CachedConstraint.attach(self, sys)
 		sys.dependsWrite(self, self.target)
+
 
 # Resolves the type of the expression, varg, and karg
 class AbstractCallConstraint(CachedConstraint):
 	__slots__ = 'op', 'path', 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'target'
 	def __init__(self, op, path, selfarg, args, kwds, vargs, kargs, target):
-		CachedConstraint.__init__(self)
+		CachedConstraint.__init__(self, selfarg, vargs, kargs)
 
 		assert isinstance(args, (list, tuple)), args
 		assert not kwds, kwds
@@ -168,14 +152,6 @@ class AbstractCallConstraint(CachedConstraint):
 		self.kargs   = kargs
 
 		self.target  = target
-
-	def update(self, sys):
-		selfargs = sys.read(self.selfarg) if self.selfarg else (None,)
-		vargs = sys.read(self.vargs) if self.vargs else (None,)
-		kargs = sys.read(self.kargs) if self.kargs else (None,)
-
-		for selfarg, varg, karg in itertools.product(selfargs, vargs, kargs):
-			self.concreteUpdate(sys, selfarg, varg, karg)
 
 	def getVArgLengths(self, sys, vargs):
 		if vargs is not None:
@@ -206,36 +182,14 @@ class AbstractCallConstraint(CachedConstraint):
 
 		assert code, "Attempted to call uncallable object:\n%r\n\nat op:\n%r\n\nwith args:\n%r\n\n" % (expr.obj, self.op, vargs)
 
-
 		allslots = list(self.args)
 		for i in range(vlength):
 			index = sys.extractor.getObject(i)
 			vslot = sys.canonical.objectSlot(vargs, 'Array', sys.existingObject(index).obj)
 			allslots.append(vslot)
 
-		division = len(code.parameters)
-		argslots =  allslots[:division]
-		vargslots = allslots[division:]
-
-		con = SimpleCallConstraint(self.op, self.path, code, expr, allslots, argslots, vargslots, self.target)
+		con = SimpleCallConstraint(self.op, self.path, code, expr, allslots, self.target)
 		con.attach(sys)
-
-
-	def attach(self, sys):
-		sys.constraint(self)
-
-		# To figure out the calling convention,
-		# we must resolve the types of the expression, vargs, and kargs.
-
-		# Note "not" works, "is not None" does not, as vargs and kargs may be empty containers.
-		if not self.selfarg and not self.vargs and not self.kargs:
-			# Nothing to resolve, so execute imediately
-			self.mark(sys)
-		else:
-			if self.selfarg: sys.dependsRead(self, self.selfarg)
-			if self.vargs: sys.dependsRead(self, self.vargs)
-			if self.kargs: sys.dependsRead(self, self.kargs)
-
 
 
 class CallConstraint(AbstractCallConstraint):
@@ -256,60 +210,30 @@ class DirectCallConstraint(AbstractCallConstraint):
 		return self.code
 
 
-
 # Resolves argument types, given and exact function, self type,
 # and list of argument slots.
 # TODO make contextual?
 class SimpleCallConstraint(CachedConstraint):
-	__slots__ = 'op', 'path', 'code', 'selftype', 'slots', 'argslots', 'vargslots', 'target'
+	__slots__ = 'op', 'path', 'code', 'selftype', 'slots', 'target'
 
-	def __init__(self, op, path, code, selftype, slots, argslots, vargslots, target):
+	def __init__(self, op, path, code, selftype, slots, target):
 		assert isinstance(op, base.OpContext), type(op)
 		assert isinstance(code, ast.Code), type(code)
-		assert target is None or isinstance(target, base.AbstractSlot), type(target)
-		CachedConstraint.__init__(self)
-
 		assert selftype is None or isinstance(selftype, base.ContextObject), selftype
+		assert target is None or isinstance(target, base.AbstractSlot), type(target)
+		CachedConstraint.__init__(self, *slots)
 
-		self.op   = op
-		self.path = path
-		self.code = code
+		self.op       = op
+		self.path     = path
+		self.code     = code
 		self.selftype = selftype
+		self.slots    = slots
+		self.target   = target
 
-		# These slots are from the caller
-		# These are slots are grouped according to their position in the callee.
-		self.slots     = slots
-		self.argslots  = argslots
-		self.vargslots = vargslots
-
-		self.target = target
-
-	def update(self, sys):
-		for args in itertools.product(*[sys.read(arg) for arg in self.slots]):
-			self.concreteUpdate(sys, args)
-
-	def concreteUpdate(self, sys, args):
+	def concreteUpdate(self, sys, *args):
 		numParams = len(self.code.parameters)
 		targetcontext = sys.canonicalContext(self.code, self.path, self.selftype, args[:numParams], args[numParams:])
-
-		if targetcontext not in self.cache:
-			self.cache.add(targetcontext)
-
-			sys.bindCall(self.op, targetcontext, self.target)
-
-			# Only used for lifetime analysis?
-			sys.opInvokes[self.op].add(targetcontext)
-
-	def attach(self, sys):
-		sys.constraint(self)
-
-		if self.slots:
-			for arg in self.slots:
-				sys.dependsRead(self, arg)
-		else:
-			# If there's no arguments, the constraint should start dirty.
-			self.mark(sys)
-
+		sys.bindCall(self.op, targetcontext, self.target)
 
 
 class DeferedSwitchConstraint(Constraint):

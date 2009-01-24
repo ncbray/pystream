@@ -168,12 +168,17 @@ class CPADatabase(object):
 			info.contexts.update(contexts)
 
 
-		for srcop, dstfunc in sys.invocations:
-			info = self.functionInfo(dstfunc.code)
-			info.contexts.add(dstfunc.context)
+		for srcop, dsts in sys.opInvokes.iteritems():
+			assert isinstance(dsts, set)
+			for dstfunc in dsts:
+				# src -> dst
+				info = self.contextOpInfo(srcop.code, srcop.op, srcop.context)
+				info.invokes.add((dstfunc.context, dstfunc.code))
 
-			info = self.contextOpInfo(srcop.code, srcop.op, srcop.context)
-			info.invokes.add((dstfunc.context, dstfunc.code))
+				# dst <- src
+				info = self.functionInfo(dstfunc.code)
+				info.contexts.add(dstfunc.context)
+
 
 		for slot, values in sys.slots.iteritems():
 			if slot.isLocalSlot():

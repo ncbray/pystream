@@ -53,8 +53,7 @@ class ExtractDataflow(object):
 		return target
 
 	def assign(self, src, dst):
-		con = AssignmentConstraint(src, dst)
-		con.attach(self.system) # TODO move inside constructor?
+		self.system.createAssign(src, dst)
 
 	def init(self, node, obj):
 		result = self.contextual(node)
@@ -202,7 +201,6 @@ class ExtractDataflow(object):
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		self(node.expr, self(node.lcl))
-		#self.assign(self(node.expr), self(node.lcl))
 
 	@dispatch(ast.Discard)
 	def visitDiscard(self, node):

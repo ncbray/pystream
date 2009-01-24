@@ -324,17 +324,17 @@ class ReverseFlowTraverse(object):
 		self.flow.restoreDup('raise')
 		return self.strategy(node)
 
-	@dispatch(ast.Code)
-	def visitCode(self, node):
-		node = ast.Code(
-			node.name,
-			node.selfparam,
-			node.parameters,
-			node.parameternames,
-			node.vparam,
-			node.kparam,
-			node.returnparam,
-			self(node.ast)
-			)
+#	@dispatch(ast.Code)
+#	def visitCode(self, node):
+#		node = ast.Code(
+#			node.name,
+#			node.selfparam,
+#			node.parameters,
+#			node.parameternames,
+#			node.vparam,
+#			node.kparam,
+#			node.returnparam,
+#			self(node.ast)
+#			)
 
-		return node
+#		return node

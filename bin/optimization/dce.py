@@ -65,7 +65,7 @@ class MarkLive(object):
 	def default(self, node):
 		if isinstance(node, ast.SimpleStatement):
 			self.marker(node)
-			
+
 		return node
 
 
@@ -79,12 +79,10 @@ def dce(extractor, adb, node):
 	rewrite.flow = traverse.flow
 	rewrite.marker.flow = traverse.flow
 
-	t = MutateFunction(traverse)
+	t = MutateCode(traverse)
 
-
-	oldcode = node.code	
 	result = t(node)
 
 	return result
 
-	
+

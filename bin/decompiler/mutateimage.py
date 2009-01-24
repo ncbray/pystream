@@ -20,7 +20,7 @@ TypeNeedsHiddenStub = (xtypes.MethodDescriptorType, xtypes.WrapperDescriptorType
 
 
 
-def attachStubs(extractor):	
+def attachStubs(extractor):
 	stubcollector.bindStubs(extractor)
 
 from util.visitor import StandardVisitor
@@ -33,14 +33,6 @@ class LLASTTranslator(StandardVisitor):
 
 	def default(self, node):
 		util.xform.visitAllChildren(self.visit, node)
-##		if isinstance(node, (str, int, float, long, type(None))):
-##			pass
-##		elif isinstance(node, (tuple, list)):
-##			for child in node:
-##				self.visit(child)
-##		else:
-##			for child in node.children():
-##				self.visit(child)
 
 	def visitExisting(self, node):
 		# Due to sloppy LLAst creation, sometimes the same Existing(..) node will be used mutiple times.
@@ -57,12 +49,12 @@ class LLASTTranslator(StandardVisitor):
 		node.object = result
 
 
-def translateLLAST(extractor, llastLUT):	
+def translateLLAST(extractor, llastLUT):
 	t = LLASTTranslator(extractor)
-	for ast in llastLUT:
+	for funcast in llastLUT:
 		# HACK Mutates inplace, doesn't rewrite?
 		# TODO rewrite
-		t.walk(ast.code)
+		t.walk(funcast.code.ast)
 	return llastLUT
 
 
@@ -75,7 +67,7 @@ def setupLowLevel(extractor):
 	llast = translateLLAST(extractor, llastLUT)
 
 	# Stick low level stubs into the list of functions.
-	extractor.desc.functions.extend(llast)	
+	extractor.desc.functions.extend(llast)
 
 	attachStubs(extractor)
 
@@ -83,7 +75,7 @@ def setupLowLevel(extractor):
 
 def attachCalls(extractor):
 	desc = extractor.desc
-	
+
 	for obj in desc.objects:
 		if isinstance(obj, Object):
 			f = obj.pyobj

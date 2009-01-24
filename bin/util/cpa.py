@@ -6,30 +6,30 @@ Slop = util.canonical.Sentinel('<Slop>')
 
 # A canonical name for a CPA context.
 class CPASignature(util.canonical.CanonicalObject):
-	__slots__ = 'function', 'path', 'selfparam', 'params', 'vparams'
+	__slots__ = 'code', 'path', 'selfparam', 'params', 'vparams'
 
-	def __init__(self, function, path, selfparam, params, vparams):
-		if len(params) != len(function.code.parameters):
-			raise TypeError, "Function has %d parameters, %d provided" % (len(function.code.parameters), len(params))
+	def __init__(self, code, path, selfparam, params, vparams):
+		if len(params) != len(code.parameters):
+			raise TypeError, "Function has %d parameters, %d provided" % (len(code.parameters), len(params))
 
 		params = tuple(params)
 
 		if vparams is not None and vparams is not Slop:
 			vparams = tuple(vparams)
 
-		self.function  = function
+		self.code      = code
 		self.path      = path
 		self.selfparam = selfparam
 		self.params    = params
 		self.vparams   = vparams
 
-		self.setCanonical(function, path, selfparam, params, vparams)
+		self.setCanonical(code, path, selfparam, params, vparams)
 
 	def classification(self):
 		vparams = self.vparams
 		if vparams is not None and vparams is not Slop:
 			vparams = len(vparams)
-		return (self.function, self.path, len(self.params), vparams)
+		return (self.code, self.path, len(self.params), vparams)
 
 	def subsumes(self, other):
 		if self.classification() == other.classification():
@@ -54,7 +54,7 @@ class CPASignature(util.canonical.CanonicalObject):
 		return self.vparams is Slop
 
 	def __repr__(self):
-		return "{0}(function={1}, path={2}, self={3}, params={4}, vparams={5})".format(type(self).__name__, self.function.name, id(self.path), self.selfparam, self.params, self.vparams)
+		return "{0}(code={1}, path={2}, self={3}, params={4}, vparams={5})".format(type(self).__name__, self.code.name, id(self.path), self.selfparam, self.params, self.vparams)
 
 # Abstract base class
 class CPAInfoProvider(object):

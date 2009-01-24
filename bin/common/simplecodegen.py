@@ -7,7 +7,7 @@ from common import opnames, defuse
 
 # HACK
 import programIR.python.ast as code
-cfg = code 
+cfg = code
 
 import re
 isIdentifier = re.compile(r'^([a-zA-Z_]\w*)?$')
@@ -17,7 +17,7 @@ def typeString(t):
 		return "<%s>" % ', '.join(set([str(label.baseType()) for label in t.labels]))
 	else:
 		return "<?>"
-		
+
 class UncollapsableCodeError(Exception):
 	pass
 
@@ -46,12 +46,12 @@ class SimpleExprGen(StandardVisitor):
 		self.collapsed = {}
 
 		self.parent = parent
-			
+
 	def getLocalName(self, node):
 		# HACK assumes locals will not conflict with non-local names
 		# TODO preregister globals and cells
 		# TODO preregister "MakeFunction" names.
-		
+
 		if not node in self.localLUT:
 			base = node.name if node.name else ''
 
@@ -59,7 +59,7 @@ class SimpleExprGen(StandardVisitor):
 			if not isIdentifier.match(base):
 				#base = 'xxx'
 				base = ''
-			
+
 			name = base
 
 			# Find a unique name.
@@ -69,7 +69,7 @@ class SimpleExprGen(StandardVisitor):
 
 ##			if node in self.collapsable:
 ##				name += '_c'
-				
+
 			self.setLocalName(node, name)
 		return self.localLUT[node]
 
@@ -86,7 +86,7 @@ class SimpleExprGen(StandardVisitor):
 	def visitExisting(self, node):
 		s = getExistingStr(node)
 		return s, -1
-	
+
 	def visitGetGlobal(self, node):
 		name = getConstant(node.name, str)
 		return name, -1
@@ -130,7 +130,7 @@ class SimpleExprGen(StandardVisitor):
 		prec = 4
 		name = getConstant(node.name, str)
 		return ("%s.%s" % (self.process(node.expr, prec), name)), prec
-	
+
 	def visitGetSubscript(self, node):
 		# HACK
 		#prec = 6
@@ -152,7 +152,7 @@ class SimpleExprGen(StandardVisitor):
 
 		prec = opnames.binaryOpPrecedence[node.op]
 		flipBinding = node.op == '**'
-		
+
 		# TODO flip l/r binding for **
 		left = self.process(node.left, prec, flipBinding)
 		right = self.process(node.right, prec, not flipBinding)
@@ -160,7 +160,7 @@ class SimpleExprGen(StandardVisitor):
 		op = node.op
 		if op in opnames.mustHaveSpace:
 			op = " %s " % op
-		
+
 		return (left + op + right), prec
 
 	def visitYield(self, node):
@@ -184,7 +184,7 @@ class SimpleExprGen(StandardVisitor):
 			return replace
 		else:
 			return self.process(node, prec)
-		
+
 	def visitBuildSlice(self, node):
 		args = [self.processNone(arg, 24, 'None') for arg in (node.start, node.stop, node.step)]
 		return ("slice(%s)" % ', '.join(args)), 4
@@ -203,7 +203,7 @@ class SimpleExprGen(StandardVisitor):
 
 	def getArgString(self, node):
 		args = [self.process(arg, 24) for arg in node.args]
-		
+
 		args.extend(["%s=%s" % (name, self.process(arg, 24)) for name, arg in node.kwds])
 
 		if node.vargs:
@@ -218,9 +218,9 @@ class SimpleExprGen(StandardVisitor):
 		prec = 4
 		expr = self.process(node.expr, prec)
 		assert isinstance(expr, str)
-		
+
 		argstr = self.getArgString(node)
-		
+
 		return ("%s(%s)" % (expr, argstr)), prec
 
 	def visitDirectCall(self, node):
@@ -230,9 +230,9 @@ class SimpleExprGen(StandardVisitor):
 			selfarg = self.process(node.selfarg, prec)
 		else:
 			selfarg = "None"
-		
+
 		argstr = self.getArgString(node)
-		
+
 		return ("<%s, %s>(%s)" % (funcname, selfarg, argstr)), prec
 
 	def visitMethodCall(self, node):
@@ -240,16 +240,16 @@ class SimpleExprGen(StandardVisitor):
 
 		expr = self.process(node.expr, prec)
 		name = self.process(node.name, prec)
-		
+
 		argstr = self.getArgString(node)
-		
+
 		return ("%s{%s}(%s)" % (expr, name, argstr)), prec
 
 
 	def visitCached(self, node):
 		if node in self.collapsed:
 			return self.collapsed[node]
-		else:	
+		else:
 			return self.visit(node)
 
 
@@ -257,7 +257,7 @@ class SimpleExprGen(StandardVisitor):
 		prec = 22
 		partial = []
 
-		
+
 		for i, term in enumerate(node.terms):
 			assert isinstance(term, cfg.Condition), term
 			text, inner = self.parent.process(term)
@@ -266,7 +266,7 @@ class SimpleExprGen(StandardVisitor):
 			if i == 0: self.parent.enterSupress()
 
 		self.parent.exitSupress()
-			
+
 		return " or ".join(partial), prec
 
 	def visitShortCircutAnd(self, node):
@@ -305,7 +305,7 @@ class SimpleCodeGen(StandardVisitor):
 
 
 		self.collapsable = set()
-		
+
 		self.seg = SimpleExprGen(self)
 		self.seg.collapsable = self.collapsable
 
@@ -330,7 +330,7 @@ class SimpleCodeGen(StandardVisitor):
 
 	def process(self, node):
 ##		assert hasattr(node, 'onEntry'), type(node)
-##		
+##
 ##		for partialmerge in node.onEntry:
 ##			self.process(partialmerge)
 
@@ -343,7 +343,7 @@ class SimpleCodeGen(StandardVisitor):
 
 	def processNoEmit(self, node):
 		self.enterSupress()
-		ret = self.process(node)		
+		ret = self.process(node)
 		self.exitSupress()
 		return ret
 
@@ -353,7 +353,7 @@ class SimpleCodeGen(StandardVisitor):
 			if expr == 'None': expr = '' # If we're just returning None, eliminate the text.
 		else:
 			expr = ''
-		
+
 		if expr:
 			self.emitStatement("return %s" % expr)
 		else:
@@ -367,7 +367,7 @@ class SimpleCodeGen(StandardVisitor):
 				args.append(self.seg.process(node.parameter))
 				if node.traceback:
 					args.append(self.seg.process(node.traceback))
-					
+
 		if args:
 			self.emitStatement("raise %s" % ", ".join(args))
 		else:
@@ -410,7 +410,7 @@ class SimpleCodeGen(StandardVisitor):
 		expr = self.seg.process(node.expr, 4)
 
 		args = self.handleSliceArgs(node)
-		
+
 		stmt = "%s[%s] = %s" % (expr, args, value)
 
 		self.emitStatement(stmt)
@@ -427,24 +427,24 @@ class SimpleCodeGen(StandardVisitor):
 		value = self.seg.process(node.value)
 		expr = self.seg.process(node.expr, 7)
 		subscript = self.seg.process(node.subscript)
-		
+
 		stmt = "%s[%s] = %s" % (expr, subscript, value)
-		
+
 		self.emitStatement(stmt)
 
 
 	def visitDeleteSubscript(self, node):
 		expr = self.seg.process(node.expr, 7)
 		subscript = self.seg.process(node.subscript)
-		
+
 		stmt = "del %s[%s]" % (expr, subscript)
-		
+
 		self.emitStatement(stmt)
 
 	def visitSetGlobal(self, node):
 		name = getConstant(node.name)
 		value = self.seg.process(node.value)
-		
+
 		stmt = "%s = %s" % (name, value)
 		self.emitStatement(stmt)
 
@@ -478,7 +478,7 @@ class SimpleCodeGen(StandardVisitor):
 
 				stmt = "%s = %s" % (self.seg.process(node.lcl), self.seg.process(node.expr.left))
 				self.emitStatement(stmt)
-			
+
 			stmt = "%s %s %s" % (self.seg.process(node.lcl), node.expr.op, self.seg.process(temp))
 			self.emitStatement(stmt)
 		elif isinstance(node.expr, code.MakeFunction):
@@ -519,7 +519,7 @@ class SimpleCodeGen(StandardVisitor):
 
 	def visitPrint(self, node):
 		parts = []
-		
+
 		if node.target:
 			target = self.seg.process(node.target)
 			target = ">> "+target
@@ -541,8 +541,8 @@ class SimpleCodeGen(StandardVisitor):
 		conditional = node.conditional
 
 		if isinstance(conditional, code.ConvertToBool):
-			conditional = conditional.expr 
-		
+			conditional = conditional.expr
+
 		if conditional in self.seg.collapsed:
 			return self.seg.collapsed[conditional]
 		else:
@@ -566,11 +566,11 @@ class SimpleCodeGen(StandardVisitor):
 
 	def visitSwitch(self, node):
 		cond, prec = self.process(node.condition)
-		
+
 		self.out.startBlock('if %s' % cond)
 		self.process(node.t)
 		self.out.endBlock()
-			
+
 		if node.f and node.f.significant():
 			self.out.startBlock("else")
 			self.process(node.f)
@@ -585,11 +585,11 @@ class SimpleCodeGen(StandardVisitor):
 		if node.value:
 			value = self.seg.process(node.value)
 			args.append(value)
-		
+
 		self.out.startBlock('except %s' % ", ".join(args))
 		self.process(node.body)
 		self.out.endBlock()
-			
+
 	def visitTryExceptFinally(self, node):
 		self.out.startBlock('try')
 		self.process(node.body)
@@ -616,7 +616,7 @@ class SimpleCodeGen(StandardVisitor):
 
 	def visitWhile(self, node):
 		cond, prec = self.process(node.condition)
-		
+
 		self.out.startBlock('while %s' % cond)
 
 		self.process(node.body)
@@ -651,7 +651,8 @@ class SimpleCodeGen(StandardVisitor):
 		for child in node.blocks:
 			self.process(child)
 
-	def visitCode(self, node, name):
+	def visitCode(self, node, name=None):
+		if name is None: name = node.name
 		assert isIdentifier.match(name), name
 
 		(defines, uses), (globaldefines, globaluses), collapsable = defuse.defuse(node)
@@ -676,7 +677,7 @@ class SimpleCodeGen(StandardVisitor):
 		# If globals are written to, define them here.
 		glbldef = [name for name in globaldefines.iterkeys()]
 		if glbldef: self.out.emitStatement("global %s" % ", ".join(glbldef))
-			
+
 		self.process(node.ast)
 		self.out.endBlock()
 

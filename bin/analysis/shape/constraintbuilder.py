@@ -23,13 +23,20 @@ class GetLocals(object):
 	def visitLocal(self, node):
 		self.locals.add(node)
 
+	def process(self, node):
+		# This function forces traversal of the node, even if it's shared.
+		# Note that node may be an arbitrary AST node.
+		if isinstance(node, ast.Local):
+			self.locals.add(node)
+		else:
+			for child in node.children():
+				self(child)
+		return self.locals
+
 def getLocals(node):
 	if isinstance(node, ast.Function):
 		node = node.code
-
-	gl = GetLocals()
-	gl(node)
-	return gl.locals
+	return GetLocals().process(node)
 
 class ShapeConstraintBuilder(object):
 	__metaclass__ = typedispatcher

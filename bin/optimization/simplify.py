@@ -5,6 +5,8 @@ from dataflow.base import InternalError
 from cStringIO import StringIO
 from common.simplecodegen import SimpleCodeGen
 
+from programIR.python import ast
+
 #
 # Leverages type inference to eliminate indirect calls,
 # fold and propigate constants, etc.
@@ -13,6 +15,7 @@ from common.simplecodegen import SimpleCodeGen
 
 
 def simplify(extractor, adb, node):
+	assert isinstance(node, ast.Code), type(node)
 	try:
 		node = fold(extractor, adb, node)
 		node = dce(extractor, adb, node)

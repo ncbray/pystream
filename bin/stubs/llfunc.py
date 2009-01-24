@@ -719,7 +719,7 @@ def isinstance_stub():
 	b = Suite()
 	getType(b, obj, type_)
 	# HACK we don't actually know the real "self" for issubclass, so we use our own to prevent the call from failing.
-	b.append(Assign(DirectCall(issubclass_stub, self, [type_, classinfo], [], None, None), result))
+	b.append(Assign(DirectCall(issubclass_stub.code, self, [type_, classinfo], [], None, None), result))
 	b.append(Return(result))
 
 	name = 'isinstance'

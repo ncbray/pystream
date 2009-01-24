@@ -14,16 +14,16 @@ from constraints import *
 class ExtractDataflow(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, system, context, func):
-		self.system = system
+	def __init__(self, system, code, context):
+		self.system  = system
+		self.code    = code
 		self.context = context
-		self.function = func
-		
+
 		self.processed = set()
 
 	def doOnce(self, node):
 		return True
-		
+
 		if not node in self.processed:
 			self.processed.add(node)
 			return True
@@ -32,25 +32,26 @@ class ExtractDataflow(object):
 
 	def contextual(self, lcl):
 		if lcl is not None:
-			return self.system.canonical.local(self.context, self.function, lcl)
+			return self.system.canonical.local(self.code, lcl, self.context)
 		else:
 			return None
 
 
 	def contextOp(self, node):
-		return self.system.canonical.contextOp(self.context, self.function, node)
+		return self.system.canonical.opContext(self.code, node, self.context)
 
 	def opPath(self, node):
 		return self.context.signature.path.advance(node)
 
-	def directCall(self, node, func, selfarg, args, vargs=None, kargs=None):
+	def directCall(self, node, code, selfarg, args, vargs=None, kargs=None):
 		result = self.contextual(node)
-		
+
 		if self.doOnce(node):
+			assert isinstance(code, ast.Code), type(code)
 			op   = self.contextOp(node)
 			path = self.opPath(node)
 			kwds = [] # HACK
-			con = DirectCallConstraint(op, path, func, selfarg, args, kwds, vargs, kargs, result)
+			con = DirectCallConstraint(op, path, code, selfarg, args, kwds, vargs, kargs, result)
 			con.attach(self.system) # TODO move inside constructor?
 
 		return result
@@ -59,11 +60,10 @@ class ExtractDataflow(object):
 		con = AssignmentConstraint(src, dst)
 		con.attach(self.system) # TODO move inside constructor?
 
-
 	def init(self, node, obj):
 		result = self.contextual(node)
 		if self.doOnce(node):
-			self.system.update(result, (self.system.existingObject(obj),))			
+			self.system.update(result, (self.system.existingObject(obj),))
 		return result
 
 	def call(self, node, expr, args, kwds, vargs, kargs):
@@ -79,19 +79,19 @@ class ExtractDataflow(object):
 		result = self.contextual(node)
 		if self.doOnce(node):
 			op   = self.contextOp(node)
-			con = LoadConstraint(op, expr, fieldtype, name, result)			
+			con = LoadConstraint(op, expr, fieldtype, name, result)
 			con.attach(self.system) # TODO move inside constructor?
 		return result
 
 	def store(self, node, expr, fieldtype, name, value):
-		op   = self.contextOp(node)		
+		op   = self.contextOp(node)
 		con = StoreConstraint(op, expr, fieldtype, name, value)
 		con.attach(self.system) # TODO move inside constructor?
 
 	def allocate(self, node, expr):
 		result = self.contextual(node)
 		if self.doOnce(node):
-			op   = self.contextOp(node)			
+			op   = self.contextOp(node)
 			path = self.opPath(node)
 			con = AllocateConstraint(op, path, expr, result)
 			con.attach(self.system) # TODO move inside constructor?
@@ -126,7 +126,7 @@ class ExtractDataflow(object):
 
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
-		return self.directCall(node, exports['convertToBool'], None, [self(node.expr)])
+		return self.directCall(node, exports['convertToBool'].code, None, [self(node.expr)])
 
 
 	@dispatch(ast.BinaryOp)
@@ -134,22 +134,22 @@ class ExtractDataflow(object):
 		if node.op in opnames.inplaceOps:
 			opname = opnames.inplace[node.op[:-1]]
 		else:
-			opname = opnames.forward[node.op]				
+			opname = opnames.forward[node.op]
 
-		return self.directCall(node, exports['interpreter%s' % opname], None, [self(node.left), self(node.right)])
+		return self.directCall(node, exports['interpreter%s' % opname].code, None, [self(node.left), self(node.right)])
 
 	@dispatch(ast.UnaryPrefixOp)
 	def visitUnaryPrefixOp(self, node):
 		opname = opnames.unaryPrefixLUT[node.op]
-		return self.directCall(node, exports['interpreter%s' % opname], None, [self(node.expr)])
+		return self.directCall(node, exports['interpreter%s' % opname].code, None, [self(node.expr)])
 
 	@dispatch(ast.GetGlobal)
 	def visitGetGlobal(self, node):
-		return self.directCall(node, exports['interpreterLoadGlobal'], None, [self(self.function.code.selfparam), self(node.name)])
+		return self.directCall(node, exports['interpreterLoadGlobal'].code, None, [self(self.code.selfparam), self(node.name)])
 
 	@dispatch(ast.GetIter)
 	def visitGetIter(self, node):
-		return self.directCall(node, exports['interpreter_iter'], None, [self(node.expr)])
+		return self.directCall(node, exports['interpreter_iter'].code, None, [self(node.expr)])
 
 	@dispatch(ast.Call)
 	def visitCall(self, node):
@@ -157,30 +157,30 @@ class ExtractDataflow(object):
 
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node):
-		return self.directCall(node, node.func, self(node.selfarg), self(node.args), self(node.vargs), self(node.kargs)) 
+		return self.directCall(node, node.func, self(node.selfarg), self(node.args), self(node.vargs), self(node.kargs))
 
 	@dispatch(ast.BuildList)
 	def visitBuildList(self, node):
-		return self.directCall(node, exports['buildList'], None, self(node.args))
+		return self.directCall(node, exports['buildList'].code, None, self(node.args))
 
 	@dispatch(ast.BuildTuple)
 	def visitBuildTuple(self, node):
-		return self.directCall(node, exports['buildTuple'], None, self(node.args))
+		return self.directCall(node, exports['buildTuple'].code, None, self(node.args))
 
 	@dispatch(ast.UnpackSequence)
 	def visitUnpackSequence(self, node):
 		# HACK oh so ugly... does not resemble what actually happens.
 		for i, arg in enumerate(node.targets):
 			obj = self.system.extractor.getObject(i)
-			self.directCall(arg, exports['interpreter_getitem'], None, [self(node.expr), self(ast.Existing(obj))])
+			self.directCall(arg, exports['interpreter_getitem'].code, None, [self(node.expr), self(ast.Existing(obj))])
 
 	@dispatch(ast.GetAttr)
 	def visitGetAttr(self, node):
-		return self.directCall(node, exports['interpreter_getattribute'], None, [self(node.expr), self(node.name)])
+		return self.directCall(node, exports['interpreter_getattribute'].code, None, [self(node.expr), self(node.name)])
 
 	@dispatch(ast.SetAttr)
 	def visitSetAttr(self, node):
-		return self.directCall(node, exports['interpreter_setattr'], None, [self(node.expr), self(node.name), self(node.value)])
+		return self.directCall(node, exports['interpreter_setattr'].code, None, [self(node.expr), self(node.name), self(node.value)])
 
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
@@ -192,7 +192,7 @@ class ExtractDataflow(object):
 
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
-		self.assign(self(node.expr), self(self.function.code.returnparam))
+		self.assign(self(node.expr), self(self.code.returnparam))
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
@@ -223,13 +223,6 @@ class ExtractDataflow(object):
 		con = DeferedSwitchConstraint(self, cond, node.t, node.f)
 		con.attach(self.system) # TODO move inside constructor?
 
-
-
-##	def visitWhile(self, node):
-##		self.visit(node.condition)
-##		self.visit(node.body)
-##		if node.else_: self.visit(node.else_)
-##
 	@dispatch(ast.For)
 	def visitFor(self, node):
 
@@ -239,19 +232,14 @@ class ExtractDataflow(object):
 		self(node.loopPreamble)
 
 		self(node.bodyPreamble)
-		
+
 		self(node.body)
-		
+
 		if node.else_:
 			self(node.else_)
-
 
 	@dispatch(ast.Code)
 	def visitCode(self, node):
 		self(node.ast)
-
-	@dispatch(ast.Function)
-	def visitFunction(self, node):
-		self(node.code)
 
 

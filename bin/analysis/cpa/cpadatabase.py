@@ -13,9 +13,9 @@ class FunctionInfo(object):
 		self.original    = function
 		self.descriptive = False
 		self.returnSlot  = None
-		
+
 		self.contexts    = set()
-		
+
 		self.opInfos     = weakref.WeakKeyDictionary()
 		self.localInfos  = weakref.WeakKeyDictionary()
 
@@ -32,9 +32,9 @@ class FunctionInfo(object):
 		assert not isinstance(op, str), op
 		if op is None:
 			op = base.externalOp
-			
+
 		assert op
-		
+
 		info = self.opInfos.get(op)
 		if not info:
 			info = ContextualOpInfo()
@@ -43,7 +43,7 @@ class FunctionInfo(object):
 
 	def localInfo(self, lcl):
 		assert lcl
-		
+
 		info = self.localInfos.get(lcl)
 		if not info:
 			info = ContextualSlotInfo()
@@ -53,7 +53,7 @@ class FunctionInfo(object):
 	def merge(self):
 		for info in self.opInfos.itervalues():
 			info.merge()
-			
+
 		for info in self.localInfos.itervalues():
 			info.merge()
 
@@ -61,9 +61,9 @@ class HeapInfo(object):
 	def __init__(self, heap):
 		self.heap        = heap
 		self.original    = heap
-		
+
 		self.contexts    = set()
-		
+
 		self.slotInfos = {}
 
 	def slotInfo(self, slotType, field):
@@ -123,7 +123,7 @@ class ContextualSlotInfo(object):
 		self.merged = SlotInfo()
 		for info in self.contexts.itervalues():
 			self.merged.merge(info)
-		
+
 class SlotInfo(object):
 	def __init__(self):
 		self.references = set()
@@ -159,8 +159,8 @@ class CPADatabase(object):
 		return info
 
 	def load(self, sys):
-		for func, contexts in sys.functionContexts.iteritems():
-			info = self.functionInfo(func)
+		for code, contexts in sys.codeContexts.iteritems():
+			info = self.functionInfo(code)
 			info.contexts.update(contexts)
 
 		for heap, contexts in sys.heapContexts.iteritems():
@@ -169,28 +169,28 @@ class CPADatabase(object):
 
 
 		for srcop, dstfunc in sys.invocations:
-			info = self.functionInfo(dstfunc.function)
+			info = self.functionInfo(dstfunc.code)
 			info.contexts.add(dstfunc.context)
 
-			info = self.contextOpInfo(srcop.function, srcop.op, srcop.context)
-			info.invokes.add((dstfunc.context, dstfunc.function))
+			info = self.contextOpInfo(srcop.code, srcop.op, srcop.context)
+			info.invokes.add((dstfunc.context, dstfunc.code))
 
 		for slot, values in sys.slots.iteritems():
 			if slot.isLocalSlot():
 				if not isinstance(slot.local, program.AbstractObject):
 					if isinstance(slot.local, ast.Local):
-						info = self.functionInfo(slot.function).localInfo(slot.local).context(slot.context)
+						info = self.functionInfo(slot.code).localInfo(slot.local).context(slot.context)
 					else:
-						info = self.functionInfo(slot.function).opInfo(slot.local).context(slot.context)
+						info = self.functionInfo(slot.code).opInfo(slot.local).context(slot.context)
 					info.references.update(values)
 			else:
 				info = self.heapInfo(slot.obj.obj).slotInfo(slot.slottype, slot.key).context(slot.obj.context)
 				info.references.update(values)
-	
+
 		# Finalize the datastructures
 		for info in self.functionInfos.itervalues():
 			info.merge()
-			
+
 		for info in self.heapInfos.itervalues():
 			info.merge()
 

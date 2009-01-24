@@ -74,7 +74,7 @@ class TestSimpleCase(TestCompoundConstraintBase):
 
 		self.anRef = self.refs(self.aSlot, self.nSlot)
 
-		dc = ast.DirectCall(self.func, None, [a,b], [], None, None)
+		dc = ast.DirectCall(self.code, None, [a,b], [], None, None)
 		self.caller = ast.Suite([
 			ast.Assign(dc, c),
 			])
@@ -198,7 +198,7 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 		self.anRef  = self.refs(self.aSlot, self.nSlot)
 		self.anExpr = self.expr(self.aExpr, self.nSlot)
 
-		dc = ast.DirectCall(self.func, None, [a], [], None, None)
+		dc = ast.DirectCall(self.code, None, [a], [], None, None)
 		self.caller = ast.Suite([
 			ast.Assign(dc, c),
 			])

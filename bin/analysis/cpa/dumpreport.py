@@ -40,38 +40,40 @@ class LinkManager(object):
 			cn = self.contextRef(obj.context)
 			return "%s#%s" % (fn, cn)
 
-	def functionRef(self, obj):
-		if isinstance(obj, ast.Function) or obj is None:
+	def codeRef(self, obj):
+		if isinstance(obj, ast.Code) or obj is None:
 			if obj not in self.functionFile: return None
 			return self.functionFile[obj]
 		else:
-			if obj.func not in self.functionFile: return None
-			fn = self.functionFile[obj.func]
+			if obj.code not in self.functionFile: return None
+			fn = self.functionFile[obj.code]
 			cn = self.contextRef(obj.context)
 			return "%s#%s" % (fn, cn)
 
-class ContextFunction(object):
-	__slots__ = 'context', 'func'
-	def __init__(self, context, func):
+# TODO share this with CPA?
+class CodeContext(object):
+	__slots__ = 'code', 'context',
+	def __init__(self, code, context):
+		assert isinstance(code, ast.Code), type(code)
+		self.code = code
 		self.context = context
-		self.func = func
 
-def functionShortName(out, func, links=None, context = None):
-	if isinstance(func, str):
+def codeShortName(out,code, links=None, context = None):
+	if isinstance(code, str):
 		name = func
 		args = []
 		vargs = None
 		kargs = None
-	elif func is None:
+	elif code is None:
 		name = 'external'
 		args = []
 		vargs = None
 		kargs = None
 	else:
-		name = func.name
-		args = list(func.code.parameternames)
-		vargs = None if func.code.vparam is None else func.code.vparam.name
-		kargs = None if func.code.kparam is None else func.code.kparam.name
+		name = code.name
+		args = list(code.parameternames)
+		vargs = None if code.vparam is None else code.vparam.name
+		kargs = None if code.kparam is None else code.kparam.name
 
 	if vargs is not None: args.append("*"+vargs)
 	if kargs is not None: args.append("**"+kargs)
@@ -79,9 +81,9 @@ def functionShortName(out, func, links=None, context = None):
 
 	if links is not None:
 		if context is not None:
-			link = links.functionRef(ContextFunction(context, func))
+			link = links.codeRef(CodeContext(code, context))
 		else:
-			link = links.functionRef(func)
+			link = links.codeRef(code)
 	else:
 		link = None
 
@@ -173,7 +175,7 @@ def itergroupings(iterable, key):
 
 def dumpFunctionInfo(func, data, links, out, scg):
 	out.begin('h3')
-	functionShortName(out, func)
+	codeShortName(out, func)
 	out.end('h3')
 
 	info = data.db.functionInfo(func)
@@ -187,15 +189,12 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.end('b')
 		out.end('p')
 
-
 	if func is not None:
 		out.begin('pre')
 		scg.walk(func)
 		out.end('pre')
 
-
 	numContexts = len(data.functionContexts(func))
-
 
 	out.begin('p')
 	out.begin('b')
@@ -263,7 +262,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			if context.kparamObj is not None:
 				tableRow('kparamObj', context.kparamObj)
 
-			returnSlot = func.code.returnparam
+			returnSlot = func.returnparam
 			values = info.localInfo(returnSlot).context(context).references
 			tableRow('return', *values)
 
@@ -302,17 +301,18 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		for op in funcOps:
 			printTabbed(op, info.opInfo(op).context(context).references)
 
-			read   = data.db.lifetime.readDB[func][op][context]
-			modify = data.db.lifetime.modifyDB[func][op][context]
+			if hasattr(data.db, 'lifetime'):
+				read   = data.db.lifetime.readDB[func][op][context]
+				modify = data.db.lifetime.modifyDB[func][op][context]
 
-			# HACK?
-			if read or modify:
-				out << '\t\t'
-				out.begin('i')
-				if read: out << "R"
-				if modify: out << "M"
-				out.end('i')
-				out.endl()
+				# HACK?
+				if read or modify:
+					out << '\t\t'
+					out.begin('i')
+					if read: out << "R"
+					if modify: out << "M"
+					out.end('i')
+					out.endl()
 
 		out.endl()
 
@@ -329,7 +329,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.begin('ul')
 		for callerF, callerC in data.callers(func, context):
 			out.begin('li')
-			functionShortName(out, callerF, links, callerC)
+			codeShortName(out, callerF, links, callerC)
 			out.end('li')
 		out.end('ul')
 		out.end('p')
@@ -342,77 +342,78 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.begin('ul')
 		for callerF, callerC in data.callees(func, context):
 			out.begin('li')
-			functionShortName(out, callerF, links, callerC)
+			codeShortName(out, callerF, links, callerC)
 			out.end('li')
 		out.end('ul')
 		out.end('p')
 
 
-		live = data.db.lifetime.live[(func, context)]
-		killed = data.db.lifetime.contextKilled[(func, context)]
+		if hasattr(data.db, 'lifetime'):
+			live = data.db.lifetime.live[(func, context)]
+			killed = data.db.lifetime.contextKilled[(func, context)]
 
-		if live:
-			out.begin('h3')
-			out << "Live"
-			out.end('h3')
-			out.begin('p')
-			out.begin('ul')
-			for obj in live:
-				out.begin('li')
-				heapLink(out, obj, links)
-				if obj in killed:
-					out << " (killed)"
-				out.end('li')
-			out.end('ul')
-			out.end('p')
-
-
-		reads = data.funcReads[func][context]
-
-		if reads:
-			out.begin('h3')
-			out << "Reads"
-			out.end('h3')
-			out.begin('p')
-			out.begin('ul')
-			for obj, slots in itergroupings(reads, lambda slot: (slot.obj, (slot.slottype, slot.key))):
-				out.begin('li')
-				heapLink(out, obj, links)
-
+			if live:
+				out.begin('h3')
+				out << "Live"
+				out.end('h3')
+				out.begin('p')
 				out.begin('ul')
-				for slot in slots:
+				for obj in live:
 					out.begin('li')
-					out << "%s - %r" % slot
+					heapLink(out, obj, links)
+					if obj in killed:
+						out << " (killed)"
 					out.end('li')
 				out.end('ul')
-
-				out.end('li')
-			out.end('ul')
-			out.end('p')
+				out.end('p')
 
 
-		modifies = data.funcModifies[func][context]
+			reads = data.funcReads[func][context]
 
-		if modifies:
-			out.begin('h3')
-			out << "Modifies"
-			out.end('h3')
-			out.begin('p')
-			out.begin('ul')
-			for obj, slots in itergroupings(modifies, lambda slot: (slot.obj, (slot.slottype, slot.key))):
-				out.begin('li')
-				heapLink(out, obj, links)
-
+			if reads:
+				out.begin('h3')
+				out << "Reads"
+				out.end('h3')
+				out.begin('p')
 				out.begin('ul')
-				for slot in slots:
+				for obj, slots in itergroupings(reads, lambda slot: (slot.obj, (slot.slottype, slot.key))):
 					out.begin('li')
-					out << "%s - %r" % slot
+					heapLink(out, obj, links)
+
+					out.begin('ul')
+					for slot in slots:
+						out.begin('li')
+						out << "%s - %r" % slot
+						out.end('li')
+					out.end('ul')
+
 					out.end('li')
 				out.end('ul')
+				out.end('p')
 
-				out.end('li')
-			out.end('ul')
-			out.end('p')
+
+			modifies = data.funcModifies[func][context]
+
+			if modifies:
+				out.begin('h3')
+				out << "Modifies"
+				out.end('h3')
+				out.begin('p')
+				out.begin('ul')
+				for obj, slots in itergroupings(modifies, lambda slot: (slot.obj, (slot.slottype, slot.key))):
+					out.begin('li')
+					heapLink(out, obj, links)
+
+					out.begin('ul')
+					for slot in slots:
+						out.begin('li')
+						out << "%s - %r" % slot
+						out.end('li')
+					out.end('ul')
+
+					out.end('li')
+				out.end('ul')
+				out.end('p')
 
 def dumpHeapInfo(heap, data, links, out):
 	out.begin('h3')
@@ -422,8 +423,6 @@ def dumpHeapInfo(heap, data, links, out):
 
 	heapInfo = data.db.heapInfo(heap)
 	contexts = heapInfo.contexts
-
-	la = data.db.lifetime
 
 	out.begin('pre')
 
@@ -441,6 +440,8 @@ def dumpHeapInfo(heap, data, links, out):
 					out << '\t\t\t'
 					heapLink(out, value, links)
 					out.endl()
+
+#	la = data.db.lifetime
 
 		# HACK no easy way to get the context object, anymore?
 ##		info = la.getObjectInfo(contextobj)
@@ -542,7 +543,7 @@ def dumpReport(data, entryPoints):
 			for func in sorted(children, key=lambda f: f.name):
 				out.begin('li')
 				makeFunctionFile(func)
-				functionShortName(out, func, links)
+				codeShortName(out, func, links)
 				printChildren(func)
 				out.end('li')
 			out.end('ul')
@@ -640,7 +641,7 @@ class CPAData(object):
 
 		for slot, values in inter.slots.iteritems():
 			if isinstance(slot, base.LocalSlot):
-				self.lcls[slot.function][slot.context].add(slot)
+				self.lcls[slot.code][slot.context].add(slot)
 			else:
 				self.objs[slot.obj.obj][slot.obj].add(slot)
 
@@ -667,19 +668,20 @@ class CPAData(object):
 
 	def calcReadModify(self):
 		self.funcReads    = collections.defaultdict(lambda: collections.defaultdict(set))
-		for func, ops in self.db.lifetime.readDB:
-			for op, contexts in ops:
-				for context, reads in contexts:
-					if reads:
-						self.funcReads[func][context].update(reads)
-
-
 		self.funcModifies = collections.defaultdict(lambda: collections.defaultdict(set))
-		for func, ops in self.db.lifetime.modifyDB:
-			for op, contexts in ops:
-				for context, modifies in contexts:
-					if modifies:
-						self.funcModifies[func][context].update(modifies)
+
+		if hasattr(self.db, 'lifetime'):
+			for func, ops in self.db.lifetime.readDB:
+				for op, contexts in ops:
+					for context, reads in contexts:
+						if reads:
+							self.funcReads[func][context].update(reads)
+
+			for func, ops in self.db.lifetime.modifyDB:
+				for op, contexts in ops:
+					for context, modifies in contexts:
+						if modifies:
+							self.funcModifies[func][context].update(modifies)
 
 
 

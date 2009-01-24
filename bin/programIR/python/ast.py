@@ -5,6 +5,9 @@
 from programIR.base.metaast import *
 from pythonbase import *
 
+# Allows Existing.object to be typed.
+from . import program
+
 class Existing(Reference):
 	__metaclass__ = astnode
 	__slots__     = 'object'
@@ -12,8 +15,7 @@ class Existing(Reference):
 
 	def __init__(self, o):
 		super(Existing, self).__init__()
-		#assert o is not None
-		# TODO check that it's a program.AbstractObject?
+		#assert isinstance(o, program.AbstractObject), type(o)
 		self.object = o
 
 	def __repr__(self):
@@ -214,9 +216,9 @@ class DirectCall(Expression):
 	__metaclass__ 	= astnode
 	__fields__ 	= 'func', 'selfarg', 'args', 'kwds', 'vargs', 'kargs'
 	__types__ 	= {'selfarg':Expression, 'args':(list, tuple), 'kwds':(list, tuple),
-			   'vargs':Expression, 'kargs':Expression}
+			   'vargs':Expression, 'kargs':Expression,
+			   'func':'Code'}
 	__optional__ 	= 'selfarg', 'vargs', 'kargs'
-
 
 	def __repr__(self):
 		return "%s(<%s>, %r, %r, %r, %r, %r)" % (type(self).__name__, self.func.name,
@@ -464,8 +466,10 @@ class Code(CompoundStatement):
 			   'returnparam':Local,
 			   'ast':Suite}
 
-	__optional__ 	= 'selfparam', 'vparam', 'kparam'
-
+	#__optional__ 	= 'selfparam', 'vparam', 'kparam'
+	# HACK for function cloning.
+	__optional__ 	= 'selfparam', 'parameters', 'parameternames', 'vparam', 'kparam', 'returnparam', 'ast'
+	__shared__      = True
 
 # TODO what's the type?
 class Function(CompoundStatement):

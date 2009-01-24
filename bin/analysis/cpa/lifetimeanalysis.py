@@ -18,17 +18,17 @@ import programIR.python.ast as ast
 
 contextSchema   = structure.WildcardSchema()
 operationSchema = structure.TypeSchema((ast.Expression, ast.Statement))
-functionSchema  = structure.TypeSchema(ast.Function)
+codeSchema  = structure.TypeSchema(ast.Code)
 
 def wrapOpContext(schema):
 	schema = mapping.MappingSchema(contextSchema, schema)
 	schema = mapping.MappingSchema(operationSchema, schema)
-	schema = mapping.MappingSchema(functionSchema, schema)
+	schema = mapping.MappingSchema(codeSchema, schema)
 	return schema
 
-def wrapFunctionContext(schema):
+def wrapCodeContext(schema):
 	schema = mapping.MappingSchema(contextSchema, schema)
-	schema = mapping.MappingSchema(functionSchema, schema)
+	schema = mapping.MappingSchema(codeSchema, schema)
 	return schema
 
 
@@ -36,28 +36,28 @@ def wrapFunctionContext(schema):
 opDataflowSchema = wrapOpContext(lattice.setUnionSchema)
 
 invokesStruct = structure.StructureSchema(
-	('function', functionSchema),
-	('context',  contextSchema)
+	('code',    codeSchema),
+	('context', contextSchema)
 	)
 invokesSchema = wrapOpContext(tupleset.TupleSetSchema(invokesStruct))
 
 invokedByStruct = structure.StructureSchema(
-	('function',  functionSchema),
+	('code',      codeSchema),
 	('operation', operationSchema),
 	('context',   contextSchema)
 	)
-invokedBySchema = wrapFunctionContext(tupleset.TupleSetSchema(invokedByStruct))
+invokedBySchema = wrapCodeContext(tupleset.TupleSetSchema(invokedByStruct))
 
 
 def invertInvokes(invokes):
 	invokedBy = invokedBySchema.instance()
 
-	for func, ops in invokes:
+	for code, ops in invokes:
+		assert isinstance(code, ast.Code), type(code)
 		for op, contexts in ops:
 			for context, invs in contexts:
-				for dstF, dstC in invs:
-					invokedBy[dstF][dstC].add(func, op, context)
-
+				for dstCode, dstContext in invs:
+					invokedBy[dstCode][dstContext].add(code, op, context)
 	return invokedBy
 
 def filteredSCC(G):
@@ -89,10 +89,10 @@ class ReadModifyAnalysis(object):
 	def __init__(self, killed, invokedBy):
 		self.invokedBy       = invokedBy
 		self.killed          = killed
-		
+
 		self.contextReads    = collections.defaultdict(set)
 		self.contextModifies = collections.defaultdict(set)
-	
+
 	def process(self, sys):
 		self.system = sys
 
@@ -105,7 +105,7 @@ class ReadModifyAnalysis(object):
 
 		# Copy modifies
 		for cop, slots in sys.opModifies.iteritems():
-			self.opModifyDB[cop.function][cop.op].merge(cop.context, slots)
+			self.opModifyDB[cop.code][cop.op].merge(cop.context, slots)
 			self.contextModifies[cop.context].update(slots)
 			allModifies.update(slots)
 
@@ -114,7 +114,7 @@ class ReadModifyAnalysis(object):
 		for cop, slots in sys.opReads.iteritems():
 			# Only track reads that may change
 			filtered = set([slot for slot in slots if slot in allModifies])
-			self.opReadDB[cop.function][cop.op].merge(cop.context, filtered)
+			self.opReadDB[cop.code][cop.op].merge(cop.context, filtered)
 			self.contextReads[cop.context].update(filtered)
 			allReads.update(slots)
 
@@ -124,9 +124,9 @@ class ReadModifyAnalysis(object):
 
 	def processReads(self):
 		self.dirty = set()
-		
+
 		for context, values in self.contextReads.iteritems():
-			if values: self.dirty.add((context.signature.function, context))
+			if values: self.dirty.add((context.signature.code, context))
 
 
 		while self.dirty:
@@ -135,12 +135,12 @@ class ReadModifyAnalysis(object):
 
 	def processContextReads(self, current):
 		currentF, currentC = current
-		
+
 		for prev in self.invokedBy[currentF][currentC]:
 			prevF, prevO, prevC = prev
 
 			prevRead = self.opReadDB[prevF][prevO]
-			
+
 			killed = self.killed[(prevC, currentC)]
 
 			# Propigate reads
@@ -157,9 +157,9 @@ class ReadModifyAnalysis(object):
 
 	def processModifies(self):
 		self.dirty = set()
-		
+
 		for context, values in self.contextModifies.iteritems():
-			if values: self.dirty.add((context.signature.function, context))
+			if values: self.dirty.add((context.signature.code, context))
 
 		while self.dirty:
 			current = self.dirty.pop()
@@ -167,12 +167,12 @@ class ReadModifyAnalysis(object):
 
 	def processContextModifies(self, current):
 		currentF, currentC = current
-		
+
 		for prev in self.invokedBy[currentF][currentC]:
 			prevF, prevO, prevC = prev
 
 			prevMod = self.opModifyDB[prevF][prevO]
-			
+
 			killed = self.killed[(prevC, currentC)]
 
 			# Propigate modifies
@@ -185,13 +185,13 @@ class ReadModifyAnalysis(object):
 				prevMod.merge(prevC, diff)
 				self.dirty.add((prevF, prevC))
 
-		
+
 class LifetimeAnalysis(object):
 	def __init__(self):
 		self.heapReferedToByHeap = collections.defaultdict(set)
-		self.heapReferedToByFunc = collections.defaultdict(set)
+		self.heapReferedToByCode = collections.defaultdict(set)
 
-		self.funcRefersToHeap = collections.defaultdict(set)
+		self.codeRefersToHeap = collections.defaultdict(set)
 
 		self.allocations = collections.defaultdict(set)
 
@@ -273,7 +273,7 @@ class LifetimeAnalysis(object):
 				# Mark as dirty
 				current.heldByClosure.update(diff)
 				for dst in current.refersTo:
-					if not dst in self.escapes: dirty.add(dst)	
+					if not dst in self.escapes: dirty.add(dst)
 
 		#self.displayHistogram()
 
@@ -301,9 +301,9 @@ class LifetimeAnalysis(object):
 		# Seed the inital dirty set
 		self.dirty = set()
 		for context, objs in self.allocations.iteritems():
-			func = context.signature.function # HACK
-			self.live[(func, context)].update(objs-self.escapes)
-			self.dirty.update(self.invokedBy[func][context])
+			code = context.signature.code # HACK
+			self.live[(code, context)].update(objs-self.escapes)
+			self.dirty.update(self.invokedBy[code][context])
 
 		while self.dirty:
 			current = self.dirty.pop()
@@ -317,7 +317,7 @@ class LifetimeAnalysis(object):
 		self.contextKilled = collections.defaultdict(set)
 		for dstF, contexts in self.invokedBy:
 			for dstC, srcs in contexts:
-				
+
 				if srcs:
 					killedAll = None
 					for srcF, srcO, srcC in srcs:
@@ -328,27 +328,28 @@ class LifetimeAnalysis(object):
 							killedAll = killedAll.intersection(newKilled)
 				else:
 					killedAll = set()
-					
+
 				if killedAll: self.contextKilled[(dstF, dstC)].update(killedAll)
 
 
 	def processScope(self, current):
 		currentF, currentO, currentC = current
+		assert isinstance(currentF, ast.Code), type(currentF)
 
 		operationSchema.validate(currentO)
-		
+
 		newLive = set()
 
 		live = self.live
-		
+
 		for dstF, dstC in self.invokes[currentF][currentO][currentC]:
 			for dstLive in live[(dstF, dstC)]:
 				if dstLive in live[(currentF, currentC)]:
 					continue
 				if dstLive in newLive:
 					continue
-				
-				refs     = self.funcRefersToHeap[(currentF, currentC)]
+
+				refs     = self.codeRefersToHeap[(currentF, currentC)]
 				refinfos = [self.getObjectInfo(ref) for ref in refs]
 
 				# Could the object stay live?
@@ -379,7 +380,7 @@ class LifetimeAnalysis(object):
 						obj.localReference.add(context)
 
 						# HACK
-						self.funcRefersToHeap[(base.externalFunction, context)].add(value)
+						self.codeRefersToHeap[(base.externalFunction, context)].add(value)
 
 						if context is base.externalFunctionContext:
 							obj.externallyVisible = True
@@ -392,23 +393,25 @@ class LifetimeAnalysis(object):
 
 		invokes = invokesSchema.instance()
 
-		for func, funcinfo in sys.db.functionInfos.iteritems():
-			ops, lcls = getOps(func)
+		for code, funcinfo in sys.db.functionInfos.iteritems():
+			assert isinstance(code, ast.Code), type(code)
+			ops, lcls = getOps(code)
 			for op in ops:
 				opinfo = funcinfo.opInfo(op)
 				for context, info in opinfo.contexts.iteritems():
 					for dstC, dstF in info.invokes:
-						invokes[func][op][context].add(dstF, dstC)
+						assert isinstance(dstF, ast.Code)
+						invokes[code][op][context].add(dstF, dstC)
 
-			
+
 			for lcl in lcls:
 				lclinfo = funcinfo.localInfo(lcl)
 				for context, info in lclinfo.contexts.iteritems():
 					for ref in info.references:
 						obj = self.getObjectInfo(ref)
-						obj.localReference.add(func)
-						
-						self.funcRefersToHeap[(func, context)].add(ref)
+						obj.localReference.add(code)
+
+						self.codeRefersToHeap[(code, context)].add(ref)
 
 						if context is base.externalFunctionContext:
 							# Doesn't appear in the database?
@@ -420,7 +423,7 @@ class LifetimeAnalysis(object):
 
 		self.invokes   = invokes
 		self.invokedBy = invokedBy
-		
+
 
 		for context, obj in sys.allocations:
 			self.allocations[context].add(obj)

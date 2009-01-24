@@ -35,23 +35,21 @@ class CallPath(ObjectContext):
 	def advance(self, op):
 		return CallPath(op, self)
 
-def localSlot(sys, func, context, lcl):
+def localSlot(sys, code, lcl, context):
 	if lcl:
-		return sys.canonical.local(context, func, lcl)
+		return sys.canonical.local(code, lcl, context)
 	else:
 		return None
 
 def calleeSlotsFromContext(sys, context):
-	func = context.signature.function
-	code = func.code
-	assert not hasattr(func, 'defaults'), "Temporary limitation"
+	code = context.signature.code
 
-	selfparam   = localSlot(sys, func, context, code.selfparam)
-	parameters  = tuple([localSlot(sys, func, context, p) for p in code.parameters])
+	selfparam   = localSlot(sys, code, code.selfparam, context)
+	parameters  = tuple([localSlot(sys, code, p, context) for p in code.parameters])
 	defaults    = []
-	vparam      = localSlot(sys, func, context, code.vparam)
-	kparam      = localSlot(sys, func, context, code.kparam)
-	returnparam = localSlot(sys, func, context, code.returnparam)
+	vparam      = localSlot(sys, code, code.vparam, context)
+	kparam      = localSlot(sys, code, code.kparam, context)
+	returnparam = localSlot(sys, code, code.returnparam, context)
 
 	return util.calling.CalleeParams(selfparam, parameters,
 		code.parameternames, defaults, vparam, kparam, returnparam)
@@ -60,15 +58,15 @@ def calleeSlotsFromContext(sys, context):
 class CPAContext(AnalysisContext):
 	__slots__ = 'signature', 'vparamObj', 'kparamObj', 'callee', 'info'
 
-	def __init__(self, path, func, selfparam, params, vparams, vparamObj, kparamObj):
+	def __init__(self, code, path, selfparam, params, vparams, vparamObj, kparamObj):
 		# Validate
-		assert not isinstance(func, (AbstractSlot, ContextObject)), func
+		assert not isinstance(code, (AbstractSlot, ContextObject)), code
 		assert selfparam is None or isinstance(selfparam, ContextObject), selfparam
 		for param in params: assert isinstance(param, ContextObject), param
 		for param in vparams: assert isinstance(param, ContextObject), param
 
 		# Build
-		self.signature = util.cpa.CPASignature(func, path, selfparam, params, vparams)
+		self.signature = util.cpa.CPASignature(code, path, selfparam, params, vparams)
 		self.vparamObj = vparamObj
 		self.kparamObj = kparamObj
 
@@ -116,7 +114,7 @@ class CPAContext(AnalysisContext):
 
 	def bindParameters(self, sys):
 		sig = self.signature
-		func = sig.function
+		#code = sig.code
 		context = self
 
 		callee = calleeSlotsFromContext(sys, self)
@@ -177,7 +175,7 @@ class ContextObject(CanonicalObject):
 
 	def __init__(self, context, obj):
 		assert isinstance(context, ObjectContext), context
-		assert isinstance(obj, program.AbstractObject), obj
+		assert isinstance(obj, program.AbstractObject), repr(obj)
 
 		self.setCanonical(context, obj)
 
@@ -191,33 +189,32 @@ class ContextObject(CanonicalObject):
 		return self.obj
 
 
-class ContextOp(CanonicalObject):
-	__slots__ = 'context', 'function', 'op'
-	def __init__(self, context, function, op):
+class OpContext(CanonicalObject):
+	__slots__ ='code', 'op', 'context',
+	def __init__(self, code, op, context):
+		assert isinstance(code, ast.Code), code
 		assert isinstance(context, AnalysisContext), context
-		assert isinstance(function, ast.Function), function
-		#assert ast.isPythonAST(op), op
 
-		self.setCanonical(context, function, op)
+		self.setCanonical(code, op, context)
 
-		self.context  = context
-		self.function = function
+		self.code     = code
 		self.op       = op
-
-
-class ContextFunction(CanonicalObject):
-	__slots__ = 'context', 'function'
-	def __init__(self, context, function):
-		assert isinstance(context, AnalysisContext), context
-		assert isinstance(function, ast.Function), function
-
-		self.setCanonical(context, function)
-
 		self.context  = context
-		self.function = function
+
+
+class CodeContext(CanonicalObject):
+	__slots__ = 'code', 'context',
+	def __init__(self, code, context):
+		assert isinstance(code, ast.Code), code
+		assert isinstance(context, AnalysisContext), context
+
+		self.setCanonical(code, context)
+
+		self.code     = code
+		self.context  = context
 
 	def decontextualize(self):
-		return self.function
+		return self.code
 
 
 ##################
@@ -291,20 +288,24 @@ class ObjectSlot(AbstractSlot):
 
 
 class LocalSlot(AbstractSlot):
-	__slots__ = 'context', 'function', 'local', 'hash'
+	__slots__ = 'code', 'local', 'context'
 
-	def __init__(self, context, function, local):
-		self.setCanonical(context, function, local)
+	def __init__(self, code, local, context):
+		assert isinstance(code,  ast.Code), code
+		#assert isinstance(local, (ast.Local, program.Object, ast.Expression)), type(local) # HACK...
+		assert isinstance(context, AnalysisContext), context
 
-		self.context  = context
-		self.function = function
-		self.local    = local
+		self.setCanonical(code, local, context)
+
+		self.code    = code
+		self.local   = local
+		self.context = context
 
 	def isLocalSlot(self):
 		return True
 
 	def __repr__(self):
-		return "%s(%d, %r, %r)" % (type(self).__name__, id(self.context), self.function.name, self.local)
+		return "%s(%r, %r, %d)" % (type(self).__name__, self.code.name, self.local, id(self.context))
 
 	def createInital(self, sys):
 		return set()
@@ -316,8 +317,8 @@ class CanonicalObjects(object):
 		self.objectSlot        = util.canonical.CanonicalCache(ObjectSlot)
 		self.contextObject     = util.canonical.CanonicalCache(ContextObject)
 		self._canonicalContext = util.canonical.CanonicalCache(CPAContext)
-		self.contextOp         = util.canonical.CanonicalCache(ContextOp)
-		self.contextFunction   = util.canonical.CanonicalCache(ContextFunction)
+		self.opContext         = util.canonical.CanonicalCache(OpContext)
+		self.codeContext       = util.canonical.CanonicalCache(CodeContext)
 
 	def externalObject(self, obj):
 		return self.contextObject(externalObjectContext, obj)

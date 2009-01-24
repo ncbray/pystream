@@ -73,7 +73,7 @@ class InterproceduralDataflow(object):
 		self.opModifies       = collections.defaultdict(set)
 		self.opInvokes        = collections.defaultdict(set)
 
-		self.functionContexts = collections.defaultdict(set)
+		self.codeContexts = collections.defaultdict(set)
 		self.heapContexts     = collections.defaultdict(set)
 
 		self.rootPath = CallPath(None)
@@ -100,8 +100,8 @@ class InterproceduralDataflow(object):
 		if self.read(slot):
 			constraint.mark(self)
 
-	def extendedParamObjects(self, path, func):
-		if func.code.vparam is not None:
+	def extendedParamObjects(self, code, path):
+		if code.vparam is not None:
 			# Create tuple for vparam
 			# HACK should name per-context, rather than per-path, to maintain precision?
 			# TODO create this inside the context w/opcode?
@@ -110,17 +110,18 @@ class InterproceduralDataflow(object):
 			vparamObj = None
 
 		# Create dictionary for karg (disabled)
-		assert func.code.kparam is None
+		assert code.kparam is None
 		kparamObj = None
 
 		return vparamObj, kparamObj
 
-	def canonicalContext(self, path, func, selfparam, params, vparams):
-		vparamObj, kparamObj = self.extendedParamObjects(path, func)
-		context = self.canonical._canonicalContext(path, func, selfparam, params, vparams, vparamObj, kparamObj)
+	def canonicalContext(self, code, path, selfparam, params, vparams):
+		assert isinstance(code, ast.Code), type(code)
+		vparamObj, kparamObj = self.extendedParamObjects(code, path)
+		context = self.canonical._canonicalContext(code, path, selfparam, params, vparams, vparamObj, kparamObj)
 
 		# Mark that we create the context.
-		self.functionContexts[func].add(context)
+		self.codeContexts[code].add(context)
 
 		# Mark that we implicitly allocated these objects
 		if vparamObj: self.allocation(None, context, vparamObj)
@@ -194,9 +195,9 @@ class InterproceduralDataflow(object):
 			return obj is not None and not obj.obj.isConstant()
 
 		sig = targetcontext.signature
-		func = sig.function
+		code = sig.code
 
-		if func in foldLUT:
+		if code in foldLUT:
 			# It's foldable.
 
 			# TODO folding with constant vargs?
@@ -209,11 +210,11 @@ class InterproceduralDataflow(object):
 			assert targetcontext.kparamObj is None, targetcontext.kparamObj
 
 			params = [param.obj for param in sig.params]
-			result = foldFunctionIR(self.extractor, foldLUT[func], params)
+			result = foldFunctionIR(self.extractor, foldLUT[code], params)
 			result = self.existingObject(result)
 
 			# Set the return value
-			returnSource = self.canonical.local(targetcontext, func, func.code.returnparam)
+			returnSource = self.canonical.local(code, code.returnparam, targetcontext)
 			self.update(returnSource, (result,))
 
 			return True
@@ -222,24 +223,25 @@ class InterproceduralDataflow(object):
 
 	# Only used to create an entry point.
 	# TODO use util.calling and cpa iteration to break down the context.
-	def getContext(self, path, func, funcobj, args):
-		assert func is not None, funcObj
+	def getContext(self, code, path, funcobj, args):
+		assert isinstance(code, ast.Code), type(code)
 
 		funcobj = self.existingObject(funcobj)
 		args    = tuple([self.externalObject(arg) for arg in args])
 
-		targetcontext = self.canonicalContext(path, func, funcobj, args, ())
+		targetcontext = self.canonicalContext(code, path, funcobj, args, ())
 		return targetcontext
 
 	def bindCall(self, target, targetcontext):
+		# HACK pulling context from target, and op from path.  Pass explicitly.
 
 		sig = targetcontext.signature
-		func = sig.function
+		code = sig.code
 
-
-		info = self.db.functionInfo(func)
-		info.descriptive = func in descriptiveLUT
-		info.returnSlot = func.code.returnparam
+		# HACK still called functionInfo
+		info = self.db.functionInfo(code)
+		info.descriptive = code in descriptiveLUT
+		info.returnSlot  = code.returnparam
 
 		# Caller-spesific initalization
 		# Done early, so constant folding makes the constraint dirty
@@ -249,13 +251,13 @@ class InterproceduralDataflow(object):
 			# HACK recoving op from callpath, may not work in the future.
 			op = sig.path.path[-1]
 
-			sourceop = self.canonical.contextOp(target.context, target.function, op)
-			dstfunc = self.canonical.contextFunction(targetcontext, func)
+			sourceop = self.canonical.opContext(target.code, op, target.context)
+			dst      = self.canonical.codeContext(code, targetcontext)
 
-			self.invocations.add((sourceop, dstfunc))
+			self.invocations.add((sourceop, dst))
 
 			# Copy the return value
-			returnSource = self.canonical.local(targetcontext, func, func.code.returnparam)
+			returnSource = self.canonical.local(code, code.returnparam, targetcontext)
 			self.createAssign(returnSource, target)
 
 
@@ -267,15 +269,15 @@ class InterproceduralDataflow(object):
 				# Extract the constraints
 				# Don't bother if the call can never happen.
 				if targetcontext.invocationMaySucceed(self):
-					exdf = ExtractDataflow(self, targetcontext, func)
-					exdf(func)
+					exdf = ExtractDataflow(self, code, targetcontext)
+					exdf(code)
 					targetcontext.bindParameters(self)
 
 
 	def addEntryPoint(self, func, funcobj, args):
-		context = self.getContext(self.rootPath, func, funcobj, args)
+		context = self.getContext(func.code, self.rootPath, funcobj, args)
 		dummy = ast.Local('external_escape')
-		dummyslot = self.canonical.local(externalFunctionContext, externalFunction, dummy)
+		dummyslot = self.canonical.local(externalFunction.code, dummy, externalFunctionContext)
 		self.bindCall(dummyslot, context)
 
 

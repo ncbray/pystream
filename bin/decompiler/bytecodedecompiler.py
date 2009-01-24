@@ -31,17 +31,17 @@ from common.simplecodegen import SimpleCodeGen
 
 
 import analysis.analysisdatabase
-import optimization.simplify 
+import optimization.simplify
 
 def decompile(func, extractor, trace=False, ssa=True):
 	assert not isinstance(extractor, bool)
-	
+
 	# HACK can't find modules for "fake" globals.
 	try:
 		mname, module = moduleForGlobalDict(func.func_globals)
 	except:
 		mname = 'unknown_module'
-		
+
 	return decompileCode(extractor, func.func_code, mname, trace=trace, ssa=ssa)
 
 def decompileCode(extractor, code, mname, trace=False, ssa=True):
@@ -52,7 +52,7 @@ def getargs(co):
     args = list(co.co_varnames[:nargs])
 
     vargs, kargs = None, None
-    
+
     if co.co_flags & inspect.CO_VARARGS:
         vargs = co.co_varnames[nargs]
         nargs += 1
@@ -65,10 +65,10 @@ def getargs(co):
 class Decompiler(object):
 	def __init__(self, extractor):
 		self.extractor = extractor
-	
+
 	def disassemble(self, code, mname, trace=False, ssa=True):
 		argnames, vargs, kargs = getargs(code)
-		
+
 		inst, targets = disassemble(code)
 
 		name = code.co_name.replace('<','').replace('>','')
@@ -89,7 +89,7 @@ class Decompiler(object):
 
 
 		try:
-			StructuralAnalyzer().process(root.entry(), trace)			
+			StructuralAnalyzer().process(root.entry(), trace)
 		finally:
 			if trace and post:
 				FlowBlockDump().process(name+"_post", root)
@@ -100,7 +100,7 @@ class Decompiler(object):
 			root = ssitransform.ssiTransform(root)
 
 		# Flow sensitive, works without a ssa or ssi transform.
-		root = optimization.simplify.simplify(self.extractor, analysis.analysisdatabase.DummyAnalysisDatabase(), root)
+		optimization.simplify.simplify(self.extractor, analysis.analysisdatabase.DummyAnalysisDatabase(), root.code)
 
 
 		if trace:
@@ -125,14 +125,14 @@ class Decompiler(object):
 			if instruction.opcode == opmap['SETUP_LOOP']:
 				looplevel += 1
 				loopstack.append(instruction.arg)
-			
+
 			jin  = ">>" if i in targets else "  "
 			jout = "<<" if instruction.isFlowControl() else "  "
 			indent = '\t'*looplevel
 			arg = str(instruction.arg) if instruction.hasArgument() else ""
 			print "%4d %s%s%s %-15s %s" % (i, jin, jout, indent, instruction.neumonic(), arg)
 		print
-		
+
 class BlockBuilder(object):
 	def makeLink(self, a, b, region):
 		self.instOut[a].append(b)
@@ -189,7 +189,7 @@ class BlockBuilder(object):
 
 			assert not region in self.regionExit
 			self.regionExit[region] = (i, i+1)
-			
+
 		elif op == opmap['END_FINALLY']:
 			block = EndFinally(region)
 			self.makeLink(i, i+1, region)
@@ -199,17 +199,17 @@ class BlockBuilder(object):
 			block.instructions.append(inst)
 			self.makeLink(i, i+1, region)
 
-		self.blocks[i] = block		
+		self.blocks[i] = block
 
 	def reachBlock(self, i):
 		if i in self.merges:
 			return self.merges[i]
-		
+
 		# Skip unconditional jumps
 		block = self.blocks[i]
 		while not block:
 			assert False # Depricated.
-			
+
 			o = self.instOut[i]
 			assert len(o) == 1
 			i = o[0]
@@ -230,7 +230,7 @@ class BlockBuilder(object):
 			exceptional = self.reachBlock(self.instOut[i][1])
 
 			if block in self.regionExit:
-				exitEdge = self.regionExit[block]	
+				exitEdge = self.regionExit[block]
 				normal = self.reachBlock(exitEdge[1])
 			else:
 				# No normal exiting edges?
@@ -259,15 +259,15 @@ class BlockBuilder(object):
 		for o in outs:
 			assert not o or block.region == o.region, (block, o)
 
-		block.setNext(*outs)						
-		
+		block.setNext(*outs)
+
 	def process(self, instructions):
 		self.instIn 	= collections.defaultdict(list)
 		self.instOut 	= collections.defaultdict(list)
 		self.blocks 	= {}
 		self.merges	= {}
 		self.regionExit = {}
-		
+
 		func = Function(None)
 
 		self.queue = [(0, func)]
@@ -289,7 +289,7 @@ class BlockBuilder(object):
 
 				merge = Merge(next.region)
 				merge.setNext(next)
-					
+
 				self.merges[i] = merge
 
 		# Connect the blocks
@@ -363,13 +363,13 @@ class BlockBuilder(object):
 				while isinstance(block.next, Linear):
 					assert block.region == block.next.region
 					assert block.next.prev == block
-					
+
 					block.instructions.extend(block.next.instructions)
 					block.next.next.replacePrev(block.next, block)
 					block.next = block.next.next
 			elif block.isRegion():
 				assert block.entry().region == block
-				self.fuseLinear(block.entry())				
+				self.fuseLinear(block.entry())
 
 			# Explore the decendants.
 			for next in block.getNext():

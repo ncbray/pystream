@@ -13,6 +13,8 @@ from programIR.python import ast
 
 from simplify import simplify
 
+import copy
+
 # Figures out what functions should have seperate implementations,
 # to improve optimization / realizability
 class ProgramCloner(object):
@@ -54,13 +56,13 @@ class ProgramCloner(object):
 
 		return numGroups
 
-	def makeFuncGroups(self, func):
+	def makeFuncGroups(self, code):
 		groups = []
 
-		different = self.different[func]
+		different = self.different[code]
 
-		for context in self.adb.functionContexts(func):
-			assert context.signature.function is func, (context, func)
+		for context in self.adb.functionContexts(code):
+			assert context.signature.code is code, (context, code)
 			for group in groups:
 				assert context in different
 				if not different[context].intersection(group):
@@ -72,13 +74,13 @@ class ProgramCloner(object):
 
 	def findConflicts(self):
 		self.realizable = True
-		for func in self.adb.liveFunctions():
+		for code in self.adb.liveFunctions():
 			# Two contexts should not be the same if they contain an op that
 			# invokes different sets of functions.
-			for op in self.adb.functionOps(func):
+			for op in self.adb.functionOps(code):
 
 				# Cache the contexts, as we'll need them later.
-				contexts = frozenset(self.adb.functionContexts(func))
+				contexts = frozenset(self.adb.functionContexts(code))
 
 				lut = collections.defaultdict(set)
 				label = {}
@@ -89,9 +91,9 @@ class ProgramCloner(object):
 				# helps avoid a problem where the edges in one context
 				# May be a subset of another context.
 				for context in contexts:
-					assert context.signature.function is func, (context, func)
+					assert context.signature.code is code, (context, code)
 
-					invocations = self.adb.invocationsForContextOp(func, op, context)
+					invocations = self.adb.invocationsForContextOp(code, op, context)
 					translated = [self.groupLUT[dst] for dst in invocations]
 
 					label[context] = translated[0] if translated else None
@@ -100,7 +102,7 @@ class ProgramCloner(object):
 						u.union(*translated)
 
 						print "Conflict"
-						print func.name
+						print code.name
 						print type(op)
 						for inv in invocations:
 							print '\t*', self.groupLUT[inv], inv
@@ -114,9 +116,9 @@ class ProgramCloner(object):
 					lut[group].add(context)
 
 				# Mark contexts with different call patterns as different.
-				different = self.different[func]
+				different = self.different[code]
 				for group in lut.itervalues():
-					assert contexts.issuperset(group), (func.name, [c.func.name for c in group])
+					assert contexts.issuperset(group), (func.name, [c.code.name for c in group])
 
 					# Contexts not in the current group
 					diff = contexts-group
@@ -124,45 +126,48 @@ class ProgramCloner(object):
 					for context in group:
 						different[context].update(diff)
 
-
-
-	def rewriteProgram(self, extractor, entryPoints):
+	def createNewCodeNodes(self):
 		newfunc = {}
 
 		# Create the new functions.
-		for func, groups in self.groups.iteritems():
-			newfunc[func] = {}
+		for code, groups in self.groups.iteritems():
+			newfunc[code] = {}
 			uid = 0
 			for group in groups:
 				if len(groups) > 1:
-					name = "%s_clone_%d" % (func.name, uid)
+					name = "%s_clone_%d" % (code.name, uid)
 				else:
-					name = func.name
+					name = code.name
 
-				newfunc[func][id(group)] = ast.Function(name, None)
+				newfunc[code][id(group)] = ast.Code(name, None, None, None, None, None, None, None)
 				uid += 1
+		return newfunc
+
+
+	def rewriteProgram(self, extractor, entryPoints):
+		newfunc = self.createNewCodeNodes()
 
 		# Clone all of the functions.
-		for func, groups in self.groups.iteritems():
+		for code, groups in self.groups.iteritems():
 			for group in groups:
-				f = newfunc[func][id(group)]
+				newcode = newfunc[code][id(group)]
 
 				# Transfer information that is tied to the context.
-				self.adb.trackContextTransfer(func, f, group)
+				self.adb.trackContextTransfer(code, newcode, group)
 
-				fc = FunctionCloner(self.adb, newfunc, self.groupLUT, func, f, group)
-				f.code = fc(func.code)
-				f.code.name = f.name # HACK to make sure the code name gets rewritten, too.
+				fc = FunctionCloner(self.adb, newfunc, self.groupLUT, code, newcode, group)
+				fc.process()
 
 
 		# HACK Horrible, horrible hack: assumes that the entry point cannot be cloned.
 		# This will be the case for most situations we're interested in... but still.  Ugly.
 		newEP = []
 		for func, funcobj, args in entryPoints:
-			groups = newfunc[func]
+			groups = newfunc[func.code]
 			assert len(groups) == 1
-			clonefunc = groups.items()[0][1]
-			newEP.append((clonefunc, funcobj, args))
+			clonecode = groups.items()[0][1]
+			func.code = clonecode
+			newEP.append((func, funcobj, args))
 
 
 		# HACK Mutate the list.
@@ -214,17 +219,15 @@ class FunctionCloner(object):
 			lcl = self.localMap[node]
 		return lcl
 
-
-	@dispatch(ast.Local)
-	def visitLocal(self, node):
-		return self.translateLocal(node)
-
-
 	@defaultdispatch
 	def default(self, node):
 		result = allChildren(self, node)
 		self.transferAnalysisData(node, result)
 		return result
+
+	@dispatch(ast.Local)
+	def visitLocal(self, node):
+		return self.translateLocal(node)
 
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node):
@@ -267,6 +270,19 @@ class FunctionCloner(object):
 	def transferLocal(self, original, replacement):
 		self.adb.trackLocalTransfer(self.sourcefunction, original, self.destfunction, replacement, self.group)
 
+	def process(self):
+		srccode = self.sourcefunction
+		dstcode = self.destfunction
+
+		dstcode.selfparam      = self(srccode.selfparam)
+		dstcode.parameters     = self(srccode.parameters)
+		dstcode.parameternames = self(srccode.parameternames)
+		dstcode.vparam         = self(srccode.vparam)
+		dstcode.kparam         = self(srccode.kparam)
+		dstcode.returnparam    = self(srccode.returnparam)
+		dstcode.ast            = self(srccode.ast)
+
+
 def clone(extractor, entryPoints, adb):
 	cloner = ProgramCloner(adb)
 	print "=== Default ==="
@@ -274,7 +290,8 @@ def clone(extractor, entryPoints, adb):
 	print
 
 	oldNumGroups = 0
-	numGroups = len(adb.liveFunctions())
+	originalNumGroups = len(adb.liveFunctions())
+	numGroups = originalNumGroups
 
 	while numGroups > oldNumGroups:
 		oldNumGroups = numGroups
@@ -290,6 +307,6 @@ def clone(extractor, entryPoints, adb):
 		print "Num groups", numGroups, '/', oldNumGroups, '/', len(adb.liveFunctions())
 
 	# Is cloning worth while?
-	if numGroups > len(adb.liveFunctions()):
+	if numGroups > originalNumGroups:
 		cloner.rewriteProgram(extractor, entryPoints)
 

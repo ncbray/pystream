@@ -15,7 +15,7 @@ class ApplyToFunction(object):
 	def __init__(self, strategy):
 		self.strategy = strategy
 
-	@dispatch(ast.Function)		
+	@dispatch(ast.Function)
 	def visitFunction(self, node):
 		self.strategy(node.code)
 		return node
@@ -26,11 +26,33 @@ class MutateFunction(object):
 	def __init__(self, strategy):
 		self.strategy = strategy
 
-	@dispatch(ast.Function)		
+	@dispatch(ast.Function)
 	def visitFunction(self, node):
 		node.code = self.strategy(node.code)
 		return node
 
+
+class ApplyToCode(object):
+	__metaclass__ = typedispatcher
+
+	def __init__(self, strategy):
+		self.strategy = strategy
+
+	@dispatch(ast.Code)
+	def visitCode(self, node):
+		self.strategy(node.ast)
+		return node
+
+class MutateCode(object):
+	__metaclass__ = typedispatcher
+
+	def __init__(self, strategy):
+		self.strategy = strategy
+
+	@dispatch(ast.Code)
+	def visitCode(self, node):
+		node.ast = self.strategy(node.ast)
+		return node
 
 class DynamicBase(object):
 	__slots__ = 'lut', 'shared'
@@ -69,7 +91,7 @@ top = Top()
 
 class DynamicDict(DynamicBase):
 	__slots__ = ()
-	
+
 	def lookup(self, key, default=undefined):
 		if key in self.lut:
 			return self.lut[key]
@@ -94,13 +116,13 @@ def printlut(lut):
 		print '\t', k, lut[k]
 
 	print
-	
+
 
 def meet(meetF, *dynamic):
 	debug = 0
-	
+
 	dynamic = [d for d in dynamic if d is not None]
-	
+
 	if not dynamic:
 		return None, False
 	elif len(dynamic) == 1:
@@ -151,7 +173,7 @@ def meet(meetF, *dynamic):
 
 		# Changed indicates the first dnamic frame has been modified.
 		return out, changed
-			
+
 
 class FlowDict(object):
 	def __init__(self):
@@ -210,7 +232,7 @@ class FlowDict(object):
 
 	def mergeCurrent(self, meetF, name):
 		assert self._current is None
-		
+
 		if name in self.bags:
 			bag = self.bags[name]
 			del self.bags[name]
@@ -225,7 +247,7 @@ class FlowDict(object):
 ##			print "Try", key, value
 		if self._current is None:
 			raise InternalError, "No flow contour exists."
-			
+
 		return self._current.define(key, value)
 
 	def lookup(self, key):
@@ -250,7 +272,7 @@ class MayRaise(object):
 	@defaultdispatch
 	def default(self, node):
 		return True
-	
+
 	@dispatch(ast.Existing)
 	def visitExisting(self, node):
 		return False

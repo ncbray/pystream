@@ -2,7 +2,7 @@ import itertools
 import base
 
 # HACK to testing if a object is a bool True/False...
-from programIR.python import program
+from programIR.python import ast, program
 
 import util.tvl
 
@@ -197,9 +197,9 @@ class AbstractCallConstraint(CachedConstraint):
 				self.finalCombination(sys, expr, vargs, kargs, vlength)
 
 	def finalCombination(self, sys, expr, vargs, kargs, vlength):
-		func = self.getFunc(sys, expr)
+		code = self.getCode(sys, expr)
 
-		assert func, "Attempted to call uncallable object:\n%r\n\nat op:\n%r\n\nwith args:\n%r\n\n" % (expr.obj, self.op, vargs)
+		assert code, "Attempted to call uncallable object:\n%r\n\nat op:\n%r\n\nwith args:\n%r\n\n" % (expr.obj, self.op, vargs)
 
 
 		allslots = list(self.args)
@@ -208,11 +208,11 @@ class AbstractCallConstraint(CachedConstraint):
 			vslot = sys.canonical.objectSlot(vargs, 'Array', sys.existingObject(index).obj)
 			allslots.append(vslot)
 
-		division = len(func.code.parameters)
+		division = len(code.parameters)
 		argslots =  allslots[:division]
 		vargslots = allslots[division:]
 
-		con = SimpleCallConstraint(self.op, self.path, func, expr, allslots, argslots, vargslots, self.target)
+		con = SimpleCallConstraint(self.op, self.path, code, expr, allslots, argslots, vargslots, self.target)
 		con.attach(sys)
 
 
@@ -233,36 +233,38 @@ class AbstractCallConstraint(CachedConstraint):
 
 class CallConstraint(AbstractCallConstraint):
 	__slots__ = ()
-	def getFunc(self, sys, selfType):
-		return sys.extractor.getCall(selfType.obj)
+	def getCode(self, sys, selfType):
+		return sys.extractor.getCall(selfType.obj).code
 
 #TODO If there's no selfv, vargs, or kargs, turn into a simple call?
 class DirectCallConstraint(AbstractCallConstraint):
-	__slots__ = ('func',)
+	__slots__ = ('code',)
 
-	def __init__(self, op, path, func, selfarg, args, kwds, vargs, kargs, target):
+	def __init__(self, op, path, code, selfarg, args, kwds, vargs, kargs, target):
+		assert isinstance(code, ast.Code), type(code)
 		AbstractCallConstraint.__init__(self, op, path, selfarg, args, kwds, vargs, kargs, target)
-		self.func = func
+		self.code = code
 
-	def getFunc(self, sys, selfType):
-		return self.func
+	def getCode(self, sys, selfType):
+		return self.code
 
 
 
 # Resolves argument types, given and exact function, self type,
 # and list of argument slots.
-
+# TODO make contextual?
 class SimpleCallConstraint(CachedConstraint):
-	__slots__ = 'op', 'path', 'func', 'selftype', 'slots', 'argslots', 'vargslots', 'target'
+	__slots__ = 'op', 'path', 'code', 'selftype', 'slots', 'argslots', 'vargslots', 'target'
 
-	def __init__(self, op, path, func, selftype, slots, argslots, vargslots, target):
+	def __init__(self, op, path, code, selftype, slots, argslots, vargslots, target):
+		assert isinstance(code, ast.Code), type(code)
 		CachedConstraint.__init__(self)
 
 		assert selftype is None or isinstance(selftype, base.ContextObject), selftype
 
 		self.op   = op
 		self.path = path
-		self.func = func
+		self.code = code
 		self.selftype = selftype
 
 		# These slots are from the caller
@@ -278,8 +280,8 @@ class SimpleCallConstraint(CachedConstraint):
 			self.concreteUpdate(sys, args)
 
 	def concreteUpdate(self, sys, args):
-		numParams = len(self.func.code.parameters)
-		targetcontext = sys.canonicalContext(self.path, self.func, self.selftype, args[:numParams], args[numParams:])
+		numParams = len(self.code.parameters)
+		targetcontext = sys.canonicalContext(self.code, self.path, self.selftype, args[:numParams], args[numParams:])
 
 		if targetcontext not in self.cache:
 			self.cache.add(targetcontext)

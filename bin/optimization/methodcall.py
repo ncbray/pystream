@@ -52,18 +52,16 @@ class MethodPatternFinder(object):
 
 	def findOriginals(self, extractor):
 		exports = stubs.stubcollector.exports
-		self.iget = exports['interpreter_getattribute']
-		self.oget = exports['object__getattribute__']
+		self.iget = exports['interpreter_getattribute'].code
+		self.oget = exports['object__getattribute__'].code
 
 		fgetpyobj = exports['function__get__']
 		fgetobj = extractor.getObject(fgetpyobj)
-		self.fget = extractor.getCall(fgetobj)
+		self.fget = extractor.getCall(fgetobj).code
 
-		self.mdget = exports['methoddescriptor__get__']
+		self.mdget = exports['methoddescriptor__get__'].code
 
-		self.mcall = exports['method__call__']
-
-
+		self.mcall = exports['method__call__'].code
 
 
 	def findExisting(self, adb):
@@ -193,8 +191,8 @@ class MethodAnalysis(object):
 	def visitLocal(self, node):
 		self.arg(node)
 
-	# ast.Function is a leaf due to direct calls.
-	@dispatch(ast.Existing, str, ast.BuildList, ast.Allocate, ast.GetGlobal, type(None), ast.Function)
+	# ast.Code is a leaf due to direct calls.
+	@dispatch(ast.Existing, str, ast.BuildList, ast.Allocate, ast.GetGlobal, type(None), ast.Code)
 	def visitLeaf(self, node):
 		return node
 
@@ -287,7 +285,6 @@ class MethodRewrite(object):
 	def rewriteCall(self, node, expr, name):
 		rewrite = ast.MethodCall(expr, name, node.args, node.kwds, node.vargs, node.kargs)
 		self.transferOpInfo(node, rewrite)
-
 		self.rewritten.add(id(node))
 		return rewrite
 
@@ -330,27 +327,27 @@ def methodCall(extractor, adb):
 
 
 	numrewritten = 0
-	for func, funcinfo in db.functionInfos.iteritems():
+	for code, funcinfo in db.functionInfos.iteritems():
 		analyze = MethodAnalysis(funcinfo, pattern)
 		rewrite = MethodRewrite(adb, funcinfo, pattern)
 
 		meet = methodMeet
 
 		traverse = dataflow.forward.ForwardFlowTraverse(adb, meet, analyze, rewrite)
-		t = dataflow.forward.MutateFunction(traverse)
+		t = dataflow.forward.MutateCode(traverse)
 
 		# HACK
 		analyze.flow = traverse.flow
 		rewrite.flow = traverse.flow
 
-		t(func)
+		t(code)
 
 		# HACK to turn attribute access assignments into discards.
 		if rewrite.rewritten:
-			optimization.simplify.simplify(extractor, analysis.analysisdatabase.DummyAnalysisDatabase(), func)
+			optimization.simplify.simplify(extractor, analysis.analysisdatabase.DummyAnalysisDatabase(), code)
 
-
-		numrewritten += len(rewrite.rewritten)
+		if rewrite.rewritten:
+			numrewritten += len(rewrite.rewritten)
 
 	print "%d method calls fused." % numrewritten
 

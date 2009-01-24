@@ -1,9 +1,10 @@
 from analysis.astcollector import getOps
+from programIR.python import ast
 
 class Finder(object):
 	def __init__(self):
 		self.processed = set()
-		
+
 	def process(self, node):
 		if node not in self.processed:
 			self.processed.add(node)
@@ -21,28 +22,28 @@ class CallGraphFinder(Finder):
 		self.invokesContext = {}
 
 	def children(self, node):
-		func, context = node
+		code, context = node
 
-		self.liveFunc.add(func)
+		self.liveFunc.add(code)
 		self.liveFuncContext.add(node)
 
-		if func not in self.invokes:
-			self.invokes[func] = set()
+		if code not in self.invokes:
+			self.invokes[code] = set()
 
 		if node not in self.invokesContext:
 			self.invokesContext[node] = set()
 
 		children = []
 
-		funcinfo = self.db.functionInfo(func)
-		ops, lcls = getOps(func)
+		funcinfo = self.db.functionInfo(code)
+		ops, lcls = getOps(code)
 		for op in ops:
 			opinfo = funcinfo.opInfo(op)
 			copinfo = opinfo.context(context)
-			
+
 			for dstc, dstf in copinfo.invokes:
 				child = (dstf, dstc)
-				self.invokes[func].add(dstf)
+				self.invokes[code].add(dstf)
 				self.invokesContext[node].add(child)
 				children.append(child)
 		return children
@@ -53,12 +54,14 @@ def findLiveFunctions(db, entryPoints):
 
 	entry = set()
 	for func, funcobj, args in entryPoints:
+		code = func.code # HACK
+		assert isinstance(code, ast.Code), type(code)
 
-		entry.add(func)
+		entry.add(code)
 
 		# HACK for finding the entry context, assumes there's only one context.
-		for context in db.functionInfo(func).contexts:
-			cgf.process((func, context))
+		for context in db.functionInfo(code).contexts:
+			cgf.process((code, context))
 
 	live = cgf.liveFunc
 	G = cgf.invokes
@@ -66,4 +69,4 @@ def findLiveFunctions(db, entryPoints):
 	G[head] = entry
 
 	return live, G
-		
+

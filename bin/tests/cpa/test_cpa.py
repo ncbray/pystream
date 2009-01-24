@@ -32,13 +32,13 @@ class TestCPA(unittest.TestCase):
 
 		self.extractor.ensureLoaded(funcobj)
 		funcast = self.extractor.getCall(funcobj)
-	
+
 		return func, funcast, funcobj
 
 
 	def testAdd(self):
 		self.extractor = Extractor(verbose=False)
-		
+
 		def func(a, b):
 			return 2*a+b
 
@@ -46,16 +46,16 @@ class TestCPA(unittest.TestCase):
 
 		for paramname in funcast.code.parameternames:
 			self.assertEqual(type(paramname), str)
-		
+
 		a = self.extractor.getObject(3)
 		b = self.extractor.getObject(5)
 
 		result = analysis.cpa.evaluate(self.extractor, [(funcast, funcobj, (a, b))])
 
-		finfo  = result.db.functionInfo(funcast)
+		finfo  = result.db.functionInfo(funcast.code)
 		types = set((self.extractor.getObject(int),))
 
 		for param in funcast.code.parameters:
 			self.assertLocalRefTypes(finfo, param, types)
-			
+
 		self.assertLocalRefTypes(finfo, funcast.code.returnparam, types)

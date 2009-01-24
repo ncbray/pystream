@@ -37,7 +37,6 @@ def codeConditioning(extractor, entryPoints, dataflow):
 		optimization.methodcall.methodCall(extractor, adb)
 		print "Time: %.2e" % (time.clock()-start)
 
-
 	start = time.clock()
 	print "Analysis: Object Lifetime"
 	la =  analysis.cpa.lifetimeanalysis.LifetimeAnalysis()
@@ -50,10 +49,12 @@ def codeConditioning(extractor, entryPoints, dataflow):
 		start = time.clock()
 		live = db.liveFunctions()
 		desc = extractor.desc
-		newfuncs = [simplify(extractor, adb, func) if func not in descriptiveLUT and func in live else func for func in desc.functions]
-		desc.functions = newfuncs
-		print "Time: %.2e" % (time.clock()-start)
 
+		for func in desc.functions:
+			code = func.code
+			if code not in descriptiveLUT and code in live:
+				simplify(extractor, adb, code)
+		print "Time: %.2e" % (time.clock()-start)
 
 	if True:
 		print "Code conditioning: Lower"

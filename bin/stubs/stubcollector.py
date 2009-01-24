@@ -2,19 +2,19 @@ from __future__ import absolute_import
 
 from _pystream import cfuncptr
 from util import xtypes
-from programIR.python.ast import Function
+from programIR.python import ast
 
 exports = {}
 
-def export(ast):
-	if isinstance(ast, xtypes.FunctionType):
-		name = ast.func_name
+def export(funcast):
+	if isinstance(funcast, xtypes.FunctionType):
+		name = funcast.func_name
 	else:
-		name = ast.name
-		
+		name = funcast.name
+
 	assert not name in exports
-	exports[name] = ast
-	return ast
+	exports[name] = funcast
+	return funcast
 
 llastLUT = []
 #attrPtr = []
@@ -25,9 +25,9 @@ foldLUT = {}
 descriptiveLUT = {}
 
 def llast(f):
-	ast = f()
-	llastLUT.append(ast)
-	return ast
+	funcast = f()
+	llastLUT.append(funcast)
+	return funcast
 
 
 _cfuncptr = cfuncptr
@@ -46,36 +46,38 @@ def attachAttrPtr(t, attr):
 
 	meth = getattr(t, attr)
 	ptr = cfuncptr(meth)
-	
-	def callback(ast):
-		assert isinstance(ast, Function), ast
-		ptrAST.append((ptr, ast))
-		return ast
+
+	def callback(funcast):
+		assert isinstance(funcast, ast.Function), funcast
+		ptrAST.append((ptr, funcast))
+		return funcast
 	return callback
 
 
 def attachPtr(obj):
 	ptr = cfuncptr(obj)
-	def callback(ast):
-		assert isinstance(ast, Function), ast
-		ptrAST.append((ptr, ast))
-		return ast
+	def callback(funcast):
+		assert isinstance(funcast, ast.Function), funcast
+		ptrAST.append((ptr, funcast))
+		return funcast
 	return callback
 
 def bindStubs(extractor):
-	for ptr, ast in ptrAST:
-		extractor.attachStubToPtr(ast, ptr)
+	for ptr, funcast in ptrAST:
+		extractor.attachStubToPtr(funcast, ptr)
 
 
 def fold(func):
-	def callback(ast):
-		foldLUT[ast] = func
-		return ast
+	def callback(funcast):
+		assert isinstance(funcast, ast.Function), type(funcast)
+		foldLUT[funcast.code] = func
+		return funcast
 	return callback
 
-def descriptive(ast):
-	descriptiveLUT[ast] = True
-	return ast
+def descriptive(funcast):
+	assert isinstance(funcast, ast.Function), type(funcast)
+	descriptiveLUT[funcast.code] = True
+	return funcast
 
 
 ##################
@@ -93,13 +95,13 @@ def highLevelStub(f):
 	# Let the function use the common global dictionary.
 	# Recreate the function with different globals.
 	f = replaceGlobals(f, highLevelGlobals)
-	
+
 	# Register
 	highLevelLUT[f.func_name] = f
 
 	# Add to the common global dictionary
 	highLevelGlobals[f.func_name] = f
-	
+
 	return f
 
 ### Attachment functions ###

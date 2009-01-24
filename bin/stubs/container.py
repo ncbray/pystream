@@ -28,7 +28,7 @@ def makeIterator(name, basetype, itertype):
 		b.append(Discard(Store(inst, 'LowLevel', Existing('parent'), self)))
 		b.append(Return(inst))
 
-		code = Code(selfp, [self], ['self'], None, None, retp, b)
+		code = Code(name, selfp, [self], ['self'], None, None, retp, b)
 		f = Function(name, code)
 		descriptive(f)
 		return f
@@ -55,10 +55,9 @@ def listappend():
 	b.append(Discard(Store(self, 'Array', Existing(-1), value)))
 	returnNone(b)
 
-	code = Code(selfp, [self, value], ['self', 'value'], None, None, retp, b)
-
-
-	f = Function('listappend', code)
+	name = 'listappend'
+	code = Code(name, selfp, [self, value], ['self', 'value'], None, None, retp, b)
+	f = Function(name, code)
 
 	return f
 
@@ -85,8 +84,9 @@ def listiterator__next__():
 	b.append(Assign(Load(parent, 'Array', Existing(-1)), value))
 	b.append(Return(value))
 
-	code = Code(selfp, [self], ['self'], None, None, retp, b)
-	f = Function('listiterator__next__', code)
+	name = 'listiterator__next__'
+	code = Code(name, selfp, [self], ['self'], None, None, retp, b)
+	f = Function(name, code)
 
 	return f
 

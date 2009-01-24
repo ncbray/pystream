@@ -37,7 +37,7 @@ class TestSimpleCase(TestCompoundConstraintBase):
 
 		# HACK should really be doing a convertToBool?
 		cond = ast.Condition(ast.Suite([]), x)
-		
+
 		body = ast.Suite([
 			ast.Assign(x, t),
 			ast.Assign(ast.Load(t, 'LowLevel', ast.Existing('n')), x),
@@ -47,7 +47,7 @@ class TestSimpleCase(TestCompoundConstraintBase):
 			ast.Store(y, 'LowLevel', ast.Existing('n'), t),
 			ast.Assign(ast.Load(t, 'LowLevel', ast.Existing('n')), y),
 			])
-		
+
 		else_ = ast.Suite([])
 
 		loop = ast.While(cond, body, else_)
@@ -59,7 +59,7 @@ class TestSimpleCase(TestCompoundConstraintBase):
 			])
 
 
-		self.code = ast.Code(None, [x, y], ['x', 'y'], None, None, ret, self.body)
+		self.code = ast.Code('test', None, [x, y], ['x', 'y'], None, None, ret, self.body)
 		self.func = ast.Function('test', self.code)
 
 
@@ -134,8 +134,8 @@ class TestSimpleCase(TestCompoundConstraintBase):
 			]
 		self.checkTransfer(argument, results)
 		#self.dump()
-		
-	def testCall1(self):		
+
+	def testCall1(self):
 		argument = (self.aRef, None, None)
 		results = [
 			(self.aRef, None, None),
@@ -143,14 +143,14 @@ class TestSimpleCase(TestCompoundConstraintBase):
 			]
 		self.checkTransfer(argument, results)
 
-	def testCall2(self):		
+	def testCall2(self):
 		argument = (self.bRef, None, None)
 		results = [
 			(self.bcRef, None, None),
-			]		
+			]
 		self.checkTransfer(argument, results)
 
-	def testCall3(self):		
+	def testCall3(self):
 		argument = (self.nRef, None, None)
 		results = [
 			(self.nRef, None, None),
@@ -175,14 +175,14 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 		self.retnRef = self.refs(self.retSlot, self.nSlot)
 		self.xnExpr  = self.expr(self.xExpr, self.nSlot)
 
-		
+
 		body = ast.Suite([
 			ast.Assign(ast.Load(x, 'LowLevel', ast.Existing('n')), y),
 			ast.Return(y)
 			])
-		
 
-		self.code = ast.Code(None, [x], ['x'], None, None, ret, body)
+
+		self.code = ast.Code('loadTest', None, [x], ['x'], None, None, ret, body)
 		self.func = ast.Function('loadTest', self.code)
 
 
@@ -220,7 +220,7 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 
 	def testLocal1(self):
 		self.setInOut(self.funcInput, self.funcOutput)
-		
+
 		argument = (self.nRef, None, None)
 		results = [
 			#(self.nRef, None, (self.xnExpr,)),
@@ -233,20 +233,20 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 			]
 		self.checkTransfer(argument, results)
 
-	def testCall1(self):		
+	def testCall1(self):
 		argument = (self.aRef, None, None)
 		results = [
 			(self.aRef, None, None),
 			]
 		self.checkTransfer(argument, results)
 
-	def testCall2(self):		
+	def testCall2(self):
 		argument = (self.cRef, None, None)
 		results = [
-			]		
+			]
 		self.checkTransfer(argument, results)
 
-	def testCall3(self):		
+	def testCall3(self):
 		argument = (self.nRef, None, None)
 		results = [
 			(self.nRef, None, (self.anExpr,)),

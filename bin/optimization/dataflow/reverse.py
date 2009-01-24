@@ -19,10 +19,10 @@ def liveMeet(values):
 # TODO integrate with decompiler?
 # No flow control after raise issues?
 
-	
+
 class ReverseFlowTraverse(object):
 	__metaclass__ = typedispatcher
-	
+
 	def __init__(self, strategy):
 		self.strategy = strategy
 
@@ -33,11 +33,11 @@ class ReverseFlowTraverse(object):
 		self.flow.save('return')
 		self.flow.restore(DynamicDict())
 		self.flow.save('raise')
-		
+
 	@defaultdispatch
 	def default(self, node):
 		result = self.strategy(node)
-		
+
 		if self.flow.tryLevel > 0 and self.mayRaise(result):
 			# Inject flow from exception handling
 			assert len(self.flow.bags['raise']) == 1
@@ -46,7 +46,7 @@ class ReverseFlowTraverse(object):
 			normalF, changed = meet(liveMeet, normalF, raiseF)
 			self.flow.restore(normalF)
 
-			
+
 		return result
 
 	@dispatch(ast.Suite, list, tuple, type(None))
@@ -65,12 +65,12 @@ class ReverseFlowTraverse(object):
 	@dispatch(ast.ExceptionHandler)
 	def visitExceptionHandler(self, node):
 		body = self(node.body)
-		
+
 		if node.value:
 			self.flow.undefine(node.value)
-			
+
 		self.strategy.marker(node.type)
-		
+
 		preamble = self(node.preamble)
 
 		node = ast.ExceptionHandler(preamble, node.type, node.value, body)
@@ -93,7 +93,7 @@ class ReverseFlowTraverse(object):
 		# Merge
 		merged, changed = meet(liveMeet, tf, ff)
 		self.flow.restore(merged)
-	
+
 		condition = self(node.condition)
 
 		return ast.Switch(condition, t, f)
@@ -111,7 +111,7 @@ class ReverseFlowTraverse(object):
 		oldBreak = self.flow.bags.get('break', [])
 		self.flow.bags['break'] = [breakF]
 		oldContinue = self.flow.bags.get('continue', [])
-		
+
 
 		# Iterate until convergence
 
@@ -133,7 +133,7 @@ class ReverseFlowTraverse(object):
 
 		self.flow.restore(current)
 
-		# Restore the loop points 
+		# Restore the loop points
 		self.flow.bags['break'] = oldBreak
 		self.flow.bags['continue'] = oldContinue
 
@@ -155,7 +155,7 @@ class ReverseFlowTraverse(object):
 		oldBreak = self.flow.bags.get('break', [])
 		self.flow.bags['break'] = [breakF]
 		oldContinue = self.flow.bags.get('continue', [])
-		
+
 
 		# Iterate until convergence
 
@@ -164,7 +164,7 @@ class ReverseFlowTraverse(object):
 			# TODO undef the index?
 			self.flow.bags['continue'] = [current.split()]
 			self.flow.restore(current.split())
-			
+
 			body = self(node.body)
 
 			index = self(node.index)
@@ -182,13 +182,13 @@ class ReverseFlowTraverse(object):
 
 		self.flow.restore(current)
 
-		# Restore the loop points 
+		# Restore the loop points
 		self.flow.bags['break'] = oldBreak
 		self.flow.bags['continue'] = oldContinue
 
 		# HACK horrible!
 		self.strategy.marker(node.iterator)
-		
+
 		iterator = self(node.iterator)
 		loopPreamble = self(node.loopPreamble)
 
@@ -201,18 +201,18 @@ class ReverseFlowTraverse(object):
 		bags = self.flow.saveBags()
 		exitF = self.flow.pop()
 
-		
+
 		def evalFinallyOn(normal):
-			# Restore bags			
+			# Restore bags
 			self.flow.saveBags()
 			for name, bag in bags.iteritems():
 				if bag:
 					frame, = bag
-					self.flow.bags[name] = [frame]	
+					self.flow.bags[name] = [frame]
 
 			if normal is not None:
 				normal = normal.split()
-			self.flow.restore(normal)				
+			self.flow.restore(normal)
 			finally_ = self(node.finally_)
 			normal = self.flow.pop()
 			return normal, finally_
@@ -252,7 +252,7 @@ class ReverseFlowTraverse(object):
 		defaultHandler = None
 
 
-		else_ = None		
+		else_ = None
 
 		normalF = exitF.split() if exitF is not None else None
 
@@ -260,13 +260,13 @@ class ReverseFlowTraverse(object):
 			self.flow.restore(normalF)
 			else_ = self(node.else_)
 			normalF = self.flow.pop()
-	
+
 		for handler in node.handlers:
 			if raiseF is not None:
 				newF = raiseF.split()
 			else:
 				newF = None
-				
+
 			self.flow.restore(newF)
 			handlers.append(self(handler))
 			raiseEntries.append(self.flow.pop())
@@ -279,14 +279,14 @@ class ReverseFlowTraverse(object):
 			raiseEntries.append(exitF)
 
 
-		raiseF, changed = meet(liveMeet, *raiseEntries)		
+		raiseF, changed = meet(liveMeet, *raiseEntries)
 
 		self.flow.restore(normalF)
 
 		oldRaise = self.flow.bags.get('raise', [])
 		self.flow.bags['raise'] = [raiseF]
 		self.flow.tryLevel += 1
-		
+
 		body = self(node.body)
 
 		self.flow.tryLevel -= 1
@@ -323,10 +323,11 @@ class ReverseFlowTraverse(object):
 	def visitRaise(self, node):
 		self.flow.restoreDup('raise')
 		return self.strategy(node)
-	
+
 	@dispatch(ast.Code)
 	def visitCode(self, node):
 		node = ast.Code(
+			node.name,
 			node.selfparam,
 			node.parameters,
 			node.parameternames,

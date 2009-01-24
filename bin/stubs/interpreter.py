@@ -114,8 +114,9 @@ def buildTuple():
 	b = Suite()
 	b.append(Return(vargs))
 
-	code = Code(None, a, n, vargs, None, retp, b)
-	f = Function('buildTuple', code)
+	name = 'buildTuple'
+	code = Code(name, None, a, n, vargs, None, retp, b)
+	f = Function(name, code)
 	return f
 
 ### A low-level stub (multiple return values?)
@@ -169,9 +170,9 @@ def interpreterLoadGlobal():
 	b.append(Assign(Load(Existing(__builtins__), 'Dictionary', name), result))
 	b.append(Return(result))
 
-
-	code = Code(None, [function, name], ['function', 'name'], None, None, retp, b)
-	f = Function('interpreterLoadGlobal', code)
+	fname = 'interpreterLoadGlobal'
+	code = Code(fname, None, [function, name], ['function', 'name'], None, None, retp, b)
+	f = Function(fname, code)
 
 	return f
 
@@ -193,8 +194,9 @@ def interpreterStoreGlobal():
 	b.append(Discard(Store(globalDict, 'Dictionary', name, value)))
 	returnNone(b)
 
-	code = Code(None, [function, name, value], ['function', 'name', 'value'], None, None, retp, b)
-	f = Function('interpreterStoreGlobal', code)
+	fname = 'interpreterStoreGlobal'
+	code = Code(fname, None, [function, name, value], ['function', 'name', 'value'], None, None, retp, b)
+	f = Function(fname, code)
 
 	return f
 
@@ -223,7 +225,7 @@ def simpleAttrCall(name, attr, argnames):
 		call(b, func, args, None, None, retval)
 		b.append(Return(retval))
 
-		code = Code(None, args, list(argnames), None, None, retp, b)
+		code = Code(name, None, args, list(argnames), None, None, retp, b)
 		f = Function(name, code)
 		return f
 

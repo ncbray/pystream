@@ -58,12 +58,12 @@ class SSITransformer(StandardVisitor):
 		self.exceptRename = []
 
 		self.hasExceptionHandling = hasExceptionHandling
-	
+
 	def process(self, node):
 		assert self.locals
 
 		if node == None: return None
-		
+
 ##		assert not node.onEntry
 ##		assert not node.onExit
 
@@ -88,7 +88,7 @@ class SSITransformer(StandardVisitor):
 				asgn = Assign(old, merge)
 				asgn.markMerge()
 				merges.append(asgn)
-		
+
 		self.exceptRename.append(rn)
 
 		return merges
@@ -98,7 +98,7 @@ class SSITransformer(StandardVisitor):
 		self.exceptLevel -= 1
 		rn = self.exceptRename[-1]
 		self.exceptRename.pop()
-		
+
 		return rn
 
 	def exceptLocal(self, lcl):
@@ -185,9 +185,9 @@ class SSITransformer(StandardVisitor):
 		except AssertionError:
 			raise
 			#raise Exception, repr(node) + '\n\n' + repr(self.locals.lut)
-			
+
 		return newnode
-		
+
 	def visitSwitch(self, node):
 		condition = self.process(node.condition)
 
@@ -218,17 +218,17 @@ class SSITransformer(StandardVisitor):
 
 	def visitAssign(self, node):
 		assert self.locals
-		
+
 		if len(self.localuses[node.lcl]) > 0:
 			assert isinstance(node.lcl, Local)
 
 			expr = self.process(node.expr)
 
 			assert self.locals, node.expr
-			
+
 			if isinstance(node.expr, Local):
 				# Assign local to local.  Nullop for SSA.
-				
+
 				expr = self.reach(expr)
 				self.locals.redefineLocal(node.lcl, expr)
 
@@ -247,7 +247,7 @@ class SSITransformer(StandardVisitor):
 				assert not rename in self.defns
 				self.defns[rename] = expr
 
-				
+
 				asgn = Assign(expr, rename)
 
 				if self.hasExceptionHandling:
@@ -272,7 +272,7 @@ class SSITransformer(StandardVisitor):
 
 	def registerFrame(self, suite):
 		if self.locals:
-			blocks = suite.blocks			
+			blocks = suite.blocks
 			if blocks:
 				if isinstance(blocks[-1], Break):
 					handler = self.handlers.breaks
@@ -293,7 +293,7 @@ class SSITransformer(StandardVisitor):
 		for block in node.blocks:
 			assert self.locals
 			blocks.append(self.process(block))
-		
+
 		newnode =  Suite(blocks)
 		self.registerFrame(newnode)
 
@@ -307,7 +307,7 @@ class SSITransformer(StandardVisitor):
 			value = self.locals.writeLocal(node.value)
 		else:
 			value = self.process(node.value)
-			
+
 		body = self.process(node.body)
 
 		return ExceptionHandler(preamble, type, value, body)
@@ -337,8 +337,8 @@ class SSITransformer(StandardVisitor):
 			handlers.append(h)
 			merges.append((TailInserter(h.body), self.locals))
 
-	
-		self.locals = ef = LocalFrame(ExceptionMerge(self.exceptLocals))			
+
+		self.locals = ef = LocalFrame(ExceptionMerge(self.exceptLocals))
 		default = self.process(node.defaultHandler)
 		merges.append((TailInserter(default), self.locals))
 
@@ -378,7 +378,7 @@ class SSITransformer(StandardVisitor):
 
 		self.handlers.breaks.new()
 		self.handlers.continues.new()
-		
+
 		body = self.process(node.body)
 
 		breaks = self.handlers.breaks.pop()
@@ -430,7 +430,7 @@ class SSITransformer(StandardVisitor):
 		#if isinstance(node.index, Local):
 		#	index = self.locals.writeLocal(node.index)
 		#else:
-	
+
 		bodyPreamble = self.process(node.bodyPreamble)
 
 		# HACK
@@ -439,7 +439,7 @@ class SSITransformer(StandardVisitor):
 			index = node.index
 		else:
 			index 	= self.process(node.index)
-			
+
 		body = self.process(node.body)
 
 		breaks = self.handlers.breaks.pop()
@@ -488,7 +488,7 @@ class SSITransformer(StandardVisitor):
 		old = self.locals
 
 		self.locals = LocalFrame()
-		
+
 		self.handlers.returns.new()
 
 		selfparam = self.locals.writeLocal(node.selfparam) if node.selfparam else None
@@ -499,8 +499,8 @@ class SSITransformer(StandardVisitor):
 		kparam = self.locals.writeLocal(node.kparam) if node.kparam else None
 
 		ast = self.process(node.ast)
-		
-		newnode = Code(selfparam, params, node.parameternames, vparam, kparam, node.returnparam, ast)
+
+		newnode = Code(node.name, selfparam, params, node.parameternames, vparam, kparam, node.returnparam, ast)
 		returns = self.handlers.returns.pop()
 
 		self.locals = old
@@ -519,7 +519,7 @@ class SSITransformer(StandardVisitor):
 		self.collapsable = collapsable
 
 		self.original = node # HACK for debugging
-		
+
 		return self.process(node)
 
 
@@ -541,5 +541,5 @@ def ssiTransform(node):
 	else:
 		ssit = SSITransformer(pff.annotate, pff.exceptRead, pff.hasExceptionHandling)
 		node = ssit.transform(node)
-	
+
 	return node

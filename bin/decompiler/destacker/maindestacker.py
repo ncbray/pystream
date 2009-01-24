@@ -10,7 +10,7 @@ from util.visitor import StandardVisitor
 from .. import errors
 from . import pythonstack
 from .. import flowblocks
-from . import instructiontranslator	
+from . import instructiontranslator
 
 from common.errors import TemporaryLimitation
 
@@ -52,7 +52,7 @@ class DestackVisitor(StandardVisitor):
 			return self.getDefns(block.blocks[0])
 		else:
 			return {}
-	
+
 	def visitReturn(self, block, stack):
 		assert isinstance(stack, PythonStack)
 		assert stack.size() >= 1
@@ -63,7 +63,7 @@ class DestackVisitor(StandardVisitor):
 		# Special case: returning None
 		if isinstance(defn, Existing) and defn.object.isConstant() and defn.object.pyobj == None:
 			arg = defn
-				
+
 		outblock = Return(arg)
 		return outblock, None
 
@@ -103,7 +103,7 @@ class DestackVisitor(StandardVisitor):
 		return None, stack
 
 	def visitNormalEntry(self, block, stack):
-		assert isinstance(stack, PythonStack)		
+		assert isinstance(stack, PythonStack)
 		return None, stack
 
 
@@ -111,8 +111,8 @@ class DestackVisitor(StandardVisitor):
 		assert isinstance(stack, PythonStack), stack
 
 		# Insurance, but probabally unessisary
-		stack = stack.duplicate()		
-		
+		stack = stack.duplicate()
+
 		t = instructiontranslator.InstructionTranslator(self.moduleName, self.ssa, self.locals, self.extractor, self.callback, self.trace)
 		inst, defn, stack = t.translate(block.instructions, stack)
 
@@ -123,11 +123,11 @@ class DestackVisitor(StandardVisitor):
 		return outblock, stack
 
 	def visitSuiteRegion(self, block, stack):
-		assert isinstance(stack, PythonStack), stack		
+		assert isinstance(stack, PythonStack), stack
 		return self.handleLinearRegion(block, stack)
 
 	def visitMerge(self, block, stack):
-		assert isinstance(stack, PythonStack), stack		
+		assert isinstance(stack, PythonStack), stack
 		assert len(block.incoming) == 1 and block.numEntries()==1, block.incoming
 		return None, stack
 
@@ -139,7 +139,7 @@ class DestackVisitor(StandardVisitor):
 		output = None
 
 		newdefns = {}
-		
+
 		while block:
 			outblock, stack = self.visit(block, stack)
 
@@ -147,13 +147,13 @@ class DestackVisitor(StandardVisitor):
 				for k, v in self.defns[outblock].iteritems():
 					assert not k in newdefns, (k, newdefns)
 					newdefns[k] = v
-							
+
 			assert isinstance(stack, PythonStack) or stack==None, block
 
 			output = appendSuite(output, outblock)
 
 			assert block.numExits() <= 1
-			
+
 			if block.numExits() == 0:
 				# Stack exists if this is a normal exit
 				break
@@ -164,7 +164,7 @@ class DestackVisitor(StandardVisitor):
 				block = block.next
 
 		self.defns[output] = newdefns
-			
+
 		return output, stack
 
 	def getTOS(self, stack):
@@ -182,11 +182,11 @@ class DestackVisitor(StandardVisitor):
 			b = bool(defn.object.pyobj)
 			maybeTrue = b
 			maybeFalse = not b
-		
+
 		return conditional, stack, (maybeTrue, maybeFalse)
 
 	def handleCond(self, cond, stack):
-		assert isinstance(stack, PythonStack), stack				
+		assert isinstance(stack, PythonStack), stack
 
 		if isinstance(cond, flowblocks.Linear):
 			block, stack = self.visit(cond, stack)
@@ -215,15 +215,15 @@ class DestackVisitor(StandardVisitor):
 		assign = Assign(conditional, temp)
 		block = Suite([assign])
 		condition = Condition(block, temp)
-		
+
 		#condition = Condition(Suite(), conditional)
 		tstack = stack.duplicate()
 		fstack = stack.duplicate()
 		return condition, tstack, fstack, (maybeTrue, maybeFalse)
 
 	def visitShortCircutOr(self, block, stack):
-		assert isinstance(stack, PythonStack), stack				
-		
+		assert isinstance(stack, PythonStack), stack
+
 		terms = []
 		stacks = []
 
@@ -254,7 +254,7 @@ class DestackVisitor(StandardVisitor):
 		if len(terms) == 1:
 			return terms[0], tstack, fstack, (maybeTrue, maybeFalse)
 
-			
+
 		condition = ShortCircutOr(terms)
 
 		# Convert into a condition.
@@ -265,13 +265,13 @@ class DestackVisitor(StandardVisitor):
 		preamble.append(Assign(condition, lcl))
 		preamble.append(Assign(ConvertToBool(lcl), temp))
 		condition = Condition(preamble, temp)
-		
+
 		return condition, tstack, fstack, (maybeTrue, maybeFalse)
 
 
 	def visitShortCircutAnd(self, block, stack):
-		assert isinstance(stack, PythonStack), stack				
-		
+		assert isinstance(stack, PythonStack), stack
+
 		terms = []
 		stacks = []
 
@@ -300,8 +300,8 @@ class DestackVisitor(StandardVisitor):
 		fstack = pythonstack.mergeStacks(stacks, [[] for term in terms])
 
 		if len(terms) == 1:
-			return terms[0], tstack, fstack, (maybeTrue, maybeFalse)				
-			
+			return terms[0], tstack, fstack, (maybeTrue, maybeFalse)
+
 		condition = ShortCircutAnd(terms)
 
 		# Convert into a condition.
@@ -310,12 +310,12 @@ class DestackVisitor(StandardVisitor):
 		temp = Local()
 		asgn2 = Assign(ConvertToBool(lcl), temp)
 		condition = Condition(Suite([asgn1, asgn2]), temp)
-		
+
 		return condition, tstack, fstack, (maybeTrue, maybeFalse)
 
 	# Entry point for processing conditionals
 	def processCond(self, cond, stack):
-		assert isinstance(stack, PythonStack), stack				
+		assert isinstance(stack, PythonStack), stack
 
 		condition, tstack, fstack, (maybeTrue, maybeFalse) = self.handleCond(cond, stack)
 
@@ -374,21 +374,21 @@ class DestackVisitor(StandardVisitor):
 		else:
 			stack = tstack
 
-		# HACK why would this occur?	
+		# HACK why would this occur?
 		if not t: t = Suite()
 		if not f: f = Suite()
-	
+
 		outblock = Switch(condition, t, f)
 
 		return outblock, stack
 
 
 	def visitLoopElse(self, block, stack):
-		assert isinstance(stack, PythonStack), stack				
+		assert isinstance(stack, PythonStack), stack
 
 
 		suite, loopstack = self.visit(block.loop, stack.duplicate())
-		
+
 		# HACK for "for" loops"
 		# We need a handle on the actual loop so we can
 		#	1) attach the "else"
@@ -405,18 +405,18 @@ class DestackVisitor(StandardVisitor):
 		else:
 			# This should no longer occur?
 			loop = suite
-		
+
 		assert isinstance(loop, Loop), [suite, type(loop)]
-		
+
 		assert loopstack == None or loopstack == stack
 
 		### Evaluate the loop "else" ###
-		if block._else:			
+		if block._else:
 			else_, elsestack = self.visit(block._else, stack.duplicate())
 
 			if else_ and not isinstance(else_, Suite):
 				else_ = Suite([else_])
-				
+
 			loop.else_ = else_
 			assert elsestack == None or elsestack == stack
 		else:
@@ -425,10 +425,10 @@ class DestackVisitor(StandardVisitor):
 		return suite, stack
 
 	def visitLoopRegion(self, block, stack):
-		assert isinstance(stack, PythonStack), stack			
-		
+		assert isinstance(stack, PythonStack), stack
+
 		block, loopstack = self.handleLinearRegion(block, stack.duplicate())
-		
+
 		return block, stack
 
 	def visitExceptRegion(self, block, stack):
@@ -436,7 +436,7 @@ class DestackVisitor(StandardVisitor):
 		oldstack = stack.duplicate()
 
 		block, stack = self.handleLinearRegion(block, stack)
-		
+
 		return block, oldstack
 
 	def visitFinallyRegion(self, block, stack):
@@ -444,7 +444,7 @@ class DestackVisitor(StandardVisitor):
 		oldstack = stack.duplicate()
 
 		block, stack = self.handleLinearRegion(block, stack)
-		
+
 		return block, oldstack
 
 
@@ -482,7 +482,7 @@ class DestackVisitor(StandardVisitor):
 			if isinstance(block, Suite) and len(block.blocks) >= 2:
 				compare 	= block.blocks[-2]
 				switch 		= block.blocks[-1]
-				
+
 				if isinstance(switch, Switch) and isinstance(compare, Assign):
 					if isinstance(compare.expr, BinaryOp) and compare.expr.op == 'exception match':
 						assert compare.expr.left == pythonstack.exceptionType
@@ -497,18 +497,18 @@ class DestackVisitor(StandardVisitor):
 
 						defn = self.getDefns(body)
 						exceptionvalue = defn.get(pythonstack.exceptionValue)
-						
+
 						handler = ExceptionHandler(condition, exceptiontype, exceptionvalue, body)
 						handlers.append(handler)
-						
+
 						block = next
 						continue
-		
-			# Done finding handlers.		
+
+			# Done finding handlers.
 			if isinstance(block, EndFinally):
 				else_ = None
 			else:
-				else_ = block				
+				else_ = block
 			break
 
 		return handlers, else_
@@ -526,7 +526,7 @@ class DestackVisitor(StandardVisitor):
 			elseblock, stack = self.visit(block.elseBlock, stack)
 		else:
 			elseblock = None
-		
+
 		# Restore stack, and prepare for the except block.
 		stack = PythonStack()
 		stack.push(pythonstack.exceptionTraceback)
@@ -549,13 +549,13 @@ class DestackVisitor(StandardVisitor):
 
 	def visitTryFinally(self, block, stack):
 		oldstack = stack
-		
+
 		stack = PythonStack()
 		tryblock, stack = self.visit(block.tryBlock, stack)
 
 		stack = PythonStack()
 		stack.push(pythonstack.flowInfo)
-		
+
 		finallyblock, stack = self.visit(block.finallyBlock, stack)
 
 		if isinstance(tryblock, TryExceptFinally):
@@ -583,7 +583,7 @@ class DestackVisitor(StandardVisitor):
 		return mask
 
 	def visitForLoop(self, block, stack):
-		assert isinstance(stack, PythonStack), stack				
+		assert isinstance(stack, PythonStack), stack
 
 		iterator = stack.peek()
 		if isinstance(iterator, pythonstack.Iter):
@@ -595,7 +595,7 @@ class DestackVisitor(StandardVisitor):
 		# Put the result of iteration on the stack.
 		bodystack = stack.duplicate()
 		bodystack.push(pythonstack.loopIndex)
-		
+
 
 		# Evaluate the body.
 		bodyBlock, bodystack = self.visit(block.body, bodystack)
@@ -615,19 +615,19 @@ class DestackVisitor(StandardVisitor):
 			bodyPreamble = Suite([Assign(Call(temp, [], [], None, None), index)])
 		elif isinstance(index, Cell):
 			lclTemp = Local()
-			bodyPreamble = Suite([Assign(Call(temp, [], [], None, None), lclTemp), SetCellDeref(lclTemp, index)])		
+			bodyPreamble = Suite([Assign(Call(temp, [], [], None, None), lclTemp), SetCellDeref(lclTemp, index)])
 		else:
 			assert False, type(index)
-					
+
 		outblock = For(iterlcl, index, loopPreamble, bodyPreamble, bodyBlock, Suite([]))
 
 		assert stack.peek() == iterator, stack.peek()
 		stack.discard() # Pop off the iterator.
-		
+
 		return outblock, stack
-	
+
 	def visitWhileLoop(self, block, stack):
-		assert isinstance(stack, PythonStack), stack				
+		assert isinstance(stack, PythonStack), stack
 
 
 		if block.cond:
@@ -638,21 +638,21 @@ class DestackVisitor(StandardVisitor):
 			condition = Condition(Suite([Assign(Existing(self.extractor.getObject(True)), lcl)]), lcl)
 			tstack = stack.duplicate()
 			fstack = stack.duplicate()
-		
+
 		# Evaluate the body.
 		bodyBlock, bodystack = self.visit(block.body, tstack)
 
 		if not isinstance(bodyBlock, Suite):
 			bodyBlock = Suite([bodyBlock])
 		outblock = While(condition, bodyBlock, Suite([]))
-		
+
 		return outblock, fstack
 
 
 	def visitFunction(self, block, stack):
-		assert isinstance(stack, PythonStack), stack				
+		assert isinstance(stack, PythonStack), stack
 		outblock, stack = self.handleLinearRegion(block, stack)
-		code = Code(Local('internal_self'), (), (), None, None, Local('internal_return'), outblock)
+		code = Code('unknown', Local('internal_self'), (), (), None, None, Local('internal_return'), outblock)
 		return Function('unknown', code), stack
 
 
@@ -661,7 +661,7 @@ class DestackVisitor(StandardVisitor):
 		assert isinstance(stack, PythonStack)
 		block, stack = self.walk(block, stack)
 		return block
-		
+
 
 
 
@@ -692,9 +692,10 @@ def destack(mname, fname, root, argnames, vargs, kargs, extractor, callback, tra
 	else:
 		k = None
 
-	stack = PythonStack()		
+	stack = PythonStack()
 	root = dv.process(root, stack)
 	root.name = fname
+	root.code.name = fname # HACK should get this from the code object, not the function...
 	root.code.parameternames = argnames
 	root.code.parameters = param
 	root.code.vparam = v

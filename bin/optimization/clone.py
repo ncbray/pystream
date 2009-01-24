@@ -152,6 +152,7 @@ class ProgramCloner(object):
 
 				fc = FunctionCloner(self.adb, newfunc, self.groupLUT, func, f, group)
 				f.code = fc(func.code)
+				f.code.name = f.name # HACK to make sure the code name gets rewritten, too.
 
 
 		# HACK Horrible, horrible hack: assumes that the entry point cannot be cloned.

@@ -27,9 +27,10 @@ def object__init__():
 
 	b = Suite()
 	returnNone(b)
-	code = Code(selfp, [self], ['self'], vargs, None, retp, b)
 
-	f = Function('object__init__', code)
+	name = 'object__init__'
+	code = Code(name, selfp, [self], ['self'], vargs, None, retp, b)
+	f = Function(name, code)
 	return f
 
 # Low level?
@@ -230,9 +231,9 @@ def object__getattribute__():
 	b.append(Switch(cond, t, f))
 	b.append(Return(result))
 
-
-	code = Code(selfp, [self, field], ['self', 'field'], None, None, retp, b)
-	f = Function('object__getattribute__', code)
+	name = 'object__getattribute__'
+	code = Code(name, selfp, [self, field], ['self', 'field'], None, None, retp, b)
+	f = Function(name, code)
 
 	return f
 
@@ -288,8 +289,9 @@ def object__setattr__():
 
 	returnNone(b)
 
-	code = Code(selfp, [self, field, value], ['self', 'field', 'value'], None, None, retp, b)
-	f = Function('object__setattr__', code)
+	name = 'object__setattr__'
+	code = Code(name, selfp, [self, field, value], ['self', 'field', 'value'], None, None, retp, b)
+	f = Function(name, code)
 
 	return f
 
@@ -314,8 +316,9 @@ def object__new__():
 	allocate(b, type_, inst)
 	b.append(Return(inst))
 
-	code = Code(self, [type_], ['type'], vargs, None, retp, b)
-	f = Function('object__new__', code)
+	name = 'object__new__'
+	code = Code(name, self, [type_], ['type'], vargs, None, retp, b)
+	f = Function(name, code)
 	return f
 
 
@@ -361,8 +364,9 @@ def type__call__():
 	b.append(Return(inst))
 
 	# Function definition
-	code = Code(self, [], [], vargs, None, retp, b)
-	f = Function('type__call__', code)
+	name ='type__call__'
+	code = Code(name, self, [], [], vargs, None, retp, b)
+	f = Function(name, code)
 	return f
 
 ##def type__call__(cls, *args, **kargs):
@@ -429,8 +433,9 @@ def method__call__():
 	call(b, im_func, [im_self], vargs, None, temp)
 	b.append(Return(temp))
 
-	code = Code(self, [], [], vargs, None, retp, b)
-	f = Function('method__call__', code)
+	name = 'method__call__'
+	code = Code(name, self, [], [], vargs, None, retp, b)
+	f = Function(name, code)
 
 	return f
 
@@ -465,9 +470,9 @@ def methoddescriptor__get__():
 	call(b, Existing(xtypes.MethodType), [func, inst, cls], None, None, result)
 	b.append(Return(result))
 
-
-	code = Code(selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
-	func = Function('methoddescriptor__get__', code)
+	name = 'methoddescriptor__get__'
+	code = Code(name, selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
+	func = Function(name, code)
 
 	return func
 
@@ -497,8 +502,9 @@ def memberdescriptor__get__():
 	b.append(Return(result))
 
 
-	code = Code(selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
-	f = Function('memberdescriptor__get__', code)
+	name = 'memberdescriptor__get__'
+	code = Code(name, selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
+	f = Function(name, code)
 	return f
 
 # For data descriptors, __set__
@@ -522,8 +528,9 @@ def memberdescriptor__set__():
 	b.append(Discard(Store(inst, 'Attribute', slot, value)))
 	returnNone(b)
 
-	code = Code(selfp, [self, inst, value], ['self', 'inst', 'value'], None, None, retp, b)
-	f = Function('memberdescriptor__set__', code)
+	name = 'memberdescriptor__set__'
+	code = Code(name, selfp, [self, inst, value], ['self', 'inst', 'value'], None, None, retp, b)
+	f = Function(name, code)
 
 	return f
 
@@ -554,8 +561,9 @@ def property__get__():
 	call(b, func, [inst], None, None, result)
 	b.append(Return(result))
 
-	code = Code(selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
-	func = Function('property__get__', code)
+	name = 'property__get__'
+	code = Code(name, selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
+	func = Function(name, code)
 
 	return func
 
@@ -586,8 +594,9 @@ def dummyBinaryOperation():
 	# Return the allocated object
 	b.append(Return(inst))
 
-	code = Code(selfp, args, ['self', 'other'], None, None, retp, b)
-	f = Function('dummyBinaryOperation', code)
+	name = 'dummyBinaryOperation'
+	code = Code(name, selfp, args, ['self', 'other'], None, None, retp, b)
+	f = Function(name, code)
 
 	return f
 
@@ -611,8 +620,9 @@ def dummyUnaryOperation():
 	# Return the allocated object
 	b.append(Return(inst))
 
-	code = Code(selfp, args, ['self'], None, None, retp, b)
-	f = Function('dummyUnaryOperation', code)
+	name = 'dummyUnaryOperation'
+	code = Code(name, selfp, args, ['self'], None, None, retp, b)
+	f = Function(name, code)
 
 	return f
 
@@ -667,8 +677,9 @@ def tuple__getitem__():
 	b.append(Assign(Load(inst, 'Array', key), result))
 	b.append(Return(result))
 
-	code = Code(self, [inst, key], ['self', 'key'], None, None, retp, b)
-	f = Function('tuple__getitem__', code)
+	name = 'tuple__getitem__'
+	code = Code(name, self, [inst, key], ['self', 'key'], None, None, retp, b)
+	f = Function(name, code)
 	return f
 
 #########################
@@ -711,8 +722,9 @@ def isinstance_stub():
 	b.append(Assign(DirectCall(issubclass_stub, self, [type_, classinfo], [], None, None), result))
 	b.append(Return(result))
 
-	code = Code(self, [obj, classinfo], ['object', 'classinfo'], None, None, retp, b)
-	f = Function('isinstance', code)
+	name = 'isinstance'
+	code = Code(name, self, [obj, classinfo], ['object', 'classinfo'], None, None, retp, b)
+	f = Function(name, code)
 	return f
 
 

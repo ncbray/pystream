@@ -75,7 +75,7 @@ def simpleDescriptor(name, argnames, rt, hasSelfParam=True):
 		# Return the allocated object
 		b.append(ast.Return(inst))
 
-		code = ast.Code(selfp, args, list(argnames), None, None, retp, b)
+		code = ast.Code(name, selfp, args, list(argnames), None, None, retp, b)
 		f = ast.Function(name, code)
 
 		descriptive(f)

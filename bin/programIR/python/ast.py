@@ -37,7 +37,7 @@ class Existing(Reference):
 
 class Local(Reference):
 	__metaclass__ = astnode
-	__slots__     = 'name'	
+	__slots__     = 'name'
 	__shared__    = True
 
 	def __init__(self, name=None):
@@ -151,10 +151,10 @@ class Not(Expression):
 	__types__ 	= {'expr':Expression}
 
 class UnaryPrefixOp(Expression):
-	__metaclass__ 	= astnode	
+	__metaclass__ 	= astnode
 	__fields__ 	= 'op', 'expr'
 	__types__ 	= {'op':str, 'expr':Expression}
-	
+
 class BinaryOp(Expression):
 	__metaclass__ 	= astnode
 	__fields__ 	= 'left', 'op', 'right'
@@ -169,7 +169,7 @@ class SetSubscript(SimpleStatement):
 	__metaclass__ = astnode
 	__fields__    = 'value', 'expr', 'subscript'
 	__types__     = {'value':Expression, 'expr':Expression, 'subscript':Expression}
-	
+
 class DeleteSubscript(SimpleStatement):
 	__metaclass__ = astnode
 	__fields__    = 'expr', 'subscript'
@@ -182,20 +182,20 @@ class GetSlice(Expression):
 	__types__     = {'expr':Expression, 'start':Expression, 'step':Expression, 'step':Expression}
 	__optional__  = 'start', 'stop', 'step'
 
-	
+
 class SetSlice(SimpleStatement):
 	__metaclass__ = astnode
-	__fields__    = 'value', 'expr', 'start', 'stop', 'step', 
+	__fields__    = 'value', 'expr', 'start', 'stop', 'step',
 	__types__     = {'value':Expression, 'expr':Expression, 'start':Expression, 'step':Expression, 'step':Expression}
 	__optional__  = 'start', 'stop', 'step'
-	
+
 class DeleteSlice(SimpleStatement):
 	__metaclass__ 	= astnode
 	__fields__ 	= 'expr', 'start', 'stop', 'step'
 	__types__ 	= {'expr':Expression, 'start':Expression, 'step':Expression, 'step':Expression}
 	__optional__ 	= 'start', 'stop', 'step'
 
-		
+
 class Call(Expression):
 	__metaclass__ 	= astnode
 	__fields__ 	= 'expr', 'args', 'kwds', 'vargs', 'kargs'
@@ -228,7 +228,7 @@ class BuildTuple(Expression):
 	__metaclass__ 	= astnode
 	__fields__ 	= 'args'
 	__types__ 	= {'args':(tuple, list)}
-	
+
 	def isPure(self):
 		return True
 
@@ -259,7 +259,7 @@ class GetAttr(Expression):
 	__metaclass__ = astnode
 	__fields__    = 'expr', 'name'
 	__types__     = {'expr':Expression, 'name':Expression}
-	
+
 class SetAttr(SimpleStatement):
 	__metaclass__ = astnode
 	__fields__    = 'value', 'expr', 'name'
@@ -269,7 +269,7 @@ class DeleteAttr(SimpleStatement):
 	__metaclass__ = astnode
 	__fields__    = 'expr', 'name'
 	__types__     = {'expr':Expression, 'name':Expression}
-	
+
 class UnpackSequence(SimpleStatement):
 	__metaclass__ = astnode
 	__fields__    = 'expr', 'targets'
@@ -286,7 +286,7 @@ class Assign(SimpleStatement):
 		super(Assign, self).__init__()
 		assert expr.returnsValue(), expr
 		assert isinstance(lcl, Local), lcl
-		
+
 		self.expr = expr
 		self.lcl = lcl
 
@@ -303,13 +303,13 @@ class Discard(SimpleStatement):
 	__metaclass__ = astnode
 	__fields__    = 'expr'
 	__types__     = {'expr':Expression}
-	
+
 class Delete(SimpleStatement):
 	__metaclass__ = astnode
 	__fields__    = 'lcl'
 	__types__     = {'lcl':Local}
 
-	
+
 class Print(SimpleStatement):
 	__metaclass__ = astnode
 	__fields__    = 'target', 'expr'
@@ -320,7 +320,7 @@ class MakeFunction(Expression):
 	__metaclass__ = astnode
 	__fields__    = 'defaults', 'cells', 'code'
 	__types__     = {'defaults':(tuple, list), 'cells':(tuple, list)}
-	
+
 	def isPure(self):
 		return True
 
@@ -353,7 +353,7 @@ class Raise(ControlFlow):
 
 class Continue(ControlFlow):
 	__metaclass__ 	= astnode
-		
+
 class Break(ControlFlow):
 	__metaclass__ 	= astnode
 
@@ -374,13 +374,13 @@ def flattenSuite(blocks, out):
 		for block in blocks:
 			flattenSuite(block, out)
 	elif blocks is not None:
-		out.append(blocks)	
+		out.append(blocks)
 
 class Suite(ASTNode):
 	__metaclass__ 	= astnode
 	__fields__ 	= 'blocks'
 	__types__ 	= {'blocks':list}
-	
+
 	def __init__(self, blocks=None):
 		super(Suite, self).__init__()
 		self.blocks = []
@@ -418,7 +418,7 @@ class Condition(CompoundStatement):
 	__metaclass__ 	= astnode
 	__fields__ = 'preamble', 'conditional'
 	__types__ = {'preamble':Suite, 'conditional':Expression}
-	
+
 
 class Switch(CompoundStatement):
 	__metaclass__ 	= astnode
@@ -426,42 +426,44 @@ class Switch(CompoundStatement):
 	__types__ 	= {'condition':Condition, 't':Suite,'f':Suite}
 
 class TryExceptFinally(CompoundStatement):
-	__metaclass__ 	= astnode	
+	__metaclass__ 	= astnode
 	__fields__ 	= 'body', 'handlers', 'defaultHandler', 'else_', 'finally_'
 	__types__ 	= {'body':Suite, 'handlers':(list, tuple),
 			   'else_':Suite, 'finally_':Suite}
 	__optional__ = 'defaultHandler', 'else_', 'finally_'
-		
+
 class Loop(CompoundStatement):
 	__slots__ = ()
 
 class While(Loop):
-	__metaclass__ 	= astnode		
+	__metaclass__ 	= astnode
 	__fields__ 	= 'condition', 'body', 'else_'
 	__types__ 	= {'condition':Condition, 'body':Suite, 'else_':Suite}
 	#__optional__ 	= 'else_'
 
 
 class For(Loop):
-	__metaclass__ 	= astnode	
+	__metaclass__ 	= astnode
 	__fields__ 	= 'iterator', 'index', 'loopPreamble', 'bodyPreamble', 'body', 'else_'
 	__types__ 	= {'iterator':Expression, 'body':Suite, 'else_':Suite, 'bodyPreamble':Suite,}
 	# TODO type of index?
-	
+
 #argnames -> list(str)
 #parameters -> list(Local)
 class Code(CompoundStatement):
 	__metaclass__ 	= astnode
 
-	__fields__ 	= 'selfparam', 'parameters', 'parameternames', 'vparam', 'kparam', 'returnparam', 'ast',
+	__fields__ 	= ('name', 'selfparam', 'parameters', 'parameternames',
+			   'vparam', 'kparam', 'returnparam', 'ast',)
 
-	__types__ 	= {'selfparam':Local,
+	__types__ 	= {'name':str,
+			   'selfparam':Local,
 			   'parameternames':(tuple, list),
 			   'parameters':(tuple, list),
 			   'vparam':Local, 'kparam':Local,
 			   'returnparam':Local,
 			   'ast':Suite}
-	
+
 	__optional__ 	= 'selfparam', 'vparam', 'kparam'
 
 

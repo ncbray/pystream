@@ -139,7 +139,7 @@ class CPAContext(AnalysisContext):
 			for i, param in enumerate(sig.vparams):
 				self._bindObjToVParamIndex(sys, param, i)
 
-externalFunction = ast.Function('external', ast.Code(None, [], [], None, None, ast.Local('internal_return'), ast.Suite([])))
+externalFunction = ast.Function('external', ast.Code('external', None, [], [], None, None, ast.Local('internal_return'), ast.Suite([])))
 
 class ExternalFunctionContext(AnalysisContext):
 	__slots__ = ()

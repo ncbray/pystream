@@ -4,7 +4,7 @@ from programIR.python.fold import existingConstant
 
 class ForwardFlowTraverse(object):
 	__metaclass__ = typedispatcher
-	
+
 	def __init__(self, adb, meetF, analyze, rewrite):
 		self.adb = adb
 		self.analyze = analyze
@@ -15,7 +15,7 @@ class ForwardFlowTraverse(object):
 		self.mayRaise = MayRaise()
 
 		self.meetF = meetF
-		
+
 	@defaultdispatch
 	def default(self, node):
 		assert False, repr(node)
@@ -23,7 +23,7 @@ class ForwardFlowTraverse(object):
 
 	def processExpr(self, node):
 		node = self.rewrite(node)
-		
+
 		# Assuming exception handing only cares about locals, save the state before the assign.
 		# TODO make sound for heap modificaions/interprocedural?
 		if self.flow.tryLevel > 0 and self.mayRaise(node):
@@ -36,10 +36,10 @@ class ForwardFlowTraverse(object):
 		return node
 
 	# HACK to verify types.
-	@dispatch(ast.Assign, ast.Discard, 
+	@dispatch(ast.Assign, ast.Discard,
 		  #ast.ConvertToBool,
 		  ast.Local, ast.Cell,
-		  ast.UnpackSequence, ast.SetAttr, 
+		  ast.UnpackSequence, ast.SetAttr,
 		  ast.Print, ast.SetSubscript, ast.Delete, ast.SetSlice, ast.DeleteAttr,
 		  ast.SetGlobal, ast.DeleteGlobal, ast.DeleteSlice, ast.DeleteSubscript,
 		  ast.SetCellDeref)
@@ -65,7 +65,7 @@ class ForwardFlowTraverse(object):
 
 		cond = condition.conditional
 		if existingConstant(cond):
-			value = cond.object.pyobj			
+			value = cond.object.pyobj
 			taken = node.t if value else node.f
 			# Note: condtion.conditional is killed, as
 			# it is assumed to be a reference.
@@ -100,9 +100,9 @@ class ForwardFlowTraverse(object):
 		current = self.flow.pop()
 
 		# Iterate until convergence
-		while 1:			
+		while 1:
 			self.flow.restore(current.split())
-			
+
 			body = self(node.body)
 
 			# Construct the state at loop exit
@@ -155,13 +155,13 @@ class ForwardFlowTraverse(object):
 			# Else never taken.
 			else_ = ast.Suite([])
 
-		
+
 		# Merge in breaks
 		out, changed = meet(self.meetF, out, b)
 		self.flow.restore(out)
 
 		result = ast.While(condition, body, else_)
-		
+
 		return result
 
 	@dispatch(ast.For)
@@ -174,7 +174,7 @@ class ForwardFlowTraverse(object):
 		current = self.flow.pop()
 
 		# Iterate until convergence
-		while 1:			
+		while 1:
 			self.flow.restore(current.split())
 
 			# TODO Need to invalidate index every iteration.
@@ -225,7 +225,7 @@ class ForwardFlowTraverse(object):
 		# Evaluate else.
 		self.flow.restore(out)
 		else_ = self(node.else_)
-		
+
 		# Merge in breaks
 		out = self.flow.pop()
 		out, changed = meet(self.meetF, out, b)
@@ -245,7 +245,7 @@ class ForwardFlowTraverse(object):
 
 		normalF = self.flow.pop()
 
-		
+
 		self.flow.mergeCurrent(self.meetF, 'raise')
 		raiseF = self.flow.pop()
 
@@ -297,7 +297,7 @@ class ForwardFlowTraverse(object):
 					allF.append(merged)
 
 		# Generate the code by evaluating the superposition
-		
+
 		superF, changed = meet(self.meetF, *allF)
 		self.flow.restore(superF)
 		finally_ = self(node.finally_)
@@ -320,7 +320,7 @@ class ForwardFlowTraverse(object):
 			self.flow.save(name)
 
 		self.flow.restore(normalF)
-		
+
 		result = ast.TryExceptFinally(body, handlers, defaultHandler, else_, finally_)
 
 		return result
@@ -335,13 +335,13 @@ class ForwardFlowTraverse(object):
 
 	@dispatch(ast.Break)
 	def visitBreak(self, node):
-		result = self.processExpr(node)		
+		result = self.processExpr(node)
 		self.flow.save('break')
 		return result
 
 	@dispatch(ast.Continue)
 	def visitContinue(self, node):
-		result = self.processExpr(node)		
+		result = self.processExpr(node)
 		self.flow.save('continue')
 		return result
 
@@ -362,6 +362,7 @@ class ForwardFlowTraverse(object):
 	@dispatch(ast.Code)
 	def visitCode(self, node):
 		node = ast.Code(
+			node.name,
 			node.selfparam,
 			node.parameters,
 			node.parameternames,

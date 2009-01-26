@@ -653,7 +653,7 @@ class CPAData(object):
 		self.lcls = collections.defaultdict(lambda: collections.defaultdict(set))
 		self.objs = collections.defaultdict(lambda: collections.defaultdict(set))
 
-		for slot, values in inter.slots.iteritems():
+		for slot, values in inter.slotManager.iterslots():
 			if isinstance(slot, base.LocalSlot):
 				self.lcls[slot.code][slot.context].add(slot)
 			else:

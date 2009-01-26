@@ -2,10 +2,11 @@ import collections
 
 import util
 
-from base import *
+import base
 
 from . import canonicalobjects
 from . import extendedtypes
+from . import slotmanager
 
 import dumpreport
 
@@ -52,6 +53,9 @@ def foldFunctionIR(extractor, func, vargs=(), kargs={}):
 
 externalOp  = util.canonical.Sentinel('<externalOp>')
 
+
+
+
 class InterproceduralDataflow(object):
 	def __init__(self, extractor):
 		self.decompileTime = 0
@@ -63,7 +67,7 @@ class InterproceduralDataflow(object):
 		self.liveCode = set()
 
 		# The value of every slot
-		self.slots = {}
+		self.slotManager = slotmanager.CachedSlotManager()
 
 		# Constraint information
 		self.constraintReads   = collections.defaultdict(set)
@@ -214,7 +218,7 @@ class InterproceduralDataflow(object):
 			if not self.read(slot):
 				self.ensureLoaded(cobj.obj)
 				type_ = self.existingObject(cobj.obj.type)
-				self.update(slot, (type_,))
+				self.initialize(slot, type_)
 
 	def signatureType(self, sig, obj):
 		cobj  = self.canonical.signatureType(sig, obj)
@@ -247,33 +251,20 @@ class InterproceduralDataflow(object):
 			current = self.dirty.popleft()
 			current.process(self)
 
+
 	def read(self, slot):
-		if slot is None:
-			# vargs, etc. can be none
-			# Returning an iterable None allows it to be
-			# used in a product transparently.
-			return (None,)
-		else:
-			assert isinstance(slot, AbstractSlot), slot
-			if not slot in self.slots:
-				self.slots[slot] = slot.createInital(self)
-			return self.slots[slot]
+		return self.slotManager.read(self, slot)
 
 	def update(self, slot, values):
-		assert isinstance(slot, AbstractSlot), repr(slot)
-		for value in values:
-			assert isinstance(value, extendedtypes.ExtendedType), repr(value)
+		return self.slotManager.update(self, slot, values)
 
-		# If the slot is unitialized, pull the inital value from the heap.
-		if not slot in self.slots:
-			self.slots[slot] = slot.createInital(self)
+	def initialize(self, slot, *values):
+		return self.slotManager.update(self, slot, frozenset(values))
 
-		target = self.slots[slot]
-		diff = set(values)-target
-		if diff:
-			self.slots[slot].update(diff)
-			for dep in self.constraintReads[slot]:
-				dep.mark(self)
+	def slotChanged(self, slot):
+		for dep in self.constraintReads[slot]:
+			dep.mark(self)
+
 
 	def createAssign(self, source, dest):
 		con = AssignmentConstraint(source, dest)
@@ -303,7 +294,7 @@ class InterproceduralDataflow(object):
 
 			# Set the return value
 			returnSource = self.canonical.local(code, code.returnparam, targetcontext)
-			self.update(returnSource, (result,))
+			self.initialize(returnSource, result)
 
 			return True
 
@@ -367,11 +358,11 @@ class InterproceduralDataflow(object):
 	def addEntryPoint(self, func, funcobj, args):
 		# The call point
 		# TODO generate bogus ops?
-		dummyOp = self.canonical.opContext(externalFunction.code, externalOp, externalFunctionContext)
+		dummyOp = self.canonical.opContext(base.externalFunction.code, externalOp, base.externalFunctionContext)
 
 		# The return value
 		dummy = ast.Local('external_escape')
-		dummyslot = self.canonical.local(externalFunction.code, dummy, externalFunctionContext)
+		dummyslot = self.canonical.local(base.externalFunction.code, dummy, base.externalFunctionContext)
 
 		# Generate and bind the context.
 		context = self.getContext(dummyOp, func.code, funcobj, args)
@@ -382,11 +373,14 @@ class InterproceduralDataflow(object):
 		# Process
 		self.process()
 
+	def slotMemory(self):
+		return self.slotManager.slotMemory()
+
 def evaluate(extractor, entryPoints):
 	dataflow = InterproceduralDataflow(extractor)
 
 	# HACK
-	externalFunctionContext.opPath = dataflow.initalOpPath()
+	base.externalFunctionContext.opPath = dataflow.initalOpPath()
 
 	for funcast, funcobj, args in entryPoints:
 		assert isinstance(funcast, ast.Function), type(funcast)

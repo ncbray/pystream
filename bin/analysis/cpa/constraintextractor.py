@@ -54,7 +54,7 @@ class ExtractDataflow(object):
 	def init(self, node, obj):
 		result = self.contextual(node)
 		if self.doOnce(node):
-			self.system.update(result, (self.system.existingObject(obj),))
+			self.system.initialize(result, self.system.existingObject(obj))
 		return result
 
 	def call(self, node, expr, args, kwds, vargs, kargs, target):

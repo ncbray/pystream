@@ -180,7 +180,7 @@ class CPADatabase(object):
 				info.contexts.add(dstfunc.context)
 
 
-		for slot, values in sys.slots.iteritems():
+		for slot, values in sys.slotManager.iterslots():
 			if slot.isLocalSlot():
 				if not isinstance(slot.local, program.AbstractObject):
 					if isinstance(slot.local, ast.Local):

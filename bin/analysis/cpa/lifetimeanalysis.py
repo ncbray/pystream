@@ -375,7 +375,7 @@ class LifetimeAnalysis(object):
 
 
 	def process(self, sys):
-		for slot, values in sys.slots.iteritems():
+		for slot, values in sys.slotManager.iterslots():
 			if slot.isLocalSlot():
 				# HACK search for the "external" function, as it tends to get filted out of the DB.
 				context = slot.context

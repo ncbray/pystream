@@ -41,7 +41,7 @@ class AnalysisContext(CanonicalObject):
 	def _bindObjToSlot(self, sys, obj, slot):
 		assert not ((obj is None) ^ (slot is None)), (obj, slot)
 		if obj is not None and slot is not None:
-			sys.update(slot, (obj,))
+			sys.initialize(slot, obj)
 
 	def vparamObject(self, sys):
 		return self._extendedParamObject(sys, sys.tupleClass.typeinfo.abstractInstance)
@@ -188,10 +188,6 @@ class ObjectSlot(AbstractSlot):
 
 		sys.ensureLoaded(obj)
 
-		# HACK Make sure it's canonical?  Shouldn't need to do this?
-		# There must be a raw Object reference in the LLAst?
-		key = sys.extractor.getObject(key.pyobj)
-
 		assert isinstance(obj, program.AbstractObject), obj
 		assert isinstance(key, program.AbstractObject), key
 
@@ -208,14 +204,10 @@ class ObjectSlot(AbstractSlot):
 				assert False, slottype
 
 			if key in subdict:
-				result = set([sys.existingObject(subdict[key])])
-			else:
-				#print "Unknown slot: ", obj, slottype, key
-				result = set()
-		else:
-			result = set()
+				return set([sys.existingObject(subdict[key])])
 
-		return result
+		# Not found, return an empty set.
+		return set()
 
 
 class LocalSlot(AbstractSlot):

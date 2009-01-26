@@ -145,7 +145,7 @@ class AllocateConstraint(CachedConstraint):
 			sys.logAllocation(self.op, contextInst)
 
 			# Return the allocated object.
-			sys.update(self.target, (contextInst,))
+			sys.initialize(self.target, contextInst)
 
 
 	def attach(self, sys):

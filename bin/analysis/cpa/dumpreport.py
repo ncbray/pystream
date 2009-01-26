@@ -1,5 +1,6 @@
 from util.xmloutput  import XMLOutput
 from common import simplecodegen
+import common.astpprint
 
 import os.path
 from util import assureDirectoryExists, itergroupings
@@ -180,9 +181,16 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.end('b')
 		out.end('p')
 
+	# Psedo-python output
 	if func is not None:
 		out.begin('pre')
 		scg.walk(func)
+		out.end('pre')
+
+	# Pretty printer for debugging
+	if False:
+		out.begin('pre')
+		common.astpprint.pprint(func, out)
 		out.end('pre')
 
 	numContexts = len(data.functionContexts(func))

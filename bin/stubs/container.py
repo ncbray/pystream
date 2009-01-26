@@ -17,6 +17,7 @@ def makeIterator(name, basetype, itertype):
 		# Param
 		selfp = Local('internal_self')
 		self = Local('self')
+		temp = Local('temp')
 		retp = Local('internal_return')
 
 		# Locals
@@ -26,6 +27,11 @@ def makeIterator(name, basetype, itertype):
 		t = Existing(itertype)
 		allocate(b, t, inst)
 		b.append(Store(inst, 'LowLevel', Existing('parent'), self))
+
+		t = Existing(int)
+		allocate(b, t, temp) # HACK no init?
+		b.append(Store(inst, 'LowLevel', Existing('iterCurrent'), temp))
+
 		b.append(Return(inst))
 
 		code = Code(name, selfp, [self], ['self'], None, None, retp, b)
@@ -34,6 +40,42 @@ def makeIterator(name, basetype, itertype):
 		return f
 
 	return makeIteratorWrap
+
+def simpleIteratorDescriptor(name, argnames, rt, hasSelfParam=True):
+	assert isinstance(name, str), name
+	assert isinstance(argnames, (tuple, list)), argnames
+	assert isinstance(rt, type), rt
+
+	def simpleDescriptorBuilder():
+		if hasSelfParam:
+			selfp = Local('internal_self')
+		else:
+			selfp = None
+
+		args  = [Local(argname) for argname in argnames]
+		inst  = Local('inst')
+		temp  = Local('temp')
+		retp  = Local('internal_return')
+
+		b = Suite()
+		t = Existing(rt)
+		allocate(b, t, inst)
+		# HACK no init?
+
+		b.append(Assign(Load(args[0], 'LowLevel', Existing('iterCurrent')), temp))
+		b.append(Store(args[0], 'LowLevel', Existing('iterCurrent'), temp))
+
+		# Return the allocated object
+		b.append(Return(inst))
+
+		code = Code(name, selfp, args, list(argnames), None, None, retp, b)
+		f = Function(name, code)
+
+		descriptive(f)
+
+		return f
+
+	return simpleDescriptorBuilder
 
 ### Tuple ###
 makeIterator('tuple__iter__', tuple, xtypes.TupleIteratorType)
@@ -92,4 +134,4 @@ def listiterator__next__():
 
 ### xrange ###
 makeIterator('xrange__iter__', xrange, xtypes.XRangeIteratorType)
-attachAttrPtr(xtypes.XRangeIteratorType, 'next')(llast(simpleDescriptor('xrangeiteratornext', ('self',), int)))
+attachAttrPtr(xtypes.XRangeIteratorType, 'next')(llast(simpleIteratorDescriptor('xrangeiteratornext', ('self',), int)))

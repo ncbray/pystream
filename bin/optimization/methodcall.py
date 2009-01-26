@@ -309,13 +309,11 @@ class MethodRewrite(object):
 		return xform.allChildren(self, node)
 
 def methodMeet(values):
-	return dataflow.forward.undefined
-
-##	prototype = values[0]
-##	for value in values[1:]:
-##		if value != prototype:
-##			return dataflow.forward.top
-##	return prototype
+	prototype = values[0]
+	for value in values:
+		if value != prototype:
+			return dataflow.forward.top
+	return prototype
 
 def methodCall(extractor, adb):
 	pattern = MethodPatternFinder()

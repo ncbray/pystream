@@ -10,35 +10,6 @@ CanonicalObject = util.canonical.CanonicalObject
 ### Evaluation Contexts ###
 ###########################
 
-class ObjectContext(CanonicalObject):
-	__slots__ = ()
-
-class AnalysisContext(CanonicalObject):
-	__slots__ = ()
-
-# Originally 9?
-callPathK = 0
-
-class CallPath(CanonicalObject):
-	__slots__ = 'path'
-
-	def __init__(self, op, oldpath=None):
-		if callPathK < 1:
-			self.path = ()
-		elif oldpath is None:
-			# 6 seems to be the minimum?
-			self.path = (None,)*(callPathK-1)+(op,)
-		else:
-			self.path = oldpath.path[1:]+(op,)
-
-		self.setCanonical(*self.path)
-
-	def __repr__(self):
-		return "callpath(%s)" % ", ".join([type(op).__name__+"/"+str(id(op)) for op in self.path])
-
-	def advance(self, op):
-		return CallPath(op, self)
-
 def localSlot(sys, code, lcl, context):
 	if lcl:
 		return sys.canonical.local(code, lcl, context)
@@ -59,37 +30,40 @@ def calleeSlotsFromContext(sys, context):
 		code.parameternames, defaults, vparam, kparam, returnparam)
 
 
-class CPAContext(AnalysisContext):
-	__slots__ = 'signature', 'vparamObj', 'kparamObj', 'callee', 'info'
+class AnalysisContext(CanonicalObject):
+	__slots__ = 'signature', 'opPath'
 
-	def __init__(self, signature, vparamObj, kparamObj):
+	def __init__(self, signature, opPath):
 		self.signature = signature
-		self.vparamObj = vparamObj
-		self.kparamObj = kparamObj
-
-		# Note that the vargObj and kargObj are considered to be "derived values"
-		# (although they are created externally, as they require access to the system)
-		# and as such aren't part of the hash or equality computations.
-		self.setCanonical(self.signature)
+		self.opPath    = opPath
+		self.setCanonical(self.signature, self.opPath)
 
 	def _bindObjToSlot(self, sys, obj, slot):
 		assert not ((obj is None) ^ (slot is None)), (obj, slot)
 		if obj is not None and slot is not None:
 			sys.update(slot, (obj,))
 
-	def setVParamLength(self, sys):
+	def vparamObject(self, sys):
+		return self._extendedParamObject(sys, sys.tupleClass.typeinfo.abstractInstance)
+
+	def _extendedParamObject(self, sys, inst):
+		# Extended param objects are named by the context they appear in.
+		context = sys.canonical.signatureContext(self.signature)
+		return sys.allocatedObject(context, inst)
+
+	def _setVParamLength(self, sys, vparamObj, length):
 		context = self
 
 		# Set the length of the vparam tuple.
-		length     = sys.existingObject(sys.extractor.getObject(len(self.signature.vparams)))
+		lengthObj  = sys.existingObject(sys.extractor.getObject(length))
 		lengthStr  = sys.extractor.getObject('length')
-		lengthSlot = sys.canonical.objectSlot(context.vparamObj, 'LowLevel', sys.existingObject(lengthStr).obj)
-		self._bindObjToSlot(sys, length, lengthSlot)
+		lengthSlot = sys.canonical.objectSlot(vparamObj, 'LowLevel', sys.existingObject(lengthStr).obj)
+		self._bindObjToSlot(sys, lengthObj, lengthSlot)
 
-	def _bindObjToVParamIndex(self, sys, obj, index):
+	def _bindVParamIndex(self, sys, vparamObj, index, obj):
 		context = self
 		index  = sys.extractor.getObject(index)
-		slot = sys.canonical.objectSlot(context.vparamObj, 'Array', sys.existingObject(index).obj)
+		slot = sys.canonical.objectSlot(vparamObj, 'Array', sys.existingObject(index).obj)
 		self._bindObjToSlot(sys, obj, slot)
 
 	def invocationMaySucceed(self, sys):
@@ -98,7 +72,7 @@ class CPAContext(AnalysisContext):
 
 		# info is not actually intrinsic to the context?
 		info = util.calling.callStackToParamsInfo(callee,
-			sig.selfparam is not None, len(sig.params)+len(sig.vparams),
+			sig.selfparam is not None, sig.numParams(),
 			False, 0, False)
 
 		if info.willSucceed.maybeFalse():
@@ -111,46 +85,51 @@ class CPAContext(AnalysisContext):
 
 	def bindParameters(self, sys):
 		sig = self.signature
-		#code = sig.code
-		context = self
 
 		callee = calleeSlotsFromContext(sys, self)
 
-		# Local binding done after creating constraints,
-		# to ensure the variables are dirty.
+		# Bind self parameter
 		self._bindObjToSlot(sys, sig.selfparam, callee.selfparam)
 
-		for arg, param in zip(sig.params, callee.params):
+		# Bind the positional parameters
+		numArgs  = len(sig.params)
+		numParam = len(callee.params)
+		assert numArgs >= numParam
+		for arg, param in zip(sig.params[:numParam], callee.params):
 			self._bindObjToSlot(sys, arg, param)
 
-		self._bindObjToSlot(sys, context.vparamObj, callee.vparam)
-		self._bindObjToSlot(sys, context.kparamObj, callee.kparam)
+		# An op context for implicit allocation
+		cop = sys.canonical.opContext(sig.code, None, self)
 
-		if self.vparamObj is not None:
-			# Set the length
-			self.setVParamLength(sys)
+		# Bind the vparams
+		if sig.code.vparam is not None:
+			vparamObj = self.vparamObject(sys)
+			sys.logAllocation(cop, vparamObj) # Implicitly allocated
+			self._bindObjToSlot(sys, vparamObj, callee.vparam)
+			self._setVParamLength(sys, vparamObj, numArgs-numParam)
 
 			# Bind the vargs
-			for i, param in enumerate(sig.vparams):
-				self._bindObjToVParamIndex(sys, param, i)
+			for i in range(numParam, numArgs):
+				self._bindVParamIndex(sys, vparamObj, i-numParam, sig.params[i])
+		else:
+			assert numArgs == numParam
 
+		# Bind the kparams
+		assert sig.code.kparam is None
+
+
+# Objects for external calls.
 externalFunction = ast.Function('external', ast.Code('external', None, [], [], None, None, ast.Local('internal_return'), ast.Suite([])))
-
-
-class ExternalFunctionContext(AnalysisContext):
-	__slots__ = ()
-
-externalFunctionContext = ExternalFunctionContext()
-
-class ExternalOp(object):
-	__slots__ = '__weakref__'
-
-externalOp = ExternalOp()
+externalSignature = util.cpa.CPASignature(externalFunction.code, None, ())
+externalFunctionContext = AnalysisContext(externalSignature, None)
 
 
 ######################
 ### Extended Types ###
 ######################
+
+class ObjectContext(CanonicalObject):
+	__slots__ = ()
 
 class ExternalObjectContext(ObjectContext):
 	__slots__ = ()
@@ -174,7 +153,6 @@ class PathObjectContext(ObjectContext):
 	__slots__ = 'path',
 
 	def __init__(self, path):
-		assert isinstance(path, CallPath), type(path)
 		self.path = path
 		self.setCanonical(path)
 
@@ -352,7 +330,7 @@ class CanonicalObjects(object):
 		self.local             = util.canonical.CanonicalCache(LocalSlot)
 		self.objectSlot        = util.canonical.CanonicalCache(ObjectSlot)
 		self.contextObject     = util.canonical.CanonicalCache(ContextObject)
-		self._canonicalContext = util.canonical.CanonicalCache(CPAContext)
+		self._canonicalContext = util.canonical.CanonicalCache(AnalysisContext)
 		self.opContext         = util.canonical.CanonicalCache(OpContext)
 		self.codeContext       = util.canonical.CanonicalCache(CodeContext)
 

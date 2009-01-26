@@ -2,35 +2,26 @@ import util.calling
 import util.canonical
 
 Any  = util.canonical.Sentinel('<Any>')
-Slop = util.canonical.Sentinel('<Slop>')
 
-# A canonical name for a CPA context.
+# A canonical name for a CPAed parameter list.
 class CPASignature(util.canonical.CanonicalObject):
-	__slots__ = 'code', 'path', 'selfparam', 'params', 'vparams'
+	__slots__ = 'code', 'selfparam', 'params'
 
-	def __init__(self, code, path, selfparam, params, vparams):
-		if len(params) != len(code.parameters):
-			raise TypeError, "Function %s has %d parameters, %d provided" % (code.name, len(code.parameters), len(params))
-
+	def __init__(self, code, selfparam, params):
 		params = tuple(params)
 
-		if vparams is not None and vparams is not Slop:
-			vparams = tuple(vparams)
-
 		self.code      = code
-		self.path      = path
 		self.selfparam = selfparam
 		self.params    = params
-		self.vparams   = vparams
 
-		self.setCanonical(code, path, selfparam, params, vparams)
+		self.setCanonical(code, selfparam, params)
 
 	def classification(self):
-		vparams = self.vparams
-		if vparams is not None and vparams is not Slop:
-			vparams = len(vparams)
-		return (self.code, self.path, len(self.params), vparams)
+		return (self.code, self.numParams())
 
+	# Is this signature more general than another signature?
+	# Megamorphic and slop arguments are marked as "Any" which is
+	# more general than a spesific type.
 	def subsumes(self, other):
 		if self.classification() == other.classification():
 			subsume = False
@@ -39,22 +30,15 @@ class CPASignature(util.canonical.CanonicalObject):
 					subsume = True
 				elif sparam != oparam:
 					return False
-
-			if self.vparam is not None and self.vparam is not Slop:
-				for sparam, oparam in zip(self.vparams, other.vparams):
-					if sparam is Any and oparam is not Any:
-						subsume = True
-					elif sparam != oparam:
-						return False
 			return subsume
 		else:
 			return False
 
-	def vparamSlop(self):
-		return self.vparams is Slop
+	def numParams(self):
+		return len(self.params)
 
 	def __repr__(self):
-		return "{0}(code={1}, path={2}, self={3}, params={4}, vparams={5})".format(type(self).__name__, self.code.name, id(self.path), self.selfparam, self.params, self.vparams)
+		return "{0}(code={1}, self={2}, params={3})".format(type(self).__name__, self.code.name, self.selfparam, self.params)
 
 # Abstract base class
 class CPAInfoProvider(object):

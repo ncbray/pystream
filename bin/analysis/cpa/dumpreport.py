@@ -231,36 +231,44 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.end('tr')
 			out.endl()
 
-		# HACK should pull from function information and contextualize
-		if isinstance(context, base.CPAContext):
-			out.begin('p')
-			out.begin('table')
+
+		# Print call/return information for the function.
+		code = func
+		out.begin('p')
+		out.begin('table')
+
+		sig = context.signature
+		if code.selfparam is not None:
+			objs = info.localInfo(code.selfparam).context(context).references
+			tableRow('self', *objs)
+
+		numParam = len(sig.code.parameters)
+		for i, param in enumerate(code.parameters):
+			objs = info.localInfo(param).context(context).references
+			tableRow('param %d' % i, *objs)
+
+		# HACK ... but how do we get the slots for the vparam?
+		for i, arg in enumerate(sig.params[numParam:]):
+			tableRow('vparam %d' % i, arg)
+
+		if code.vparam is not None:
+			objs = info.localInfo(code.vparam).context(context).references
+			tableRow('vparamObj', *objs)
+
+		if code.kparam is not None:
+			objs = info.localInfo(code.kparam).context(context).references
+			tableRow('kparamObj', *objs)
+
+		returnSlot = func.returnparam
+		values = info.localInfo(returnSlot).context(context).references
+		tableRow('return', *values)
+
+		out.end('table')
+		out.end('p')
+		out.endl()
+		out.endl()
 
 
-			sig = context.signature
-			if sig.selfparam is not None:
-				tableRow('self', sig.selfparam)
-
-			for i, arg in enumerate(sig.params):
-				tableRow('param %d' % i, arg)
-
-			for i, arg in enumerate(sig.vparams):
-				tableRow('vparam %d' % i, arg)
-
-			if context.vparamObj is not None:
-				tableRow('vparamObj', context.vparamObj)
-
-			if context.kparamObj is not None:
-				tableRow('kparamObj', context.kparamObj)
-
-			returnSlot = func.returnparam
-			values = info.localInfo(returnSlot).context(context).references
-			tableRow('return', *values)
-
-			out.end('table')
-			out.end('p')
-			out.endl()
-			out.endl()
 
 		ops  = []
 		lcls = []

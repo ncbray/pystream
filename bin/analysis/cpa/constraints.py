@@ -111,24 +111,27 @@ class StoreConstraint(CachedConstraint):
 
 
 class AllocateConstraint(CachedConstraint):
-	__slots__ = 'op', 'path', 'type_', 'target'
-	def __init__(self, op, path, type_, target):
+	__slots__ = 'op', 'type_', 'target'
+	def __init__(self, op, type_, target):
 		CachedConstraint.__init__(self, type_)
 		self.op     = op
-		self.path   = path
 		self.type_  = type_
 		self.target = target
 
 	def extendedType(self, sys, type_):
-		context = sys.canonical.pathContext(self.path)
+		# Note: this path does not include the final op, which is this
+		# allocate.  This is good as long as there is only one allocation
+		# in a given context. (It makes better use of the path length.)
+		context = sys.canonical.pathContext(self.op.context.opPath)
 
 		pyobj = type_.obj.pyobj
 		if pyobj is xtypes.MethodType:
 			sig = self.op.context.signature
 			# TODO check that this is "new"?
-			if len(sig.params) == 1 and len(sig.vparams) == 3:
-				func = sig.vparams[0]
-				inst = sig.vparams[1]
+			if len(sig.params) == 4:
+				# sig.params[0] is the type object for __new__
+				func = sig.params[1]
+				inst = sig.params[2]
 				context = sys.canonical.methodContext(func, inst)
 
 		sys.ensureLoaded(type_.obj)
@@ -153,8 +156,8 @@ class AllocateConstraint(CachedConstraint):
 
 # Resolves the type of the expression, varg, and karg
 class AbstractCallConstraint(CachedConstraint):
-	__slots__ = 'op', 'path', 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'target'
-	def __init__(self, op, path, selfarg, args, kwds, vargs, kargs, target):
+	__slots__ = 'op', 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'target'
+	def __init__(self, op, selfarg, args, kwds, vargs, kargs, target):
 		CachedConstraint.__init__(self, selfarg, vargs, kargs)
 
 		assert isinstance(args, (list, tuple)), args
@@ -162,7 +165,6 @@ class AbstractCallConstraint(CachedConstraint):
 		assert target is None or isinstance(target, base.AbstractSlot), type(target)
 
 		self.op      = op
-		self.path    = path
 		self.selfarg = selfarg
 		self.args    = args
 		self.kwds    = kwds
@@ -211,7 +213,7 @@ class AbstractCallConstraint(CachedConstraint):
 				vslot = sys.canonical.objectSlot(vargs, 'Array', sys.existingObject(index).obj)
 				allslots.append(vslot)
 
-			con = SimpleCallConstraint(self.op, self.path, code, expr, allslots, self.target)
+			con = SimpleCallConstraint(self.op, code, expr, allslots, self.target)
 			con.attach(sys)
 
 
@@ -224,9 +226,9 @@ class CallConstraint(AbstractCallConstraint):
 class DirectCallConstraint(AbstractCallConstraint):
 	__slots__ = ('code',)
 
-	def __init__(self, op, path, code, selfarg, args, kwds, vargs, kargs, target):
+	def __init__(self, op, code, selfarg, args, kwds, vargs, kargs, target):
 		assert isinstance(code, ast.Code), type(code)
-		AbstractCallConstraint.__init__(self, op, path, selfarg, args, kwds, vargs, kargs, target)
+		AbstractCallConstraint.__init__(self, op, selfarg, args, kwds, vargs, kargs, target)
 		self.code = code
 
 	def getCode(self, sys, selfType):
@@ -237,9 +239,9 @@ class DirectCallConstraint(AbstractCallConstraint):
 # and list of argument slots.
 # TODO make contextual?
 class SimpleCallConstraint(CachedConstraint):
-	__slots__ = 'op', 'path', 'code', 'selftype', 'slots', 'target'
+	__slots__ = 'op', 'code', 'selftype', 'slots', 'target'
 
-	def __init__(self, op, path, code, selftype, slots, target):
+	def __init__(self, op, code, selftype, slots, target):
 		assert isinstance(op, base.OpContext), type(op)
 		assert isinstance(code, ast.Code), type(code)
 		assert selftype is None or isinstance(selftype, base.ContextObject), selftype
@@ -247,15 +249,13 @@ class SimpleCallConstraint(CachedConstraint):
 		CachedConstraint.__init__(self, *slots)
 
 		self.op       = op
-		self.path     = path
 		self.code     = code
 		self.selftype = selftype
 		self.slots    = slots
 		self.target   = target
 
 	def concreteUpdate(self, sys, *args):
-		numParams = len(self.code.parameters)
-		targetcontext = sys.canonicalContext(self.code, self.path, self.selftype, args[:numParams], args[numParams:])
+		targetcontext = sys.canonicalContext(self.op, self.code, self.selftype, args)
 		sys.bindCall(self.op, targetcontext, self.target)
 
 

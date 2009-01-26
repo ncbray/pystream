@@ -4,7 +4,7 @@ usePsyco        = False
 # may be called from different working directories...
 outputDirectory = "c:/projects/pystream/summaries"
 
-if False:
+if True:
 	limitedTest = [
 		#'tests.shape.test_shape',
 		#'tests.shape.test_shape_examples',

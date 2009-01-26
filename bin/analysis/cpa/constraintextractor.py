@@ -39,16 +39,12 @@ class ExtractDataflow(object):
 	def contextOp(self, node):
 		return self.system.canonical.opContext(self.code, node, self.context)
 
-	def opPath(self, node):
-		return self.system.canonical.path(self.context.signature.path, node)
-
 	def directCall(self, node, code, selfarg, args, vargs, kargs, target):
 		if self.doOnce(node):
 			assert isinstance(code, ast.Code), type(code)
 			op   = self.contextOp(node)
-			path = self.opPath(node)
 			kwds = [] # HACK
-			con = DirectCallConstraint(op, path, code, selfarg, args, kwds, vargs, kargs, target)
+			con = DirectCallConstraint(op, code, selfarg, args, kwds, vargs, kargs, target)
 			con.attach(self.system) # TODO move inside constructor?
 		return target
 
@@ -64,8 +60,7 @@ class ExtractDataflow(object):
 	def call(self, node, expr, args, kwds, vargs, kargs, target):
 		if self.doOnce(node):
 			op   = self.contextOp(node)
-			path = self.opPath(node)
-			con = CallConstraint(op, path, expr, args, kwds, vargs, kargs, target)
+			con = CallConstraint(op, expr, args, kwds, vargs, kargs, target)
 			con.attach(self.system) # TODO move inside constructor?
 		return target
 
@@ -84,8 +79,7 @@ class ExtractDataflow(object):
 	def allocate(self, node, expr, target):
 		if self.doOnce(node):
 			op   = self.contextOp(node)
-			path = self.opPath(node)
-			con = AllocateConstraint(op, path, expr, target)
+			con = AllocateConstraint(op, expr, target)
 			con.attach(self.system) # TODO move inside constructor?
 		return target
 

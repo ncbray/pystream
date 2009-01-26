@@ -27,6 +27,8 @@ from stubs.stubcollector import descriptiveLUT
 # For keeping track of how much time we spend decompiling.
 import time
 
+import util.canonical
+
 #########################
 ### Utility functions ###
 #########################
@@ -45,6 +47,7 @@ def foldFunctionIR(extractor, func, vargs=(), kargs={}):
 ### Main class for analysis ###
 ###############################
 
+externalOp  = util.canonical.Sentinel('<externalOp>')
 
 class InterproceduralDataflow(object):
 	def __init__(self, extractor):
@@ -76,8 +79,6 @@ class InterproceduralDataflow(object):
 		self.codeContexts     = collections.defaultdict(set)
 		self.heapContexts     = collections.defaultdict(set)
 
-		self.rootPath = CallPath(None)
-
 		self.entryPointDescs = []
 
 		self.db = CPADatabase()
@@ -91,7 +92,35 @@ class InterproceduralDataflow(object):
 		self.dictionaryClass = self.extractor.getObject(dict)
 		self.ensureLoaded(self.dictionaryClass)
 
+		# Controls how many previous ops are remembered by a context.
+		self.opPathLength  = 0
 
+		# TODO remember prior CPA signatures?
+
+		self.cache = {}
+
+
+	def initalOpPath(self):
+		if self.opPathLength == 0:
+			path = None
+		elif self.opPathLength == 1:
+			path = externalOp
+		else:
+			path = (externalOp,)*self.opPathLength
+
+		return self.cache.setdefault(path, path)
+
+	def advanceOpPath(self, original, op):
+		assert not isinstance(op, base.OpContext)
+
+		if self.opPathLength == 0:
+			path = None
+		elif self.opPathLength == 1:
+			path = op
+		else:
+			path = original[1:]+(op,)
+
+		return self.cache.setdefault(path, path)
 	def ensureLoaded(self, obj):
 		start = time.clock()
 		self.extractor.ensureLoaded(obj)
@@ -124,9 +153,9 @@ class InterproceduralDataflow(object):
 		self.constraintWrites[slot].add(constraint)
 
 
-	def extendedParamObjects(self, sig):
+	def extendedParamObjects(self, context):
 		# Extended param objects are named by the context they appear in.
-		context = self.canonical.signatureContext(sig)
+		context = self.canonical.signatureContext(context.signature)
 		if sig.code.vparam is not None:
 			# Create tuple for vparam
 			# TODO create this inside the context w/opcode?
@@ -140,27 +169,24 @@ class InterproceduralDataflow(object):
 
 		return vparamObj, kparamObj
 
-	def _signature(self, code, path, selfparam, params, vparams):
+	def _signature(self, code, selfparam, params):
 		assert not isinstance(code, (AbstractSlot, ContextObject)), code
 		assert selfparam is None or isinstance(selfparam, ContextObject), selfparam
-		for param in params: assert isinstance(param, ContextObject), param
-		for param in vparams: assert isinstance(param, ContextObject), param
+		for param in params:
+			assert isinstance(param, ContextObject), param
 
-		return util.cpa.CPASignature(code, path, selfparam, params, vparams)
+		return util.cpa.CPASignature(code, selfparam, params)
 
-	def canonicalContext(self, code, path, selfparam, params, vparams):
+	def canonicalContext(self, srcOp, code, selfparam, params):
+		assert isinstance(srcOp, base.OpContext), type(srcOp)
 		assert isinstance(code, ast.Code), type(code)
-		sig = self._signature(code, path, selfparam, params, vparams)
-		vparamObj, kparamObj = self.extendedParamObjects(sig)
-		context = self.canonical._canonicalContext(sig, vparamObj, kparamObj)
 
-		# Mark that we create the context.
+		sig     = self._signature(code, selfparam, params)
+		opPath  = self.advanceOpPath(srcOp.context.opPath, srcOp.op)
+		context = self.canonical._canonicalContext(sig, opPath)
+
+		# Mark that we created the context.
 		self.codeContexts[code].add(context)
-
-		# Mark that we implicitly allocated these objects
-		cop = self.canonical.opContext(code, None, context)
-		if vparamObj: self.logAllocation(cop, vparamObj)
-		if kparamObj: self.logAllocation(cop, kparamObj)
 
 		return context
 
@@ -238,15 +264,14 @@ class InterproceduralDataflow(object):
 
 		if code in foldLUT:
 			# It's foldable.
+			assert code.vparam is None, code.name
+			assert code.kparam is None, code.name
 
 			# TODO folding with constant vargs?
 			# HACK the internal selfparam is usually not "constant" as it's a function, so we ignore it?
 			#if notConst(sig.selfparam): return False
 			for param in sig.params:
 				if notConst(param): return False
-
-			assert targetcontext.vparamObj is None, targetcontext.vparamObj
-			assert targetcontext.kparamObj is None, targetcontext.kparamObj
 
 			params = [param.obj for param in sig.params]
 			result = foldFunctionIR(self.extractor, foldLUT[code], params)
@@ -262,13 +287,13 @@ class InterproceduralDataflow(object):
 
 	# Only used to create an entry point.
 	# TODO use util.calling and cpa iteration to break down the context.
-	def getContext(self, code, path, funcobj, args):
+	def getContext(self, srcOp, code, funcobj, args):
 		assert isinstance(code, ast.Code), type(code)
 
 		funcobj = self.existingObject(funcobj)
 		args    = tuple([self.externalObject(arg) for arg in args])
 
-		targetcontext = self.canonicalContext(code, path, funcobj, args, ())
+		targetcontext = self.canonicalContext(srcOp, code, funcobj, args)
 		return targetcontext
 
 	def bindCall(self, cop, targetcontext, target):
@@ -308,14 +333,23 @@ class InterproceduralDataflow(object):
 					if targetcontext.invocationMaySucceed(self):
 						exdf = ExtractDataflow(self, code, targetcontext)
 						exdf(code)
+
+						# Local binding done after creating constraints,
+						# to ensure the variables are dirty.
 						targetcontext.bindParameters(self)
 
 
 	def addEntryPoint(self, func, funcobj, args):
-		context = self.getContext(func.code, self.rootPath, funcobj, args)
-		dummyOp = self.canonical.opContext(externalFunction.code, None, externalFunctionContext)
+		# The call point
+		# TODO generate bogus ops?
+		dummyOp = self.canonical.opContext(externalFunction.code, externalOp, externalFunctionContext)
+
+		# The return value
 		dummy = ast.Local('external_escape')
 		dummyslot = self.canonical.local(externalFunction.code, dummy, externalFunctionContext)
+
+		# Generate and bind the context.
+		context = self.getContext(dummyOp, func.code, funcobj, args)
 		self.bindCall(dummyOp, context, dummyslot)
 
 
@@ -325,6 +359,9 @@ class InterproceduralDataflow(object):
 
 def evaluate(extractor, entryPoints):
 	dataflow = InterproceduralDataflow(extractor)
+
+	# HACK
+	externalFunctionContext.opPath = dataflow.initalOpPath()
 
 	for funcast, funcobj, args in entryPoints:
 		assert isinstance(funcast, ast.Function), type(funcast)

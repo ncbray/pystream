@@ -189,7 +189,7 @@ class CPADatabase(object):
 						info = self.functionInfo(slot.code).opInfo(slot.local).context(slot.context)
 					info.references.update(values)
 			else:
-				info = self.heapInfo(slot.obj.obj).slotInfo(slot.slottype, slot.key).context(slot.obj.context)
+				info = self.heapInfo(slot.obj.group()).slotInfo(slot.slottype, slot.key).context(slot.obj)
 				info.references.update(values)
 
 		# Finalize the datastructures

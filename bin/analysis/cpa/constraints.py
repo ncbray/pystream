@@ -1,5 +1,6 @@
 import itertools
-import base
+from . import base
+from . import extendedtypes
 
 # HACK to testing if a object is a bool True/False...
 from programIR.python import ast, program
@@ -119,10 +120,8 @@ class AllocateConstraint(CachedConstraint):
 		self.target = target
 
 	def extendedType(self, sys, type_):
-		# Note: this path does not include the final op, which is this
-		# allocate.  This is good as long as there is only one allocation
-		# in a given context. (It makes better use of the path length.)
-		context = sys.canonical.pathContext(self.op.context.opPath)
+		sys.ensureLoaded(type_.obj)
+		instObj = type_.obj.abstractInstance()
 
 		pyobj = type_.obj.pyobj
 		if pyobj is xtypes.MethodType:
@@ -132,12 +131,12 @@ class AllocateConstraint(CachedConstraint):
 				# sig.params[0] is the type object for __new__
 				func = sig.params[1]
 				inst = sig.params[2]
-				context = sys.canonical.methodContext(func, inst)
+				return sys.methodType(func, inst, instObj)
 
-		sys.ensureLoaded(type_.obj)
-		instObj = type_.obj.abstractInstance()
-		contextInst = sys.allocatedObject(context, instObj)
-		return contextInst
+		# Note: this path does not include the final op, which is this
+		# allocate.  This is good as long as there is only one allocation
+		# in a given context. (It makes better use of the path length.)
+		return sys.pathType(self.op.context.opPath, instObj)
 
 
 	def concreteUpdate(self, sys, type_):
@@ -244,7 +243,7 @@ class SimpleCallConstraint(CachedConstraint):
 	def __init__(self, op, code, selftype, slots, target):
 		assert isinstance(op, base.OpContext), type(op)
 		assert isinstance(code, ast.Code), type(code)
-		assert selftype is None or isinstance(selftype, base.ContextObject), selftype
+		assert selftype is None or isinstance(selftype, extendedtypes.ExtendedType), selftype
 		assert target is None or isinstance(target, base.AbstractSlot), type(target)
 		CachedConstraint.__init__(self, *slots)
 

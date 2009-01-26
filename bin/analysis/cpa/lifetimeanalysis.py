@@ -89,8 +89,8 @@ class ObjectInfo(object):
 		self.heldByClosure  = set()
 
 		# Reasonable defaults
-		self.globallyVisible   = obj.context is base.existingObjectContext
-		self.externallyVisible = obj.context is base.externalObjectContext
+		self.globallyVisible   = obj.isExisting()
+		self.externallyVisible = obj.isExternal()
 
 
 class ReadModifyAnalysis(object):

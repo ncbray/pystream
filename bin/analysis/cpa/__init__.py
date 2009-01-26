@@ -4,6 +4,9 @@ import util
 
 from base import *
 
+from . import canonicalobjects
+from . import extendedtypes
+
 import dumpreport
 
 from stubs.stubcollector import foldLUT
@@ -68,7 +71,7 @@ class InterproceduralDataflow(object):
 		# The worklist
 		self.dirty = collections.deque()
 
-		self.canonical = CanonicalObjects()
+		self.canonical = canonicalobjects.CanonicalObjects()
 
 		# Information for contextual operations.
 		self.opAllocates      = collections.defaultdict(set)
@@ -99,6 +102,7 @@ class InterproceduralDataflow(object):
 
 		self.cache = {}
 
+		self.initalizedTypes = set()
 
 	def initalOpPath(self):
 		if self.opPathLength == 0:
@@ -170,10 +174,11 @@ class InterproceduralDataflow(object):
 		return vparamObj, kparamObj
 
 	def _signature(self, code, selfparam, params):
-		assert not isinstance(code, (AbstractSlot, ContextObject)), code
-		assert selfparam is None or isinstance(selfparam, ContextObject), selfparam
+		assert isinstance(code, ast.Code), type(code)
+		#assert not isinstance(code, (AbstractSlot, extendedtypes.ExtendedType)), code
+		assert selfparam is None or isinstance(selfparam,  extendedtypes.ExtendedType), selfparam
 		for param in params:
-			assert isinstance(param, ContextObject), param
+			assert isinstance(param,  extendedtypes.ExtendedType), param
 
 		return util.cpa.CPASignature(code, selfparam, params)
 
@@ -191,31 +196,48 @@ class InterproceduralDataflow(object):
 		return context
 
 	def setTypePointer(self, cobj):
-		# Makes sure the type pointer is valid.
-		typestr = self.extractor.getObject('type')
-		slot    = self.canonical.objectSlot(cobj, 'LowLevel', typestr)
+		assert isinstance(cobj, extendedtypes.ExtendedType), type(cobj)
 
-		if not self.read(slot):
-			self.ensureLoaded(cobj.obj)
-			type_ = self.existingObject(cobj.obj.type)
-			self.update(slot, (type_,))
+		# HACK to prevent recursion...
+		# Recursion should not occur in practice, but bugs can cause it...
+		if cobj not in self.initalizedTypes:
+			self.initalizedTypes.add(cobj)
 
-	def contextObject(self, context, obj):
-		isNew = not self.canonical.contextObject.exists(context, obj)
-		cobj  = self.canonical.contextObject(context, obj)
-		if isNew:
-			self.setTypePointer(cobj)
-			self.heapContexts[obj].add(context)
+			self.heapContexts[cobj.group()].add(cobj)
+
+			# Makes sure the type pointer is valid.
+			typestr = self.extractor.getObject('type')
+			slot    = self.canonical.objectSlot(cobj, 'LowLevel', typestr)
+
+			if not self.read(slot):
+				self.ensureLoaded(cobj.obj)
+				type_ = self.existingObject(cobj.obj.type)
+				self.update(slot, (type_,))
+
+	def signatureType(self, sig, obj):
+		cobj  = self.canonical.signatureType(sig, obj)
+		self.setTypePointer(cobj)
+		return cobj
+
+	def pathType(self, path, obj):
+		cobj  = self.canonical.pathType(path, obj)
+		self.setTypePointer(cobj)
+		return cobj
+
+	def methodType(self, func, inst, obj):
+		cobj  = self.canonical.methodType(func, inst, obj)
+		self.setTypePointer(cobj)
 		return cobj
 
 	def externalObject(self, obj):
-		return self.contextObject(externalObjectContext, obj)
+		cobj  = self.canonical.externalType(obj)
+		self.setTypePointer(cobj)
+		return cobj
 
 	def existingObject(self, obj):
-		return self.contextObject(existingObjectContext, obj)
-
-	def allocatedObject(self, context, obj):
-		return self.contextObject(context, obj)
+		cobj  = self.canonical.existingType(obj)
+		self.setTypePointer(cobj)
+		return cobj
 
 
 	def process(self):
@@ -238,7 +260,7 @@ class InterproceduralDataflow(object):
 	def update(self, slot, values):
 		assert isinstance(slot, AbstractSlot), repr(slot)
 		for value in values:
-			assert isinstance(value, ContextObject), repr(value)
+			assert isinstance(value, extendedtypes.ExtendedType), repr(value)
 
 		# If the slot is unitialized, pull the inital value from the heap.
 		if not slot in self.slots:

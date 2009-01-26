@@ -48,8 +48,7 @@ class AnalysisContext(CanonicalObject):
 
 	def _extendedParamObject(self, sys, inst):
 		# Extended param objects are named by the context they appear in.
-		context = sys.canonical.signatureContext(self.signature)
-		return sys.allocatedObject(context, inst)
+		return sys.signatureType(self.signature, inst)
 
 	def _setVParamLength(self, sys, vparamObj, length):
 		context = self
@@ -124,86 +123,6 @@ externalSignature = util.cpa.CPASignature(externalFunction.code, None, ())
 externalFunctionContext = AnalysisContext(externalSignature, None)
 
 
-######################
-### Extended Types ###
-######################
-
-class ObjectContext(CanonicalObject):
-	__slots__ = ()
-
-class ExternalObjectContext(ObjectContext):
-	__slots__ = ()
-
-	def __repr__(self):
-		return "<external>"
-
-externalObjectContext = ExternalObjectContext()
-
-
-class ExistingObjectContext(ObjectContext):
-	__slots__ = ()
-
-	def __repr__(self):
-		return "<existing>"
-
-existingObjectContext = ExistingObjectContext()
-
-
-class PathObjectContext(ObjectContext):
-	__slots__ = 'path',
-
-	def __init__(self, path):
-		self.path = path
-		self.setCanonical(path)
-
-	def __repr__(self):
-		return "<path %d>" % id(self.path)
-
-class MethodContext(ObjectContext):
-	__slots__ = 'func', 'inst'
-
-	def __init__(self, func, inst):
-		self.func = func
-		self.inst = inst
-		self.setCanonical(func, inst)
-
-	def __repr__(self):
-		return "<method %d %d>" % (id(self.func), id(self.inst))
-
-class SignatureContext(ObjectContext):
-	__slots__ = 'sig'
-
-	def __init__(self, sig):
-		self.sig = sig
-		self.setCanonical(sig)
-
-	def __repr__(self):
-		return "<sig %d>" % (id(self.sig),)
-
-##################
-### Heap Names ###
-##################
-
-class ContextObject(CanonicalObject):
-	__slots__ = 'context', 'obj'
-
-
-	def __init__(self, context, obj):
-		assert isinstance(context, ObjectContext), context
-		assert isinstance(obj, program.AbstractObject), repr(obj)
-
-		self.setCanonical(context, obj)
-
-		self.context 	= context
-		self.obj 	= obj
-
-	def __repr__(self):
-		return "%s(%r, %r)" % (type(self).__name__, self.context, self.obj)
-
-	def decontextualize(self):
-		return self.obj
-
-
 class OpContext(CanonicalObject):
 	__slots__ ='code', 'op', 'context',
 	def __init__(self, code, op, context):
@@ -250,7 +169,6 @@ class ObjectSlot(AbstractSlot):
 	__slots__ = 'obj', 'slottype', 'key', 'hash'
 
 	def __init__(self, obj, slottype, key):
-		assert isinstance(obj, ContextObject), obj
 		assert isinstance(slottype, str)
 		assert isinstance(key, program.AbstractObject), key
 
@@ -323,37 +241,3 @@ class LocalSlot(AbstractSlot):
 
 	def createInital(self, sys):
 		return set()
-
-
-class CanonicalObjects(object):
-	def __init__(self):
-		self.local             = util.canonical.CanonicalCache(LocalSlot)
-		self.objectSlot        = util.canonical.CanonicalCache(ObjectSlot)
-		self.contextObject     = util.canonical.CanonicalCache(ContextObject)
-		self._canonicalContext = util.canonical.CanonicalCache(AnalysisContext)
-		self.opContext         = util.canonical.CanonicalCache(OpContext)
-		self.codeContext       = util.canonical.CanonicalCache(CodeContext)
-
-		self.cache = {}
-
-	def externalObject(self, obj):
-		return self.contextObject(externalObjectContext, obj)
-
-	def existingObject(self, obj):
-		return self.contextObject(existingObjectContext, obj)
-
-	def path(self, old, op):
-		new = old.advance(op)
-		return self.cache.setdefault(new, new)
-
-	def pathContext(self, path):
-		new = PathObjectContext(path)
-		return self.cache.setdefault(new, new)
-
-	def methodContext(self, func, inst):
-		new = MethodContext(func, inst)
-		return self.cache.setdefault(new, new)
-
-	def signatureContext(self, sig):
-		new = SignatureContext(sig)
-		return self.cache.setdefault(new, new)

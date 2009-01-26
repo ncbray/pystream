@@ -37,7 +37,7 @@ class LinkManager(object):
 			if obj.obj not in self.objectFile: return None
 
 			fn = self.objectFile[obj.obj]
-			cn = self.contextRef(obj.context)
+			cn = self.contextRef(obj)
 			return "%s#%s" % (fn, cn)
 
 	def codeRef(self, obj):

@@ -37,7 +37,8 @@ class FoldRewrite(object):
 			return self.adb.db.functionInfo(self.code).localInfo(ref).merged.references
 		elif isinstance(ref, ast.Existing):
 			# HACK needs access to canonical objects
-			return set((self.adb.db.canonical.existingObject(ref.object),))
+			# HACK doesn't create type pointer?
+			return set((self.adb.db.canonical.existingType(ref.object),))
 
 	def getMethodFunction(self, expr, name):
 		# Static setup
@@ -46,7 +47,7 @@ class FoldRewrite(object):
 		dictStrObj = self.extractor.getObject('dictionary')
 
 		def cobjSlotRefs(cobj, slotType, key):
-			return db.heapInfo(cobj.obj).slotInfo(slotType, key).context(cobj.context).references
+			return db.heapInfo(cobj.group()).slotInfo(slotType, key).context(cobj).references
 
 
 		# Dynamic setup

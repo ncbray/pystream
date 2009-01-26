@@ -60,6 +60,8 @@ class InterproceduralDataflow(object):
 		# Has the context been constructed?
 		self.liveContexts = set()
 
+		self.liveCode = set()
+
 		# The value of every slot
 		self.slots = {}
 
@@ -348,6 +350,7 @@ class InterproceduralDataflow(object):
 			# Caller-independant initalization.
 			if not targetcontext in self.liveContexts:
 				self.liveContexts.add(targetcontext)
+				self.liveCode.add(targetcontext.signature.code)
 
 				if not self.fold(targetcontext):
 					# Extract the constraints

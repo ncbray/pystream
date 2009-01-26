@@ -78,10 +78,14 @@ def cpaAnalyze(e, entryPoints):
 	start = time.clock()
 	result = analysis.cpa.evaluate(e, entryPoints)
 	elapsed = time.clock()-start
-	print "Constraints: %d" % len(result.constraints)
-	print "Decompile:   %.3f s" % (result.decompileTime)
-	print "Analysis:    %.3f s" % (elapsed-result.decompileTime)
-	print "Total:       %.3f s" % (elapsed)
+	print "Constraints:   %d" % len(result.constraints)
+	print "Contexts:      %d" % len(result.liveContexts)
+	print "Code:          %d" % len(result.liveCode)
+	print "Contexts/Code: %.1f" % (len(result.liveContexts)/len(result.liveCode))
+
+	print "Decompile:     %.3f s" % (result.decompileTime)
+	print "Analysis:      %.3f s" % (elapsed-result.decompileTime)
+	print "Total:         %.3f s" % (elapsed)
 	print
 
 	return result

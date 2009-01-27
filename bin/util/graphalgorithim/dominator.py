@@ -9,7 +9,7 @@ class ReversePostorderCrawler(object):
 		self.order = []
 		self(head)
 		self.order.reverse()
-			
+
 	def __call__(self, node):
 		self.processed.add(node)
 		for next in self.G.get(node, ()):
@@ -25,7 +25,7 @@ def intersect(doms, b1, b2):
 	while finger1 != finger2:
 		while finger1 > finger2:
 			finger1 = doms[finger1]
-			
+
 		while finger2 > finger1:
 			finger2 = doms[finger2]
 	return finger1
@@ -39,8 +39,8 @@ def dominatorTree(G, head):
 	for i, node in enumerate(order):
 		forward[node] = i
 		reverse[i] = node
-		
-	
+
+
 	# Find the predicesors, in reverse postorder space.
 	pred = {}
 	for node, nexts in G.iteritems():
@@ -78,7 +78,7 @@ def dominatorTree(G, head):
 			# Refine the immediate dominator,
 			# make it consistant with the predicesors.
 			for p in pred[node]:
-				if doms[p] is not None:			
+				if doms[p] is not None:
 					new_idom = intersect(doms, new_idom, p)
 
 			# Check if the immediate dominator has changed.
@@ -101,8 +101,8 @@ def dominatorTree(G, head):
 			tree[idom] = [node]
 		else:
 			tree[idom].append(node)
-	return tree
-	
+	return tree, idoms
+
 
 
 def makeSingleHead(G, head):

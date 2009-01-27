@@ -13,6 +13,8 @@ from . import base
 
 from . import programculler
 
+from . import dumpgraphs
+
 import config
 
 class LinkManager(object):
@@ -41,15 +43,16 @@ class LinkManager(object):
 			cn = self.contextRef(obj)
 			return "%s#%s" % (fn, cn)
 
-	def codeRef(self, obj):
-		if isinstance(obj, ast.Code) or obj is None:
-			if obj not in self.functionFile: return None
-			return self.functionFile[obj]
-		else:
-			if obj.code not in self.functionFile: return None
-			fn = self.functionFile[obj.code]
-			cn = self.contextRef(obj.context)
-			return "%s#%s" % (fn, cn)
+	def codeRef(self, code, context):
+		if code not in self.functionFile:
+			return None
+
+		link = self.functionFile[code]
+
+		if context is not None:
+			link = "%s#%s" % (link,  self.contextRef(context))
+
+		return link
 
 # TODO share this with CPA?
 class CodeContext(object):
@@ -59,7 +62,7 @@ class CodeContext(object):
 		self.code = code
 		self.context = context
 
-def codeShortName(out,code, links=None, context = None):
+def codeShortName(code):
 	if isinstance(code, str):
 		name = func
 		args = []
@@ -79,18 +82,14 @@ def codeShortName(out,code, links=None, context = None):
 	if vargs is not None: args.append("*"+vargs)
 	if kargs is not None: args.append("**"+kargs)
 
+	return "%s(%s)" % (name, ", ".join(args))
 
-	if links is not None:
-		if context is not None:
-			link = links.codeRef(CodeContext(code, context))
-		else:
-			link = links.codeRef(code)
-	else:
-		link = None
 
+def outputCodeShortName(out, code, links=None, context=None):
+	link = links.codeRef(code, context) if links is not None else None
 
 	if link: out.begin('a', href=link)
-	out << "%s(%s)" % (name, ", ".join(args))
+	out << codeShortName(code)
 	if link: out.end('a')
 
 
@@ -158,6 +157,10 @@ def dumpHeader(out):
 	out << "Functions"
 	out.end('a')
 	out << " | "
+	out.begin('a', href="invocations.svg")
+	out << "Function Graph"
+	out.end('a')
+	out << " | "
 	out.begin('a', href="object_index.html")
 	out << "Objects"
 	out.end('a')
@@ -167,7 +170,7 @@ def dumpHeader(out):
 
 def dumpFunctionInfo(func, data, links, out, scg):
 	out.begin('h3')
-	codeShortName(out, func)
+	outputCodeShortName(out, func)
 	out.end('h3')
 
 	info = data.db.functionInfo(func)
@@ -311,7 +314,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			callees = data.opCallees(func, op, context)
 			for dstC, dstF in callees:
 				out << '\t\t'
-				codeShortName(out, dstF, links, dstC)
+				outputCodeShortName(out, dstF, links, dstC)
 				out.endl()
 
 			if hasattr(data.db, 'lifetime'):
@@ -343,7 +346,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.begin('ul')
 		for callerF, callerC in data.callers(func, context):
 			out.begin('li')
-			codeShortName(out, callerF, links, callerC)
+			outputCodeShortName(out, callerF, links, callerC)
 			out.end('li')
 		out.end('ul')
 		out.end('p')
@@ -356,7 +359,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.begin('ul')
 		for callerF, callerC in data.callees(func, context):
 			out.begin('li')
-			codeShortName(out, callerF, links, callerC)
+			outputCodeShortName(out, callerF, links, callerC)
 			out.end('li')
 		out.end('ul')
 		out.end('p')
@@ -487,7 +490,7 @@ def makeFunctionTree(data):
 				invokes[func].add(dstf)
 
 	util.graphalgorithim.dominator.makeSingleHead(invokes, head)
-	tree = util.graphalgorithim.dominator.dominatorTree(invokes, head)
+	tree, idoms = util.graphalgorithim.dominator.dominatorTree(invokes, head)
 	return tree, head
 
 
@@ -507,7 +510,7 @@ def makeHeapTree(data):
 				points[heap].add(dst.obj)
 
 	util.graphalgorithim.dominator.makeSingleHead(points, head)
-	tree = util.graphalgorithim.dominator.dominatorTree(points, head)
+	tree, idoms = util.graphalgorithim.dominator.dominatorTree(points, head)
 	return tree, head
 
 def dumpReport(data, entryPoints):
@@ -548,7 +551,7 @@ def dumpReport(data, entryPoints):
 
 
 	head =  None
-	tree = util.graphalgorithim.dominator.dominatorTree(liveInvocations, head)
+	tree, idoms = util.graphalgorithim.dominator.dominatorTree(liveInvocations, head)
 
 	def printChildren(node):
 		children = tree.get(node)
@@ -557,7 +560,7 @@ def dumpReport(data, entryPoints):
 			for func in sorted(children, key=lambda f: f.name):
 				out.begin('li')
 				makeFunctionFile(func)
-				codeShortName(out, func, links)
+				outputCodeShortName(out, func, links)
 				printChildren(func)
 				out.end('li')
 			out.end('ul')
@@ -639,6 +642,7 @@ def dumpReport(data, entryPoints):
 		out.endl()
 		out.close()
 
+	dumpgraphs.dump(data, entryPoints, links, reportDir)
 
 import collections
 import base

@@ -174,27 +174,8 @@ class CPADatabase(object):
 			info = self.heapInfos[heap]
 		return info
 
-	def load(self, sys):
-		for code, contexts in sys.codeContexts.iteritems():
-			info = self.functionInfo(code)
-			info.contexts.update(contexts)
-
-		for heap, contexts in sys.heapContexts.iteritems():
-			info = self.heapInfo(heap)
-			info.contexts.update(contexts)
-
-
-		for srcop, dsts in sys.opInvokes.iteritems():
-			assert isinstance(dsts, set)
-			for dstfunc in dsts:
-				# src -> dst
-				info = self.contextOpInfo(srcop.code, srcop.op, srcop.context)
-				info.invokes.add((dstfunc.context, dstfunc.code))
-
-				# dst <- src
-				info = self.functionInfo(dstfunc.code)
-				info.contexts.add(dstfunc.context)
-
+	def loadObjects(self, sys):
+		# Find the live object nodes
 		objs = getLiveObjectNodes(sys.slotManager.roots)
 
 		# Build the database
@@ -207,6 +188,7 @@ class CPADatabase(object):
 			hinfo = self.heapInfo(ogroup)
 			hinfo.contexts.add(obj)
 
+			# Index the slots
 			for slot in obj:
 				slotName = slot.slotName
 				info = hinfo.slotInfo(slotName.type, slotName.name).context(obj)
@@ -221,21 +203,42 @@ class CPADatabase(object):
 		print "%.1f%% dynamic" % (float(dynamic)/len(objs)*100.0)
 
 
-		# HACK
-		for slot in sys.slotManager.roots:
-			name = slot.slotName
-			if name.isLocal():
-				info = self.functionInfo(name.code).localInfo(name.local).context(name.context)
-				info.references.update(slot)
-#			else:
-#
-
+	def finalizeInfos(self):
 		# Finalize the datastructures
 		for info in self.functionInfos.itervalues():
 			info.merge()
 
 		for info in self.heapInfos.itervalues():
 			info.merge()
+
+	def load(self, sys):
+		for code, contexts in sys.codeContexts.iteritems():
+			info = self.functionInfo(code)
+			info.contexts.update(contexts)
+
+		for srcop, dsts in sys.opInvokes.iteritems():
+			assert isinstance(dsts, set)
+			for dstfunc in dsts:
+				# src -> dst
+				info = self.contextOpInfo(srcop.code, srcop.op, srcop.context)
+				info.invokes.add((dstfunc.context, dstfunc.code))
+
+				# dst <- src
+				info = self.functionInfo(dstfunc.code)
+				info.contexts.add(dstfunc.context)
+
+		self.loadObjects(sys)
+
+
+		# Find all the locals
+		for slot in sys.slotManager.roots:
+			name = slot.slotName
+			if name.isLocal():
+				info = self.functionInfo(name.code).localInfo(name.local).context(name.context)
+				info.references.update(slot)
+
+
+		self.finalizeInfos()
 
 	def liveFunctions(self):
 		return set(self.functionInfos.keys())

@@ -16,7 +16,7 @@ from . import storegraph
 def localSlot(sys, code, lcl, context):
 	if lcl:
 		name = sys.canonical.localName(code, lcl, context)
-		return sys.slotManager.root(name)
+		return sys.slotManager.root(sys, name, sys.slotManager.region)
 	else:
 		return None
 
@@ -51,23 +51,23 @@ class AnalysisContext(CanonicalObject):
 
 			slot.initializeType(sys, obj)
 
-	def vparamObject(self, sys):
-		return self._extendedParamObject(sys, sys.tupleClass.typeinfo.abstractInstance)
+	def vparamType(self, sys):
+		return self._extendedParamType(sys, sys.tupleClass.typeinfo.abstractInstance)
 
-	def _extendedParamObject(self, sys, inst):
+	def _extendedParamType(self, sys, inst):
 		# Extended param objects are named by the context they appear in.
-		return sys.signatureType(self.signature, inst)
+		return sys.canonical.signatureType(self.signature, inst)
 
 	def _setVParamLength(self, sys, vparamObj, length):
 		context = self
 
 		# Set the length of the vparam tuple.
 		slotName   = sys.lengthSlotName
-		lengthObj  = sys.existingObject(sys.extractor.getObject(length))
+		lengthObjxtype  = sys.canonical.existingType(sys.extractor.getObject(length))
 
 		lengthSlot = vparamObj.field(sys, slotName, sys.slotManager.region)
 
-		self._bindObjToSlot(sys, lengthObj.xtype, lengthSlot)
+		self._bindObjToSlot(sys, lengthObjxtype, lengthSlot)
 
 	def _bindVParamIndex(self, sys, vparamObj, index, obj):
 		context = self
@@ -112,9 +112,12 @@ class AnalysisContext(CanonicalObject):
 
 		# Bind the vparams
 		if sig.code.vparam is not None:
-			vparamObj = self.vparamObject(sys)
-			sys.logAllocation(cop, vparamObj) # Implicitly allocated
-			self._bindObjToSlot(sys, vparamObj.xtype, callee.vparam)
+			vparamType = self.vparamType(sys)
+			self._bindObjToSlot(sys, vparamType, callee.vparam)
+			sys.logAllocation(cop, vparamType) # Implicitly allocated
+
+			# Set the length
+			vparamObj = callee.vparam.knownObject(vparamType)
 			self._setVParamLength(sys, vparamObj, numArgs-numParam)
 
 			# Bind the vargs

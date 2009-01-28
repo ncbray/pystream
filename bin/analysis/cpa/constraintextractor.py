@@ -30,16 +30,18 @@ class ExtractDataflow(object):
 		else:
 			return False
 
-	def contextual(self, lcl):
+	def localSlot(self, lcl):
 		if lcl is not None:
-			name = self.system.canonical.localName(self.code, lcl, self.context)
-			return self.system.slotManager.root(name)
+			sys = self.system
+			name = sys.canonical.localName(self.code, lcl, self.context)
+			return sys.slotManager.root(sys, name, sys.slotManager.region)
 		else:
 			return None
 
-	def existing(self, obj):
-		name = self.system.canonical.existingName(self.code, obj, self.context)
-		return self.system.slotManager.root(name)
+	def existingSlot(self, obj):
+		sys = self.system
+		name = sys.canonical.existingName(self.code, obj, self.context)
+		return sys.slotManager.root(sys, name, sys.slotManager.region)
 
 	def contextOp(self, node):
 		return self.system.canonical.opContext(self.code, node, self.context)
@@ -57,9 +59,10 @@ class ExtractDataflow(object):
 		self.system.createAssign(src, dst)
 
 	def init(self, node, obj):
-		result = self.existing(obj)
+		result = self.existingSlot(obj)
 		if self.doOnce(node):
-			result.initialize(self.system, self.system.existingObject(obj))
+			sys = self.system
+			result.initializeType(sys, sys.canonical.existingType(obj))
 		return result
 
 	def call(self, node, expr, args, kwds, vargs, kargs, target):
@@ -180,7 +183,7 @@ class ExtractDataflow(object):
 		# HACK oh so ugly... does not resemble what actually happens.
 		for i, arg in enumerate(node.targets):
 			obj = self.system.extractor.getObject(i)
-			target = self.contextual(arg)
+			target = self.localSlot(arg)
 			self.directCall(node, exports['interpreter_getitem'].code,
 				None, [self(node.expr), self(ast.Existing(obj))],
 				None, None, target)
@@ -211,7 +214,7 @@ class ExtractDataflow(object):
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
-		return self.contextual(node)
+		return self.localSlot(node)
 
 	@dispatch(ast.Existing)
 	def visitExisting(self, node):
@@ -234,7 +237,7 @@ class ExtractDataflow(object):
 	def visitSwitch(self, node):
 		self(node.condition)
 
-		cond = self.contextual(node.condition.conditional)
+		cond = self.localSlot(node.condition.conditional)
 		con = DeferedSwitchConstraint(self, cond, node.t, node.f)
 		con.attach(self.system) # TODO move inside constructor?
 

@@ -6,15 +6,18 @@ class RegionGroup(object):
 		# Root slots, such as locals and references to "existing" objects
 		self.slots = {}
 
-	def root(self, sys, slot, targetRegion):
-		if slot not in self.slots:
-			assert slot.isRoot(), slot
-			root = SlotNode(None, slot, targetRegion, sys.slotManager.emptyTypeSet())
-			self.slots[slot] = root
+	def root(self, sys, slotName, regionHint):
+		if slotName not in self.slots:
+			assert slotName.isRoot(), slot
+			root = SlotNode(None, slotName, regionHint, sys.slotManager.emptyTypeSet())
+			self.slots[slotName] = root
 			return root
 		else:
 			# TODO merge region?
-			return self.slots[slot]
+			return self.slots[slotName]
+
+	def knownRoot(self, slotName):
+		return self.slots[slotName]
 
 	def __iter__(self):
 		return self.slots.itervalues()
@@ -43,6 +46,9 @@ class RegionNode(object):
 		else:
 			return self.objects[xtype]
 
+	def knownObject(self, xtype):
+		return self.objects[xtype]
+
 	def __iter__(self):
 		return self.objects.itervalues()
 
@@ -55,19 +61,24 @@ class ObjectNode(object):
 		self.xtype  = xtype
 		self.slots = {}
 
-	def field(self, sys, slotName, targetRegion):
+	def field(self, sys, slotName, regionHint):
+		assert sys is not None
 		if slotName not in self.slots:
 			assert not slotName.isRoot()
-			field = SlotNode(self, slotName, targetRegion, sys.slotManager.emptyTypeSet())
+			field = SlotNode(self, slotName, regionHint, sys.slotManager.emptyTypeSet())
 			self.slots[slotName] = field
 
 			if self.xtype.isExisting():
-				data = sys.slotManager.existingSlot(self.xtype, slotName)
-				if data: field.initialize(sys, *data)
+				ref = sys.slotManager.existingSlotRef(self.xtype, slotName)
+				if ref is not None:
+					field.initializeType(sys, ref)
 			return field
 		else:
 			# TODO merge region?
 			return self.slots[slotName]
+
+	def knownField(self, slotName):
+		return self.slots[slotName]
 
 	def __iter__(self):
 		return self.slots.itervalues()
@@ -82,18 +93,19 @@ class SlotNode(object):
 		self.refs      = refs
 		self.observers = []
 
-	def initialize(self, sys, obj):
-		xtype = obj.xtype
-		self.initializeType(sys, xtype)
-
 	def initializeType(self, sys, xtype):
+		assert sys is not None
 		assert isinstance(xtype, extendedtypes.ExtendedType), type(xtype)
+
+		# TODO use diffTypeSet from canonicalSlots?
 		if xtype not in self.refs:
 			self._update(sys, frozenset((xtype,)))
+			self.region.object(sys, xtype) # Ensure the object exists
 
 	def update(self, sys, other):
+		assert sys is not None
 		assert self.region == other.region
-		diff = other.refs-self.refs
+		diff = sys.slotManager.diffTypeSet(other.refs, self.refs)
 		if diff: self._update(sys, diff)
 
 	def _update(self, sys, diff):
@@ -109,9 +121,13 @@ class SlotNode(object):
 		self.observers.append(constraint)
 		if self.refs: constraint.mark(sys)
 
+	def knownObject(self, xtype):
+		return self.region.knownObject(xtype)
+
 	def __iter__(self):
+		# HACK use slotManager.iterTypeSet?
 		for xtype in self.refs:
-			yield self.region.object(None, xtype) # HACK
+			yield self.region.knownObject(xtype)
 
 	def __repr__(self):
 		xtype = None if self.object is None else self.object.xtype

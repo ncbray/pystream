@@ -8,9 +8,6 @@ from programIR.python import ast, program
 
 import util.tvl
 
-# For allocation
-from util import xtypes
-
 class Constraint(object):
 	__slots__ = 'dirty', 'path'
 
@@ -94,17 +91,19 @@ class LoadConstraint(CachedConstraint):
 	def concreteUpdate(self, sys, exprType, keyType):
 		assert keyType.isExisting() or keyType.isExternal(), keyType
 
-		fieldName = sys.canonical.fieldName(self.slottype, keyType.obj)
+		obj   = self.expr.region.object(sys, exprType)
+		name  = sys.canonical.fieldName(self.slottype, keyType.obj)
 
-		obj = self.expr.region.object(sys, exprType)
-
-		# HACK for a region
-		field = obj.field(sys, fieldName, self.expr.region)
+		if self.target:
+			field = obj.field(sys, name, self.target.region)
+			sys.createAssign(field, self.target)
+		else:
+			# The load is being discarded.  This is probally in a
+			# descriptive stub.  As such, we want to log the read.
+			field = obj.field(sys, name, sys.slotManager.region)
 
 		sys.logRead(self.op, field)
 
-		if self.target:
-			sys.createAssign(field, self.target)
 
 
 class StoreConstraint(CachedConstraint):
@@ -120,12 +119,12 @@ class StoreConstraint(CachedConstraint):
 	def concreteUpdate(self, sys, exprType, keyType):
 		assert keyType.isExisting() or keyType.isExternal(), keyType
 
-		obj = self.expr.region.object(sys, exprType)
-		slotName = sys.canonical.fieldName(self.slottype, keyType.obj)
-		field = obj.field(sys, slotName, self.expr.region) # HACK for a region
+		obj   = self.expr.region.object(sys, exprType)
+		name  = sys.canonical.fieldName(self.slottype, keyType.obj)
+		field = obj.field(sys, name, self.value.region)
 
-		sys.logModify(self.op, field)
 		sys.createAssign(self.value, field)
+		sys.logModify(self.op, field)
 
 
 class AllocateConstraint(CachedConstraint):
@@ -136,32 +135,12 @@ class AllocateConstraint(CachedConstraint):
 		self.type_  = type_
 		self.target = target
 
-	def extendedType(self, sys, type_):
-		sys.ensureLoaded(type_.obj)
-		instObj = type_.obj.abstractInstance()
-
-		pyobj = type_.obj.pyobj
-		if pyobj is xtypes.MethodType:
-			sig = self.op.context.signature
-			# TODO check that this is "new"?
-			if len(sig.params) == 4:
-				# sig.params[0] is the type object for __new__
-				func = sig.params[1]
-				inst = sig.params[2]
-				return sys.methodType(func, inst, instObj)
-
-		# Note: this path does not include the final op, which is this
-		# allocate.  This is good as long as there is only one allocation
-		# in a given context. (It makes better use of the path length.)
-		return sys.pathType(self.op.context.opPath, instObj)
-
-
 	def concreteUpdate(self, sys, type_):
 		if type_.obj.isType():
-			contextInst = self.extendedType(sys, type_)
-			sys.logAllocation(self.op, contextInst)
+			xtype = sys.extendedInstanceType(self.op.context, type_)
+			self.target.initializeType(sys, xtype)
 
-			self.target.initialize(sys, contextInst)
+			sys.logAllocation(self.op, xtype)
 
 	def attach(self, sys):
 		CachedConstraint.attach(self, sys)

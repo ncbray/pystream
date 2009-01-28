@@ -33,6 +33,9 @@ import time
 
 import util.canonical
 
+# For allocation
+import types
+
 #########################
 ### Utility functions ###
 #########################
@@ -86,7 +89,6 @@ class InterproceduralDataflow(object):
 		self.opInvokes        = collections.defaultdict(set)
 
 		self.codeContexts     = collections.defaultdict(set)
-		self.heapContexts     = collections.defaultdict(set)
 
 		self.entryPointDescs = []
 
@@ -101,6 +103,7 @@ class InterproceduralDataflow(object):
 		self.dictionaryClass = self.extractor.getObject(dict)
 		self.ensureLoaded(self.dictionaryClass)
 
+		self.typeSlotName     = self.canonical.fieldName('LowLevel', self.extractor.getObject('type'))
 		self.lengthSlotName   = self.canonical.fieldName('LowLevel', self.extractor.getObject('length'))
 
 		# Controls how many previous ops are remembered by a context.
@@ -156,22 +159,6 @@ class InterproceduralDataflow(object):
 	def constraint(self, constraint):
 		self.constraints.add(constraint)
 
-	def extendedParamObjects(self, context):
-		# Extended param objects are named by the context they appear in.
-		context = self.canonical.signatureContext(context.signature)
-		if sig.code.vparam is not None:
-			# Create tuple for vparam
-			# TODO create this inside the context w/opcode?
-			vparamObj = self.allocatedObject(context, self.tupleClass.typeinfo.abstractInstance)
-		else:
-			vparamObj = None
-
-		# Create dictionary for karg (disabled)
-		assert sig.code.kparam is None
-		kparamObj = None
-
-		return vparamObj, kparamObj
-
 	def _signature(self, code, selfparam, params):
 		assert isinstance(code, ast.Code), type(code)
 		#assert not isinstance(code, (AbstractSlot, extendedtypes.ExtendedType)), code
@@ -197,43 +184,39 @@ class InterproceduralDataflow(object):
 	def setTypePointer(self, obj):
 		assert isinstance(obj, storegraph.ObjectNode), type(obj)
 		xtype = obj.xtype
-		assert isinstance(xtype, extendedtypes.ExtendedType), type(xtype)
-
 
 		if not xtype.isExisting():
-#			print "Setting type pointer for", xtype
-
 			# Makes sure the type pointer is valid.
-			typestr = self.extractor.getObject('type')
-			typeFieldName = self.canonical.fieldName('LowLevel', typestr)
-
-			field = obj.field(self, typeFieldName, self.slotManager.region)
-
 			self.ensureLoaded(xtype.obj)
-			type_ = self.existingObject(xtype.obj.type)
-			field.initialize(self, type_)
 
-	def signatureType(self, sig, obj):
-		xtype  = self.canonical.signatureType(sig, obj)
-		return self.slotManager.region.object(self, xtype)
+			# Get the type object
+			typextype = self.canonical.existingType(xtype.obj.type)
 
-	def pathType(self, path, obj):
-		xtype  = self.canonical.pathType(path, obj)
-		return self.slotManager.region.object(self, xtype)
+			field = obj.field(self, self.typeSlotName, self.slotManager.region)
+			field.initializeType(self, typextype)
 
+	def extendedInstanceType(self, context, xtype):
+		self.ensureLoaded(xtype.obj)
+		instObj = xtype.obj.abstractInstance()
 
-	def methodType(self, func, inst, obj):
-		xtype  = self.canonical.methodType(func, inst, obj)
-		return self.slotManager.region.object(self, xtype)
+		pyobj = xtype.obj.pyobj
+		if pyobj is types.MethodType:
+			# Method types are named by their function and instance
+			sig = context.signature
+			# TODO check that this is "new"?
+			if len(sig.params) == 4:
+				# sig.params[0] is the type object for __new__
+				func = sig.params[1]
+				inst = sig.params[2]
+				return self.canonical.methodType(func, inst, instObj)
+		elif pyobj is types.TupleType:
+			# Tuples are named by the signature of the context they're allocated in.
+			return self.canonical.signatureType(context.signature, instObj)
 
-	def externalObject(self, obj):
-		xtype  = self.canonical.externalType(obj)
-		return self.slotManager.region.object(self, xtype)
-
-	def existingObject(self, obj):
-		xtype  = self.canonical.existingType(obj)
-		return self.slotManager.region.object(self, xtype)
-
+		# Note: this path does not include the final op, which is this
+		# allocate.  This is good as long as there is only one allocation
+		# in a given context. (It makes better use of the finite path length.)
+		return self.canonical.pathType(context.opPath, instObj)
 
 	def process(self):
 		while self.dirty:
@@ -264,13 +247,12 @@ class InterproceduralDataflow(object):
 
 			params = [param.obj for param in sig.params]
 			result = foldFunctionIR(self.extractor, foldLUT[code], params)
-			result = self.existingObject(result)
+			resultxtype = self.canonical.existingType(result)
 
 			# Set the return value
-
-			slotName = self.canonical.localName(code, code.returnparam, targetcontext)
-			returnSource = self.slotManager.root(slotName)
-			returnSource.initialize(self, result)
+			name = self.canonical.localName(code, code.returnparam, targetcontext)
+			returnSource = self.slotManager.root(self, name, self.slotManager.region)
+			returnSource.initializeType(self, resultxtype)
 
 			return True
 
@@ -281,11 +263,10 @@ class InterproceduralDataflow(object):
 	def getContext(self, srcOp, code, funcobj, args):
 		assert isinstance(code, ast.Code), type(code)
 
-		funcobj = self.existingObject(funcobj)
-		args    = tuple([self.externalObject(arg) for arg in args])
-		argxtypes = [arg.xtype for arg in args]
+		funcobjxtype = self.canonical.existingType(funcobj)
+		argxtypes    = tuple([self.canonical.externalType(arg) for arg in args])
 
-		targetcontext = self.canonicalContext(srcOp, code, funcobj.xtype, argxtypes)
+		targetcontext = self.canonicalContext(srcOp, code, funcobjxtype, argxtypes)
 		return targetcontext
 
 	def bindCall(self, cop, targetcontext, target):
@@ -313,7 +294,7 @@ class InterproceduralDataflow(object):
 			# Copy the return value
 			if target is not None:
 				returnName = self.canonical.localName(code, code.returnparam, targetcontext)
-				returnSource = self.slotManager.root(returnName)
+				returnSource = self.slotManager.root(self, returnName, self.slotManager.region)
 				self.createAssign(returnSource, target)
 
 			# Caller-independant initalization.
@@ -338,8 +319,6 @@ class InterproceduralDataflow(object):
 		# TODO generate bogus ops?
 		dummyOp = self.canonical.opContext(base.externalFunction.code, externalOp, base.externalFunctionContext)
 
-		#existingArgs = [self.existingObject(arg) for arg in args]
-
 		# Generate the calling context
 		context = self.getContext(dummyOp, func.code, funcobj, args)
 
@@ -347,7 +326,7 @@ class InterproceduralDataflow(object):
 		code = base.externalFunction.code
 		dummyReturn = ast.Local('external_escape')
 		dummyReturnName = self.canonical.localName(code, dummyReturn, base.externalFunctionContext)
-		dummyslot = self.slotManager.root(dummyReturnName)
+		dummyslot = self.slotManager.root(self, dummyReturnName, self.slotManager.region)
 		self.bindCall(dummyOp, context, dummyslot)
 
 

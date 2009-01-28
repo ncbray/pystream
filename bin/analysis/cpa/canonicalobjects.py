@@ -96,35 +96,41 @@ class CanonicalObjects(object):
 
 	def localName(self, code, lcl, context):
 		name = LocalSlotName(code, lcl, context)
-		return self.cache.setdefault(name, name)
+		new = self.cache.setdefault(name, name)
+		return name
 
 	def existingName(self, code, obj, context):
 		name = ExistingSlotName(code, obj, context)
-		return self.cache.setdefault(name, name)
-
+		new = self.cache.setdefault(name, name)
+		return name
 
 	def fieldName(self, type, fname):
 		name = FieldSlotName(type, fname)
-		return self.cache.setdefault(name, name)
+		name = self.cache.setdefault(name, name)
+		return name
 
 
-	# HACK called from optimization.fold, doesn't create type pointer?
 	def externalType(self, obj):
 		new = extendedtypes.ExternalObjectType(obj)
-		return self.cache.setdefault(new, new)
+		new = self.cache.setdefault(new, new)
+		return new
 
 	def existingType(self, obj):
 		new = extendedtypes.ExistingObjectType(obj)
-		return self.cache.setdefault(new, new)
+		new = self.cache.setdefault(new, new)
+		return new
 
 	def pathType(self, path, obj):
 		new = extendedtypes.PathObjectType(path, obj)
-		return self.cache.setdefault(new, new)
+		new = self.cache.setdefault(new, new)
+		return new
 
 	def methodType(self, func, inst, obj):
 		new = extendedtypes.MethodContext(func, inst, obj)
-		return self.cache.setdefault(new, new)
+		new = self.cache.setdefault(new, new)
+		return new
 
 	def signatureType(self, sig, obj):
 		new = extendedtypes.SignatureContext(sig, obj)
-		return self.cache.setdefault(new, new)
+		new = self.cache.setdefault(new, new)
+		return new

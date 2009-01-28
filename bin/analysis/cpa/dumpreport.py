@@ -265,9 +265,6 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			objs = info.localInfo(param).context(context).references
 			tableRow('param %d' % i, *objs)
 
-		# HACK ... but how do we get the slots for the vparam?
-
-
 		if code.vparam is not None:
 			objs = info.localInfo(code.vparam).context(context).references
 			tableRow('vparamObj', *objs)
@@ -275,7 +272,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			for vparamObj in objs:
 				for i, arg in enumerate(sig.params[numParam:]):
 					name = data.sys.canonical.fieldName('Array', data.sys.extractor.getObject(i))
-					slot = vparamObj.field(data.sys, name, None) # HACK
+					slot = vparamObj.knownField(name)
 					tableRow('vparam %d' % i, *slot)
 
 		if code.kparam is not None:
@@ -350,31 +347,33 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.end('pre')
 		out.endl()
 
+		callers = data.callers(func, context)
+		if callers:
+			out.begin('h3')
+			out << "Callers"
+			out.end('h3')
+			out.begin('p')
+			out.begin('ul')
+			for callerF, callerC in callers:
+				out.begin('li')
+				outputCodeShortName(out, callerF, links, callerC)
+				out.end('li')
+			out.end('ul')
+			out.end('p')
 
-		out.begin('h3')
-		out << "Callers"
-		out.end('h3')
-		out.begin('p')
-		out.begin('ul')
-		for callerF, callerC in data.callers(func, context):
-			out.begin('li')
-			outputCodeShortName(out, callerF, links, callerC)
-			out.end('li')
-		out.end('ul')
-		out.end('p')
-
-
-		out.begin('h3')
-		out << "Callees"
-		out.end('h3')
-		out.begin('p')
-		out.begin('ul')
-		for callerF, callerC in data.callees(func, context):
-			out.begin('li')
-			outputCodeShortName(out, callerF, links, callerC)
-			out.end('li')
-		out.end('ul')
-		out.end('p')
+		callees = data.callees(func, context)
+		if callees:
+			out.begin('h3')
+			out << "Callees"
+			out.end('h3')
+			out.begin('p')
+			out.begin('ul')
+			for callerF, callerC in callees:
+				out.begin('li')
+				outputCodeShortName(out, callerF, links, callerC)
+				out.end('li')
+			out.end('ul')
+			out.end('p')
 
 
 		if hasattr(data.db, 'lifetime'):

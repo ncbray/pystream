@@ -53,7 +53,7 @@ class SlotManager(object):
 
 class CachedSlotManager(SlotManager):
 	def __init__(self, sys):
-		SlotManager.__init__(self, sys)
+		self.sys = sys
 		self.cache = {}
 
 		emptyset = frozenset()
@@ -63,8 +63,12 @@ class CachedSlotManager(SlotManager):
 		self.roots  = storegraph.RegionGroup()
 		self.region = storegraph.RegionNode(None)
 
-	def root(self, name):
-		return self.roots.root(self.sys, name, self.region)
+	# TODO we're passing sys, so eventually this method can be removed...
+	def root(self, sys, name, regionHint):
+		return self.roots.root(sys, name, regionHint)
+
+	def knownRoot(self, name):
+		return self.roots.knownRoot(name)
 
 	def emptyTypeSet(self):
 		return self._emptyset
@@ -73,35 +77,17 @@ class CachedSlotManager(SlotManager):
 		c = a.union(b)
 		return self.cache.setdefault(c, c)
 
-#	def _getExistingValue(self, slot):
-#		s = frozenset(slot.createInital(self.sys))
-#		s = self.cache.setdefault(s, s)
-#		self.slots[slot] = s
-#		return s
-
-#	def update(self, slot, values):
-#		target = self.slots.get(slot)
-
-#		# If the slot is unitialized, pull the inital value from the heap.
-#		if target is None: target = self._getExistingValue(slot)
-
-#		diff = values-target
-#		if diff:
-#			s = target.union(diff)
-#			self.slots[slot] = self.cache.setdefault(s, s)
-#			self.sys.slotChanged(slot)
+	def diffTypeSet(self, a, b):
+		return a-b
 
 	def slotMemory(self):
-		mem = sys.getsizeof(self.slots)
-		mem += sys.getsizeof(self.cache)
-
+		mem = sys.getsizeof(self.cache)
 		for s1, s2 in self.cache.iteritems():
 			mem += sys.getsizeof(s1)
-
 		return mem
 
 
-	def existingSlot(self, xtype, slotName):
+	def existingSlotRef(self, xtype, slotName):
 		assert xtype.isExisting()
 		assert not slotName.isRoot()
 
@@ -126,8 +112,7 @@ class CachedSlotManager(SlotManager):
 				assert False, slottype
 
 			if key in subdict:
-				data =  frozenset([self.sys.existingObject(subdict[key])])
-				return self.cache.setdefault(data, data)
+				return self.sys.canonical.existingType(subdict[key])
 
-		# Not found, return an empty set.
-		return self.emptyTypeSet()
+		# Not found
+		return None

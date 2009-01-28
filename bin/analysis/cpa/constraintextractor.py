@@ -34,14 +34,14 @@ class ExtractDataflow(object):
 		if lcl is not None:
 			sys = self.system
 			name = sys.canonical.localName(self.code, lcl, self.context)
-			return sys.slotManager.root(sys, name, sys.slotManager.region)
+			return self.context.group.root(sys, name, sys.region)
 		else:
 			return None
 
 	def existingSlot(self, obj):
 		sys = self.system
 		name = sys.canonical.existingName(self.code, obj, self.context)
-		return sys.slotManager.root(sys, name, sys.slotManager.region)
+		return self.context.group.root(sys, name, sys.region)
 
 	def contextOp(self, node):
 		return self.system.canonical.opContext(self.code, node, self.context)

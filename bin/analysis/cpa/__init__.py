@@ -6,7 +6,7 @@ import base
 
 from . import canonicalobjects
 from . import extendedtypes
-from . import slotmanager
+from . import setmanager
 
 import dumpreport
 
@@ -70,7 +70,7 @@ class InterproceduralDataflow(object):
 		self.liveCode = set()
 
 		# The value of every slot
-		self.slotManager = slotmanager.CachedSlotManager(self)
+		self.setManager = setmanager.CachedSetManager()
 
 		# Constraint information
 		self.constraintReads   = collections.defaultdict(set)
@@ -103,17 +103,20 @@ class InterproceduralDataflow(object):
 		self.dictionaryClass = self.extractor.getObject(dict)
 		self.ensureLoaded(self.dictionaryClass)
 
+		# Cache common slot names
 		self.typeSlotName     = self.canonical.fieldName('LowLevel', self.extractor.getObject('type'))
 		self.lengthSlotName   = self.canonical.fieldName('LowLevel', self.extractor.getObject('length'))
 
 		# Controls how many previous ops are remembered by a context.
-		self.opPathLength  = 0
-
 		# TODO remember prior CPA signatures?
-
+		self.opPathLength  = 0
 		self.cache = {}
 
-		self.initalizedTypes = set()
+		# The storage graph
+		self.roots  = storegraph.RegionGroup()
+
+		# HACK a single region?
+		self.region = storegraph.RegionNode(None)
 
 	def initalOpPath(self):
 		if self.opPathLength == 0:
@@ -174,7 +177,7 @@ class InterproceduralDataflow(object):
 
 		sig     = self._signature(code, selfparam, params)
 		opPath  = self.advanceOpPath(srcOp.context.opPath, srcOp.op)
-		context = self.canonical._canonicalContext(sig, opPath, self.slotManager.roots)
+		context = self.canonical._canonicalContext(sig, opPath, self.roots)
 
 		# Mark that we created the context.
 		self.codeContexts[code].add(context)
@@ -192,8 +195,38 @@ class InterproceduralDataflow(object):
 			# Get the type object
 			typextype = self.canonical.existingType(xtype.obj.type)
 
-			field = obj.field(self, self.typeSlotName, self.slotManager.region)
+			field = obj.field(self, self.typeSlotName, self.region)
 			field.initializeType(self, typextype)
+
+	def existingSlotRef(self, xtype, slotName):
+		assert xtype.isExisting()
+		assert not slotName.isRoot()
+
+		obj = xtype.obj
+		assert isinstance(obj, program.AbstractObject), obj
+		self.ensureLoaded(obj)
+
+		slottype, key = slotName.type, slotName.name
+
+		assert isinstance(key, program.AbstractObject), key
+
+		if isinstance(obj, program.Object):
+			if slottype == 'LowLevel':
+				subdict = obj.lowlevel
+			elif slottype == 'Attribute':
+				subdict = obj.slot
+			elif slottype == 'Array':
+				subdict = obj.array
+			elif slottype == 'Dictionary':
+				subdict = obj.dictionary
+			else:
+				assert False, slottype
+
+			if key in subdict:
+				return self.canonical.existingType(subdict[key])
+
+		# Not found
+		return None
 
 	def extendedInstanceType(self, context, xtype):
 		self.ensureLoaded(xtype.obj)
@@ -251,7 +284,7 @@ class InterproceduralDataflow(object):
 
 			# Set the return value
 			name = self.canonical.localName(code, code.returnparam, targetcontext)
-			returnSource = self.slotManager.root(self, name, self.slotManager.region)
+			returnSource = self.roots.root(self, name, self.region)
 			returnSource.initializeType(self, resultxtype)
 
 			return True
@@ -294,7 +327,7 @@ class InterproceduralDataflow(object):
 			# Copy the return value
 			if target is not None:
 				returnName = self.canonical.localName(code, code.returnparam, targetcontext)
-				returnSource = self.slotManager.root(self, returnName, self.slotManager.region)
+				returnSource = targetcontext.group.root(self, returnName, self.region)
 				self.createAssign(returnSource, target)
 
 			# Caller-independant initalization.
@@ -326,7 +359,7 @@ class InterproceduralDataflow(object):
 		code = base.externalFunction.code
 		dummyReturn = ast.Local('external_escape')
 		dummyReturnName = self.canonical.localName(code, dummyReturn, base.externalFunctionContext)
-		dummyslot = self.slotManager.root(self, dummyReturnName, self.slotManager.region)
+		dummyslot = self.roots.root(self, dummyReturnName, self.region)
 		self.bindCall(dummyOp, context, dummyslot)
 
 
@@ -340,7 +373,7 @@ class InterproceduralDataflow(object):
 		self.solveTime = end-start-self.decompileTime
 
 	def slotMemory(self):
-		return self.slotManager.slotMemory()
+		return self.setManager.memory()
 
 def evaluate(extractor, entryPoints):
 	dataflow = InterproceduralDataflow(extractor)

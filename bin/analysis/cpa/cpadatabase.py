@@ -176,7 +176,7 @@ class CPADatabase(object):
 
 	def loadObjects(self, sys):
 		# Find the live object nodes
-		objs = getLiveObjectNodes(sys.slotManager.roots)
+		objs = getLiveObjectNodes(sys.roots)
 
 		# Build the database
 		self.liveObjectGroups = set()
@@ -231,7 +231,7 @@ class CPADatabase(object):
 
 
 		# Find all the locals
-		for slot in sys.slotManager.roots:
+		for slot in sys.roots:
 			name = slot.slotName
 			if name.isLocal():
 				info = self.functionInfo(name.code).localInfo(name.local).context(name.context)

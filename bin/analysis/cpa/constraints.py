@@ -100,7 +100,7 @@ class LoadConstraint(CachedConstraint):
 		else:
 			# The load is being discarded.  This is probally in a
 			# descriptive stub.  As such, we want to log the read.
-			field = obj.field(sys, name, sys.slotManager.region)
+			field = obj.field(sys, name, sys.region)
 
 		sys.logRead(self.op, field)
 
@@ -170,8 +170,8 @@ class AbstractCallConstraint(CachedConstraint):
 		if vargsType is not None:
 			assert isinstance(vargsType, extendedtypes.ExtendedType), type(vargsType)
 			vargsObj = self.vargs.region.object(sys, vargsType)
-			slotName   = sys.lengthSlotName
-			field    = vargsObj.field(sys, slotName, sys.slotManager.region)
+			slotName = sys.lengthSlotName
+			field    = vargsObj.field(sys, slotName, sys.region)
 
 			lengths = []
 			for lengthType in field.refs:
@@ -206,7 +206,7 @@ class AbstractCallConstraint(CachedConstraint):
 				vargsObj = self.vargs.region.object(sys, vargs)
 				for index in range(vlength):
 					slotName = sys.canonical.fieldName('Array', sys.extractor.getObject(index))
-					field = vargsObj.field(sys, slotName, sys.slotManager.region)
+					field = vargsObj.field(sys, slotName, sys.region)
 					allslots.append(field)
 
 			con = SimpleCallConstraint(self.op, code, expr, allslots, self.target)

@@ -16,7 +16,7 @@ from . import storegraph
 def localSlot(sys, code, lcl, context):
 	if lcl:
 		name = sys.canonical.localName(code, lcl, context)
-		return sys.slotManager.root(sys, name, sys.slotManager.region)
+		return context.group.root(sys, name, sys.region)
 	else:
 		return None
 
@@ -65,14 +65,14 @@ class AnalysisContext(CanonicalObject):
 		slotName   = sys.lengthSlotName
 		lengthObjxtype  = sys.canonical.existingType(sys.extractor.getObject(length))
 
-		lengthSlot = vparamObj.field(sys, slotName, sys.slotManager.region)
+		lengthSlot = vparamObj.field(sys, slotName, sys.region)
 
 		self._bindObjToSlot(sys, lengthObjxtype, lengthSlot)
 
 	def _bindVParamIndex(self, sys, vparamObj, index, obj):
 		context = self
 		slotName = sys.canonical.fieldName('Array', sys.extractor.getObject(index))
-		field = vparamObj.field(sys, slotName, sys.slotManager.region)
+		field = vparamObj.field(sys, slotName, sys.region)
 		self._bindObjToSlot(sys, obj, field)
 
 	def invocationMaySucceed(self, sys):

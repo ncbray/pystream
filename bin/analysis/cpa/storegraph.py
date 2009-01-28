@@ -9,7 +9,7 @@ class RegionGroup(object):
 	def root(self, sys, slotName, regionHint):
 		if slotName not in self.slots:
 			assert slotName.isRoot(), slot
-			root = SlotNode(None, slotName, regionHint, sys.slotManager.emptyTypeSet())
+			root = SlotNode(None, slotName, regionHint, sys.setManager.empty())
 			self.slots[slotName] = root
 			return root
 		else:
@@ -65,11 +65,11 @@ class ObjectNode(object):
 		assert sys is not None
 		if slotName not in self.slots:
 			assert not slotName.isRoot()
-			field = SlotNode(self, slotName, regionHint, sys.slotManager.emptyTypeSet())
+			field = SlotNode(self, slotName, regionHint, sys.setManager.empty())
 			self.slots[slotName] = field
 
 			if self.xtype.isExisting():
-				ref = sys.slotManager.existingSlotRef(self.xtype, slotName)
+				ref = sys.existingSlotRef(self.xtype, slotName)
 				if ref is not None:
 					field.initializeType(sys, ref)
 			return field
@@ -105,11 +105,11 @@ class SlotNode(object):
 	def update(self, sys, other):
 		assert sys is not None
 		assert self.region == other.region
-		diff = sys.slotManager.diffTypeSet(other.refs, self.refs)
+		diff = sys.setManager.diff(other.refs, self.refs)
 		if diff: self._update(sys, diff)
 
 	def _update(self, sys, diff):
-		self.refs = sys.slotManager.inplaceUnionTypeSet(self.refs, diff)
+		self.refs = sys.setManager.inplaceUnion(self.refs, diff)
 		for o in self.observers:
 			o.mark(sys)
 
@@ -125,7 +125,7 @@ class SlotNode(object):
 		return self.region.knownObject(xtype)
 
 	def __iter__(self):
-		# HACK use slotManager.iterTypeSet?
+		# HACK use setManager.iter?
 		for xtype in self.refs:
 			yield self.region.knownObject(xtype)
 

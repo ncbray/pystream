@@ -12,7 +12,7 @@ if True:
 		#'tests.shape.test_shape_pathinfo',
 		#'tests.test_database',
 		'tests.test_full',
-		'tests.cpa.test_cpa',
+		#'tests.cpa.test_cpa',
 		]
 else:
 	testExclude = [

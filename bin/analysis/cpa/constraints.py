@@ -1,5 +1,6 @@
 import itertools
 from . import base
+from . import storegraph
 from . import extendedtypes
 
 # HACK to testing if a object is a bool True/False...
@@ -38,7 +39,7 @@ class CachedConstraint(Constraint):
 		self.cache = set()
 
 	def update(self, sys):
-		values = [sys.read(slot) for slot in self.observing]
+		values = [(None,) if slot is None else slot.refs for slot in self.observing]
 
 		for args in itertools.product(*values):
 			if not args in self.cache:
@@ -51,7 +52,7 @@ class CachedConstraint(Constraint):
 		depends = False
 		for slot in self.observing:
 			if slot is not None:
-				sys.dependsRead(self, slot)
+				slot.dependsRead(sys, self)
 				depends = True
 
 		if not depends:
@@ -62,26 +63,27 @@ class CachedConstraint(Constraint):
 class AssignmentConstraint(Constraint):
 	__slots__ = 'sourceslot', 'destslot'
 	def __init__(self, sourceslot, destslot):
-		assert isinstance(sourceslot, base.AbstractSlot), sourceslot
-		assert isinstance(destslot, base.AbstractSlot), destslot
+		assert isinstance(sourceslot, storegraph.SlotNode), sourceslot
+		assert isinstance(destslot, storegraph.SlotNode), destslot
 
 		Constraint.__init__(self)
 		self.sourceslot = sourceslot
 		self.destslot   = destslot
 
 	def update(self, sys):
-		values = sys.read(self.sourceslot)
-		sys.update(self.destslot, values)
+		self.destslot.update(sys, self.sourceslot)
 
 	def attach(self, sys):
 		sys.constraint(self)
-		sys.dependsRead(self, self.sourceslot)
-		sys.dependsWrite(self, self.destslot)
-
+		self.sourceslot.dependsRead(sys, self)
+		self.destslot.dependsWrite(sys, self)
 
 class LoadConstraint(CachedConstraint):
 	__slots__ = 'op', 'expr', 'slottype', 'key', 'target'
 	def __init__(self, op, expr, slottype, key, target):
+		assert isinstance(expr, storegraph.SlotNode), type(expr)
+		assert isinstance(key,  storegraph.SlotNode), type(key)
+
 		CachedConstraint.__init__(self, expr, key)
 		self.op       = op
 		self.expr     = expr
@@ -89,10 +91,20 @@ class LoadConstraint(CachedConstraint):
 		self.key      = key
 		self.target   = target
 
-	def concreteUpdate(self, sys, expr, key):
-		slot = sys.canonical.objectSlot(expr, self.slottype, key.obj)
-		sys.logRead(self.op, slot)
-		if self.target: sys.createAssign(slot, self.target)
+	def concreteUpdate(self, sys, exprType, keyType):
+		assert keyType.isExisting() or keyType.isExternal(), keyType
+
+		fieldName = sys.canonical.fieldName(self.slottype, keyType.obj)
+
+		obj = self.expr.region.object(sys, exprType)
+
+		# HACK for a region
+		field = obj.field(sys, fieldName, self.expr.region)
+
+		sys.logRead(self.op, field)
+
+		if self.target:
+			sys.createAssign(field, self.target)
 
 
 class StoreConstraint(CachedConstraint):
@@ -105,10 +117,15 @@ class StoreConstraint(CachedConstraint):
 		self.key      = key
 		self.value    = value
 
-	def concreteUpdate(self, sys, expr, key):
-		slot = sys.canonical.objectSlot(expr, self.slottype, key.obj)
-		sys.logModify(self.op, slot)
-		sys.createAssign(self.value, slot)
+	def concreteUpdate(self, sys, exprType, keyType):
+		assert keyType.isExisting() or keyType.isExternal(), keyType
+
+		obj = self.expr.region.object(sys, exprType)
+		slotName = sys.canonical.fieldName(self.slottype, keyType.obj)
+		field = obj.field(sys, slotName, self.expr.region) # HACK for a region
+
+		sys.logModify(self.op, field)
+		sys.createAssign(self.value, field)
 
 
 class AllocateConstraint(CachedConstraint):
@@ -144,13 +161,11 @@ class AllocateConstraint(CachedConstraint):
 			contextInst = self.extendedType(sys, type_)
 			sys.logAllocation(self.op, contextInst)
 
-			# Return the allocated object.
-			sys.initialize(self.target, contextInst)
-
+			self.target.initialize(sys, contextInst)
 
 	def attach(self, sys):
 		CachedConstraint.attach(self, sys)
-		sys.dependsWrite(self, self.target)
+		self.target.dependsWrite(sys, self)
 
 
 # Resolves the type of the expression, varg, and karg
@@ -161,7 +176,7 @@ class AbstractCallConstraint(CachedConstraint):
 
 		assert isinstance(args, (list, tuple)), args
 		assert not kwds, kwds
-		assert target is None or isinstance(target, base.AbstractSlot), type(target)
+		assert target is None or isinstance(target, storegraph.SlotNode), type(target)
 
 		self.op      = op
 		self.selfarg = selfarg
@@ -172,17 +187,17 @@ class AbstractCallConstraint(CachedConstraint):
 
 		self.target  = target
 
-	def getVArgLengths(self, sys, vargs):
-		if vargs is not None:
-			lengthStr  = sys.extractor.getObject('length')
-			lengthSlot = sys.canonical.objectSlot(vargs, 'LowLevel', sys.existingObject(lengthStr).obj)
+	def getVArgLengths(self, sys, vargsType):
+		if vargsType is not None:
+			assert isinstance(vargsType, extendedtypes.ExtendedType), type(vargsType)
+			vargsObj = self.vargs.region.object(sys, vargsType)
+			slotName   = sys.lengthSlotName
+			field    = vargsObj.field(sys, slotName, sys.slotManager.region)
 
 			lengths = []
-
-			for vlengthObj in sys.read(lengthSlot):
-				vlength = vlengthObj.obj.pyobj
-				assert isinstance(vlength, int), vlength
-				lengths.append(vlength)
+			for lengthType in field.refs:
+				assert lengthType.isExisting()
+				lengths.append(lengthType.obj.pyobj)
 
 			return lengths
 		else:
@@ -207,10 +222,13 @@ class AbstractCallConstraint(CachedConstraint):
 
 		if info.willSucceed.maybeTrue():
 			allslots = list(self.args)
-			for i in range(vlength):
-				index = sys.extractor.getObject(i)
-				vslot = sys.canonical.objectSlot(vargs, 'Array', sys.existingObject(index).obj)
-				allslots.append(vslot)
+
+			if vargs:
+				vargsObj = self.vargs.region.object(sys, vargs)
+				for index in range(vlength):
+					slotName = sys.canonical.fieldName('Array', sys.extractor.getObject(index))
+					field = vargsObj.field(sys, slotName, sys.slotManager.region)
+					allslots.append(field)
 
 			con = SimpleCallConstraint(self.op, code, expr, allslots, self.target)
 			con.attach(sys)
@@ -244,7 +262,7 @@ class SimpleCallConstraint(CachedConstraint):
 		assert isinstance(op, base.OpContext), type(op)
 		assert isinstance(code, ast.Code), type(code)
 		assert selftype is None or isinstance(selftype, extendedtypes.ExtendedType), selftype
-		assert target is None or isinstance(target, base.AbstractSlot), type(target)
+		assert target is None or isinstance(target, storegraph.SlotNode), type(target)
 		CachedConstraint.__init__(self, *slots)
 
 		self.op       = op
@@ -289,9 +307,9 @@ class DeferedSwitchConstraint(Constraint):
 
 	def update(self, sys):
 		if self.tDefered or self.fDefered:
-			for cond in sys.read(self.cond):
-				self.updateBranching(self.getBranch(cond))
+			for condType in self.cond.refs:
+				self.updateBranching(self.getBranch(condType))
 
 	def attach(self, sys):
 		sys.constraint(self)
-		sys.dependsRead(self, self.cond)
+		self.cond.dependsRead(sys, self)

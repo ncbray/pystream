@@ -132,6 +132,22 @@ class SlotInfo(object):
 		self.references.update(other.references)
 
 
+# Search for object nodes using a depth first search
+def getLiveObjectNodes(group):
+	objs = set()
+	pending = []
+
+	pending.append(group)
+
+	while pending:
+		current = pending.pop()
+		for slot in current:
+			for ref in slot:
+				if ref not in objs:
+					pending.append(ref)
+					objs.add(ref)
+	return objs
+
 class CPADatabase(object):
 	def __init__(self):
 		self.functionInfos = weakref.WeakKeyDictionary()
@@ -179,18 +195,40 @@ class CPADatabase(object):
 				info = self.functionInfo(dstfunc.code)
 				info.contexts.add(dstfunc.context)
 
+		objs = getLiveObjectNodes(sys.slotManager.roots)
 
-		for slot, values in sys.slotManager.iterslots():
-			if slot.isLocalSlot():
-				if not isinstance(slot.local, program.AbstractObject):
-					if isinstance(slot.local, ast.Local):
-						info = self.functionInfo(slot.code).localInfo(slot.local).context(slot.context)
-					else:
-						info = self.functionInfo(slot.code).opInfo(slot.local).context(slot.context)
-					info.references.update(values)
-			else:
-				info = self.heapInfo(slot.obj.group()).slotInfo(slot.slottype, slot.key).context(slot.obj)
-				info.references.update(values)
+		# Build the database
+		self.liveObjectGroups = set()
+		dynamic = 0
+		for obj in objs:
+			ogroup = obj.xtype.group()
+			self.liveObjectGroups.add(ogroup)
+
+			hinfo = self.heapInfo(ogroup)
+			hinfo.contexts.add(obj)
+
+			for slot in obj:
+				slotName = slot.slotName
+				info = hinfo.slotInfo(slotName.type, slotName.name).context(obj)
+				info.references.update(slot)
+
+			if not obj.xtype.isExisting() and not obj.xtype.isExternal():
+				dynamic += 1
+
+
+		print "%d heap objects." % len(objs)
+		print "%d groups." % len(self.liveObjectGroups)
+		print "%.1f%% dynamic" % (float(dynamic)/len(objs)*100.0)
+
+
+		# HACK
+		for slot in sys.slotManager.roots:
+			name = slot.slotName
+			if name.isLocal():
+				info = self.functionInfo(name.code).localInfo(name.local).context(name.context)
+				info.references.update(slot)
+#			else:
+#
 
 		# Finalize the datastructures
 		for info in self.functionInfos.itervalues():
@@ -202,6 +240,8 @@ class CPADatabase(object):
 	def liveFunctions(self):
 		return set(self.functionInfos.keys())
 
+	def liveObjects(self):
+		return self.liveObjectGroups
 
 	def iterContextOp(self):
 		for func, funcInfo in self.functionInfos.iteritems():

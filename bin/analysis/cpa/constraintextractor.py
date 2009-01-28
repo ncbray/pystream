@@ -32,9 +32,14 @@ class ExtractDataflow(object):
 
 	def contextual(self, lcl):
 		if lcl is not None:
-			return self.system.canonical.local(self.code, lcl, self.context)
+			name = self.system.canonical.localName(self.code, lcl, self.context)
+			return self.system.slotManager.root(name)
 		else:
 			return None
+
+	def existing(self, obj):
+		name = self.system.canonical.existingName(self.code, obj, self.context)
+		return self.system.slotManager.root(name)
 
 	def contextOp(self, node):
 		return self.system.canonical.opContext(self.code, node, self.context)
@@ -52,9 +57,9 @@ class ExtractDataflow(object):
 		self.system.createAssign(src, dst)
 
 	def init(self, node, obj):
-		result = self.contextual(node)
+		result = self.existing(obj)
 		if self.doOnce(node):
-			self.system.initialize(result, self.system.existingObject(obj))
+			result.initialize(self.system, self.system.existingObject(obj))
 		return result
 
 	def call(self, node, expr, args, kwds, vargs, kargs, target):

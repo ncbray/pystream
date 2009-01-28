@@ -10,6 +10,7 @@ import programIR.python.ast as ast
 import programIR.python.program as program
 
 from . import base
+from . import storegraph
 
 from . import programculler
 
@@ -33,15 +34,24 @@ class LinkManager(object):
 		return self.contextName[context]
 
 	def objectRef(self, obj):
-		if isinstance(obj, program.AbstractObject):
-			if obj not in self.objectFile: return None
-			return self.objectFile[obj]
-		else:
-			if obj.obj not in self.objectFile: return None
+		context = None
+		xtype   = None
 
-			fn = self.objectFile[obj.obj]
-			cn = self.contextRef(obj)
-			return "%s#%s" % (fn, cn)
+		if isinstance(obj, storegraph.ObjectNode):
+			context = obj
+			xtype   = obj.xtype
+			obj     = xtype.obj
+
+		if obj not in self.objectFile: return None
+
+		fn = self.objectFile[obj]
+
+		if context:
+			cn = self.contextRef(context)
+			fn = "%s#%s" % (fn, cn)
+
+		return fn
+
 
 	def codeRef(self, code, context):
 		if code not in self.functionFile:
@@ -85,6 +95,15 @@ def codeShortName(code):
 	return "%s(%s)" % (name, ", ".join(args))
 
 
+def objectShortName(obj):
+	if isinstance(obj, storegraph.ObjectNode):
+		context = obj
+		xtype   = obj.xtype
+		obj     = xtype.obj
+		return repr(xtype)
+
+	return repr(obj)
+
 def outputCodeShortName(out, code, links=None, context=None):
 	link = links.codeRef(code, context) if links is not None else None
 
@@ -93,7 +112,7 @@ def outputCodeShortName(out, code, links=None, context=None):
 	if link: out.end('a')
 
 
-def heapShortName(out, heap, links=None):
+def outputObjectShortName(out, heap, links=None):
 	if links != None:
 		link = links.objectRef(heap)
 	else:
@@ -101,21 +120,10 @@ def heapShortName(out, heap, links=None):
 
 	if link:
 		out.begin('a', href=link)
-	out << repr(heap)
+	out << objectShortName(heap)
 	if link:
 		out.end('a')
 
-def heapLink(out, heap, links=None):
-	if links != None:
-		link = links.objectRef(heap)
-	else:
-		link = None
-
-	if link:
-		out.begin('a', href=link)
-	out << repr(heap)
-	if link:
-		out.end('a')
 
 
 class TypeInferenceData(object):
@@ -207,6 +215,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 
 	for context in data.functionContexts(func):
 		out.tag('hr')
+		out.begin('div')
 
 		cref = links.contextRef(context)
 		out.tag('a', name=cref)
@@ -228,12 +237,10 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.begin('td')
 
 			for arg in args:
-				if not first:
-					out.tag('br')
-				obj = arg.obj
+				if not first: out.tag('br')
 				link = links.objectRef(arg)
 				if link: out.begin('a', href=link)
-				out << arg
+				out << objectShortName(arg)
 				if link: out.end('a')
 
 				first = False
@@ -259,12 +266,17 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			tableRow('param %d' % i, *objs)
 
 		# HACK ... but how do we get the slots for the vparam?
-		for i, arg in enumerate(sig.params[numParam:]):
-			tableRow('vparam %d' % i, arg)
+
 
 		if code.vparam is not None:
 			objs = info.localInfo(code.vparam).context(context).references
 			tableRow('vparamObj', *objs)
+
+			for vparamObj in objs:
+				for i, arg in enumerate(sig.params[numParam:]):
+					name = data.sys.canonical.fieldName('Array', data.sys.extractor.getObject(i))
+					slot = vparamObj.field(data.sys, name, None) # HACK
+					tableRow('vparam %d' % i, *slot)
 
 		if code.kparam is not None:
 			objs = info.localInfo(code.kparam).context(context).references
@@ -286,9 +298,9 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		other = []
 
 		for slot in data.functionContextSlots(func, context):
-			if isinstance(slot.local, ast.Local):
+			if slot.slotName.isLocal():
 				lcls.append(slot)
-			elif isinstance(slot.local, program.AbstractObject):
+			elif slot.slotName.isExisting():
 				other.append(slot)
 			else:
 				ops.append(slot)
@@ -302,7 +314,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				out << '\t\t'
 				link = links.objectRef(value)
 				if link: out.begin('a', href=link)
-				out << value
+				out << objectShortName(value)
 				if link: out.end('a')
 				out.endl()
 
@@ -431,10 +443,12 @@ def dumpFunctionInfo(func, data, links, out, scg):
 					out.end('li')
 				out.end('ul')
 				out.end('p')
+		out.end('div')
+
 
 def dumpHeapInfo(heap, data, links, out):
 	out.begin('h3')
-	heapShortName(out, heap)
+	outputObjectShortName(out, heap)
 	out.end('h3')
 	out.endl()
 
@@ -444,10 +458,13 @@ def dumpHeapInfo(heap, data, links, out):
 	out.begin('pre')
 
 	for context in contexts:
+		out.begin('div')
 		cref = links.contextRef(context)
 		out.tag('a', name=cref)
 
-		out << '\t'+str(context)+ '\n'
+		out << '\t'
+		outputObjectShortName(out, context)
+		out.endl()
 
 		for (slottype, key), info in heapInfo.slotInfos.iteritems():
 			values = info.context(context).references
@@ -455,20 +472,9 @@ def dumpHeapInfo(heap, data, links, out):
 				out << '\t\t%s / %s\n' % (str(slottype), str(key))
 				for value in values:
 					out << '\t\t\t'
-					heapLink(out, value, links)
+					outputObjectShortName(out, value, links)
 					out.endl()
-
-#	la = data.db.lifetime
-
-		# HACK no easy way to get the context object, anymore?
-##		info = la.getObjectInfo(contextobj)
-##
-##		if info.heldByClosure:
-##			out << '\t\tHeld by (closure)\n'
-##			for holder in info.heldByClosure:
-##				out << '\t\t\t'
-##				heapLink(out, holder.obj, links)
-##				out.endl()
+		out.end('div')
 		out.endl()
 
 	out.end('pre')
@@ -495,7 +501,7 @@ def makeFunctionTree(data):
 
 
 def makeHeapTree(data):
-	liveHeap= data.liveHeap()
+	liveHeap = data.db.liveObjects()
 
 	head = None
 	points = {}
@@ -507,7 +513,9 @@ def makeHeapTree(data):
 		for (slottype, key), info in heapInfo.slotInfos.iteritems():
 			values = info.merged.references
 			for dst in values:
-				points[heap].add(dst.obj)
+				ogroup = dst.xtype.group()
+				assert ogroup in liveHeap, (heap, ogroup)
+				points[heap].add(ogroup)
 
 	util.graphalgorithim.dominator.makeSingleHead(points, head)
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(points, head)
@@ -539,7 +547,7 @@ def dumpReport(data, entryPoints):
 		return fn
 
 
-	liveHeap = data.liveHeap()
+	liveHeap = data.db.liveObjects()
 	liveFunctions, liveInvocations = programculler.findLiveFunctions(data.db, entryPoints)
 
 	out, scg = makeOutput(reportDir, 'function_index.html')
@@ -602,11 +610,6 @@ def dumpReport(data, entryPoints):
 	if count != len(liveHeap):
 		print "WARNING: tree contains %d elements, whereas there are %d expected." % (count, len(liveHeap))
 
-##	print "Extra"
-##	for node in nodes-set(liveHeap):
-##		print node
-##	print
-
 	missing = set(liveHeap)-nodes
 	if missing:
 		print "Missing"
@@ -615,15 +618,12 @@ def dumpReport(data, entryPoints):
 		print
 
 
-##	out.begin('ul')
-##	for heap in liveHeap:
-##		out.begin('li')
-##		out.begin('a', href=links.objectRef(heap))
-##		out << heap
-##		out.end('a')
-##		out.end('li')
-##	out.end('ul')
-##	out.endl()
+	extra = nodes-liveHeap
+	if extra:
+		print "Extra"
+		for node in extra:
+			print node
+		print
 
 	out.close()
 
@@ -657,12 +657,10 @@ class CPAData(object):
 		self.lcls = collections.defaultdict(lambda: collections.defaultdict(set))
 		self.objs = collections.defaultdict(lambda: collections.defaultdict(set))
 
-		for slot, values in inter.slotManager.iterslots():
-			if isinstance(slot, base.LocalSlot):
-				self.lcls[slot.code][slot.context].add(slot)
-			else:
-				self.objs[slot.obj.obj][slot.obj].add(slot)
-
+		for slot in inter.slotManager.roots:
+			name = slot.slotName
+			if name.isLocal():
+				self.lcls[name.code][name.context].add(slot)
 
 		self.calcInvocations()
 		self.calcReadModify()
@@ -744,5 +742,6 @@ def dump(extractor, dataflow, entryPoints):
 	adb = CPAAnalysisDatabase(dataflow.db)
 	data = CPAData(dataflow, dataflow.db)
 	data.adb = adb
+	data.sys = dataflow # HACK?
 	dumpReport(data, entryPoints)
 

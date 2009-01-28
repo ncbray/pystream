@@ -24,7 +24,7 @@ class ExtendedType(CanonicalObject):
 class ExtendedObjectType(ExtendedType):
 	__slots__ = 'obj'
 	def __init__(self, obj):
-		assert isinstance(obj, program.AbstractObject)
+		assert isinstance(obj, program.AbstractObject), type(obj)
 		self.obj = obj
 		self.setCanonical(obj)
 
@@ -66,7 +66,10 @@ class PathObjectType(ExtendedObjectType):
 		self.setCanonical(path, obj)
 
 	def __repr__(self):
-		return "<path %d %r>" % (id(self.path), self.obj)
+		if self.path is None:
+			return "<path * %r>" % self.obj
+		else:
+			return "<path %d %r>" % (id(self.path), self.obj)
 
 # Methods are typed according to the function and instance they are bound to
 # TODO prevent type loops

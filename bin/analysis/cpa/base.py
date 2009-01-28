@@ -6,13 +6,17 @@ import util.calling
 import util.canonical
 CanonicalObject = util.canonical.CanonicalObject
 
+from . import extendedtypes
+from . import storegraph
+
 ###########################
 ### Evaluation Contexts ###
 ###########################
 
 def localSlot(sys, code, lcl, context):
 	if lcl:
-		return sys.canonical.local(code, lcl, context)
+		name = sys.canonical.localName(code, lcl, context)
+		return sys.slotManager.root(name)
 	else:
 		return None
 
@@ -31,17 +35,21 @@ def calleeSlotsFromContext(sys, context):
 
 
 class AnalysisContext(CanonicalObject):
-	__slots__ = 'signature', 'opPath'
+	__slots__ = 'signature', 'opPath', 'group'
 
-	def __init__(self, signature, opPath):
+	def __init__(self, signature, opPath, group):
 		self.signature = signature
 		self.opPath    = opPath
+		self.group     = group
 		self.setCanonical(self.signature, self.opPath)
 
 	def _bindObjToSlot(self, sys, obj, slot):
 		assert not ((obj is None) ^ (slot is None)), (obj, slot)
 		if obj is not None and slot is not None:
-			sys.initialize(slot, obj)
+			assert isinstance(obj, extendedtypes.ExtendedType), type(obj)
+			assert isinstance(slot, storegraph.SlotNode)
+
+			slot.initializeType(sys, obj)
 
 	def vparamObject(self, sys):
 		return self._extendedParamObject(sys, sys.tupleClass.typeinfo.abstractInstance)
@@ -54,16 +62,18 @@ class AnalysisContext(CanonicalObject):
 		context = self
 
 		# Set the length of the vparam tuple.
+		slotName   = sys.lengthSlotName
 		lengthObj  = sys.existingObject(sys.extractor.getObject(length))
-		lengthStr  = sys.extractor.getObject('length')
-		lengthSlot = sys.canonical.objectSlot(vparamObj, 'LowLevel', sys.existingObject(lengthStr).obj)
-		self._bindObjToSlot(sys, lengthObj, lengthSlot)
+
+		lengthSlot = vparamObj.field(sys, slotName, sys.slotManager.region)
+
+		self._bindObjToSlot(sys, lengthObj.xtype, lengthSlot)
 
 	def _bindVParamIndex(self, sys, vparamObj, index, obj):
 		context = self
-		index  = sys.extractor.getObject(index)
-		slot = sys.canonical.objectSlot(vparamObj, 'Array', sys.existingObject(index).obj)
-		self._bindObjToSlot(sys, obj, slot)
+		slotName = sys.canonical.fieldName('Array', sys.extractor.getObject(index))
+		field = vparamObj.field(sys, slotName, sys.slotManager.region)
+		self._bindObjToSlot(sys, obj, field)
 
 	def invocationMaySucceed(self, sys):
 		sig = self.signature
@@ -104,7 +114,7 @@ class AnalysisContext(CanonicalObject):
 		if sig.code.vparam is not None:
 			vparamObj = self.vparamObject(sys)
 			sys.logAllocation(cop, vparamObj) # Implicitly allocated
-			self._bindObjToSlot(sys, vparamObj, callee.vparam)
+			self._bindObjToSlot(sys, vparamObj.xtype, callee.vparam)
 			self._setVParamLength(sys, vparamObj, numArgs-numParam)
 
 			# Bind the vargs
@@ -120,7 +130,7 @@ class AnalysisContext(CanonicalObject):
 # Objects for external calls.
 externalFunction = ast.Function('external', ast.Code('external', None, [], [], None, None, ast.Local('internal_return'), ast.Suite([])))
 externalSignature = util.cpa.CPASignature(externalFunction.code, None, ())
-externalFunctionContext = AnalysisContext(externalSignature, None)
+externalFunctionContext = AnalysisContext(externalSignature, None, None)
 
 
 class OpContext(CanonicalObject):
@@ -149,87 +159,3 @@ class CodeContext(CanonicalObject):
 
 	def decontextualize(self):
 		return self.code
-
-
-##################
-### Slot Names ###
-##################
-
-class AbstractSlot(CanonicalObject):
-	__slots__ = ()
-
-	def isLocalSlot(self):
-		return False
-
-	def isObjectSlot(self):
-		return False
-
-
-class ObjectSlot(AbstractSlot):
-	__slots__ = 'obj', 'slottype', 'key', 'hash'
-
-	def __init__(self, obj, slottype, key):
-		assert isinstance(slottype, str)
-		assert isinstance(key, program.AbstractObject), key
-
-		self.setCanonical(obj, slottype, key)
-
-		self.obj      = obj
-		self.slottype = slottype
-		self.key      = key
-
-	def isObjectSlot(self):
-		return True
-
-	def createInital(self, sys):
-		obj = self.obj.obj
-		slottype = self.slottype
-		key = self.key
-
-		sys.ensureLoaded(obj)
-
-		assert isinstance(obj, program.AbstractObject), obj
-		assert isinstance(key, program.AbstractObject), key
-
-		if isinstance(obj, program.Object):
-			if slottype == 'LowLevel':
-				subdict = obj.lowlevel
-			elif slottype == 'Attribute':
-				subdict = obj.slot
-			elif slottype == 'Array':
-				subdict = obj.array
-			elif slottype == 'Dictionary':
-				subdict = obj.dictionary
-			else:
-				assert False, slottype
-
-			if key in subdict:
-				return set([sys.existingObject(subdict[key])])
-
-		# Not found, return an empty set.
-		return set()
-
-
-class LocalSlot(AbstractSlot):
-	__slots__ = 'code', 'local', 'context'
-
-	def __init__(self, code, local, context):
-		assert isinstance(code,  ast.Code), code
-		assert not isinstance(local, AbstractSlot), local # This is obviously bad...
-		#assert isinstance(local, (ast.Local, program.Object, ast.Expression)), type(local) # HACK...
-		assert isinstance(context, AnalysisContext), context
-
-		self.setCanonical(code, local, context)
-
-		self.code    = code
-		self.local   = local
-		self.context = context
-
-	def isLocalSlot(self):
-		return True
-
-	def __repr__(self):
-		return "%s(%r, %r, %d)" % (type(self).__name__, self.code.name, self.local, id(self.context))
-
-	def createInital(self, sys):
-		return set()

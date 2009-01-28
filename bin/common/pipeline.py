@@ -85,7 +85,7 @@ def cpaAnalyze(e, entryPoints):
 	print "Slot Memory:   %.1f kB" % (result.slotMemory()/1024.0)
 
 	print "Decompile:     %.3f s" % (result.decompileTime)
-	print "Analysis:      %.3f s" % (elapsed-result.decompileTime)
+	print "Solve:         %.3f s" % (result.solveTime)
 	print "Total:         %.3f s" % (elapsed)
 	print
 
@@ -94,9 +94,9 @@ def cpaAnalyze(e, entryPoints):
 def cpaPass(e, entryPoints):
 	result = cpaAnalyze(e, entryPoints)
 
-	start = time.clock()
-	codeConditioning(e, entryPoints, result)
-	print "Optimize: %.3f" % (time.clock()-start)
+#	start = time.clock()
+#	codeConditioning(e, entryPoints, result)
+#	print "Optimize: %.3f" % (time.clock()-start)
 
 	return result
 

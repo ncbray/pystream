@@ -471,6 +471,9 @@ class Code(CompoundStatement):
 	__optional__ 	= 'selfparam', 'parameters', 'parameternames', 'vparam', 'kparam', 'returnparam', 'ast'
 	__shared__      = True
 
+	def __repr__(self):
+		return "Code(%s/%d)" % (self.name, id(self))
+
 # TODO what's the type?
 class Function(CompoundStatement):
 	__metaclass__ 	= astnode

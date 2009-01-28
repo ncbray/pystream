@@ -22,12 +22,14 @@ def compileExample(filename):
 			print "Compile time: %.3f sec" % (end-start)
 
 		compileCache[filename] = make
-	
+
+	return None, None # HACK prevents further compilation
+
 	if not filename in loadCache:
 		make = compileCache[filename]
 
 		module = make.module
-		
+
 		# HACK mangle the module name
 		generated = imp.load_source(make.moduleName+'gen', make.outfile)
 

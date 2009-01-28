@@ -67,7 +67,7 @@ class InterproceduralDataflow(object):
 		self.liveCode = set()
 
 		# The value of every slot
-		self.slotManager = slotmanager.CachedSlotManager()
+		self.slotManager = slotmanager.CachedSlotManager(self)
 
 		# Constraint information
 		self.constraintReads   = collections.defaultdict(set)
@@ -100,6 +100,8 @@ class InterproceduralDataflow(object):
 		# For kargs
 		self.dictionaryClass = self.extractor.getObject(dict)
 		self.ensureLoaded(self.dictionaryClass)
+
+		self.lengthSlotName   = self.canonical.fieldName('LowLevel', self.extractor.getObject('length'))
 
 		# Controls how many previous ops are remembered by a context.
 		self.opPathLength  = 0
@@ -154,15 +156,6 @@ class InterproceduralDataflow(object):
 	def constraint(self, constraint):
 		self.constraints.add(constraint)
 
-	def dependsRead(self, constraint, slot):
-		self.constraintReads[slot].add(constraint)
-		if self.read(slot):
-			constraint.mark(self)
-
-	def dependsWrite(self, constraint, slot):
-		self.constraintWrites[slot].add(constraint)
-
-
 	def extendedParamObjects(self, context):
 		# Extended param objects are named by the context they appear in.
 		context = self.canonical.signatureContext(context.signature)
@@ -194,77 +187,58 @@ class InterproceduralDataflow(object):
 
 		sig     = self._signature(code, selfparam, params)
 		opPath  = self.advanceOpPath(srcOp.context.opPath, srcOp.op)
-		context = self.canonical._canonicalContext(sig, opPath)
+		context = self.canonical._canonicalContext(sig, opPath, self.slotManager.roots)
 
 		# Mark that we created the context.
 		self.codeContexts[code].add(context)
 
 		return context
 
-	def setTypePointer(self, cobj):
-		assert isinstance(cobj, extendedtypes.ExtendedType), type(cobj)
+	def setTypePointer(self, obj):
+		assert isinstance(obj, storegraph.ObjectNode), type(obj)
+		xtype = obj.xtype
+		assert isinstance(xtype, extendedtypes.ExtendedType), type(xtype)
 
-		# HACK to prevent recursion...
-		# Recursion should not occur in practice, but bugs can cause it...
-		if cobj not in self.initalizedTypes:
-			self.initalizedTypes.add(cobj)
 
-			self.heapContexts[cobj.group()].add(cobj)
+		if not xtype.isExisting():
+#			print "Setting type pointer for", xtype
 
 			# Makes sure the type pointer is valid.
 			typestr = self.extractor.getObject('type')
-			slot    = self.canonical.objectSlot(cobj, 'LowLevel', typestr)
+			typeFieldName = self.canonical.fieldName('LowLevel', typestr)
 
-			if not self.read(slot):
-				self.ensureLoaded(cobj.obj)
-				type_ = self.existingObject(cobj.obj.type)
-				self.initialize(slot, type_)
+			field = obj.field(self, typeFieldName, self.slotManager.region)
+
+			self.ensureLoaded(xtype.obj)
+			type_ = self.existingObject(xtype.obj.type)
+			field.initialize(self, type_)
 
 	def signatureType(self, sig, obj):
-		cobj  = self.canonical.signatureType(sig, obj)
-		self.setTypePointer(cobj)
-		return cobj
+		xtype  = self.canonical.signatureType(sig, obj)
+		return self.slotManager.region.object(self, xtype)
 
 	def pathType(self, path, obj):
-		cobj  = self.canonical.pathType(path, obj)
-		self.setTypePointer(cobj)
-		return cobj
+		xtype  = self.canonical.pathType(path, obj)
+		return self.slotManager.region.object(self, xtype)
+
 
 	def methodType(self, func, inst, obj):
-		cobj  = self.canonical.methodType(func, inst, obj)
-		self.setTypePointer(cobj)
-		return cobj
+		xtype  = self.canonical.methodType(func, inst, obj)
+		return self.slotManager.region.object(self, xtype)
 
 	def externalObject(self, obj):
-		cobj  = self.canonical.externalType(obj)
-		self.setTypePointer(cobj)
-		return cobj
+		xtype  = self.canonical.externalType(obj)
+		return self.slotManager.region.object(self, xtype)
 
 	def existingObject(self, obj):
-		cobj  = self.canonical.existingType(obj)
-		self.setTypePointer(cobj)
-		return cobj
+		xtype  = self.canonical.existingType(obj)
+		return self.slotManager.region.object(self, xtype)
 
 
 	def process(self):
 		while self.dirty:
 			current = self.dirty.popleft()
 			current.process(self)
-
-
-	def read(self, slot):
-		return self.slotManager.read(self, slot)
-
-	def update(self, slot, values):
-		return self.slotManager.update(self, slot, values)
-
-	def initialize(self, slot, *values):
-		return self.slotManager.update(self, slot, frozenset(values))
-
-	def slotChanged(self, slot):
-		for dep in self.constraintReads[slot]:
-			dep.mark(self)
-
 
 	def createAssign(self, source, dest):
 		con = AssignmentConstraint(source, dest)
@@ -293,8 +267,10 @@ class InterproceduralDataflow(object):
 			result = self.existingObject(result)
 
 			# Set the return value
-			returnSource = self.canonical.local(code, code.returnparam, targetcontext)
-			self.initialize(returnSource, result)
+
+			slotName = self.canonical.localName(code, code.returnparam, targetcontext)
+			returnSource = self.slotManager.root(slotName)
+			returnSource.initialize(self, result)
 
 			return True
 
@@ -307,8 +283,9 @@ class InterproceduralDataflow(object):
 
 		funcobj = self.existingObject(funcobj)
 		args    = tuple([self.externalObject(arg) for arg in args])
+		argxtypes = [arg.xtype for arg in args]
 
-		targetcontext = self.canonicalContext(srcOp, code, funcobj, args)
+		targetcontext = self.canonicalContext(srcOp, code, funcobj.xtype, argxtypes)
 		return targetcontext
 
 	def bindCall(self, cop, targetcontext, target):
@@ -335,7 +312,8 @@ class InterproceduralDataflow(object):
 
 			# Copy the return value
 			if target is not None:
-				returnSource = self.canonical.local(code, code.returnparam, targetcontext)
+				returnName = self.canonical.localName(code, code.returnparam, targetcontext)
+				returnSource = self.slotManager.root(returnName)
 				self.createAssign(returnSource, target)
 
 			# Caller-independant initalization.
@@ -360,18 +338,27 @@ class InterproceduralDataflow(object):
 		# TODO generate bogus ops?
 		dummyOp = self.canonical.opContext(base.externalFunction.code, externalOp, base.externalFunctionContext)
 
-		# The return value
-		dummy = ast.Local('external_escape')
-		dummyslot = self.canonical.local(base.externalFunction.code, dummy, base.externalFunctionContext)
+		#existingArgs = [self.existingObject(arg) for arg in args]
 
-		# Generate and bind the context.
+		# Generate the calling context
 		context = self.getContext(dummyOp, func.code, funcobj, args)
+
+		# Make an invocation
+		code = base.externalFunction.code
+		dummyReturn = ast.Local('external_escape')
+		dummyReturnName = self.canonical.localName(code, dummyReturn, base.externalFunctionContext)
+		dummyslot = self.slotManager.root(dummyReturnName)
 		self.bindCall(dummyOp, context, dummyslot)
 
 
 	def solve(self):
+		start = time.clock()
 		# Process
 		self.process()
+
+		end = time.clock()
+
+		self.solveTime = end-start-self.decompileTime
 
 	def slotMemory(self):
 		return self.slotManager.slotMemory()

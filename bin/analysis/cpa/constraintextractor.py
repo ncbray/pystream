@@ -14,10 +14,10 @@ from constraints import *
 class ExtractDataflow(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, system, code, context):
+	def __init__(self, system, context):
 		self.system  = system
-		self.code    = code
 		self.context = context
+		self.code = self.context.signature.code
 
 		self.processed = set()
 
@@ -257,4 +257,5 @@ class ExtractDataflow(object):
 	def visitCode(self, node):
 		self(node.ast)
 
-
+	def process(self):
+		self(self.code)

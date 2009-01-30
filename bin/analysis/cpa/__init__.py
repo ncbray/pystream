@@ -302,9 +302,23 @@ class InterproceduralDataflow(object):
 		targetcontext = self.canonicalContext(srcOp, code, funcobjxtype, argxtypes)
 		return targetcontext
 
+	def initializeContext(self, context):
+		# Don't bother if the call can never happen.
+		if context.invocationMaySucceed(self):
+			# Caller-independant initalization.
+			if context not in self.liveContexts:
+				# Mark as initialized
+				self.liveContexts.add(context)
+				self.liveCode.add(context.signature.code)
+
+				# Check to see if we can just fold it.
+				if not self.fold(context):
+					# Extract the constraints
+					exdf = ExtractDataflow(self, context)
+					exdf.process()
+
 	def bindCall(self, cop, targetcontext, target):
 		assert isinstance(cop, base.OpContext), type(cop)
-		# HACK pulling context from target, and op from path.  Pass explicitly.
 
 		sig = targetcontext.signature
 		code = sig.code
@@ -324,27 +338,18 @@ class InterproceduralDataflow(object):
 			# Record the invocation
 			self.opInvokes[cop].add(dst)
 
+			self.initializeContext(targetcontext)
+
+			# Bind this spesific invocation
+			# TODO bind w/ caller arguments?
+			targetcontext.bindParameters(self)
+
 			# Copy the return value
+			# TODO make part of bindParameters
 			if target is not None:
 				returnName = self.canonical.localName(code, code.returnparam, targetcontext)
 				returnSource = targetcontext.group.root(self, returnName, self.region)
 				self.createAssign(returnSource, target)
-
-			# Caller-independant initalization.
-			if not targetcontext in self.liveContexts:
-				self.liveContexts.add(targetcontext)
-				self.liveCode.add(targetcontext.signature.code)
-
-				if not self.fold(targetcontext):
-					# Extract the constraints
-					# Don't bother if the call can never happen.
-					if targetcontext.invocationMaySucceed(self):
-						exdf = ExtractDataflow(self, code, targetcontext)
-						exdf(code)
-
-						# Local binding done after creating constraints,
-						# to ensure the variables are dirty.
-						targetcontext.bindParameters(self)
 
 
 	def addEntryPoint(self, func, funcobj, args):

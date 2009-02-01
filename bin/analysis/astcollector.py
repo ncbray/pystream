@@ -7,7 +7,7 @@ class GetOps(object):
 	__metaclass__ = typedispatcher
 
 	def __init__(self):
-		self.ops    = set()
+		self.ops    = []
 		self.locals = set()
 
 	@defaultdispatch
@@ -34,7 +34,7 @@ class GetOps(object):
 		  ast.GetAttr, ast.SetAttr, ast.ConvertToBool,
 		  ast.BuildTuple, ast.BuildList, ast.GetIter)
 	def visitOp(self, node):
-		self.ops.add(node)
+		self.ops.append(node)
 
 	@dispatch(list)
 	def visitList(self, node):

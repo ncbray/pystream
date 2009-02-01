@@ -139,8 +139,8 @@ class AllocateConstraint(CachedConstraint):
 		if type_.obj.isType():
 			xtype = sys.extendedInstanceType(self.op.context, type_)
 			self.target.initializeType(sys, xtype)
-
-			sys.logAllocation(self.op, xtype)
+			obj = self.target.knownObject(xtype)
+			sys.logAllocation(self.op, obj)
 
 	def attach(self, sys):
 		CachedConstraint.attach(self, sys)

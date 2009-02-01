@@ -151,12 +151,15 @@ class InterproceduralDataflow(object):
 		return result
 
 	def logAllocation(self, cop, cobj):
+		assert isinstance(cobj, storegraph.ObjectNode), type(cobj)
 		self.opAllocates[cop].add(cobj)
 
 	def logRead(self, cop, slot):
+		assert isinstance(slot, storegraph.SlotNode), type(slot)
 		self.opReads[cop].add(slot)
 
 	def logModify(self, cop, slot):
+		assert isinstance(slot, storegraph.SlotNode), type(slot)
 		self.opModifies[cop].add(slot)
 
 	def constraint(self, constraint):

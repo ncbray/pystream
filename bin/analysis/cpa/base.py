@@ -113,11 +113,15 @@ class AnalysisContext(CanonicalObject):
 		# Bind the vparams
 		if sig.code.vparam is not None:
 			vparamType = self.vparamType(sys)
+
+			# Set the varg pointer
+			# Ensures the object node is created.
 			self._bindObjToSlot(sys, vparamType, callee.vparam)
-			sys.logAllocation(cop, vparamType) # Implicitly allocated
+
+			vparamObj = callee.vparam.knownObject(vparamType)
+			sys.logAllocation(cop, vparamObj) # Implicitly allocated
 
 			# Set the length
-			vparamObj = callee.vparam.knownObject(vparamType)
 			self._setVParamLength(sys, vparamObj, numArgs-numParam)
 
 			# Bind the vargs

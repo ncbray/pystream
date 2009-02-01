@@ -168,6 +168,8 @@ class ObjectNode(MergableNode):
 	def __iter__(self):
 		return self.slots.itervalues()
 
+	def __repr__(self):
+		return "obj(%r, %r)" % (self.xtype, id(self.region))
 
 class SlotNode(MergableNode):
 	__slots__ = 'object', 'slotName', 'region', 'refs', 'observers'

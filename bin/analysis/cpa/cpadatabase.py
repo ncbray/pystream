@@ -236,6 +236,9 @@ class CPADatabase(object):
 			if name.isLocal():
 				info = self.functionInfo(name.code).localInfo(name.local).context(name.context)
 				info.references.update(slot)
+			elif name.isExisting():
+				info = self.functionInfo(name.code).localInfo(name.object).context(name.context)
+				info.references.update(slot)
 
 
 		self.finalizeInfos()

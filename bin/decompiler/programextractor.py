@@ -36,7 +36,7 @@ FieldNotFound = FieldNotFoundType()
 def type_fields(t):
 	fields = set()
 	for cls in inspect.getmro(t):
-		fields.update(cls.__dict__.iterkeys())	
+		fields.update(cls.__dict__.iterkeys())
 	return fields
 
 def type_lookup(t, field):
@@ -61,14 +61,14 @@ def translateEntryPoint(extractor, module, name, args):
 	name = extractor.getObject(name)
 
 	extractor.ensureLoaded(module)
-	
+
 	assert name in module.slot, name
 	fobj = module.slot[name] # Is this correct?  It might be in the dictionary...
 	# TODO just get from the pyobj?
 
 	extractor.ensureLoaded(fobj)
 	func = extractor.getCall(fobj)
-	
+
 	argobjs  = [arg.getObject(extractor) for arg in args]
 	return func, fobj, argobjs
 
@@ -88,7 +88,7 @@ class Extractor(object):
 
 		self.complete = collections.defaultdict(lambda: False)
 		self.queue = collections.deque()
-		
+
 		self.constpool = collections.defaultdict(dict)
 
 		# What we're building.
@@ -121,9 +121,9 @@ class Extractor(object):
 
 		if not cls in self.typeDictCache:
 			self.typeDictCache[cls] = flatTypeDict(cls)
-			
+
 		return self.typeDictCache[cls]
-		
+
 
 	def makeImaginary(self, name, t):
 		obj = program.ImaginaryObject(name, t)
@@ -168,22 +168,22 @@ class Extractor(object):
 	def replaceAttr(self, obj, attr, replacement):
 		assert isinstance(obj, type), obj
 		assert isinstance(attr, str), attr
-		
+
 		assert obj not in self # It hasn't be processed, yet.
 
 		self.attrLUT[id(obj)][attr] = replacement
 
-	def initalizeObjects(self):		
+	def initalizeObjects(self):
 		replaceAttrs(self)
 
 		setupLowLevel(self)
-		
+
 		# Prevents uglyness by masking the module dictionary.  This prevents leakage.
 		self.replaceObject(sys.modules, {})
 		replaceObjects(self)
 
 		# Always need it, but might miss it in some cases (interpreter has internal refernece).
-		self.__getObject(__builtins__) 
+		self.__getObject(__builtins__)
 
 
 		# Strings for mutating the image
@@ -221,26 +221,30 @@ class Extractor(object):
 		self.ensureLoaded(o)
 
 		if o not in self.desc.callLUT:
+			self.desc.callLUT[o] = None # Prevent recursion.
+
 			typedict = self.getTypeDict(o.type)
 			callstr = self.getObject('__call__')
 
 			# HACK, does not chain the lookup?
 			if callstr in typedict:
-				func = self.getCall(typedict[callstr])
+				callobj = typedict[callstr]
+				assert callobj is not o, o
+				func = self.getCall(callobj)
 				if func:
 					self.desc.callLUT[o] = func
-		
+
 		return self.desc.callLUT.get(o)
 
 	def getObject(self, o, t=False):
 		assert type(o).__dict__ not in self, o
-		
+
 		result = self.__getObject(o, t)
 		return result
 
 	def __getObject(self, o, t=False):
 		assert not isinstance(o, program.AbstractObject), o
-		
+
 		o = self.getCanonical(o)
 
 		if not self.contains(o):
@@ -249,14 +253,14 @@ class Extractor(object):
 			# Create the object
 			obj = program.Object(o)
 
-			# Lookup table, by object ID.			
+			# Lookup table, by object ID.
 			self.objcache[id(o)] = obj
 
 			# A list of created objects
 			self.desc.objects.append(obj)
 
 			if not self.lazy:
-				# Put object in processing queue.	
+				# Put object in processing queue.
 				# Give priority to types, in reverse order.
 				if t:
 					self.queue.appendleft(obj)
@@ -265,17 +269,17 @@ class Extractor(object):
 
 ##			# Must be after caching, as types may recurse.
 ##			self.initalizeObject(obj)
-			
+
 			return obj
 		else:
 			return self.objcache[id(o)]
-		
+
 	def process(self):
 		if self.lazy:
 			return
-		
+
 		assert not self.queue or not self.finalized
-		
+
 		while self.queue:
 			obj = self.queue.popleft()
 			self.processObject(obj)
@@ -286,10 +290,10 @@ class Extractor(object):
 		assert not self.queue
 ##		for obj in self.objcache.itervalues():
 ##			assert self.complete[obj], obj
-		
+
 
 	def finalize(self):
-		assert not self.finalized		
+		assert not self.finalized
 		self.finalized = True
 
 	def unfinalize(self):
@@ -354,9 +358,9 @@ class Extractor(object):
 				dumpObj(obj.type)
 				td = obj.type.lowlevel[self.desc.dictionaryName]
 				dumpObj(td)
-				
+
 			assert self.desc.nameObj in obj.slot, obj.slot
-			
+
 			obj.addLowLevel(self.desc.slotObj, obj.slot[self.desc.nameObj])
 
 		# REquires a C function pointer.
@@ -393,7 +397,7 @@ class Extractor(object):
 			# Must be after caching, as types may recurse.
 			self.initalizeObject(obj)
 
-			
+
 			if isinstance(pyobj, xtypes.FunctionType):
 				self.handleFunction(obj)
 			elif isinstance(pyobj, xtypes.BuiltinFunctionType):
@@ -404,7 +408,7 @@ class Extractor(object):
 				self.handleObject(obj)
 
 			self.postProcessMutate(obj)
-			
+
 			self.complete[obj] = True
 		else:
 			self.defer(obj)
@@ -419,12 +423,12 @@ class Extractor(object):
 
 
 	# Object may have fixed slots.  Search for them.
-	def handleSlots(self, obj):		
+	def handleSlots(self, obj):
 		pyobj = obj.pyobj
 
 		flat = self.flatTypeDict(type(pyobj))
 
-		# Relies on type dictionary being flattened.		
+		# Relies on type dictionary being flattened.
 		for name, member in flat.iteritems():
 			assert not isinstance(name, program.AbstractObject), name
 			assert not isinstance(member, program.AbstractObject), member
@@ -466,7 +470,7 @@ class Extractor(object):
 				clsid = id(cls.pyobj)
 				if clsid in self.attrLUT:
 					lut = self.attrLUT[clsid]
-			
+
 			for k, v in obj.pyobj.iteritems():
 				v = lut.get(k, v) # Replace the value if needed.
 				obj.addDictionaryItem(self.__getObject(k), self.__getObject(v))
@@ -490,19 +494,19 @@ class Extractor(object):
 
 	def handleType(self, obj):
 		# Flatten the type dictionary and add a low-level pointer.
-		# TODO point type.__dict__ slot getter to this slot?  
+		# TODO point type.__dict__ slot getter to this slot?
 		flat = self.flatTypeDict(obj.pyobj)
 		flatObj = self.__getObject(flat)
 
 		# This is so the mutator knows it's dealing with a type dictionary
 		self.typeDictType[flatObj] = obj
-		
+
 
 		# All type objects have flattened dictionaries.
 		obj.addLowLevel(self.desc.dictionaryName, flatObj)
-		
 
-		
+
+
 		pyobj = obj.pyobj
 
 		for t in inspect.getmro(pyobj):
@@ -527,7 +531,7 @@ class Extractor(object):
 
 		self.handleObject(obj)
 
-			
+
 	def handleBuiltinFunction(self, obj):
 		func = obj.pyobj
 		self.builtin += 1
@@ -545,7 +549,7 @@ class Extractor(object):
 
 	def decompileFunction(self, func, trace=False, ssa=True):
 		function = None
-		
+
 		try:
 			function = decompile(func, self, trace=trace, ssa=ssa)
 		except IrreducibleGraphException:
@@ -579,6 +583,6 @@ def extractProgram(moduleName, module, rawEntryPoints):
 	moduleObj = extractor.getObject(module)
 
 	# Get the entry points.
-	entryPoints = translateEntryPoints(extractor, moduleObj, rawEntryPoints)	
+	entryPoints = translateEntryPoints(extractor, moduleObj, rawEntryPoints)
 
 	return extractor, entryPoints

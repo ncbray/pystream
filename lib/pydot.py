@@ -178,7 +178,9 @@ def needs_quotes( s ):
 
 
 def quote_if_necessary(s):
-	if isinstance(s, bool):
+	if s is None:
+		return 'None'
+	elif isinstance(s, bool):
 		return 'true' if s else 'false'
 	elif isinstance(s, (int, float)):
 		return str(s)

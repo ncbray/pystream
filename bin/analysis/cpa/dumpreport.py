@@ -388,7 +388,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				out.begin('ul')
 				for obj in live:
 					out.begin('li')
-					heapLink(out, obj, links)
+					outputObjectShortName(out, obj, links)
 					if obj in killed:
 						out << " (killed)"
 					out.end('li')
@@ -404,14 +404,14 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				out.end('h3')
 				out.begin('p')
 				out.begin('ul')
-				for obj, slots in itergroupings(reads, lambda slot: slot.obj, lambda slot: (slot.slottype, slot.key)):
+				for obj, slots in itergroupings(reads, lambda slot: slot.object, lambda slot: slot.slotName):
 					out.begin('li')
-					heapLink(out, obj, links)
+					outputObjectShortName(out, obj, links)
 
 					out.begin('ul')
 					for slot in slots:
 						out.begin('li')
-						out << "%s - %r" % slot
+						out << "%r" % slot
 						out.end('li')
 					out.end('ul')
 
@@ -428,14 +428,14 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				out.end('h3')
 				out.begin('p')
 				out.begin('ul')
-				for obj, slots in itergroupings(modifies, lambda slot: slot.obj, lambda slot: (slot.slottype, slot.key)):
+				for obj, slots in itergroupings(modifies, lambda slot: slot.object, lambda slot: slot.slotName):
 					out.begin('li')
-					heapLink(out, obj, links)
+					outputObjectShortName(out, obj, links)
 
 					out.begin('ul')
 					for slot in slots:
 						out.begin('li')
-						out << "%s - %r" % slot
+						out << "%r" % slot
 						out.end('li')
 					out.end('ul')
 

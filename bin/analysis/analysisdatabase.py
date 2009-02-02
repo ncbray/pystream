@@ -24,14 +24,14 @@ class AbstractAnalysisDatabase(object):
 	def origin(self, function, op):
 		return self.opTracking.get(op, op)
 
-	
+
 	# Single, non-contextual local reference
 	# Returns object
 	def singleObject(self, function, local):
 		values = self.objectsForLocal(function, self.origin(function, local))
 
 		if len(values) == 1:
-			obj = tuple(values)[0].obj
+			obj = tuple(values)[0].xtype.obj
 			if obj.isPreexisting():
 				return obj
 		return None
@@ -40,11 +40,11 @@ class AbstractAnalysisDatabase(object):
 	# Returns function
 	def singleCall(self, function, b):
 		funcs = self.invocationsForOp(function, self.origin(function, b))
-		
+
 		if len(funcs) == 1:
 			func = tuple(funcs)[0]
 			return func
-		
+
 		return None
 
 

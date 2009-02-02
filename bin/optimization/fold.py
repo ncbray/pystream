@@ -36,9 +36,26 @@ class FoldRewrite(object):
 		if isinstance(ref, ast.Local):
 			return self.adb.db.functionInfo(self.code).localInfo(ref).merged.references
 		elif isinstance(ref, ast.Existing):
-			# HACK needs access to canonical objects
-			# HACK doesn't create type pointer?
-			return set((self.adb.db.canonical.existingType(ref.object),))
+			# HACK creating a de-contextualized existing object?  This should really be a "global" object...
+			obj = ref.object
+			sys = self.adb.db.system
+			existingName = sys.canonical.existingName(self.code, obj, None)
+			slot = sys.roots.root(sys, existingName, sys.roots.regionHint)
+			slot.initializeType(sys, sys.canonical.existingType(obj))
+
+			objs = tuple(iter(slot))
+			return objs
+		else:
+			assert False, type(ref)
+
+
+
+	def getExistingNames(self, ref):
+		if isinstance(ref, ast.Local):
+			refs = self.adb.db.functionInfo(self.code).localInfo(ref).merged.references
+			return [ref.xtype.obj for ref in refs]
+		elif isinstance(ref, ast.Existing):
+			return (ref.object,)
 
 	def getMethodFunction(self, expr, name):
 		# Static setup
@@ -47,25 +64,26 @@ class FoldRewrite(object):
 		dictStrObj = self.extractor.getObject('dictionary')
 
 		def cobjSlotRefs(cobj, slotType, key):
-			return db.heapInfo(cobj.group()).slotInfo(slotType, key).context(cobj).references
-
+			fieldName = db.canonical.fieldName(slotType, key)
+			slot = cobj.knownField(fieldName)
+			return tuple(iter(slot))
 
 		# Dynamic setup
 		funcs = set()
-		targetObjs = self.getObjects(expr)
-		nameObjs = self.getObjects(name)
+		exprObjs = self.getObjects(expr)
+		nameObjs = self.getExistingNames(name)
 
-		for target in targetObjs:
-			typeObjs = cobjSlotRefs(target, 'LowLevel', typeStrObj)
+		for exprObj in exprObjs:
+			typeObjs = cobjSlotRefs(exprObj, 'LowLevel', typeStrObj)
 			for t in typeObjs:
 				dictObjs = cobjSlotRefs(t, 'LowLevel', dictStrObj)
 				for d in dictObjs:
 					for nameObj in nameObjs:
-						funcObjs = cobjSlotRefs(d, 'Dictionary', nameObj.obj)
+						funcObjs = cobjSlotRefs(d, 'Dictionary', nameObj)
 						funcs.update(funcObjs)
 
 		if len(funcs) == 1:
-			return ast.Existing(funcs.pop().obj)
+			return ast.Existing(funcs.pop().xtype.obj)
 		else:
 			return None
 

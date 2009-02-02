@@ -44,17 +44,17 @@ class LocalSlotName(BaseSlotName):
 
 
 class ExistingSlotName(BaseSlotName):
-	__slots__ = 'code', 'obj', 'context'
+	__slots__ = 'code', 'object', 'context'
 
-	def __init__(self, code, obj, context):
+	def __init__(self, code, object, context):
 #		assert isinstance(code, ast.Code), type(code)
 #		assert isinstance(obj, program.AbstractObject), type(obj)
 #		assert isinstance(context, base.AnalysisContext), type(context)
 
 		self.code    = code
-		self.obj     = obj
+		self.object     = object
 		self.context = context
-		self.setCanonical(code, obj, context)
+		self.setCanonical(code, object, context)
 
 	def isRoot(self):
 		return True
@@ -63,7 +63,7 @@ class ExistingSlotName(BaseSlotName):
 		return True
 
 	def __repr__(self):
-		return 'existing(%s, %r, %d)' % (self.code.name, self.obj, id(self.context))
+		return 'existing(%s, %r, %d)' % (self.code.name, self.object, id(self.context))
 
 
 class FieldSlotName(BaseSlotName):

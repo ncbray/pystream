@@ -103,7 +103,7 @@ class Object(AbstractObject):
 		else:
 			r = repr(self.pyobj)
 
-			
+
 		return "%s(%s)" % (type(self).__name__, r)
 
 
@@ -177,5 +177,5 @@ class ProgramDescription(object):
 	def bindCall(self, obj, func):
 		assert isinstance(obj, AbstractObject), obj
 		assert not isinstance(func, AbstractObject), func
-		assert not obj in self.callLUT, obj
+		assert obj not in self.callLUT, obj
 		self.callLUT[obj] = func

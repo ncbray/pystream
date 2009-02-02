@@ -94,6 +94,7 @@ class InterproceduralDataflow(object):
 
 		self.db = CPADatabase()
 		self.db.canonical = self.canonical # HACK so the canonical objects are accessable.
+		self.db.system = self # HACK even bigger hack...
 
 		# For vargs
 		self.tupleClass = self.extractor.getObject(tuple)

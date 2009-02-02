@@ -94,9 +94,9 @@ def cpaAnalyze(e, entryPoints):
 def cpaPass(e, entryPoints):
 	result = cpaAnalyze(e, entryPoints)
 
-#	start = time.clock()
-#	codeConditioning(e, entryPoints, result)
-#	print "Optimize: %.3f" % (time.clock()-start)
+	start = time.clock()
+	codeConditioning(e, entryPoints, result)
+	print "Optimize: %.3f" % (time.clock()-start)
 
 	return result
 

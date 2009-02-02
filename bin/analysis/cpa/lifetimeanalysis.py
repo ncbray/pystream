@@ -16,6 +16,8 @@ from analysis.astcollector import getOps
 import programIR.python.ast as ast
 
 
+from . import storegraph
+
 contextSchema   = structure.WildcardSchema()
 operationSchema = structure.TypeSchema((ast.Expression, ast.Statement))
 codeSchema  = structure.TypeSchema(ast.Code)
@@ -89,9 +91,11 @@ class ObjectInfo(object):
 		self.heldByClosure  = set()
 
 		# Reasonable defaults
-		self.globallyVisible   = obj.isExisting()
-		self.externallyVisible = obj.isExternal()
+		self.globallyVisible   = obj.xtype.isExisting()
+		self.externallyVisible = obj.xtype.isExternal()
 
+	def isReachableFrom(self, refs):
+		return bool(self.heldByClosure.intersection(refs))
 
 class ReadModifyAnalysis(object):
 	def __init__(self, killed, invokedBy):
@@ -152,7 +156,7 @@ class ReadModifyAnalysis(object):
 			killed = self.killed[(prevC, currentC)]
 
 			# Propigate reads
-			filtered = set([value for value in self.contextReads[currentC] if value.obj not in killed])
+			filtered = set([value for value in self.contextReads[currentC] if value.object not in killed])
 			current = prevRead[prevC]
 			diff = filtered-current if current else filtered
 
@@ -184,7 +188,7 @@ class ReadModifyAnalysis(object):
 			killed = self.killed[(prevC, currentC)]
 
 			# Propigate modifies
-			filtered = set([value for value in self.contextModifies[currentC] if value.obj not in killed])
+			filtered = set([value for value in self.contextModifies[currentC] if value.object not in killed])
 			#diff = filtered-self.opModifies[prev]
 			current = prevMod[prevC]
 			diff = filtered-current if current else filtered
@@ -193,6 +197,35 @@ class ReadModifyAnalysis(object):
 				prevMod.merge(prevC, diff)
 				self.dirty.add((prevF, prevC))
 
+class DFSSearcher(object):
+	def __init__(self):
+		self._stack   = []
+		self._touched = set()
+
+	def enqueue(self, *children):
+		for child in children:
+			if child not in self._touched:
+				self._touched.add(child)
+				self._stack.append(child)
+
+	def process(self):
+		while self._stack:
+			current = self._stack.pop()
+			self.visit(current)
+
+class ObjectSearcher(DFSSearcher):
+	def __init__(self, la):
+		DFSSearcher.__init__(self)
+		self.la = la
+
+	def visit(self, obj):
+		objInfo = self.la.getObjectInfo(obj)
+		for slot in obj:
+			for next in slot:
+				nextInfo = self.la.getObjectInfo(next)
+				objInfo.refersTo.add(nextInfo)
+				nextInfo.referedFrom.add(objInfo)
+				self.enqueue(next)
 
 class LifetimeAnalysis(object):
 	def __init__(self):
@@ -209,6 +242,7 @@ class LifetimeAnalysis(object):
 
 
 	def getObjectInfo(self, obj):
+		assert isinstance(obj, storegraph.ObjectNode), type(obj)
 		if obj not in self.objects:
 			info = ObjectInfo(obj)
 			self.objects[obj] = info
@@ -361,7 +395,7 @@ class LifetimeAnalysis(object):
 				if dstLive in refs:
 					# Directly held
 					newLive.add(dstLive)
-				elif self.objects[dstLive].heldByClosure.intersection(refinfos):
+				elif self.getObjectInfo(dstLive).isReachableFrom(refinfos):
 					# Indirectly held
 					newLive.add(dstLive)
 				else:
@@ -374,28 +408,7 @@ class LifetimeAnalysis(object):
 			self.dirty.update(self.invokedBy[currentF][currentC])
 
 
-	def process(self, sys):
-		for slot, values in sys.slotManager.iterslots():
-			if slot.isLocalSlot():
-				# HACK search for the "external" function, as it tends to get filted out of the DB.
-				context = slot.context
-				if context is base.externalFunctionContext:
-					for value in values:
-						obj = self.getObjectInfo(value)
-						obj.localReference.add(context)
-
-						# HACK
-						self.codeRefersToHeap[(base.externalFunction, context)].add(value)
-
-						if context is base.externalFunctionContext:
-							obj.externallyVisible = True
-			else:
-				obj = self.getObjectInfo(slot.obj)
-				for value in values:
-					other = self.getObjectInfo(value)
-					obj.refersTo.add(other)
-					other.referedFrom.add(obj)
-
+	def gatherInvokes(self, sys):
 		invokes = invokesSchema.instance()
 
 		for code, funcinfo in sys.db.functionInfos.iteritems():
@@ -425,9 +438,38 @@ class LifetimeAnalysis(object):
 
 		invokedBy = invertInvokes(invokes)
 
-
 		self.invokes   = invokes
 		self.invokedBy = invokedBy
+
+	def gatherSlots(self, sys):
+
+		searcher = ObjectSearcher(self)
+
+		for slot in sys.roots:
+			for next in slot:
+				searcher.enqueue(next)
+
+
+			if slot.slotName.isLocal():
+				# HACK search for the "external" function, as it tends to get filted out of the DB.
+				context = slot.slotName.context
+				if context is base.externalFunctionContext:
+					for next in slot:
+						obj = self.getObjectInfo(next)
+						obj.localReference.add(context)
+
+						# HACK
+						self.codeRefersToHeap[(base.externalFunction, context)].add(next)
+
+						if context is base.externalFunctionContext:
+							obj.externallyVisible = True
+
+		searcher.process()
+
+
+	def process(self, sys):
+		self.gatherSlots(sys)
+		self.gatherInvokes(sys)
 
 		self.allocations = forgetOp(sys.opAllocates)
 

@@ -499,6 +499,11 @@ class Store(LLStatement):
 	__fields__    = 'expr', 'fieldtype', 'name', 'value'
 	__types__     = {'expr':Reference, 'fieldtype':str, 'name':Reference, 'value':Reference}
 
+class Check(LLExpression):
+	__metaclass__ = astnode
+	__fields__    = 'expr', 'fieldtype', 'name'
+	__types__     = {'expr':Reference, 'fieldtype':str, 'name':Reference}
+
 manifest = makeASTManifest(globals())
 
 

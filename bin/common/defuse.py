@@ -13,7 +13,7 @@ class CodeVisitor(traversal.ConcreteVisitor):
 		else:
 			# Just for development.
 			assert node==None or isinstance(node, (str, int, float))
-			return 
+			return
 
 
 class DefUseVisitor(CodeVisitor):
@@ -51,7 +51,7 @@ class DefUseVisitor(CodeVisitor):
 		assert isinstance(gname, Existing)
 		name = gname.constantValue()
 		assert isinstance(name, str)
-		self.globaldef[name].append(location)		
+		self.globaldef[name].append(location)
 
 	def useGlobal(self, location, gname):
 		assert isinstance(gname, Existing)
@@ -85,7 +85,7 @@ class DefUseVisitor(CodeVisitor):
 		self.use(node, node.value)
 
 	def visitDeleteGlobal(self, node):
-		# TODO use internal self?		
+		# TODO use internal self?
 		self.defineGlobal(node, node.name)
 
 	def visitSuite(self, node):
@@ -128,7 +128,7 @@ class DefUseVisitor(CodeVisitor):
 	def handleArgs(self, node):
 		for arg in node.args:
 			self.use(node, arg)
-			
+
 		for name, arg in node.kwds:
 			self.use(node, arg)
 
@@ -295,10 +295,10 @@ class DefUseVisitor(CodeVisitor):
 
 	def visitMakeFunction(self, node):
 		#self.use(node, node.code)
-		
+
 		for default in node.defaults:
 			self.use(node, default)
-			
+
 		for cell in node.cells:
 			self.use(node, cell)
 
@@ -314,6 +314,9 @@ class DefUseVisitor(CodeVisitor):
 		self.use(node, node.name)
 		self.use(node, node.value)
 
+	def visitCheck(self, node):
+		self.use(node, node.expr)
+		self.use(node, node.name)
 
 class Collapser(StandardVisitor):
 	def __init__(self, defines, uses):
@@ -347,18 +350,18 @@ class Collapser(StandardVisitor):
 	def process(self, node):
 		if node == None:
 			return
-		
+
 		if isinstance(node, Statement) and not isinstance(node, Assign) and not isinstance(node, Suite):
 			self.resetStack()
-			
+
 ##		for assign in reversed(node.onExit):
 ##			self.process(assign)
 
 		self.visit(node)
-		
+
 ##		for assign in reversed(node.onEntry):
 ##			self.process(assign)
-		
+
 
 	def visitFunction(self, node):
 		self.process(node.code)
@@ -372,7 +375,7 @@ class Collapser(StandardVisitor):
 
 	def visitReturn(self, node):
 		self.process(node.expr)
-		
+
 		if not isinstance(node.expr, Existing):
 			self.markPossible(node.expr)
 
@@ -422,7 +425,7 @@ class Collapser(StandardVisitor):
 	def visitExceptionHandler(self, node):
 		self.resetStack()
 		self.process(node.body)
-		
+
 		self.resetStack()
 		if node.value: self.process(node.value)
 
@@ -450,7 +453,7 @@ class Collapser(StandardVisitor):
 
 		self.resetStack()
 		self.process(node.t)
-		
+
 		self.resetStack()
 		self.process(node.condition)
 
@@ -461,11 +464,11 @@ class Collapser(StandardVisitor):
 
 		if node.else_:
 			self.resetStack()
-			self.process(node.else_)		
+			self.process(node.else_)
 
 		if node.defaultHandler:
 			self.resetStack()
-			self.process(node.defaultHandler)		
+			self.process(node.defaultHandler)
 
 		for handler in reversed(node.handlers):
 			self.resetStack()
@@ -480,7 +483,7 @@ class Collapser(StandardVisitor):
 			self.process(node.else_)
 
 		self.resetStack()
-		self.process(node.body)		
+		self.process(node.body)
 		self.resetStack()
 		self.process(node.condition)
 		self.resetStack()
@@ -519,7 +522,7 @@ class Collapser(StandardVisitor):
 	def searchForTargetNondestructive(self, lcl):
 		if lcl in self.stack:
 			self.markCollapsable(lcl)
-	
+
 	def visitAssign(self, node):
 		if isinstance(node.expr, Existing):
 			# Can reorder and duplicate without penalty
@@ -614,7 +617,7 @@ class Collapser(StandardVisitor):
 
 	def visitGetSubscript(self, node):
 		self.process(node.subscript)
-		self.process(node.expr)		
+		self.process(node.expr)
 		self.markPossible(node.expr, node.subscript)
 
 	def visitSetSubscript(self, node):
@@ -623,7 +626,7 @@ class Collapser(StandardVisitor):
 		self.process(node.value)
 
 		# TODO reset stack?
-		
+
 		self.markPossible(node.value, node.expr, node.subscript)
 
 
@@ -631,7 +634,7 @@ class Collapser(StandardVisitor):
 		self.resetStack()
 
 		self.process(node.subscript)
-		self.process(node.expr)		
+		self.process(node.expr)
 
 		self.markPossible(node.expr, node.subscript)
 
@@ -705,7 +708,7 @@ class Collapser(StandardVisitor):
 	def processArgs(self, node):
 		if node.kargs:
 			self.process(node.kargs)
-		
+
 		if node.vargs:
 			self.process(node.vargs)
 
@@ -723,8 +726,8 @@ class Collapser(StandardVisitor):
 			self.markPossible(node.vargs)
 
 		if node.kargs:
-			self.markPossible(node.kargs)		
-		
+			self.markPossible(node.kargs)
+
 	def visitCall(self, node):
 		self.processArgs(node)
 		self.process(node.expr)
@@ -762,7 +765,7 @@ class Collapser(StandardVisitor):
 	def visitMakeFunction(self, node):
 		for arg in reversed(node.defaults):
 			self.process(arg)
-			
+
 		#self.process(node.code)
 
 		#self.markPossible(node.code)
@@ -784,6 +787,10 @@ class Collapser(StandardVisitor):
 		self.process(node.expr)
 		self.markPossible(node.expr, node.name, node.value)
 
+	def visitCheck(self, node):
+		self.process(node.name)
+		self.process(node.expr)
+		self.markPossible(node.expr, node.name)
 
 def defuse(ast):
 	duv = DefUseVisitor()
@@ -796,5 +803,5 @@ def defuse(ast):
 	c = Collapser(duv.lcldef, duv.lcluse)
 	c.walk(ast)
 
-	
+
 	return (duv.lcldef, duv.lcluse), (duv.globaldef, duv.globaluse), c.collapsable

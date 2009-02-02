@@ -93,13 +93,19 @@ class ExtractDataflow(object):
 			con.attach(self.system) # TODO move inside constructor?
 		return target
 
+	def check(self, node, expr, fieldtype, name, target):
+		if self.doOnce(node):
+			op   = self.contextOp(node)
+			con = CheckConstraint(op, expr, fieldtype, name, target)
+			con.attach(self.system) # TODO move inside constructor?
+		return target
 
 	##################################
 	### Generic feature extraction ###
 	##################################
 
 	@defaultdispatch
-	def default(self, node):
+	def default(self, node, *args):
 		assert False, repr(node)
 
 	@dispatch(str, type(None))
@@ -234,6 +240,10 @@ class ExtractDataflow(object):
 	@dispatch(ast.Allocate)
 	def visitAllocate(self, node, target):
 		return self.allocate(node, self(node.expr), target)
+
+	@dispatch(ast.Check)
+	def visitCheck(self, node, target):
+		return self.check(node, self(node.expr), node.fieldtype, self(node.name), target)
 
 	@dispatch(ast.Switch)
 	def visitSwitch(self, node):

@@ -116,9 +116,6 @@ class InterproceduralDataflow(object):
 		# The storage graph
 		self.roots  = storegraph.RegionGroup()
 
-		# HACK a single region?
-		self.region = storegraph.RegionNode(None)
-
 	def initalOpPath(self):
 		if self.opPathLength == 0:
 			path = None
@@ -199,7 +196,7 @@ class InterproceduralDataflow(object):
 			# Get the type object
 			typextype = self.canonical.existingType(xtype.obj.type)
 
-			field = obj.field(self, self.typeSlotName, self.region)
+			field = obj.field(self, self.typeSlotName, obj.region.group.regionHint)
 			field.initializeType(self, typextype)
 
 	def existingSlotRef(self, xtype, slotName):
@@ -288,7 +285,7 @@ class InterproceduralDataflow(object):
 
 			# Set the return value
 			name = self.canonical.localName(code, code.returnparam, targetcontext)
-			returnSource = self.roots.root(self, name, self.region)
+			returnSource = self.roots.root(self, name, self.roots.regionHint)
 			returnSource.initializeType(self, resultxtype)
 
 			return True
@@ -352,7 +349,7 @@ class InterproceduralDataflow(object):
 			# TODO make part of bindParameters
 			if target is not None:
 				returnName = self.canonical.localName(code, code.returnparam, targetcontext)
-				returnSource = targetcontext.group.root(self, returnName, self.region)
+				returnSource = targetcontext.group.root(self, returnName, targetcontext.group.regionHint)
 				self.createAssign(returnSource, target)
 
 
@@ -368,7 +365,7 @@ class InterproceduralDataflow(object):
 		code = base.externalFunction.code
 		dummyReturn = ast.Local('external_escape')
 		dummyReturnName = self.canonical.localName(code, dummyReturn, base.externalFunctionContext)
-		dummyslot = self.roots.root(self, dummyReturnName, self.region)
+		dummyslot = self.roots.root(self, dummyReturnName, self.roots.regionHint)
 		self.bindCall(dummyOp, context, dummyslot)
 
 

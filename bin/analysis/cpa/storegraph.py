@@ -58,6 +58,7 @@ class RegionNode(MergableNode):
 	__slots__ = 'objects', 'group', 'weight'
 
 	def __init__(self, group):
+		assert group is not None
 		MergableNode.__init__(self)
 
 		self.group   = group
@@ -172,7 +173,7 @@ class ObjectNode(MergableNode):
 		return "obj(%r, %r)" % (self.xtype, id(self.region))
 
 class SlotNode(MergableNode):
-	__slots__ = 'object', 'slotName', 'region', 'refs', 'observers'
+	__slots__ = 'object', 'slotName', 'region', 'refs', 'null', 'observers'
 	def __init__(self, object, slot, region, refs):
 		MergableNode.__init__(self)
 
@@ -180,6 +181,7 @@ class SlotNode(MergableNode):
 		self.slotName  = slot
 		self.region    = region
 		self.refs      = refs
+		self.null      = True
 		self.observers = []
 
 	def merge(self, sys, other):
@@ -212,6 +214,8 @@ class SlotNode(MergableNode):
 				for o in observers:
 					o.mark(sys)
 
+			# Merge flags
+			self.null |= other.null
 
 		self.region = self.region.getForward()
 		self.object = self.object.getForward()
@@ -221,14 +225,19 @@ class SlotNode(MergableNode):
 	def initializeType(self, sys, xtype):
 		self = self.getForward()
 
+
 		assert isinstance(xtype, extendedtypes.ExtendedType), type(xtype)
 
 		# TODO use diffTypeSet from canonicalSlots?
 		if xtype not in self.refs:
+			assert not self.refs
+
 			# Do this first, incase we merge?
 			self.region.object(sys, xtype) # Ensure the object exists
 
 			self._update(sys, frozenset((xtype,)))
+
+			self.null = False
 
 	def update(self, sys, other):
 		self = self.getForward()

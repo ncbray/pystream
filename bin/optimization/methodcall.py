@@ -196,7 +196,7 @@ class MethodAnalysis(object):
 	def visitLeaf(self, node):
 		return node
 
-	@dispatch(ast.Load, ast.Store, ast.Return, ast.SetAttr,
+	@dispatch(ast.Load, ast.Store, ast.Check, ast.Return, ast.SetAttr,
 		  ast.Discard, ast.GetIter, ast.ConvertToBool,
 		  ast.BinaryOp, ast.UnaryPrefixOp,
 		  ast.BuildTuple, list, ast.Call, ast.DirectCall, ast.MethodCall, ast.GetAttr)

@@ -27,7 +27,7 @@ class GetOps(object):
 	def visitLocal(self, node):
 		self.locals.add(node)
 
-	@dispatch(ast.Load, ast.Store, ast.Allocate, ast.BinaryOp, ast.UnaryPrefixOp,
+	@dispatch(ast.Load, ast.Store, ast.Check, ast.Allocate, ast.BinaryOp, ast.UnaryPrefixOp,
 		  ast.GetGlobal, ast.SetGlobal,
 		  ast.Call, ast.DirectCall, ast.MethodCall,
 		  ast.UnpackSequence,

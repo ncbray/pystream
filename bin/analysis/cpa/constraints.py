@@ -147,6 +147,46 @@ class AllocateConstraint(CachedConstraint):
 		self.target.dependsWrite(sys, self)
 
 
+class CheckConstraint(CachedConstraint):
+	__slots__ = 'op', 'expr', 'slottype', 'key', 'target'
+	def __init__(self, op, expr, slottype, key, target):
+		assert isinstance(expr, storegraph.SlotNode), type(expr)
+		assert isinstance(key,  storegraph.SlotNode), type(key)
+		assert target
+
+		CachedConstraint.__init__(self, expr, key)
+		self.op       = op
+		self.expr     = expr
+		self.slottype = slottype
+		self.key      = key
+		self.target   = target
+
+	def emit(self, sys, pyobj):
+		obj = sys.extractor.getObject(pyobj)
+		xtype = sys.canonical.existingType(obj)
+
+		# HACK initalize type implies then reference is never null...
+		# Make sound?
+		self.target.initializeType(sys, xtype)
+
+	def concreteUpdate(self, sys, exprType, keyType):
+		assert keyType.isExisting() or keyType.isExternal(), keyType
+
+		self.expr = self.expr.getForward()
+
+		obj   = self.expr.region.object(sys, exprType)
+		name  = sys.canonical.fieldName(self.slottype, keyType.obj)
+
+		slot = obj.field(sys, name, obj.region.group.regionHint)
+
+		if slot.refs:
+			self.emit(sys, True)
+
+		# TODO make sure the constraint is reevaluated if "null" changes.
+		if slot.null:
+			self.emit(sys, False)
+
+
 # Resolves the type of the expression, varg, and karg
 class AbstractCallConstraint(CachedConstraint):
 	__slots__ = 'op', 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'target'

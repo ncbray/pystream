@@ -125,14 +125,25 @@ def interpreterLoadGlobal():
 
 	# Temporaries
 	globalDict = Local('globalDict')
+	temp 	= Local('temp')
 	result 	= Local('result')
 	retp    = Local('internal_return')
 
 	# Instructions
 	b = Suite()
 	b.append(Assign(Load(function, 'Attribute', Existing('func_globals')), globalDict))
-	b.append(Assign(Load(globalDict, 'Dictionary', name), result))
-	b.append(Assign(Load(Existing(__builtins__), 'Dictionary', name), result))
+	b.append(Assign(Check(globalDict, 'Dictionary', name), temp))
+
+
+	t = Suite()
+	t.append(Assign(Load(globalDict, 'Dictionary', name), result))
+
+	f = Suite()
+	f.append(Assign(Load(Existing(__builtins__), 'Dictionary', name), result))
+
+	c = Condition(Suite(), temp)
+	b.append(Switch(c, t, f))
+
 	b.append(Return(result))
 
 	fname = 'interpreterLoadGlobal'

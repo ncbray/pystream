@@ -465,14 +465,16 @@ def dumpHeapInfo(heap, data, links, out):
 		outputObjectShortName(out, context)
 		out.endl()
 
-		for (slottype, key), info in heapInfo.slotInfos.iteritems():
-			values = info.context(context).references
-			if values:
-				out << '\t\t%s / %s\n' % (str(slottype), str(key))
-				for value in values:
-					out << '\t\t\t'
-					outputObjectShortName(out, value, links)
-					out.endl()
+		for slot in context:
+			out << '\t\t%r' % slot.slotName
+			if slot.null:
+				out << " (null?)"
+			out.endl()
+			for ref in slot:
+				out << '\t\t\t'
+				outputObjectShortName(out, ref, links)
+				out.endl()
+
 		out.end('div')
 		out.endl()
 

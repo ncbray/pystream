@@ -41,8 +41,9 @@ class ConvertCalls(object):
 		return node
 
 	@dispatch(ast.Suite, ast.Condition, list, tuple,
-		  ast.Assign, ast.Discard, ast.Return, ast.Allocate, ast.Store, ast.Load, ast.Switch,
-		  ast.For, ast.While)
+		  ast.Assign, ast.Discard, ast.Return,
+		  ast.Allocate, ast.Store, ast.Load, ast.Check,
+		  ast.Switch, ast.For, ast.While)
 	def visitOK(self, node):
 		nodeT = allChildren(self, node)
 		self.adb.trackRewrite(self.code, node, nodeT)

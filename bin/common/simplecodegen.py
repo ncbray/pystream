@@ -124,6 +124,10 @@ class SimpleExprGen(StandardVisitor):
 #		return ("<store>(%s, %r, %s, %s)" % (self.process(node.expr, 24), node.fieldtype, self.process(node.name, 24), self.process(node.value, 24))), 4
 
 
+	def visitCheck(self, node):
+		return ("<check>(%s, %r, %s)" % (self.process(node.expr, 24), node.fieldtype, self.process(node.name, 24))), 4
+
+
 	def visitGetAttr(self, node):
 		# HACK
 		#prec = 7

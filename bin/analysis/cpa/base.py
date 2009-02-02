@@ -58,22 +58,11 @@ class AnalysisContext(CanonicalObject):
 		# Extended param objects are named by the context they appear in.
 		return sys.canonical.signatureType(self.signature, inst)
 
-	def _setVParamLength(self, sys, vparamObj, length):
-		context = self
 
-		# Set the length of the vparam tuple.
-		slotName   = sys.lengthSlotName
-		lengthObjxtype  = sys.canonical.existingType(sys.extractor.getObject(length))
-
-		lengthSlot = vparamObj.field(sys, slotName, self.group.regionHint)
-
-		self._bindObjToSlot(sys, lengthObjxtype, lengthSlot)
-
-	def _bindVParamIndex(self, sys, vparamObj, index, obj):
-		context = self
+	def _vparamSlot(self, sys, vparamObj, index):
 		slotName = sys.canonical.fieldName('Array', sys.extractor.getObject(index))
 		field = vparamObj.field(sys, slotName, self.group.regionHint)
-		self._bindObjToSlot(sys, obj, field)
+		return field
 
 	def invocationMaySucceed(self, sys):
 		sig = self.signature
@@ -92,7 +81,24 @@ class AnalysisContext(CanonicalObject):
 
 		return info.willSucceed.maybeTrue()
 
-	def bindParameters(self, sys):
+	def initializeVParam(self, sys, cop, vparamSlot, length):
+		vparamType = self.vparamType(sys)
+
+		# Set the varg pointer
+		# Ensures the object node is created.
+		self._bindObjToSlot(sys, vparamType, vparamSlot)
+
+		vparamObj = vparamSlot.initializeType(sys, vparamType)
+		sys.logAllocation(cop, vparamObj) # Implicitly allocated
+
+		# Set the length of the vparam tuple.
+		lengthObjxtype  = sys.canonical.existingType(sys.extractor.getObject(length))
+		lengthSlot = vparamObj.field(sys, sys.lengthSlotName, self.group.regionHint)
+		self._bindObjToSlot(sys, lengthObjxtype, lengthSlot)
+
+		return vparamObj
+
+	def bindParameters(self, sys, caller):
 		sig = self.signature
 
 		callee = calleeSlotsFromContext(sys, self)
@@ -104,35 +110,34 @@ class AnalysisContext(CanonicalObject):
 		numArgs  = len(sig.params)
 		numParam = len(callee.params)
 		assert numArgs >= numParam
-		for arg, param in zip(sig.params[:numParam], callee.params):
-			self._bindObjToSlot(sys, arg, param)
+		for arg, cpaType, param in zip(caller.args[:numParam], sig.params[:numParam], callee.params):
+			param.initializeType(sys, cpaType)
 
 		# An op context for implicit allocation
 		cop = sys.canonical.opContext(sig.code, None, self)
 
 		# Bind the vparams
 		if sig.code.vparam is not None:
-			vparamType = self.vparamType(sys)
-
-			# Set the varg pointer
-			# Ensures the object node is created.
-			self._bindObjToSlot(sys, vparamType, callee.vparam)
-
-			vparamObj = callee.vparam.knownObject(vparamType)
-			sys.logAllocation(cop, vparamObj) # Implicitly allocated
-
-			# Set the length
-			self._setVParamLength(sys, vparamObj, numArgs-numParam)
+			vparamObj = self.initializeVParam(sys, cop, callee.vparam, numArgs-numParam)
 
 			# Bind the vargs
 			for i in range(numParam, numArgs):
-				self._bindVParamIndex(sys, vparamObj, i-numParam, sig.params[i])
+				arg     = caller.args[i]
+				cpaType = sig.params[i]
+				slot = self._vparamSlot(sys, vparamObj, i-numParam)
+				slot.initializeType(sys, cpaType)
 		else:
 			assert numArgs == numParam
 
 		# Bind the kparams
 		assert sig.code.kparam is None
 
+
+		# Copy the return value
+		if caller.returnarg is not None:
+			code = self.signature.code
+			returnSlot = localSlot(sys, code, code.returnparam, self)
+			sys.createAssign(returnSlot, caller.returnarg)
 
 # Objects for external calls.
 externalFunction = ast.Function('external', ast.Code('external', None, [], [], None, None, ast.Local('internal_return'), ast.Suite([])))

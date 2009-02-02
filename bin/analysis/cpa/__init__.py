@@ -1,5 +1,5 @@
 import collections
-
+import itertools
 import util
 
 import base
@@ -317,56 +317,68 @@ class InterproceduralDataflow(object):
 					# Extract the constraints
 					exdf = ExtractDataflow(self, context)
 					exdf.process()
+			return True
+		return False
 
-	def bindCall(self, cop, targetcontext, target):
+	def initCodeInfo(self, code):
+		# HACK still called functionInfo
+		info = self.db.functionInfo(code)
+		info.descriptive = code in descriptiveLUT
+		info.returnSlot  = code.returnparam
+
+	def bindCall(self, cop, caller, targetcontext):
 		assert isinstance(cop, base.OpContext), type(cop)
 
 		sig = targetcontext.signature
 		code = sig.code
 
-		# HACK still called functionInfo
 		# HACK should initalize elsewhere?
-		info = self.db.functionInfo(code)
-		info.descriptive = code in descriptiveLUT
-		info.returnSlot  = code.returnparam
-
-		# Caller-spesific initalization
-		# Done early, so constant folding makes the constraint dirty
-		# Target may be done for the entrypoints.
+		self.initCodeInfo(code)
 
 		dst = self.canonical.codeContext(code, targetcontext)
 		if dst not in self.opInvokes[cop]:
 			# Record the invocation
 			self.opInvokes[cop].add(dst)
 
-			self.initializeContext(targetcontext)
+			if self.initializeContext(targetcontext):
+				targetcontext.bindParameters(self, caller)
 
-			# Bind this spesific invocation
-			# TODO bind w/ caller arguments?
-			targetcontext.bindParameters(self)
-
-			# Copy the return value
-			# TODO make part of bindParameters
-			if target is not None:
-				returnName = self.canonical.localName(code, code.returnparam, targetcontext)
-				returnSource = targetcontext.group.root(self, returnName, targetcontext.group.regionHint)
-				self.createAssign(returnSource, target)
-
+	def makeExternalSlot(self, name):
+		code = base.externalFunction.code
+		dummyLocal = ast.Local(name)
+		dummyName = self.canonical.localName(code, dummyLocal, base.externalFunctionContext)
+		dummySlot = self.roots.root(self, dummyName, self.roots.regionHint)
+		return dummySlot
 
 	def addEntryPoint(self, func, funcobj, args):
 		# The call point
 		# TODO generate bogus ops?
 		dummyOp = self.canonical.opContext(base.externalFunction.code, externalOp, base.externalFunctionContext)
 
+
+		funcobjxtype = self.canonical.existingType(funcobj)
+		argxtypes    = tuple([self.canonical.externalType(arg) for arg in args])
+
+		# Generate caller information
+		selfSlot = self.makeExternalSlot('dummy_self')
+		selfSlot.initializeType(self, funcobjxtype)
+
+		argSlots = []
+		for argxtype in argxtypes:
+			argSlot = self.makeExternalSlot('dummy_param')
+			argSlot.initializeType(self, argxtype)
+			argSlots.append(argSlot)
+
+		dummyReturnSlot = self.makeExternalSlot('dummy_return')
+
+		caller = util.calling.CallerArgs(selfSlot, argSlots, [], None, None, dummyReturnSlot)
+
+
 		# Generate the calling context
 		context = self.getContext(dummyOp, func.code, funcobj, args)
 
 		# Make an invocation
-		code = base.externalFunction.code
-		dummyReturn = ast.Local('external_escape')
-		dummyReturnName = self.canonical.localName(code, dummyReturn, base.externalFunctionContext)
-		dummyslot = self.roots.root(self, dummyReturnName, self.roots.regionHint)
-		self.bindCall(dummyOp, context, dummyslot)
+		self.bindCall(dummyOp, caller, context)
 
 
 	def solve(self):

@@ -138,8 +138,7 @@ class AllocateConstraint(CachedConstraint):
 	def concreteUpdate(self, sys, type_):
 		if type_.obj.isType():
 			xtype = sys.extendedInstanceType(self.op.context, type_)
-			self.target.initializeType(sys, xtype)
-			obj = self.target.knownObject(xtype)
+			obj = self.target.initializeType(sys, xtype)
 			sys.logAllocation(self.op, obj)
 
 	def attach(self, sys):
@@ -249,7 +248,10 @@ class AbstractCallConstraint(CachedConstraint):
 					field = vargsObj.field(sys, slotName, None)
 					allslots.append(field)
 
-			con = SimpleCallConstraint(self.op, code, expr, allslots, self.target)
+			# HACK this is actually somewhere between caller and callee...
+			caller = util.calling.CallerArgs(self.selfarg, allslots, [], None, None, self.target)
+
+			con = SimpleCallConstraint(self.op, code, expr, allslots, caller)
 			con.attach(sys)
 
 
@@ -275,24 +277,23 @@ class DirectCallConstraint(AbstractCallConstraint):
 # and list of argument slots.
 # TODO make contextual?
 class SimpleCallConstraint(CachedConstraint):
-	__slots__ = 'op', 'code', 'selftype', 'slots', 'target'
+	__slots__ = 'op', 'code', 'selftype', 'slots', 'caller'
 
-	def __init__(self, op, code, selftype, slots, target):
+	def __init__(self, op, code, selftype, slots, caller):
 		assert isinstance(op, base.OpContext), type(op)
 		assert isinstance(code, ast.Code), type(code)
 		assert selftype is None or isinstance(selftype, extendedtypes.ExtendedType), selftype
-		assert target is None or isinstance(target, storegraph.SlotNode), type(target)
 		CachedConstraint.__init__(self, *slots)
 
 		self.op       = op
 		self.code     = code
 		self.selftype = selftype
 		self.slots    = slots
-		self.target   = target
+		self.caller   = caller
 
-	def concreteUpdate(self, sys, *args):
-		targetcontext = sys.canonicalContext(self.op, self.code, self.selftype, args)
-		sys.bindCall(self.op, targetcontext, self.target)
+	def concreteUpdate(self, sys, *argsTypes):
+		targetcontext = sys.canonicalContext(self.op, self.code, self.selftype, argsTypes)
+		sys.bindCall(self.op, self.caller, targetcontext)
 
 
 class DeferedSwitchConstraint(Constraint):

@@ -86,9 +86,9 @@ class AnalysisContext(CanonicalObject):
 
 		if info.willSucceed.maybeFalse():
 			if info.willSucceed.mustBeFalse():
-				print "Call to %s will always fail." % func.name
+				print "Call to %r will always fail." % self.signature
 			else:
-				print "Call to %s may fail." % func.name
+				print "Call to %r may fail." % self.signature
 
 		return info.willSucceed.maybeTrue()
 

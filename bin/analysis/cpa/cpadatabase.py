@@ -200,7 +200,7 @@ class CPADatabase(object):
 
 		print "%d heap objects." % len(objs)
 		print "%d groups." % len(self.liveObjectGroups)
-		print "%.1f%% dynamic" % (float(dynamic)/len(objs)*100.0)
+		print "%.1f%% dynamic" % (float(dynamic)/max(len(objs), 1)*100.0)
 
 
 	def finalizeInfos(self):

@@ -81,7 +81,7 @@ def cpaAnalyze(e, entryPoints):
 	print "Constraints:   %d" % len(result.constraints)
 	print "Contexts:      %d" % len(result.liveContexts)
 	print "Code:          %d" % len(result.liveCode)
-	print "Contexts/Code: %.1f" % (len(result.liveContexts)/len(result.liveCode))
+	print "Contexts/Code: %.1f" % (len(result.liveContexts)/max(len(result.liveCode), 1))
 	print "Slot Memory:   %.1f kB" % (result.slotMemory()/1024.0)
 
 	print "Decompile:     %.3f s" % (result.decompileTime)

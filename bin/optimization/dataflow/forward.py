@@ -46,10 +46,24 @@ class ForwardFlowTraverse(object):
 	def visitOK(self, node):
 		return self.processExpr(node)
 
-	@dispatch(ast.Suite, list, tuple, ast.ExceptionHandler, type(None))
+	@dispatch(list, tuple, ast.ExceptionHandler, type(None))
 	def visitFlow(self, node):
 		node = xform.allChildren(self, node)
 		return node
+
+	@dispatch(ast.Suite)
+	def visitFlow(self, node):
+		newblocks = []
+		for block in node.blocks:
+			newblocks.append(self(block))
+			if not self.flow._current:
+				# Folding control structures can kill subsequent blocks.
+				break
+
+		if newblocks != node.blocks:
+			return ast.Suite(newblocks)
+		else:
+			return node
 
 	@dispatch(ast.Condition)
 	def visitCondition(self, node):

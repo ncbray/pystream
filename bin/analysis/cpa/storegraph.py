@@ -230,7 +230,7 @@ class SlotNode(MergableNode):
 
 		# TODO use diffTypeSet from canonicalSlots?
 		if xtype not in self.refs:
-			assert not self.refs
+			#assert not self.refs, (xtype, self.refs)
 
 			# Do this first, incase we merge?
 			self.region.object(sys, xtype) # Ensure the object exists

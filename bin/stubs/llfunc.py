@@ -33,155 +33,13 @@ def object__init__():
 	f = Function(name, code)
 	return f
 
-# Low level?
 
-# types all have __get__ and __set__, set to null if not specified
-
-# Indiredtion to dictionary is tricky, so is "hasattr(self, 'dictionary')"
-#	Solve by assuming type specializtion?
-#		Requires that low-level "hasattr"s are all specialized or transformed into type tests?
-
-# "field in d" is impossible to resolve precisely unless:
-#	"defined/undefined" analysis is used
-#	Post-analysis information is used to bound the possible keys in a dictionary.
-#		Post-analysis/cloning folding?
-
-
-# Translating decompiled functions:
-#	need to link globals (getattr/type) to the calls.  requires a bit of simple analysis.
-#		effectively an op-based def-use?
-# A great opprotunity to discover correlation and optimize?
-
-
-##def object__getattribute__(self, field):
-##	cls = type(self)
-##
-##	desc = type_lookup(cls, field)
-##	# None vs. wrapped None?
-##
-##	f = desc.__get__
-##
-##	if f:
-##		s = desc.__set__
-##		if s:
-##			# Data descriptor
-##			return f(cls, self)
-##
-##	if hasattr(self, 'dictionary'): # lowlevel
-##		d = self.dictionary
-##		if field in d:
-##			# Contained in object dictionary
-##			return d[field]
-##
-##	if f:
-##		# Method descriptor
-##		return f(cls, self)
-##	elif desc:
-##		# Not actually a descriptor, and nothing in the dictionary.
-##		# Return class variable.
-##		# Note: for this to work, we need to be able to distinguish between
-##		# the class variable being None and the type lookup failing.
-##		return desc
-##	else:
-##		# Assumes f exists, as exceptions are not supported.
-##		# Returning "NotImplemented" simply provides a tracer for us to see if something goes wrong.
-##		# Probabally should create a special purpose tracer.
-##		#raise AttributeError, "'%.50s' object has no attribute '%.400s'" % (cls.__name__, field)
-##		return NotImplemented
-
-
-##def type_lookup(cls, field):
-##	# HACK, possible due to flattened classes
-##	# Assumes no possibility of error
-##	return getattr(cls, field)
-
-
-# HasAttr opcode
-# dict.__contains__(self, key) -> bool
-# dict.__get
-
-def object__getattribute__(self, field):
-	cls = type(self)
-	cls = self.type
-
-	#desc = type_lookup(cls, field)
-	desc = getattr(cls, field)
-
-	#if desc is not null:
-	if True:
-		f = getattr(desc, '__get__')
-		if f:
-			s = getattr(desc, '__set__')
-			if s:
-				# Data descriptor
-				return f(cls, self)
-
-	if hasattr(self, 'dictionary'): # lowlevel
-		d = self.dictionary
-		if field in d:
-			# Contained in object dictionary
-			return getdict(d, field)
-
-##	if desc is not null:
-	if True:
-		if f:
-			# Method descriptor
-			return f(cls, self)
-		else:
-			# Not actually a descriptor, and nothing in the dictionary.
-			# Return class variable.
-			# Note: for this to work, we need to be able to distinguish between
-			# the class variable being None and the type lookup failing.
-			return desc
-	else:
-		# Assumes f exists, as exceptions are not supported.
-		# Returning "NotImplemented" simply provides a tracer for us to see if something goes wrong.
-		# Probabally should create a special purpose tracer.
-		#raise AttributeError, "'%.50s' object has no attribute '%.400s'" % (cls.__name__, field)
-		return NotImplemented
-
-
-##@attachAttrPtr(object, '__getattribute__')
-##@descriptive
-##@llast
-##def object__getattribute__():
-##	# Param
-##	self = Local('self')
-##	field = Local('field')
-##
-##	# Locals
-##	cls 	= Local('cls')
-##	desc 	= Local('desc')
-##	d 	= Local('dict')
-##
-##	result = Local('result')
-##
-##	b = Suite()
-##
-##	# Load the attribute from the class
-##	getType(b, self, cls)
-##	b.append(Assign(Load(cls, 'Attribute', field), desc))
-##
-##
-##	# TODO only call GetProperty on objects that support the descriptor protocall?
-##	# Or should every object nominally support the protocall? o.__get__(inst, cls) -> o
-##	operation(b, '__get__', desc, [self, cls], None, None, result)
-##
-##	# HACK flow insensitive.
-##	b.append(Assign(Load(self, 'LowLevel', Existing('dictionary')), d))
-##	b.append(Assign(Load(d, 'Dictionary', field), result))
-##	b.append(Return(result))
-##
-##	code = Code(None, ['self', 'field'], [self, field], None, None, b)
-##	f = Function('object__getattribute__', code)
-##
-##	return f
-
-
-
+# TODO incomplete
+# case: method descriptor blocked by dict attr
+# case: class variable
+# case: exception
 @export
 @attachAttrPtr(object, '__getattribute__')
-@descriptive   # HACK should work in most cases.
 @llast
 def object__getattribute__():
 	# Param
@@ -190,46 +48,73 @@ def object__getattribute__():
 	field = Local('field')
 
 	# Locals
-	cls 	= Local('cls')
-	desc 	= Local('desc')
+	cls      = Local('cls')
+	clsDict  = Local('clsDict')
 
-	result = Local('result')
+	desc     = Local('desc')
+	descCls  = Local('descCls')
+	descDict = Local('descDict')
+	descFunc = Local('descFunc')
 
-	retp   = Local('internal_return')
+	hasGetter = Local('hasGetter')
+	hasSetter = Local('hasSetter')
+
+	d = Local('instDict')
+
+	result   = Local('result')
+
+	retp     = Local('internal_return')
 
 	b = Suite()
 
 	getType(b, self, cls)
-	type_lookup(b, cls, field, desc)
+	b.append(Assign(Load(cls, 'LowLevel', Existing('dictionary')), clsDict))
 
 
 	t = Suite([])
 
-	# Get the descriptor
-	descFunc = Local('descFunc')
-	inst_lookup(t, desc, Existing('__get__'), descFunc)
+	t.append(Assign(Load(clsDict, 'Dictionary', field), desc))
+	getType(t, desc, descCls)
+	t.append(Assign(Load(descCls, 'LowLevel', Existing('dictionary')), descDict))
+
+	condSuite = Suite([])
+	condSuite.append(Assign(Check(descDict, 'Dictionary', Existing('__set__')), hasSetter))
+	cond = Condition(condSuite, hasSetter)
+
+	gst = Suite([])
+	gst.append(Assign(Call(descFunc, [desc, self, cls], [], None, None), result))
+	gst.append(Return(result))
+
+	gt = Suite([])
+	gt.append(Assign(Load(descDict, 'Dictionary', Existing('__get__')), descFunc))
+	gt.append(Switch(cond, gst, Suite([])))
+
+	condSuite = Suite([])
+	condSuite.append(Assign(Check(descDict, 'Dictionary', Existing('__get__')), hasGetter))
+	cond = Condition(condSuite, hasGetter)
+
+	t.append(Switch(cond, gt, Suite([])))
+
 
 	# Call the descriptor
-	call(t, descFunc, [desc, self, cls], None, None, result)
+	t.append(Assign(Call(descFunc, [desc, self, cls], [], None, None), result))
+	t.append(Return(result))
 
 
-
-	f = Suite([])
 
 	# No descriptor
-	d = Local('dict')
+	f = Suite([])
 	f.append(Assign(Load(self, 'LowLevel', Existing('dictionary')), d))
 	f.append(Assign(Load(d, 'Dictionary', field), result))
+	f.append(Return(result))
 
 
 	conditional = Local('conditional')
 	condSuite = Suite([])
-	#condSuite.append(Assign(ConvertToBool(desc), conditional))
-	allocate(condSuite, Existing(bool), conditional)
+	condSuite.append(Assign(Check(clsDict, 'Dictionary', field), conditional))
 	cond = Condition(condSuite, conditional)
 
 	b.append(Switch(cond, t, f))
-	b.append(Return(result))
 
 	name = 'object__getattribute__'
 	code = Code(name, selfp, [self, field], ['self', 'field'], None, None, retp, b)
@@ -237,35 +122,51 @@ def object__getattribute__():
 
 	return f
 
-##def isDataDescriptor(desc):
-##	return hasattr(desc, '__get__') and hasattr(desc, '__set__')
-##
-##def object__getattribute__(self, field):
-##	# data descriptor > dictionary > method descriptor > class attribute > error
-##
-##	cls = type(self)
-##	desc = cls.lookup(field)
-##
-##	if desc and isDataDescriptor(desc):
-##		return desc.__get__(self, cls)
-##	elif self.__dict__ and field in self.__dict__:
-##		return self.__dict__[field]
-##	elif desc and hasattr(desc, '__get__'):
-##		return desc.__get__(self, cls)
-##	elif desc:
-##		return desc
-##	else:
-## 		raise AttributeError, "'%.50s' object has no attribute '%.400s'" % (cls.__name__, field)
+
+#@export
+#@attachAttrPtr(object, '__getattribute__')
+#@descriptive   # HACK should work in most cases.
+#@llcode
+#def object__getattribute__(self, field):
+#	cls     = self.type
+#	clsDict = cls.dictionary
+
+#	if checkDict(clsDict, field):
+#		desc = loadDict(clsDict, field)
+#		descDict = desc.type.dictionary
+
+#		if checkDict(descDict, '__get__'):
+#			if checkDict(descDict, '__set__'):
+#				# Data descriptor
+#				f = loadDict(descDict, '__get__')
+#				return f(desc, cls, self)
+
+#	if hasattr(self, 'dictionary'):
+#		d = self.dictionary
+#		if checkDict(d, field):
+#			# Dictionary attribute
+#			return loadDict(d, field)
+
+#	if checkDict(clsDict, field):
+#		if checkDict(descDict, '__get__'):
+#			# Method descriptor
+#			f = loadDict(descDict, '__get__')
+#			return f(desc, cls, self)
+#		else:
+#			# Class variable
+#			return desc
+#	else:
+#		raise AttributeError, field
+
 
 @export
 @highLevelStub
 def default__get__(self, inst, cls):
 	return self
 
-# Default __setattr__
-# Low level, requires class lookup?
+# TODO incomplete
+# set object__getattribute__
 @attachAttrPtr(object, '__setattr__')
-@descriptive
 @llast
 def object__setattr__():
 	selfp = Local('internal_self')
@@ -277,23 +178,71 @@ def object__setattr__():
 	retp  = Local('internal_return')
 
 	# Locals
-	#cls = Local('cls')
-	desc = Local('desc')
-	setter = Local('setter')
+	cls     = Local('cls')
+	clsDict = Local('clsDict')
+
+	desc     = Local('desc')
+	descCls  = Local('descCls')
+	descDict = Local('descDict')
+	setter   = Local('setter')
+
+	descExists = Local('descExists')
+	hasSetter  = Local('hasSetter')
+
+	selfDict   = Local('selfDict')
 
 	b = Suite()
 
-	inst_lookup(b, self, field, desc)
-	inst_lookup(b, desc, Existing('__set__'), setter)
-	call(b, setter, [desc, self, value], None, None)
+	getType(b, self, cls)
+	b.append(Assign(Load(cls, 'LowLevel', Existing('dictionary')), clsDict))
+
+
+
+
+	t = Suite([])
+	t.append(Assign(Load(clsDict, 'Dictionary', field), desc))
+	getType(t, desc, descCls)
+	t.append(Assign(Load(descCls, 'LowLevel', Existing('dictionary')), descDict))
+
+
+	ts = Suite()
+	ts.append(Assign(Load(descDict, 'Dictionary', Existing('__set__')),setter))
+	call(ts, setter, [desc, self, value], None, None)
+	returnNone(ts)
+
+
+	f = Suite([])
+	f.append(Assign(Load(self, 'LowLevel', Existing('dictionary')), selfDict))
+	f.append(Store(selfDict, 'Dictionary', field, value))
+	returnNone(f)
+
+	conditional = Local('conditional')
+	condSuite = Suite([])
+	condSuite.append(Assign(Check(descDict, 'Dictionary', Existing('__set__')), hasSetter))
+	cond = Condition(condSuite, hasSetter)
+	t.append(Switch(cond, ts, f))
+
+
+	f = Suite([])
+	f.append(Assign(Load(self, 'LowLevel', Existing('dictionary')), selfDict))
+	f.append(Store(selfDict, 'Dictionary', field, value))
+	returnNone(f)
+
+	conditional = Local('conditional')
+	condSuite = Suite([])
+	condSuite.append(Assign(Check(clsDict, 'Dictionary', field), descExists))
+	cond = Condition(condSuite, descExists)
+	b.append(Switch(cond, t, f))
 
 	returnNone(b)
+
 
 	name = 'object__setattr__'
 	code = Code(name, selfp, [self, field, value], ['self', 'field', 'value'], None, None, retp, b)
 	f = Function(name, code)
 
 	return f
+
 
 ############
 ### Type ###

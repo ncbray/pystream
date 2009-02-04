@@ -126,11 +126,11 @@ class CanonicalObjects(object):
 		return new
 
 	def methodType(self, func, inst, obj):
-		new = extendedtypes.MethodContext(func, inst, obj)
+		new = extendedtypes.MethodObjectType(func, inst, obj)
 		new = self.cache.setdefault(new, new)
 		return new
 
-	def signatureType(self, sig, obj):
-		new = extendedtypes.SignatureContext(sig, obj)
+	def contextType(self, sig, obj):
+		new = extendedtypes.ContextObjectType(sig, obj)
 		new = self.cache.setdefault(new, new)
 		return new

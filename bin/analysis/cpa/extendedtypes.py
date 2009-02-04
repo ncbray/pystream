@@ -73,7 +73,7 @@ class PathObjectType(ExtendedObjectType):
 
 # Methods are typed according to the function and instance they are bound to
 # TODO prevent type loops
-class MethodContext(ExtendedObjectType):
+class MethodObjectType(ExtendedObjectType):
 	__slots__ = 'func', 'inst'
 
 	def __init__(self, func, inst, obj):
@@ -91,14 +91,14 @@ class MethodContext(ExtendedObjectType):
 # Extended parameter objects need to be kept precise per context
 # TODO make this based on the full context?
 # TODO prevent type loops
-class SignatureContext(ExtendedObjectType):
-	__slots__ = 'sig'
+class ContextObjectType(ExtendedObjectType):
+	__slots__ = 'context'
 
-	def __init__(self, sig, obj):
+	def __init__(self, context, obj):
 		assert isinstance(obj, program.AbstractObject)
-		self.sig = sig
+		self.context = context
 		self.obj = obj
-		self.setCanonical(sig, obj)
+		self.setCanonical(context, obj)
 
 	def __repr__(self):
-		return "<sig %d %r>" % (id(self.sig), self.obj)
+		return "<context %d %r>" % (id(self.context), self.obj)

@@ -244,14 +244,15 @@ class InterproceduralDataflow(object):
 				func = sig.params[1]
 				inst = sig.params[2]
 				return self.canonical.methodType(func, inst, instObj)
-		elif pyobj is types.TupleType:
-			# Tuples are named by the signature of the context they're allocated in.
-			return self.canonical.signatureType(context.signature, instObj)
+		elif pyobj is types.TupleType or pyobj is types.ListType or pyobj is types.DictionaryType:
+			# Containers are named by the signature of the context they're allocated in.
+			return self.canonical.contextType(context, instObj)
 
 		# Note: this path does not include the final op, which is this
 		# allocate.  This is good as long as there is only one allocation
 		# in a given context. (It makes better use of the finite path length.)
 		return self.canonical.pathType(context.opPath, instObj)
+		#return self.canonical.contextType(context, instObj)
 
 	def process(self):
 		while self.dirty:

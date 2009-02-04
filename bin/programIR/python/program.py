@@ -108,11 +108,12 @@ class Object(AbstractObject):
 
 
 class ImaginaryObject(AbstractObject):
-	__slots__ = 'name',
-	def __init__(self, name, t):
+	__slots__ = 'name', 'preexisting'
+	def __init__(self, name, t, preexisting):
 		assert t.isType()
 		self.name = name
 		self.type = t
+		self.preexisting = preexisting
 
 	def __repr__(self):
 		return "%s(%s)" % (type(self).__name__, self.name)
@@ -120,7 +121,7 @@ class ImaginaryObject(AbstractObject):
 	def isPreexisting(self):
 		# HACK imaginary objects may be prexisting
 		# For example: hidden function stubs.
-		return  self.type is None or self.type.typeinfo.abstractInstance is not self
+		return self.preexisting
 
 
 # TODO create unique ID for hashable objects.

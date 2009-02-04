@@ -391,6 +391,10 @@ class InterproceduralDataflow(object):
 
 		self.solveTime = end-start-self.decompileTime
 
+	def checkConstraints(self):
+		for c in self.constraints:
+			c.check(self.console)
+
 	def slotMemory(self):
 		return self.setManager.memory()
 
@@ -407,6 +411,8 @@ def evaluate(console, extractor, entryPoints):
 		dataflow.addEntryPoint(funcast, funcobj, args)
 
 	dataflow.solve()
+
+	dataflow.checkConstraints()
 
 	# HACK?
 	dataflow.db.load(dataflow)

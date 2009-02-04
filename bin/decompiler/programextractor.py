@@ -125,8 +125,8 @@ class Extractor(object):
 		return self.typeDictCache[cls]
 
 
-	def makeImaginary(self, name, t):
-		obj = program.ImaginaryObject(name, t)
+	def makeImaginary(self, name, t, preexisting):
+		obj = program.ImaginaryObject(name, t, preexisting)
 		self.desc.objects.append(obj)
 		return obj
 
@@ -142,7 +142,7 @@ class Extractor(object):
 	def makeHiddenFunction(self, parent, ptr):
 		if not ptr in self.pointerToObject:
 			t = self.__getObject(xtypes.BuiltinFunctionType)
-			obj = self.makeImaginary("stub_%d" % ptr, t)
+			obj = self.makeImaginary("stub_%d" % ptr, t, True)
 			self.pointerToObject[ptr] = obj
 			self.linkObjToStub(ptr)
 		else:
@@ -524,7 +524,7 @@ class Extractor(object):
 
 		# MUTATE
 		# Create abstract instance for the type.
-		obj.typeinfo.abstractInstance = self.makeImaginary("%s_instance" % pyobj.__name__, obj)
+		obj.typeinfo.abstractInstance = self.makeImaginary("%s_instance" % pyobj.__name__, obj, False)
 
 		# HACK assumes standard getattribute function?
 		assert hasattr(obj.pyobj, '__dict__')

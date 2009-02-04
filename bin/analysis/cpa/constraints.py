@@ -27,6 +27,8 @@ class Constraint(object):
 			self.dirty = True
 			sys.dirty.append(self)
 
+	def check(self, console):
+		pass
 
 class CachedConstraint(Constraint):
 	__slots__ = 'observing', 'cache'
@@ -55,6 +57,17 @@ class CachedConstraint(Constraint):
 		if not depends:
 			# Nothing will trigger this constraint...
 			self.mark(sys)
+
+	def check(self, console):
+		bad = []
+		for slot in self.observing:
+			if slot is not None and not slot.refs:
+				bad.append(slot)
+
+		if bad:
+			console.output("Unresolved %r:" % self.op.op)
+			for slot in bad:
+				console.output("\t%r" % slot)
 
 
 class AssignmentConstraint(Constraint):

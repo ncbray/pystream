@@ -28,9 +28,9 @@ def operation(b, attr, expr, args, vargs, kargs, result=None):
 
 def call(b, expr, args, vargs, kargs, result=None):
 	# Make sure the optimizer doesn't get rid of the call attribute?
-	type_ 	= ast.Local('type__call__')
-	getType(b, expr, type_)
-	b.append(ast.Discard(ast.Load(type_, 'Attribute', ast.Existing('__call__'))))
+	#type_ 	= ast.Local('type__call__')
+	#getType(b, expr, type_)
+	#b.append(ast.Discard(ast.Load(type_, 'Attribute', ast.Existing('__call__'))))
 
 	call = ast.Call(expr, args, [], vargs, kargs)
 

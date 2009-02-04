@@ -100,13 +100,13 @@ def cpaPass(e, entryPoints):
 
 	return result
 
-def cpaDump(e, result, entryPoints):
+def cpaDump(name, e, result, entryPoints):
 	print "Dump..."
 	start = time.clock()
-	analysis.cpa.dumpreport.dump(e, result, entryPoints)
+	analysis.cpa.dumpreport.dump(name, e, result, entryPoints)
 	print "Dump: %.3f" % (time.clock()-start)
 
-def evaluate(e, entryPoints):
+def evaluate(name, e, entryPoints):
 	cpaHeader(1)
 	result = cpaPass(e, entryPoints)
 
@@ -116,4 +116,4 @@ def evaluate(e, entryPoints):
 		cpaHeader(2)
 		result = cpaPass(e, entryPoints)
 
-	cpaDump(e, result, entryPoints)
+	cpaDump(name, e, result, entryPoints)

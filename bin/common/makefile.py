@@ -108,7 +108,7 @@ class Makefile(object):
 
 		e, entryPoints = extractProgram(self.moduleName, self.module, self.rawEntryPoints)
 
-		common.pipeline.evaluate(e, entryPoints)
+		common.pipeline.evaluate(self.moduleName, e, entryPoints)
 
 ##		# Output
 		assureDirectoryExists(self.outdir)

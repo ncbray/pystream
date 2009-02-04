@@ -522,8 +522,8 @@ def makeHeapTree(data):
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(points, head)
 	return tree, head
 
-def dumpReport(data, entryPoints):
-	reportDir = makeReportDirectory('cpa')
+def dumpReport(name, data, entryPoints):
+	reportDir = makeReportDirectory(name)
 
 	links = LinkManager()
 
@@ -736,7 +736,7 @@ class CPAData(object):
 
 from . analysisdatabase import CPAAnalysisDatabase
 
-def dump(extractor, dataflow, entryPoints):
+def dump(name, extractor, dataflow, entryPoints):
 	print
 	print "Dumping report..."
 
@@ -744,5 +744,5 @@ def dump(extractor, dataflow, entryPoints):
 	data = CPAData(dataflow, dataflow.db)
 	data.adb = adb
 	data.sys = dataflow # HACK?
-	dumpReport(data, entryPoints)
+	dumpReport(name, data, entryPoints)
 

@@ -64,6 +64,9 @@ class CompilerConsole(object):
 
 		#filename = globals.get('__file__')
 		filename = caller.f_code.co_filename
+
+		del caller # Destroy a circular reference
+
 		return "%s:%d" % (filename, lineno)
 
 	def output(self, s, tabs=1):

@@ -234,3 +234,9 @@ if physics:
 ##	def testF(self):
 ##		self.compare('testF')
 
+
+class TestRecursiveFull(FullTestBase):
+	makefile = 'full/makerecursive.py'
+
+	def testFact(self):
+		self.compare('fact', 10)

@@ -66,7 +66,7 @@ class InstructionTranslator(object):
 	def writeLocal(self, name, value):
 		if hasattr(value, 'name') and not value.name and isIdentifier.match(name):
 			value.name = name
-			
+
 		if self.emitStoreLocal:
 			lcl = self.readLocal(name)
 
@@ -112,12 +112,12 @@ class InstructionTranslator(object):
 
 	def op_ROT_THREE(self):
 		self.stack.rot3()
-		
+
 	def op_ROT_TWO(self):
 		self.stack.rot2()
 
 
-	# Load 
+	# Load
 	def op_LOAD_FAST(self, name):
 		self.push(self.readLocal(name))
 
@@ -161,7 +161,7 @@ class InstructionTranslator(object):
 	def op_STORE_NAME(self, name):
 		# HACK in all cases encountered, STORE_NAME seems to load a global.
 		self.op_STORE_GLOBAL(name)
-		
+
 	def op_STORE_GLOBAL(self, name):
 		arg = self.getArg()
 
@@ -178,7 +178,7 @@ class InstructionTranslator(object):
 		self.emit(DeleteGlobal(self.makeConstant(name)))
 
 
-	# Store 
+	# Store
 	def op_STORE_FAST(self, name):
 		arg = self.getArg()
 
@@ -203,7 +203,7 @@ class InstructionTranslator(object):
 			lcl = Local()
 			self.defn[expr] = lcl
 			expr = lcl
-		
+
 		self.emit(SetAttr(expr, target, self.makeConstant(name)))
 
 	def op_DELETE_ATTR(self, name):
@@ -229,7 +229,7 @@ class InstructionTranslator(object):
 			lcl = Local()
 			self.defn[value] = lcl
 			value = lcl
-		
+
 		self.emit(SetSubscript(value, expr, subscript))
 
 	def op_DELETE_SUBSCR(self):
@@ -353,7 +353,7 @@ class InstructionTranslator(object):
 		kwds = self.getKwds(kwd)
 		args = self.getArgs(positional)
 		expr = self.getArg()
-		
+
 		self.pushOp(Call(expr, args, kwds, vargs, kargs))
 
 
@@ -363,11 +363,11 @@ class InstructionTranslator(object):
 
 		kargs = None
 		vargs = self.getArg()
-		
+
 		kwds = self.getKwds(kwd)
 		args = self.getArgs(positional)
 		expr = self.getArg()
-		
+
 		self.pushOp(Call(expr, args, kwds, vargs, kargs))
 
 	def op_CALL_FUNCTION_KW(self, count):
@@ -375,11 +375,11 @@ class InstructionTranslator(object):
 
 		kargs = self.getArg()
 		vargs = None
-		
+
 		kwds = self.getKwds(kwd)
 		args = self.getArgs(positional)
 		expr = self.getArg()
-		
+
 		self.pushOp(Call(expr, args, kwds, vargs, kargs))
 
 
@@ -388,11 +388,11 @@ class InstructionTranslator(object):
 
 		kargs = self.getArg()
 		vargs = self.getArg()
-		
+
 		kwds = self.getKwds(kwd)
 		args = self.getArgs(positional)
 		expr = self.getArg()
-		
+
 		self.pushOp(Call(expr, args, kwds, vargs, kargs))
 
 	def op_MAKE_FUNCTION(self, count):
@@ -406,7 +406,7 @@ class InstructionTranslator(object):
 		func = self.callback(self.extractor, getConstant(defn), self.moduleName, self.trace)
 
 		code = func
-		
+
 		self.pushOp(MakeFunction(args, (), code))
 
 	def op_MAKE_CLOSURE(self, count):
@@ -439,7 +439,7 @@ class InstructionTranslator(object):
 		func = self.callback(self.extractor, getConstant(defn), self.moduleName)
 
 		code = func
-		
+
 		self.pushOp(MakeFunction(args, cells, code))
 
 
@@ -447,11 +447,13 @@ class InstructionTranslator(object):
 	# Structure manipulation
 
 	def op_BUILD_LIST(self, count):
-		self.pushOp(BuildList(self.getArgs(count)))
+		self.pushOp(Allocate(Existing(self.extractor.getObject(list))))
+		#self.pushOp(BuildList(self.getArgs(count)))
 
 	def op_BUILD_MAP(self, count):
 		# TODO count is a size hint... we should preserve it?
-		self.pushOp(BuildMap())
+		self.pushOp(Allocate(Existing(self.extractor.getObject(dict))))
+		#self.pushOp(BuildMap())
 
 	def op_STORE_MAP(self):
 		# HACK reduce STORE_MAP into a subscript
@@ -459,7 +461,7 @@ class InstructionTranslator(object):
 		value = self.getArg()
 		expr  = self.peek() # Dictionary not popped
 
-		self.emit(SetSubscript(value, expr, key))		
+		self.emit(SetSubscript(value, expr, key))
 
 	def op_BUILD_SLICE(self, count):
 		assert count == 2 or count == 3
@@ -468,10 +470,10 @@ class InstructionTranslator(object):
 			step = self.getArg()
 		else:
 			step = None
-			
+
 		stop = self.getArg()
 		start = self.getArg()
-			
+
 		self.pushOp(BuildSlice(start, stop, step))
 
 
@@ -488,7 +490,7 @@ class InstructionTranslator(object):
 			expr = lcl
 
 
-		defn = self.ssa.definition(expr)		
+		defn = self.ssa.definition(expr)
 		if isinstance(defn, BuildTuple):
 			# Don't bother unpacking a tuple we just built.
 			toStack = defn.args
@@ -505,7 +507,7 @@ class InstructionTranslator(object):
 		for i in r:
 			target = toStack[i]
 			self.push(target)
-			
+
 
 	def op_LOAD_ATTR(self, name):
 		target = self.getArg()
@@ -552,14 +554,14 @@ class InstructionTranslator(object):
 	def op_STORE_SLICE_1(self):
 		a = self.getArg()
 		expr = self.getArg()
-		value = self.getArg()		
+		value = self.getArg()
 		self.emit(SetSlice(value, expr, a, None, None))
 
 
 	def op_STORE_SLICE_2(self):
 		b = self.getArg()
 		expr = self.getArg()
-		value = self.getArg()		
+		value = self.getArg()
 		self.emit(SetSlice(value, expr, None, b, None))
 
 	def op_STORE_SLICE_3(self):
@@ -701,7 +703,7 @@ class InstructionTranslator(object):
 		if isinstance(bop, BinaryOp) and bop.op in opnames.inplaceOps:
 			self.pushAssign(bop.left, bop)
 		else:
-			self.pushOp(bop)		
+			self.pushOp(bop)
 
 	def newLocal(self):
 		return Local()
@@ -734,7 +736,7 @@ class InstructionTranslator(object):
 			self.lineno = inst.line
 			handler = self.ophandler.get(inst.opcode)
 
-			if not handler:					
+			if not handler:
 				raise errors.UnsupportedOpcodeError, (inst.neumonic()+' '+str(inst.arg))
 
 			if inst.hasArgument():

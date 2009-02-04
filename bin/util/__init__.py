@@ -2,11 +2,7 @@ __all__ = ['assureDirectoryExists', 'numbits', 'replaceGlobals']
 
 import os.path
 import sys
-
-
 import math
-
-
 import types
 
 def replaceGlobals(f, g):
@@ -42,3 +38,24 @@ def itergroupings(iterable, key, value):
 		else:
 			grouping[group].append(data)
 	return grouping.iteritems()
+
+def elapsedTimeString(t):
+	if t < 1.0:
+		return "%.1f ms" % (t*1000.0)
+	elif t < 60.0:
+		return "%.2f s" % (t)
+	elif t < 3600.0:
+		return "%.2f m" % (t/60.0)
+	else:
+		return "%.2f h" % (t/3600.0)
+
+def memorySizeString(sz):
+	sz = float(sz)
+	if sz < 1024:
+		return "%f B" % sz
+	elif sz < 1024**2:
+		return "%.1f kB" % (sz/(1024))
+	elif sz < 1024**3:
+		return "%.1f MB" % (sz/(1024**2))
+	else:
+		return "%.1f GB" % (sz/(1024**3))

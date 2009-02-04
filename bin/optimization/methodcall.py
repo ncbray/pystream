@@ -159,8 +159,6 @@ class MethodAnalysis(object):
 
 	def arg(self, node):
 		assert isinstance(node, ast.Local), type(node)
-		#print "Arg", node
-
 		# Kill on method leak.
 		key = self.flow.lookup(('meth', node))
 		if isinstance(key, tuple):
@@ -315,10 +313,10 @@ def methodMeet(values):
 			return dataflow.forward.top
 	return prototype
 
-def methodCall(extractor, adb):
+def methodCall(console, extractor, adb):
 	pattern = MethodPatternFinder()
 	if not pattern.preprocess(extractor, adb):
-		print "No method calls for fuse."
+		console.output("No method calls to fuse.")
 		return
 
 	db = adb.db
@@ -347,5 +345,6 @@ def methodCall(extractor, adb):
 		if rewrite.rewritten:
 			numrewritten += len(rewrite.rewritten)
 
-	print "%d method calls fused." % numrewritten
-
+	# TODO may not be entirely correct, as the method call may
+	# not be fused in the final iteration.
+	console.output("%d method calls fused." % numrewritten)

@@ -737,9 +737,6 @@ class CPAData(object):
 from . analysisdatabase import CPAAnalysisDatabase
 
 def dump(name, extractor, dataflow, entryPoints):
-	print
-	print "Dumping report..."
-
 	adb = CPAAnalysisDatabase(dataflow.db)
 	data = CPAData(dataflow, dataflow.db)
 	data.adb = adb

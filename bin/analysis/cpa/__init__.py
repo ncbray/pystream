@@ -60,8 +60,9 @@ externalOp  = util.canonical.Sentinel('<externalOp>')
 
 
 class InterproceduralDataflow(object):
-	def __init__(self, extractor):
+	def __init__(self, console, extractor):
 		self.decompileTime = 0
+		self.console   = console
 		self.extractor = extractor
 
 		# Has the context been constructed?
@@ -393,8 +394,8 @@ class InterproceduralDataflow(object):
 	def slotMemory(self):
 		return self.setManager.memory()
 
-def evaluate(extractor, entryPoints):
-	dataflow = InterproceduralDataflow(extractor)
+def evaluate(console, extractor, entryPoints):
+	dataflow = InterproceduralDataflow(console, extractor)
 
 	# HACK
 	base.externalFunctionContext.opPath = dataflow.initalOpPath()

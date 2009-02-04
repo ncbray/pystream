@@ -15,6 +15,8 @@ import common.pipeline
 
 import cProfile
 
+from . import compilerconsole
+
 # Thin wrappers made to work with decompiler.programextractor
 class InstWrapper(object):
 	def __init__(self, typeobj):
@@ -38,7 +40,7 @@ class ObjWrapper(object):
 
 class Makefile(object):
 	def __init__(self, filename):
-		self.filename = filename
+		self.filename = os.path.normpath(filename)
 
 		self.moduleName = None
 		self.module = None
@@ -93,12 +95,12 @@ class Makefile(object):
 		exec f in makeDSL
 
 	def pystreamCompile(self):
-		print
-		print "===================="
-		print "===== Frontend ====="
-		print "===================="
-		print
+		console = compilerconsole.CompilerConsole()
+
+		console.begin("makefile")
+		console.output("Processing {0}".format(self.filename))
 		self.executeFile()
+		console.end()
 
 		if len(self.rawEntryPoints) <= 0:
 			print "No entry points, nothing to do."
@@ -108,7 +110,7 @@ class Makefile(object):
 
 		e, entryPoints = extractProgram(self.moduleName, self.module, self.rawEntryPoints)
 
-		common.pipeline.evaluate(self.moduleName, e, entryPoints)
+		common.pipeline.evaluate(console, self.moduleName, e, entryPoints)
 
 ##		# Output
 		assureDirectoryExists(self.outdir)

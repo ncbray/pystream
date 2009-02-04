@@ -7,13 +7,7 @@ import analysis.cpa.dumpreport
 import analysis.shape
 #import analysis.fiapprox
 
-
-def cpaHeader(uid):
-	print
-	print "============="
-	print "=== CPA %d ===" % uid
-	print "============="
-	print
+import util
 
 import optimization.methodcall
 from optimization.cullprogram import cullProgram
@@ -24,29 +18,25 @@ from optimization.callconverter import callConverter
 # HACK?
 from stubs.stubcollector import descriptiveLUT
 
-def codeConditioning(extractor, entryPoints, dataflow):
-	print "Code conditioning"
-
-
+def codeConditioning(console, extractor, entryPoints, dataflow):
 	db = dataflow.db
 	adb = analysis.cpa.analysisdatabase.CPAAnalysisDatabase(db)
 
-	if True:
-		start = time.clock()
-		print "Code conditioning: Method Call"
-		optimization.methodcall.methodCall(extractor, adb)
-		print "Time: %.2e" % (time.clock()-start)
+	console.begin('conditioning')
 
-	start = time.clock()
-	print "Analysis: Object Lifetime"
+	if True:
+		console.begin('method call')
+		optimization.methodcall.methodCall(console, extractor, adb)
+		console.end()
+
+	console.begin('lifetime analysis')
 	la =  analysis.cpa.lifetimeanalysis.LifetimeAnalysis()
 	la.process(dataflow)
 	dataflow.db.lifetime = la # HACK
-	print "Time: %.2e" % (time.clock()-start)
+	console.end()
 
 	if True:
-		print "Code conditioning: Simplify"
-		start = time.clock()
+		console.begin('simplify')
 		live = db.liveFunctions()
 		desc = extractor.desc
 
@@ -54,66 +44,60 @@ def codeConditioning(extractor, entryPoints, dataflow):
 			code = func.code
 			if code not in descriptiveLUT and code in live:
 				simplify(extractor, adb, code)
-		print "Time: %.2e" % (time.clock()-start)
+		console.end()
 
 	if True:
-		print "Code conditioning: Lower"
-		start = time.clock()
+		console.begin('lower')
 		# Flatten the interpreter calls.
 		# Needs to be done before cloning, as cloning can only
 		# redirect direct calls.
 		for func in adb.liveFunctions():
 			if not func in descriptiveLUT:
 				callConverter(extractor, adb, func)
-		print "Time: %.2e" % (time.clock()-start)
+		console.end()
 
 	if True:
-		start = time.clock()
-		print "Code conditioning: Clone"
-		clone(extractor, entryPoints, adb)
-		print "Time: %.2e" % (time.clock()-start)
+		console.begin('clone')
+		clone(console, extractor, entryPoints, adb)
+		console.end()
 
-def cpaAnalyze(e, entryPoints):
-	print "Analyize"
-	start = time.clock()
-	result = analysis.cpa.evaluate(e, entryPoints)
-	elapsed = time.clock()-start
-	print "Constraints:   %d" % len(result.constraints)
-	print "Contexts:      %d" % len(result.liveContexts)
-	print "Code:          %d" % len(result.liveCode)
-	print "Contexts/Code: %.1f" % (len(result.liveContexts)/max(len(result.liveCode), 1))
-	print "Slot Memory:   %.1f kB" % (result.slotMemory()/1024.0)
+	console.end()
 
-	print "Decompile:     %.3f s" % (result.decompileTime)
-	print "Solve:         %.3f s" % (result.solveTime)
-	print "Total:         %.3f s" % (elapsed)
-	print
+def cpaAnalyze(console, e, entryPoints):
+	console.begin('cpa analysis')
+	result = analysis.cpa.evaluate(console, e, entryPoints)
+	console.output("Constraints:   %d" % len(result.constraints))
+	console.output("Contexts:      %d" % len(result.liveContexts))
+	console.output("Code:          %d" % len(result.liveCode))
+	console.output("Contexts/Code: %.1f" % (len(result.liveContexts)/max(len(result.liveCode), 1)))
+	console.output("Slot Memory:   %s" % util.memorySizeString(result.slotMemory()))
 
+	console.output("Decompile:     %s" % util.elapsedTimeString(result.decompileTime))
+	console.output("Solve:         %s" % util.elapsedTimeString(result.solveTime))
+	console.end()
 	return result
 
-def cpaPass(e, entryPoints):
-	result = cpaAnalyze(e, entryPoints)
-
-	start = time.clock()
-	codeConditioning(e, entryPoints, result)
-	print "Optimize: %.3f" % (time.clock()-start)
-
+def cpaPass(console, e, entryPoints):
+	console.begin('depython')
+	result = cpaAnalyze(console, e, entryPoints)
+	codeConditioning(console, e, entryPoints, result)
+	console.end()
 	return result
 
-def cpaDump(name, e, result, entryPoints):
-	print "Dump..."
+def cpaDump(console, name, e, result, entryPoints):
+	console.begin('dump')
 	start = time.clock()
 	analysis.cpa.dumpreport.dump(name, e, result, entryPoints)
-	print "Dump: %.3f" % (time.clock()-start)
+	console.end()
 
-def evaluate(name, e, entryPoints):
-	cpaHeader(1)
-	result = cpaPass(e, entryPoints)
+def evaluate(console, name, e, entryPoints):
+	console.begin('compile')
+	result = cpaPass(console, e, entryPoints)
 
 	#analysis.shape.evaluate(e, entryPoints, result)
 
 	if False:
-		cpaHeader(2)
 		result = cpaPass(e, entryPoints)
 
-	cpaDump(name, e, result, entryPoints)
+	cpaDump(console, name, e, result, entryPoints)
+	console.end()

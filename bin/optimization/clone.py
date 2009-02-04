@@ -18,7 +18,8 @@ import copy
 # Figures out what functions should have seperate implementations,
 # to improve optimization / realizability
 class ProgramCloner(object):
-	def __init__(self, adb):
+	def __init__(self, console, adb):
+		self.console = console
 		self.adb = adb
 
 		# func -> context -> context set
@@ -40,7 +41,7 @@ class ProgramCloner(object):
 			groups = self.makeFuncGroups(func)
 
 			if len(groups) > 1:
-				print func.name, len(groups), "groups"
+				self.console.output("%s %d groups" % (func.name, len(groups)))
 
 			self.groups[func] = groups
 
@@ -283,11 +284,10 @@ class FunctionCloner(object):
 		dstcode.ast            = self(srccode.ast)
 
 
-def clone(extractor, entryPoints, adb):
-	cloner = ProgramCloner(adb)
-	print "=== Default ==="
-	cloner.makeGroups() # Create default groups.
-	print
+def clone(console, extractor, entryPoints, adb):
+	cloner = ProgramCloner(console, adb)
+
+	cloner.makeGroups()
 
 	oldNumGroups = 0
 	originalNumGroups = len(adb.liveFunctions())
@@ -298,13 +298,12 @@ def clone(extractor, entryPoints, adb):
 
 		cloner.findConflicts()
 
-		print "=== Split ==="
-		print cloner.realizable
+		console.output("=== Split ===")
 		numGroups = cloner.makeGroups()
-		print
+		console.output("Realizable: %r" % cloner.realizable)
+		console.output("Num groups %d / %d / %d" %  (numGroups, oldNumGroups, len(adb.liveFunctions())))
+		console.output('')
 
-
-		print "Num groups", numGroups, '/', oldNumGroups, '/', len(adb.liveFunctions())
 
 	# Is cloning worth while?
 	if numGroups > originalNumGroups:

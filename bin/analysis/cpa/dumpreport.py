@@ -206,11 +206,11 @@ def dumpFunctionInfo(func, data, links, out, scg):
 
 	numContexts = len(data.functionContexts(func))
 
-	out.begin('p')
+	out.begin('div')
 	out.begin('b')
 	out << '%d contexts' % numContexts
 	out.end('b')
-	out.end('p')
+	out.end('div')
 
 
 	for context in data.functionContexts(func):
@@ -454,6 +454,12 @@ def dumpHeapInfo(heap, data, links, out):
 	heapInfo = data.db.heapInfo(heap)
 	contexts = heapInfo.contexts
 
+	out.begin('div')
+	out.begin('b')
+	out << '%d contexts' % len(contexts)
+	out.end('b')
+	out.end('div')
+
 	out.begin('pre')
 
 	for context in contexts:
@@ -570,6 +576,10 @@ def dumpReport(name, data, entryPoints):
 				out.begin('li')
 				makeFunctionFile(func)
 				outputCodeShortName(out, func, links)
+				numContexts = len(data.functionContexts(func))
+				if numContexts > 1:
+					out << " "
+					out << numContexts
 				printChildren(func)
 				out.end('li')
 			out.end('ul')
@@ -600,6 +610,11 @@ def dumpReport(name, data, entryPoints):
 				out << heap
 				nodes.add(heap)
 				if link: out.end('a')
+
+				numContexts = len(data.db.heapInfo(heap).contexts)
+				if numContexts > 1:
+					out << " "
+					out << numContexts
 				count += printHeapChildren(heap) + 1
 				out.end('li')
 			out.end('ul')

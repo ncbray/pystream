@@ -73,6 +73,57 @@ class ProgramCloner(object):
 				groups.append(set((context,)))
 		return groups
 
+	def findInitialConflicts(self):
+		# Clone loads from different fields
+		for code, codeinfo in self.adb.db.lifetime.readDB:
+			contexts = frozenset(self.adb.functionContexts(code))
+			for op, opinfo in codeinfo:
+				# Only split loads for reading different fields
+				if isinstance(op, ast.Load):
+					lut = collections.defaultdict(set)
+					for context, slots in opinfo:
+						if slots:
+							fields = frozenset([slot.slotName for slot in slots])
+							lut[fields].add(context)
+
+					self.markDifferentContexts(code, contexts, lut)
+
+
+		# Clone stores to different fields
+		for code, codeinfo in self.adb.db.lifetime.modifyDB:
+			contexts = frozenset(self.adb.functionContexts(code))
+			for op, opinfo in codeinfo:
+				# Only split loads for reading different fields
+				if isinstance(op, ast.Store):
+					lut = collections.defaultdict(set)
+					for context, slots in opinfo:
+						if slots:
+							fields = frozenset([slot.slotName for slot in slots])
+							lut[fields].add(context)
+
+					self.markDifferentContexts(code, contexts, lut)
+
+
+		# Clone different allocates based on the type pointer
+		for code in self.adb.liveFunctions():
+			# Two contexts should not be the same if they contain an op that
+			# invokes different sets of functions.
+			codeInfo = self.adb.db.functionInfo(code)
+			contexts = frozenset(self.adb.functionContexts(code))
+
+			for op in self.adb.functionOps(code):
+				if isinstance(op, ast.Allocate):
+					lut = collections.defaultdict(set)
+
+					typeExpr = op.expr
+					clclInfo = codeInfo.localInfo(typeExpr)
+					for context, lclInfo in clclInfo.contexts.iteritems():
+						types = frozenset([ref.xtype.obj for ref in lclInfo.references])
+						lut[types].add(context)
+
+					self.markDifferentContexts(code, contexts, lut)
+
+
 	def findConflicts(self):
 		self.realizable = True
 		for code in self.adb.liveFunctions():
@@ -116,16 +167,19 @@ class ProgramCloner(object):
 					group = u[label[context]]
 					lut[group].add(context)
 
-				# Mark contexts with different call patterns as different.
-				different = self.different[code]
-				for group in lut.itervalues():
-					assert contexts.issuperset(group), (func.name, [c.code.name for c in group])
+				self.markDifferentContexts(code, contexts, lut)
 
-					# Contexts not in the current group
-					diff = contexts-group
+	def markDifferentContexts(self, code, contexts, lut):
+		# Mark contexts with different call patterns as different.
+		different = self.different[code]
+		for group in lut.itervalues():
+			assert contexts.issuperset(group), (func.name, [c.code.name for c in group])
 
-					for context in group:
-						different[context].update(diff)
+			# Contexts not in the current group
+			diff = contexts-group
+
+			for context in group:
+				different[context].update(diff)
 
 	def createNewCodeNodes(self):
 		newfunc = {}
@@ -287,6 +341,7 @@ class FunctionCloner(object):
 def clone(console, extractor, entryPoints, adb):
 	cloner = ProgramCloner(console, adb)
 
+	cloner.findInitialConflicts()
 	cloner.makeGroups()
 
 	oldNumGroups = 0

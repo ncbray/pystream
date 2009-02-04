@@ -12,8 +12,7 @@ initalize() # HACK?
 from stubs.stubcollector import exports, llastLUT # HACK
 
 
-from programIR.python.program import ImaginaryObject, AbstractObject, Object
-from programIR.python.ast import isPythonAST
+from programIR.python import ast, program
 
 TypeNeedsStub = (xtypes.MethodDescriptorType, xtypes.WrapperDescriptorType, xtypes.BuiltinFunctionType)
 TypeNeedsHiddenStub = (xtypes.MethodDescriptorType, xtypes.WrapperDescriptorType)
@@ -38,13 +37,17 @@ class LLASTTranslator(StandardVisitor):
 		# Due to sloppy LLAst creation, sometimes the same Existing(..) node will be used mutiple times.
 		# Therefore, we may encounter an alread mutated node.
 		# TODO tighten standards for low-level Existing(...) reuse.
-		if not isinstance(node.object, AbstractObject):
-			result = self.extractor.getObject(node.object)
-		else:
+
+		if isinstance(node.object, program.Object):
 			# HACK should rewrite the AST, not mutate it.
 			# Mutiple extractors may be created, (compiling seperate programs)
 			# but all will use the stubs.
 			result = self.extractor.getObject(node.object.pyobj)
+		elif isinstance(node.object, program.ImaginaryObject):
+			result = node.object
+		else:
+			result = self.extractor.getObject(node.object)
+
 
 		node.object = result
 

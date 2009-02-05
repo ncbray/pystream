@@ -15,8 +15,6 @@ from optimization.simplify import simplify
 from optimization.clone import clone
 from optimization.callconverter import callConverter
 
-# HACK?
-from stubs.stubcollector import descriptiveLUT
 
 def codeConditioning(console, extractor, entryPoints, dataflow):
 	db = dataflow.db
@@ -42,7 +40,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 
 		for func in desc.functions:
 			code = func.code
-			if code not in descriptiveLUT and code in live:
+			if code not in extractor.stubs.descriptiveLUT and code in live:
 				simplify(extractor, adb, code)
 		console.end()
 
@@ -52,7 +50,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 		# Needs to be done before cloning, as cloning can only
 		# redirect direct calls.
 		for func in adb.liveFunctions():
-			if not func in descriptiveLUT:
+			if not func in extractor.stubs.descriptiveLUT:
 				callConverter(extractor, adb, func)
 		console.end()
 

@@ -4,12 +4,12 @@ import collections
 
 import programIR.python.program as program
 
-from stubs.stubcollector import replaceObjects, replaceAttrs, exports
+from stubs import makeStubs
 
 from . decompiler import decompile
 from . errors import IrreducibleGraphException
 
-# Cached "getter" w/ processing queue and "valid" flag?
+# Cached "getter" w/ processicng queue and "valid" flag?
 
 import inspect
 
@@ -111,10 +111,12 @@ class Extractor(object):
 		# Used for debugging, prevents new object from being extracted when set to true.
 		self.finalized = False
 
+		self.stubs = makeStubs(self)
 		self.initalizeObjects()
 
 		self.typeDictCache = {}
 		self.typeDictType = {}
+
 
 
 	def flatTypeDict(self, cls):
@@ -178,13 +180,14 @@ class Extractor(object):
 		self.attrLUT[id(obj)][attr] = replacement
 
 	def initalizeObjects(self):
-		replaceAttrs(self)
+		self.stubs.replaceAttrs(self)
 
 		setupLowLevel(self)
 
 		# Prevents uglyness by masking the module dictionary.  This prevents leakage.
-		self.replaceObject(sys.modules, {})
-		replaceObjects(self)
+		if not self.lazy:
+			self.replaceObject(sys.modules, {})
+		self.stubs.replaceObjects(self)
 
 		# Always need it, but might miss it in some cases (interpreter has internal refernece).
 		self.__getObject(__builtins__)
@@ -376,7 +379,7 @@ class Extractor(object):
 				s = '__%s__' % op
 				sObj = self.__getObject(s)
 				fObj = self.makeImaginaryFunctionObject(s)
-				self.desc.bindCall(fObj, exports['int_rich_compare'])
+				self.desc.bindCall(fObj, self.stubs.exports['int_rich_compare'])
 				dict.addDictionaryItem(sObj, fObj)
 
 	def canProcess(self, obj):

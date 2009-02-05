@@ -10,8 +10,6 @@ from . import setmanager
 
 import dumpreport
 
-from stubs.stubcollector import foldLUT
-
 from constraintextractor import ExtractDataflow
 
 from constraints import AssignmentConstraint
@@ -24,9 +22,6 @@ from util.fold import foldFunction
 
 
 from . cpadatabase import CPADatabase
-
-# HACK?
-from stubs.stubcollector import descriptiveLUT
 
 # For keeping track of how much time we spend decompiling.
 import time
@@ -270,7 +265,7 @@ class InterproceduralDataflow(object):
 		sig = targetcontext.signature
 		code = sig.code
 
-		if code in foldLUT:
+		if code in self.extractor.stubs.foldLUT:
 			# It's foldable.
 			assert code.vparam is None, code.name
 			assert code.kparam is None, code.name
@@ -282,7 +277,7 @@ class InterproceduralDataflow(object):
 				if notConst(param): return False
 
 			params = [param.obj for param in sig.params]
-			result = foldFunctionIR(self.extractor, foldLUT[code], params)
+			result = foldFunctionIR(self.extractor, self.extractor.stubs.foldLUT[code], params)
 			resultxtype = self.canonical.existingType(result)
 
 			# Set the return value
@@ -325,7 +320,7 @@ class InterproceduralDataflow(object):
 	def initCodeInfo(self, code):
 		# HACK still called functionInfo
 		info = self.db.functionInfo(code)
-		info.descriptive = code in descriptiveLUT
+		info.descriptive = code in self.extractor.stubs.descriptiveLUT
 		info.returnSlot  = code.returnparam
 
 	def bindCall(self, cop, caller, targetcontext):

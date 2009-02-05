@@ -5,13 +5,6 @@ from common import opnames
 
 from . constantfinder import findCodeReferencedObjects
 
-
-from stubs import stubcollector, initalize
-initalize() # HACK?
-
-from stubs.stubcollector import exports, llastLUT # HACK
-
-
 from programIR.python import ast, program
 
 TypeNeedsStub = (xtypes.MethodDescriptorType, xtypes.WrapperDescriptorType, xtypes.BuiltinFunctionType)
@@ -20,7 +13,7 @@ TypeNeedsHiddenStub = (xtypes.MethodDescriptorType, xtypes.WrapperDescriptorType
 
 
 def attachStubs(extractor):
-	stubcollector.bindStubs(extractor)
+	extractor.stubs.bindStubs(extractor)
 
 from util.visitor import StandardVisitor
 
@@ -52,7 +45,8 @@ class LLASTTranslator(StandardVisitor):
 		node.object = result
 
 
-def translateLLAST(extractor, llastLUT):
+def translateLLAST(extractor):
+	llastLUT = extractor.stubs.llastLUT
 	t = LLASTTranslator(extractor)
 	for funcast in llastLUT:
 		# HACK Mutates inplace, doesn't rewrite?
@@ -64,10 +58,10 @@ def translateLLAST(extractor, llastLUT):
 
 def setupLowLevel(extractor):
 	# HACK will not be found until after mutate?
-	extractor.getObject(exports['default__get__'])
+	#extractor.getObject(exports['default__get__'])
 
 	# Low level stubs need to be slightly modified
-	llast = translateLLAST(extractor, llastLUT)
+	llast = translateLLAST(extractor)
 
 	# Stick low level stubs into the list of functions.
 	extractor.desc.functions.extend(llast)

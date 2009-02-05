@@ -4,7 +4,6 @@ from programIR.python import ast
 from programIR.python import program
 
 from common import opnames
-from stubs.stubcollector import exports
 
 
 ##oldDispatch = dispatch
@@ -31,6 +30,9 @@ class ConvertCalls(object):
 		self.adb.trackRewrite(self.code, node, result)
 		return result
 
+	@property
+	def exports(self):
+		return self.extractor.stubs.exports
 
 	@defaultdispatch
 	def default(self, node):
@@ -57,7 +59,7 @@ class ConvertCalls(object):
 
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
-		return self.directCall(node, exports['convertToBool'].code, None, [self(node.expr)])
+		return self.directCall(node, self.exports['convertToBool'].code, None, [self(node.expr)])
 
 
 	@dispatch(ast.BinaryOp)
@@ -67,29 +69,29 @@ class ConvertCalls(object):
 		else:
 			opname = opnames.forward[node.op]
 
-		return self.directCall(node, exports['interpreter%s' % opname].code, None, [self(node.left), self(node.right)])
+		return self.directCall(node, self.exports['interpreter%s' % opname].code, None, [self(node.left), self(node.right)])
 
 	@dispatch(ast.UnaryPrefixOp)
 	def visitUnaryPrefixOp(self, node):
 		opname = opnames.unaryPrefixLUT[node.op]
-		return self.directCall(node, exports['interpreter%s' % opname].code, None, [self(node.expr)])
+		return self.directCall(node, self.exports['interpreter%s' % opname].code, None, [self(node.expr)])
 
 	@dispatch(ast.GetGlobal)
 	def visitGetGlobal(self, node):
-		return self.directCall(node, exports['interpreterLoadGlobal'].code, None, [self(self.code.selfparam), self(node.name)])
+		return self.directCall(node, self.exports['interpreterLoadGlobal'].code, None, [self(self.code.selfparam), self(node.name)])
 
 	@dispatch(ast.GetIter)
 	def visitGetIter(self, node):
-		return self.directCall(node, exports['interpreter_iter'].code, None, [self(node.expr)])
+		return self.directCall(node, self.exports['interpreter_iter'].code, None, [self(node.expr)])
 
 
 	@dispatch(ast.BuildList)
 	def visitBuildList(self, node):
-		return self.directCall(node, exports['buildList'].code, None, self(node.args))
+		return self.directCall(node, self.exports['buildList'].code, None, self(node.args))
 
 	@dispatch(ast.BuildTuple)
 	def visitBuildTuple(self, node):
-		return self.directCall(node, exports['buildTuple'].code, None, self(node.args))
+		return self.directCall(node, self.exports['buildTuple'].code, None, self(node.args))
 
 	@dispatch(ast.UnpackSequence)
 	def visitUnpackSequence(self, node):
@@ -99,18 +101,18 @@ class ConvertCalls(object):
 
 		for i, arg in enumerate(node.targets):
 			obj = self.extractor.getObject(i)
-			call = self.directCall(arg, exports['interpreter_getitem'].code, None, [self(node.expr), self(ast.Existing(obj))])
+			call = self.directCall(arg, self.exports['interpreter_getitem'].code, None, [self(node.expr), self(ast.Existing(obj))])
 			calls.append(ast.Assign(call, arg))
 
 		return calls
 
 	@dispatch(ast.GetAttr)
 	def visitGetAttr(self, node):
-		return self.directCall(node, exports['interpreter_getattribute'].code, None, [self(node.expr), self(node.name)])
+		return self.directCall(node, self.exports['interpreter_getattribute'].code, None, [self(node.expr), self(node.name)])
 
 	@dispatch(ast.SetAttr)
 	def visitSetAttr(self, node):
-		return ast.Discard(self.directCall(node, exports['interpreter_setattr'].code, None, [self(node.expr), self(node.name), self(node.value)]))
+		return ast.Discard(self.directCall(node, self.exports['interpreter_setattr'].code, None, [self(node.expr), self(node.name), self(node.value)]))
 
 ##	def visitWhile(self, node):
 ##		self.visit(node.condition)
@@ -121,7 +123,7 @@ class ConvertCalls(object):
 ##	def visitFor(self, node):
 ##		iterator = self(node.iterator)
 ##
-##		self.directCall(node.index, exports['interpreter_next'], None, [iterator])
+##		self.directCall(node.index, self.exports['interpreter_next'], None, [iterator])
 ##
 ##		self(node.body)
 ##

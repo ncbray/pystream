@@ -1,8 +1,6 @@
 from __future__ import absolute_import
 
 import programIR.python.ast as ast
-
-from . stubcollector import descriptive
 import util
 
 def allocate(b, t, inst):
@@ -58,7 +56,7 @@ def loadAttribute(expr, type, name):
 	mangledName = util.uniqueSlotName(descriptor)
 	return ast.Load(expr, 'Attribute', ast.Existing(mangledName))
 
-def simpleDescriptor(name, argnames, rt, hasSelfParam=True):
+def simpleDescriptor(collector, name, argnames, rt, hasSelfParam=True):
 	assert isinstance(name, str), name
 	assert isinstance(argnames, (tuple, list)), argnames
 	assert isinstance(rt, type), rt
@@ -84,7 +82,7 @@ def simpleDescriptor(name, argnames, rt, hasSelfParam=True):
 		code = ast.Code(name, selfp, args, list(argnames), None, None, retp, b)
 		f = ast.Function(name, code)
 
-		descriptive(f)
+		collector.descriptive(f)
 
 		return f
 

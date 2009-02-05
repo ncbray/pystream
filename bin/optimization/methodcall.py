@@ -6,7 +6,6 @@ import dataflow.forward
 
 
 import util.xtypes
-import stubs.stubcollector
 
 import optimization.simplify
 import analysis.analysisdatabase
@@ -51,7 +50,7 @@ class MethodPatternFinder(object):
 	__metaclass__ = typedispatcher
 
 	def findOriginals(self, extractor):
-		exports = stubs.stubcollector.exports
+		exports = extractor.stubs.exports
 		self.iget = exports['interpreter_getattribute'].code
 		self.oget = exports['object__getattribute__'].code
 

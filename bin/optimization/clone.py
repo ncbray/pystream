@@ -25,25 +25,31 @@ class ProgramCloner(object):
 		# func -> context -> context set
 		self.different = collections.defaultdict(lambda: collections.defaultdict(set))
 
+		self.liveFunctions = self.adb.liveFunctions()
+
+		self.liveContexts = {}
+		self.liveOps = {}
+
+		for code in self.liveFunctions:
+			self.liveContexts[code] = frozenset(self.adb.functionContexts(code))
+			self.liveOps[code] = self.adb.functionOps(code)
+
 		# HACK, ensure the keys exist
-		for func in adb.liveFunctions():
+		for func in self.liveFunctions:
 			different = self.different[func]
 			for context in adb.functionContexts(func):
 				different[context]
 
-
-
+	def listGroups(self):
+		for func, groups in self.groups.iteritems():
+			if len(groups) > 1:
+				self.console.output("%s %d groups" % (func.name, len(groups)))
 
 	def makeGroups(self):
 		# Create groups of contexts
 		self.groups = {}
-		for func in self.adb.liveFunctions():
-			groups = self.makeFuncGroups(func)
-
-			if len(groups) > 1:
-				self.console.output("%s %d groups" % (func.name, len(groups)))
-
-			self.groups[func] = groups
+		for func in self.liveFunctions:
+			self.groups[func] = self.makeFuncGroups(func)
 
 		# Create context -> group mapping
 		self.groupLUT = {}
@@ -76,7 +82,7 @@ class ProgramCloner(object):
 	def findInitialConflicts(self):
 		# Clone loads from different fields
 		for code, codeinfo in self.adb.db.lifetime.readDB:
-			contexts = frozenset(self.adb.functionContexts(code))
+			contexts = self.liveContexts[code]
 			for op, opinfo in codeinfo:
 				# Only split loads for reading different fields
 				if isinstance(op, ast.Load):
@@ -91,7 +97,7 @@ class ProgramCloner(object):
 
 		# Clone stores to different fields
 		for code, codeinfo in self.adb.db.lifetime.modifyDB:
-			contexts = frozenset(self.adb.functionContexts(code))
+			contexts = self.liveContexts[code]
 			for op, opinfo in codeinfo:
 				# Only split loads for reading different fields
 				if isinstance(op, ast.Store):
@@ -105,11 +111,11 @@ class ProgramCloner(object):
 
 
 		# Clone different allocates based on the type pointer
-		for code in self.adb.liveFunctions():
+		for code in self.liveFunctions:
 			# Two contexts should not be the same if they contain an op that
 			# invokes different sets of functions.
 			codeInfo = self.adb.db.functionInfo(code)
-			contexts = frozenset(self.adb.functionContexts(code))
+			contexts = self.liveContexts[code]
 
 			for op in self.adb.functionOps(code):
 				if isinstance(op, ast.Allocate):
@@ -126,13 +132,13 @@ class ProgramCloner(object):
 
 	def findConflicts(self):
 		self.realizable = True
-		for code in self.adb.liveFunctions():
+		for code in self.liveFunctions:
 			# Two contexts should not be the same if they contain an op that
 			# invokes different sets of functions.
-			for op in self.adb.functionOps(code):
+			for op in self.liveOps[code]:
 
 				# Cache the contexts, as we'll need them later.
-				contexts = frozenset(self.adb.functionContexts(code))
+				contexts = self.liveContexts[code]
 
 				lut = collections.defaultdict(set)
 				label = {}
@@ -212,6 +218,8 @@ class ProgramCloner(object):
 
 				fc = FunctionCloner(self.adb, newfunc, self.groupLUT, code, newcode, group)
 				fc.process()
+				simplify(extractor, self.adb, newcode)
+
 
 
 		# HACK Horrible, horrible hack: assumes that the entry point cannot be cloned.
@@ -233,9 +241,6 @@ class ProgramCloner(object):
 		funcs = []
 		for func, groups in newfunc.iteritems():
 			funcs.extend(groups.itervalues())
-
-		for func in funcs:
-			simplify(extractor, self.adb, func)
 
 		return funcs
 
@@ -289,8 +294,6 @@ class FunctionCloner(object):
 		tempresult = self.default(node)
 
 		# Redirect the direct call to the new, cloned function.
-
-
 		# If the op is unreachable in this context, there may be no invocations.
 		invocations = self.adb.invocationsForOp(self.destfunction, tempresult)
 		if invocations:
@@ -339,28 +342,32 @@ class FunctionCloner(object):
 
 
 def clone(console, extractor, entryPoints, adb):
+	console.begin('analysis')
 	cloner = ProgramCloner(console, adb)
 
 	cloner.findInitialConflicts()
 	cloner.makeGroups()
 
 	oldNumGroups = 0
-	originalNumGroups = len(adb.liveFunctions())
+	originalNumGroups = len(cloner.liveFunctions)
 	numGroups = originalNumGroups
 
 	while numGroups > oldNumGroups:
 		oldNumGroups = numGroups
 
 		cloner.findConflicts()
-
-		console.output("=== Split ===")
 		numGroups = cloner.makeGroups()
-		console.output("Realizable: %r" % cloner.realizable)
-		console.output("Num groups %d / %d / %d" %  (numGroups, oldNumGroups, len(adb.liveFunctions())))
-		console.output('')
 
+	console.output("=== Split ===")
+	cloner.listGroups()
+	console.output("Realizable: %r" % cloner.realizable)
+	console.output("Num groups %d / %d / %d" %  (numGroups, oldNumGroups, originalNumGroups))
+	console.output('')
+
+	console.end()
 
 	# Is cloning worth while?
 	if numGroups > originalNumGroups:
+		console.begin('rewrite')
 		cloner.rewriteProgram(extractor, entryPoints)
-
+		console.end()

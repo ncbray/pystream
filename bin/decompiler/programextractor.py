@@ -4,7 +4,7 @@ import collections
 
 import programIR.python.program as program
 
-from stubs.stubcollector import replaceObjects, replaceAttrs
+from stubs.stubcollector import replaceObjects, replaceAttrs, exports
 
 from . decompiler import decompile
 from . errors import IrreducibleGraphException
@@ -140,10 +140,13 @@ class Extractor(object):
 			stub = self.pointerToStub[ptr]
 			self.desc.bindCall(obj, stub)
 
+	def makeImaginaryFunctionObject(self, name):
+		t = self.__getObject(xtypes.BuiltinFunctionType)
+		return self.makeImaginary(name, t, True)
+
 	def makeHiddenFunction(self, parent, ptr):
-		if not ptr in self.pointerToObject:
-			t = self.__getObject(xtypes.BuiltinFunctionType)
-			obj = self.makeImaginary("stub_%d" % ptr, t, True)
+		if ptr not in self.pointerToObject:
+			obj = self.makeImaginaryFunctionObject("stub_%d" % ptr)
 			self.pointerToObject[ptr] = obj
 			self.linkObjToStub(ptr)
 		else:
@@ -232,7 +235,7 @@ class Extractor(object):
 			# HACK, does not chain the lookup?
 			if callstr in typedict:
 				callobj = typedict[callstr]
-				assert callobj is not o, o
+				assert callobj is not o, "Cycle when looking for call: %r" % o
 				func = self.getCall(callobj)
 				if func:
 					self.desc.callLUT[o] = func
@@ -365,15 +368,18 @@ class Extractor(object):
 			except TypeError:
 				print "Cannot get pointer:", f
 
+		if pyobj is int or pyobj is long:
+			dict = obj.lowlevel[self.desc.dictionaryName]
+			self.ensureLoaded(dict)
+
+			for op in ('eq', 'ne', 'lt', 'le', 'ge', 'gt'):
+				s = '__%s__' % op
+				sObj = self.__getObject(s)
+				fObj = self.makeImaginaryFunctionObject(s)
+				self.desc.bindCall(fObj, exports['int_rich_compare'])
+				dict.addDictionaryItem(sObj, fObj)
+
 	def canProcess(self, obj):
-##		# type is inherantly circular
-##		if obj == obj.type: return True
-##
-##		# The type must be finished
-##		if not self.complete[obj.type]: return False
-
-		# Object no longer require that their types be processed.
-
 		return True
 
 	def initalizeObject(self, obj):

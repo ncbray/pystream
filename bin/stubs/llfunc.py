@@ -603,6 +603,9 @@ attachDummyNumerics(float, dummyBinaryOperation, dummyUnaryOperation)
 attachDummyNumerics(long,  dummyBinaryOperation, dummyUnaryOperation)
 attachDummyNumerics(str,   dummyBinaryOperation, dummyUnaryOperation)
 
+int_rich_compare_stub = export(descriptive(llast(simpleDescriptor('int_rich_compare', ('a',  'b'), bool))))
+
+
 #############
 ### Tuple ###
 #############

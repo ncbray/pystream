@@ -5,17 +5,34 @@ class ReversePostorderCrawler(object):
 		self.G = G
 		self.head = head
 
-		self.processed = set()
+		self.all = set(G.iterkeys())
+
+		self.processed = set((self.head,))
 		self.order = []
-		self(head)
+
+		for next in self.G[self.head]:
+			self(next)
+
+		# Look for inaccesable cycles
+		remaining = self.all-self.processed
+		while remaining:
+			newEntry = remaining.pop()
+			self.G[head] = set(self.G[head])
+			self.G[head].add(newEntry)
+			self(newEntry)
+			remaining = self.all-self.processed
+
+		# Finally, the head
+		self.order.append(self.head)
+
 		self.order.reverse()
 
 	def __call__(self, node):
-		self.processed.add(node)
-		for next in self.G.get(node, ()):
-			if next not in self.processed:
-				self(next)
-		self.order.append(node)
+		if node not in self.processed:
+			self.processed.add(node)
+			for next in self.G.get(node, ()):
+					self(next)
+			self.order.append(node)
 
 
 
@@ -39,7 +56,6 @@ def dominatorTree(G, head):
 	for i, node in enumerate(order):
 		forward[node] = i
 		reverse[i] = node
-
 
 	# Find the predicesors, in reverse postorder space.
 	pred = {}

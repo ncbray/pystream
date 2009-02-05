@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import programIR.python.ast as ast
 
 from . stubcollector import descriptive
+import util
 
 def allocate(b, t, inst):
 	b.append(ast.Assign(ast.Allocate(t), inst))
@@ -51,6 +52,11 @@ def inst_lookup(b, expr, field, result):
 	getType(b, expr, cls)
 	type_lookup(b, cls, field, result)
 
+
+def loadAttribute(expr, type, name):
+	descriptor  = type.__dict__[name]
+	mangledName = util.uniqueSlotName(descriptor)
+	return ast.Load(expr, 'Attribute', ast.Existing(mangledName))
 
 def simpleDescriptor(name, argnames, rt, hasSelfParam=True):
 	assert isinstance(name, str), name

@@ -97,7 +97,7 @@ def evaluate(console, name, e, entryPoints):
 	#analysis.shape.evaluate(e, entryPoints, result)
 
 	if False:
-		result = cpaPass(e, entryPoints)
+		result = cpaPass(console, e, entryPoints)
 
 	cpaDump(console, name, e, result, entryPoints)
 	console.end()

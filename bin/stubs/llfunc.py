@@ -8,7 +8,7 @@ method = xtypes.MethodType
 function = xtypes.FunctionType
 
 from . stubcollector import llast, descriptive, attachPtr, attachAttrPtr, highLevelStub, replaceObject, replaceAttr, export, fold
-from . llutil import simpleDescriptor, allocate, getType, returnNone, call, operation, type_lookup, inst_lookup
+from . llutil import simpleDescriptor, allocate, getType, returnNone, call, operation, type_lookup, inst_lookup, loadAttribute
 
 
 ##############
@@ -376,8 +376,8 @@ def method__call__():
 	vargs = Local('vargs')
 
 	b = Suite()
-	b.append(Assign(Load(self, 'Attribute', Existing('im_self')), im_self))
-	b.append(Assign(Load(self, 'Attribute', Existing('im_func')), im_func))
+	b.append(Assign(loadAttribute(self, xtypes.MethodType, 'im_self'), im_self))
+	b.append(Assign(loadAttribute(self, xtypes.MethodType, 'im_func'), im_func))
 
 	call(b, im_func, [im_self], vargs, None, temp)
 	b.append(Return(temp))
@@ -506,7 +506,8 @@ def property__get__():
 	result 	= Local('result')
 
 	b = Suite()
-	b.append(Assign(Load(self, 'Attribute', Existing('fget')), func))
+
+	b.append(Assign(loadAttribute(self, property, 'fget'), func))
 	call(b, func, [inst], None, None, result)
 	b.append(Return(result))
 

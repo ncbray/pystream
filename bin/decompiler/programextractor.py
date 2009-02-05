@@ -17,6 +17,7 @@ from . import errors
 
 import sys
 import dis
+import util
 
 from decompiler.mutateimage import finishExtraction, setupLowLevel
 
@@ -190,6 +191,8 @@ class Extractor(object):
 		self.desc.functionNameObj = self.getObject('function')
 		self.desc.slotObj         = self.getObject('slot')
 		self.desc.nameObj         = self.getObject('__name__')
+		self.desc.objClassObj     = self.getObject('__objclass__')
+
 		self.desc.dict__Name      = self.getObject('__dict__')
 		self.desc.dictionaryName  = self.getObject('dictionary')
 
@@ -322,48 +325,38 @@ class Extractor(object):
 	def defer(self, obj):
 		self.queue.append(obj)
 
+	def dictSlotForObj(self, pyobj):
+		assert not isinstance(pyobj, program.AbstractObject)
+		flat = self.flatTypeDict(type(pyobj))
+		if '__dict__' in flat:
+			return util.uniqueSlotName(flat['__dict__'])
+		else:
+			return None
+
 	def postProcessMutate(self, obj):
 		pyobj = obj.pyobj
 
 		# Create a low-level slot for the dictionary, if one exists.
 		# Note that for type objects, this is done earlier.
-		if not isinstance(pyobj, type) and self.desc.dict__Name in obj.slot:
-			obj.addLowLevel(self.desc.dictionaryName, obj.slot[self.desc.dict__Name])
-			#obj.lowlevel[self.desc.dictionaryName] = obj.slot[self.desc.__dict__Name]
-
-
+		if not isinstance(pyobj, type):
+			mangledDictName = self.dictSlotForObj(pyobj)
+			if mangledDictName:
+				mangledDictNameObj = self.__getObject(mangledDictName)
+				if mangledDictNameObj in obj.slot:
+					obj.addLowLevel(self.desc.dictionaryName, obj.slot[mangledDictNameObj])
 
 		# No function pointers, so C function pointers are transformed into a hidden function object.
 		if isinstance(pyobj, xtypes.TypeNeedsHiddenStub):
 			self.makeHiddenFunction(obj, cfuncptr(pyobj))
 
-
-
 		# No internal pointers, so member descriptors need to have a "slot pointer" added
 		if isinstance(pyobj, xtypes.MemberDescriptorType):
 			# It's a slot descriptor.
-			# HACK there's no such thing as a "slot pointer"
+			# HACK there's no such thing as a "slot pointer", so use a unique string
+			mangledNameObj = self.__getObject(util.uniqueSlotName(pyobj))
+			obj.addLowLevel(self.desc.slotObj, mangledNameObj)
 
-			def dumpObj(obj):
-				print obj
-				print self.complete[obj]
-				print obj.lowlevel
-				print obj.slot
-				print obj.dictionary
-				print obj.array
-				print
-
-			if self.desc.nameObj not in obj.slot:
-				dumpObj(obj)
-				dumpObj(obj.type)
-				td = obj.type.lowlevel[self.desc.dictionaryName]
-				dumpObj(td)
-
-			assert self.desc.nameObj in obj.slot, obj.slot
-
-			obj.addLowLevel(self.desc.slotObj, obj.slot[self.desc.nameObj])
-
-		# REquires a C function pointer.
+		# Requires a C function pointer.
 		if isinstance(pyobj, xtypes.TypeNeedsStub):
 			try:
 				ptr = cfuncptr(pyobj)
@@ -437,8 +430,9 @@ class Extractor(object):
 			# TODO slot wrapper for methods?
 			if inspect.ismemberdescriptor(member):
 				try:
+					mangledName = util.uniqueSlotName(member)
 					value = member.__get__(pyobj, type(pyobj))
-					obj.addSlot(self.__getObject(name), self.__getObject(value))
+					obj.addSlot(self.__getObject(mangledName), self.__getObject(value))
 				except:
 					print "Error getting attribute?"
 					print "obj", pyobj
@@ -455,6 +449,7 @@ class Extractor(object):
 
 	def __handleObjectDict(self, obj, d):
 		for k, v in d.iteritems():
+			# HACK addSlot is unsound?
 			nameObj = self.__getObject(k)
 			valueObj = self.__getObject(v)
 			obj.addSlot(nameObj, valueObj)

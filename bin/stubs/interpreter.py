@@ -3,7 +3,8 @@ from __future__ import absolute_import
 from  programIR.python.ast import *
 
 from . stubcollector import llast, attachAttrPtr, highLevelStub, export, fold, descriptive
-from . llutil import simpleDescriptor, allocate, getType, call, returnNone, type_lookup, inst_lookup
+from . llutil import simpleDescriptor, allocate, getType, call, returnNone, type_lookup, inst_lookup, loadAttribute
+import types
 
 # TODO should call:
 # 	__nonzero__
@@ -62,6 +63,7 @@ fold(bool)(export(llast(simpleDescriptor('convertToBool', ('o',), bool, hasSelfP
 # Horrible hack, as vargs depend on creating a tuple,
 # and creating a tuple depends on vargs.
 @export
+@descriptive # This is such a hack, treat it opaquely.
 @llast
 def buildTuple():
 	# Self
@@ -131,7 +133,8 @@ def interpreterLoadGlobal():
 
 	# Instructions
 	b = Suite()
-	b.append(Assign(Load(function, 'Attribute', Existing('func_globals')), globalDict))
+
+	b.append(Assign(loadAttribute(function, types.FunctionType, 'func_globals'), globalDict))
 	b.append(Assign(Check(globalDict, 'Dictionary', name), temp))
 
 
@@ -166,7 +169,7 @@ def interpreterStoreGlobal():
 
 	# Instructions
 	b = Suite()
-	b.append(Assign(Load(function, 'Attribute', Existing('func_globals')), globalDict))
+	b.append(Assign(loadAttribute(function, types.FunctionType, 'func_globals'), globalDict))
 	b.append(Store(globalDict, 'Dictionary', name, value))
 	returnNone(b)
 

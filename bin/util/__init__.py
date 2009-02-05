@@ -59,3 +59,11 @@ def memorySizeString(sz):
 		return "%.1f MB" % (sz/(1024**2))
 	else:
 		return "%.1f GB" % (sz/(1024**3))
+
+# Note that the unique name may change between runs, as it takes the id of a type.
+def uniqueSlotName(descriptor):
+	# HACK GetSetDescriptors are not really slots?
+	assert isinstance(descriptor, (types.MemberDescriptorType, types.GetSetDescriptorType)), (descriptor, type(descriptor), dir(descriptor))
+	name     = descriptor.__name__
+	objClass = descriptor.__objclass__
+	return "%s#%s#%d" % (name, objClass.__name__, id(objClass))

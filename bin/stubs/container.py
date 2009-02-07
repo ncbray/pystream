@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from  programIR.python.ast import *
 
 from . stubcollector import stubgenerator
-from . llutil import allocate, getType, returnNone
+#from . llutil import allocate, getType, returnNone
 from util import xtypes
 
 
@@ -36,13 +36,11 @@ def makeContainerStubs(collector):
 			inst = Local('inst')
 
 			b = Suite()
-			t = Existing(itertype)
-			allocate(b, t, inst)
-			b.append(Store(inst, 'LowLevel', Existing('parent'), self))
+			b.append(collector.allocate(collector.existing(itertype), inst))
+			b.append(Store(inst, 'LowLevel', collector.existing('parent'), self))
 
-			t = Existing(int)
-			allocate(b, t, temp) # HACK no init?
-			b.append(Store(inst, 'LowLevel', Existing('iterCurrent'), temp))
+			b.append(collector.allocate(collector.existing(int), temp)) # HACK no init?
+			b.append(Store(inst, 'LowLevel', collector.existing('iterCurrent'), temp))
 
 			b.append(Return(inst))
 
@@ -70,12 +68,12 @@ def makeContainerStubs(collector):
 			retp  = Local('internal_return')
 
 			b = Suite()
-			t = Existing(rt)
-			allocate(b, t, inst)
+			t = collector.existing(rt)
+			b.append(collector.allocate(t, inst))
 			# HACK no init?
 
-			b.append(Assign(Load(args[0], 'LowLevel', Existing('iterCurrent')), temp))
-			b.append(Store(args[0], 'LowLevel', Existing('iterCurrent'), temp))
+			b.append(Assign(Load(args[0], 'LowLevel', collector.existing('iterCurrent')), temp))
+			b.append(Store(args[0], 'LowLevel', collector.existing('iterCurrent'), temp))
 
 			# Return the allocated object
 			b.append(Return(inst))
@@ -106,8 +104,8 @@ def makeContainerStubs(collector):
 		value = Local('value')
 
 		b = Suite()
-		b.append(Store(self, 'Array', Existing(-1), value))
-		returnNone(b)
+		b.append(Store(self, 'Array', collector.existing(-1), value))
+		b.append(collector.returnNone())
 
 		name = 'listappend'
 		code = Code(name, selfp, [self, value], ['self', 'value'], None, None, retp, b)
@@ -134,8 +132,8 @@ def makeContainerStubs(collector):
 
 		b = Suite()
 
-		b.append(Assign(Load(self, 'LowLevel',Existing('parent')), parent))
-		b.append(Assign(Load(parent, 'Array', Existing(-1)), value))
+		b.append(Assign(Load(self, 'LowLevel', collector.existing('parent')), parent))
+		b.append(Assign(Load(parent, 'Array',collector.existing(-1)), value))
 		b.append(Return(value))
 
 		name = 'listiterator__next__'

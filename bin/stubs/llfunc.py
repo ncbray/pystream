@@ -8,7 +8,8 @@ method = xtypes.MethodType
 function = xtypes.FunctionType
 
 from . stubcollector import stubgenerator
-from . llutil import simpleDescriptor, allocate, getType, returnNone, call, operation, type_lookup, inst_lookup, loadAttribute
+from . llutil import simpleDescriptor
+#, allocate, getType, returnNone, call, operation, type_lookup, inst_lookup, loadAttribute
 
 
 @stubgenerator
@@ -38,7 +39,7 @@ def makeLLFunc(collector):
 		retp  = Local('internal_return')
 
 		b = Suite()
-		returnNone(b)
+		b.append(collector.returnNone())
 
 		name = 'object__init__'
 		code = Code(name, selfp, [self], ['self'], vargs, None, retp, b)
@@ -79,18 +80,18 @@ def makeLLFunc(collector):
 
 		b = Suite()
 
-		getType(b, self, cls)
-		b.append(Assign(Load(cls, 'LowLevel', Existing('dictionary')), clsDict))
+		b.append(collector.getType(self, cls))
+		b.append(Assign(Load(cls, 'LowLevel', collector.existing('dictionary')), clsDict))
 
 
 		t = Suite([])
 
 		t.append(Assign(Load(clsDict, 'Dictionary', field), desc))
-		getType(t, desc, descCls)
-		t.append(Assign(Load(descCls, 'LowLevel', Existing('dictionary')), descDict))
+		t.append(collector.getType(desc, descCls))
+		t.append(Assign(Load(descCls, 'LowLevel', collector.existing('dictionary')), descDict))
 
 		condSuite = Suite([])
-		condSuite.append(Assign(Check(descDict, 'Dictionary', Existing('__set__')), hasSetter))
+		condSuite.append(Assign(Check(descDict, 'Dictionary', collector.existing('__set__')), hasSetter))
 		cond = Condition(condSuite, hasSetter)
 
 		gst = Suite([])
@@ -98,11 +99,11 @@ def makeLLFunc(collector):
 		gst.append(Return(result))
 
 		gt = Suite([])
-		gt.append(Assign(Load(descDict, 'Dictionary', Existing('__get__')), descFunc))
+		gt.append(Assign(Load(descDict, 'Dictionary', collector.existing('__get__')), descFunc))
 		gt.append(Switch(cond, gst, Suite([])))
 
 		condSuite = Suite([])
-		condSuite.append(Assign(Check(descDict, 'Dictionary', Existing('__get__')), hasGetter))
+		condSuite.append(Assign(Check(descDict, 'Dictionary', collector.existing('__get__')), hasGetter))
 		cond = Condition(condSuite, hasGetter)
 
 		t.append(Switch(cond, gt, Suite([])))
@@ -116,7 +117,7 @@ def makeLLFunc(collector):
 
 		# No descriptor
 		f = Suite([])
-		f.append(Assign(Load(self, 'LowLevel', Existing('dictionary')), d))
+		f.append(Assign(Load(self, 'LowLevel', collector.existing('dictionary')), d))
 		f.append(Assign(Load(d, 'Dictionary', field), result))
 		f.append(Return(result))
 
@@ -205,40 +206,41 @@ def makeLLFunc(collector):
 
 		b = Suite()
 
-		getType(b, self, cls)
-		b.append(Assign(Load(cls, 'LowLevel', Existing('dictionary')), clsDict))
+		b.append(collector.getType(self, cls))
+		b.append(Assign(Load(cls, 'LowLevel', collector.existing('dictionary')), clsDict))
 
 
 
 
 		t = Suite([])
 		t.append(Assign(Load(clsDict, 'Dictionary', field), desc))
-		getType(t, desc, descCls)
-		t.append(Assign(Load(descCls, 'LowLevel', Existing('dictionary')), descDict))
+		t.append(collector.getType(desc, descCls))
+		t.append(Assign(Load(descCls, 'LowLevel', collector.existing('dictionary')), descDict))
 
 
 		ts = Suite()
-		ts.append(Assign(Load(descDict, 'Dictionary', Existing('__set__')),setter))
-		call(ts, setter, [desc, self, value], None, None)
-		returnNone(ts)
+		ts.append(Assign(Load(descDict, 'Dictionary', collector.existing('__set__')),setter))
+		ts.append(Discard(Call(setter, [desc, self, value], [], None, None)))
+		ts.append(collector.returnNone())
 
 
 		f = Suite([])
-		f.append(Assign(Load(self, 'LowLevel', Existing('dictionary')), selfDict))
+		f.append(Assign(Load(self, 'LowLevel', collector.existing('dictionary')), selfDict))
 		f.append(Store(selfDict, 'Dictionary', field, value))
-		returnNone(f)
+		f.append(collector.returnNone())
 
 		conditional = Local('conditional')
 		condSuite = Suite([])
-		condSuite.append(Assign(Check(descDict, 'Dictionary', Existing('__set__')), hasSetter))
+		condSuite.append(Assign(Check(descDict, 'Dictionary', collector.existing('__set__')), hasSetter))
 		cond = Condition(condSuite, hasSetter)
 		t.append(Switch(cond, ts, f))
 
 
 		f = Suite([])
-		f.append(Assign(Load(self, 'LowLevel', Existing('dictionary')), selfDict))
+		f.append(Assign(Load(self, 'LowLevel', collector.existing('dictionary')), selfDict))
 		f.append(Store(selfDict, 'Dictionary', field, value))
-		returnNone(f)
+		f.append(collector.returnNone())
+
 
 		conditional = Local('conditional')
 		condSuite = Suite([])
@@ -246,7 +248,7 @@ def makeLLFunc(collector):
 		cond = Condition(condSuite, descExists)
 		b.append(Switch(cond, t, f))
 
-		returnNone(b)
+		b.append(collector.returnNone())
 
 
 		name = 'object__setattr__'
@@ -274,7 +276,7 @@ def makeLLFunc(collector):
 		inst = Local('inst')
 
 		b = Suite()
-		allocate(b, type_, inst)
+		b.append(collector.allocate(type_, inst))
 		b.append(Return(inst))
 
 		name = 'object__new__'
@@ -314,12 +316,12 @@ def makeLLFunc(collector):
 		b = Suite()
 
 		# Call __new__
-		type_lookup(b, self, Existing('__new__'), new_method)
-		call(b, new_method, [self], vargs, None, inst)
+		b.append(collector.typeLookup(self, '__new__', new_method))
+		b.append(Assign(Call(new_method, [self], [], vargs, None), inst))
 
 		# TODO Do the isinstance check?
 		# Call __init__
-		operation(b, '__init__', inst, [], vargs, None)
+		b.append(collector.operation('__init__', inst, [], vargs, None))
 
 		# Return the allocated object
 		b.append(Return(inst))
@@ -388,10 +390,10 @@ def makeLLFunc(collector):
 		vargs = Local('vargs')
 
 		b = Suite()
-		b.append(Assign(loadAttribute(self, xtypes.MethodType, 'im_self'), im_self))
-		b.append(Assign(loadAttribute(self, xtypes.MethodType, 'im_func'), im_func))
+		b.append(collector.loadAttribute(self, xtypes.MethodType, 'im_self', im_self))
+		b.append(collector.loadAttribute(self, xtypes.MethodType, 'im_func', im_func))
 
-		call(b, im_func, [im_self], vargs, None, temp)
+		b.append(Assign(Call(im_func, [im_self], [], vargs, None), temp))
 		b.append(Return(temp))
 
 		name = 'method__call__'
@@ -427,8 +429,8 @@ def makeLLFunc(collector):
 		result 	= Local('result')
 
 		b = Suite()
-		b.append(Assign(Load(self, 'LowLevel', Existing('function')), func))
-		call(b, Existing(xtypes.MethodType), [func, inst, cls], None, None, result)
+		b.append(Assign(Load(self, 'LowLevel', collector.existing('function')), func))
+		b.append(Assign(Call(collector.existing(xtypes.MethodType), [func, inst, cls], [], None, None), result))
 		b.append(Return(result))
 
 		name = 'methoddescriptor__get__'
@@ -458,7 +460,7 @@ def makeLLFunc(collector):
 		result = Local('result')
 
 		b = Suite()
-		b.append(Assign(Load(self, 'LowLevel', Existing('slot')), slot))
+		b.append(Assign(Load(self, 'LowLevel', collector.existing('slot')), slot))
 		b.append(Assign(Load(inst, 'Attribute', slot), result))
 		b.append(Return(result))
 
@@ -485,9 +487,9 @@ def makeLLFunc(collector):
 
 		# Instructions
 		b = Suite()
-		b.append(Assign(Load(self, 'LowLevel', Existing('slot')), slot))
+		b.append(Assign(Load(self, 'LowLevel', collector.existing('slot')), slot))
 		b.append(Store(inst, 'Attribute', slot, value))
-		returnNone(b)
+		b.append(collector.returnNone())
 
 		name = 'memberdescriptor__set__'
 		code = Code(name, selfp, [self, inst, value], ['self', 'inst', 'value'], None, None, retp, b)
@@ -519,8 +521,7 @@ def makeLLFunc(collector):
 
 		b = Suite()
 
-		b.append(Assign(loadAttribute(self, property, 'fget'), func))
-		call(b, func, [inst], None, None, result)
+		b.append(collector.attributeCall(self, property, 'fget', [inst], [], None, None, result))
 		b.append(Return(result))
 
 		name = 'property__get__'
@@ -549,8 +550,8 @@ def makeLLFunc(collector):
 		args.append(Local('other'))
 
 		b = Suite()
-		getType(b, args[0], t)
-		allocate(b, t, inst)
+		b.append(collector.getType(args[0], t))
+		b.append(collector.allocate(t, inst))
 		# HACK no init?  Don't know what arguments to pass...
 
 		# Return the allocated object
@@ -575,8 +576,8 @@ def makeLLFunc(collector):
 		args.append(Local('self'))
 
 		b = Suite()
-		getType(b, args[0], t)
-		allocate(b, t, inst)
+		b.append(collector.getType(args[0], t))
+		b.append(collector.allocate(t, inst))
 		# HACK no init?  Don't know what arguments to pass...
 
 		# Return the allocated object
@@ -682,7 +683,7 @@ def makeLLFunc(collector):
 
 		# Instructions
 		b = Suite()
-		getType(b, obj, type_)
+		b.append(collector.getType(obj, type_))
 		# HACK we don't actually know the real "self" for issubclass, so we use our own to prevent the call from failing.
 		b.append(Assign(DirectCall(issubclass_stub.code, self, [type_, classinfo], [], None, None), result))
 		b.append(Return(result))

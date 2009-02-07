@@ -4,7 +4,7 @@ from _pystream import cfuncptr
 from util import xtypes
 from programIR.python import ast
 
-from util import replaceGlobals
+import util
 
 class StubCollector(object):
 	def __init__(self, extractor):
@@ -23,6 +23,71 @@ class StubCollector(object):
 		self.highLevelLUT 	= {}
 		self.objectReplacements	= []
 		self.attrReplacements	= []
+
+
+	##############################
+	### AST building utilities ###
+	##############################
+
+	def existing(self, obj):
+		return ast.Existing(self.extractor.getObject(obj))
+
+	def allocate(self, t, target):
+		return ast.Assign(ast.Allocate(t), target)
+
+	def getType(self, inst, result):
+		return ast.Assign(ast.Load(inst, 'LowLevel', self.existing('type')), result)
+
+	def loadAttribute(self, expr, type, name, target):
+		descriptor  = type.__dict__[name]
+		mangledName = util.uniqueSlotName(descriptor)
+		return ast.Assign(ast.Load(expr, 'Attribute', self.existing(mangledName)), target)
+
+	def returnNone(self):
+		return ast.Return(self.existing(None))
+
+	def typeLookup(self, cls, field, result):
+		clsDict = ast.Local('clsDict')
+		return [
+			ast.Assign(ast.Load(cls, 'LowLevel', self.existing('dictionary')), clsDict),
+			ast.Assign(ast.Load(clsDict, 'Dictionary', self.existing(field)), result),
+			]
+
+	def instLookup(self, expr, field, result):
+		cls = ast.Local('cls')
+		return [self.getType(expr, cls), self.typeLookup(cls, field, result)]
+
+	def operation(self, attr, expr, args, vargs, kargs, result=None):
+		type_ 	= ast.Local('type%s' % attr)
+		func 	= ast.Local('func%s' % attr)
+
+		newargs = [expr]
+		newargs.extend(args)
+
+		if result:
+			return [
+				self.instLookup(expr, attr, func),
+				ast.Assign(ast.Call(func, newargs, [], vargs, kargs), result)
+				]
+		else:
+			return [
+				self.instLookup(expr, attr, func),
+				ast.Discard(ast.Call(func, newargs, [], vargs, kargs))
+				]
+
+	def attributeCall(self, expr, type, field, args, kwds, vargs, kargs, result=None):
+		method = ast.Local('method_%s' % field)
+		getter = self.loadAttribute(expr, type, field, method)
+		call   = ast.Call(method, args, kwds, vargs, kargs)
+		if result:
+			callStmt = ast.Assign(call, result)
+		else:
+			callStmt = ast.Discard(call)
+		return [getter, callStmt]
+
+	#####################
+	### Stub building ###
+	#####################
 
 	def export(self, funcast):
 		if isinstance(funcast, xtypes.FunctionType):
@@ -45,7 +110,9 @@ class StubCollector(object):
 		except TypeError:
 			raise TypeError, "Cannot get pointer from %r" % type(obj)
 
+	############################
 	### Attachment functions ###
+	############################
 
 	def attachAttrPtr(self, t, attr):
 		assert isinstance(t, type), t
@@ -95,7 +162,7 @@ class StubCollector(object):
 	def highLevelStub(self, f):
 		# Let the function use the common global dictionary.
 		# Recreate the function with different globals.
-		f = replaceGlobals(f, self.highLevelGlobals)
+		f = util.replaceGlobals(f, self.highLevelGlobals)
 
 		# Register
 		self.highLevelLUT[f.func_name] = f

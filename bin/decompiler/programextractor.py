@@ -19,8 +19,6 @@ import sys
 import dis
 import util
 
-from decompiler.mutateimage import finishExtraction, setupLowLevel
-
 from common.errors import TemporaryLimitation, InternalError
 
 import optimization.simplify
@@ -175,14 +173,16 @@ class Extractor(object):
 		assert isinstance(obj, type), obj
 		assert isinstance(attr, str), attr
 
-		assert obj not in self # It hasn't be processed, yet.
+		assert obj not in self.complete # It hasn't be processed, yet.
 
 		self.attrLUT[id(obj)][attr] = replacement
 
 	def initalizeObjects(self):
 		self.stubs.replaceAttrs(self)
 
-		setupLowLevel(self)
+		# Stick low level stubs into the list of functions.
+		self.desc.functions.extend(self.stubs.llastLUT)
+		self.stubs.bindStubs(self)
 
 		# Prevents uglyness by masking the module dictionary.  This prevents leakage.
 		if not self.lazy:

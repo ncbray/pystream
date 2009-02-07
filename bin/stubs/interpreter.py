@@ -3,7 +3,8 @@ from __future__ import absolute_import
 from  programIR.python.ast import *
 
 from . stubcollector import stubgenerator
-from . llutil import simpleDescriptor, allocate, getType, call, returnNone, type_lookup, inst_lookup, loadAttribute
+from . llutil import simpleDescriptor
+#, allocate, getType, call, returnNone, type_lookup, inst_lookup, loadAttribute
 import types
 
 
@@ -147,7 +148,7 @@ def makeInterpreterStubs(collector):
 		# Instructions
 		b = Suite()
 
-		b.append(Assign(loadAttribute(function, types.FunctionType, 'func_globals'), globalDict))
+		b.append(collector.loadAttribute(function, types.FunctionType, 'func_globals', globalDict))
 		b.append(Assign(Check(globalDict, 'Dictionary', name), temp))
 
 
@@ -155,7 +156,7 @@ def makeInterpreterStubs(collector):
 		t.append(Assign(Load(globalDict, 'Dictionary', name), result))
 
 		f = Suite()
-		f.append(Assign(Load(Existing(__builtins__), 'Dictionary', name), result))
+		f.append(Assign(Load(collector.existing(__builtins__), 'Dictionary', name), result))
 
 		c = Condition(Suite(), temp)
 		b.append(Switch(c, t, f))
@@ -182,9 +183,9 @@ def makeInterpreterStubs(collector):
 
 		# Instructions
 		b = Suite()
-		b.append(Assign(loadAttribute(function, types.FunctionType, 'func_globals'), globalDict))
+		b.append(collector.loadAttribute(function, types.FunctionType, 'func_globals', globalDict))
 		b.append(Store(globalDict, 'Dictionary', name, value))
-		returnNone(b)
+		b.append(collector.returnNone())
 
 		fname = 'interpreterStoreGlobal'
 		code = Code(fname, None, [function, name, value], ['function', 'name', 'value'], None, None, retp, b)
@@ -213,8 +214,8 @@ def makeInterpreterStubs(collector):
 			# Instructions
 			b = Suite()
 
-			inst_lookup(b, args[0], Existing(attr), func)
-			call(b, func, args, None, None, retval)
+			b.append(collector.instLookup(args[0], attr, func))
+			b.append(Assign(Call(func, args, [], None, None), retval))
 			b.append(Return(retval))
 
 			code = Code(name, None, args, list(argnames), None, None, retp, b)

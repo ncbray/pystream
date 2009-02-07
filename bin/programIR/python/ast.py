@@ -15,7 +15,7 @@ class Existing(Reference):
 
 	def __init__(self, o):
 		super(Existing, self).__init__()
-		#assert isinstance(o, program.AbstractObject), type(o)
+		assert isinstance(o, program.AbstractObject), type(o)
 		self.object = o
 
 	def __repr__(self):
@@ -371,13 +371,6 @@ class EndFinally(ControlFlow):
 ### CFG ###
 ###########
 
-def flattenSuite(blocks, out):
-	if isinstance(blocks, (list, tuple)):
-		for block in blocks:
-			flattenSuite(block, out)
-	elif blocks is not None:
-		out.append(blocks)
-
 class Suite(ASTNode):
 	__metaclass__ 	= astnode
 	__fields__ 	= 'blocks'
@@ -386,13 +379,16 @@ class Suite(ASTNode):
 	def __init__(self, blocks=None):
 		super(Suite, self).__init__()
 		self.blocks = []
-		flattenSuite(blocks, self.blocks)
+		self.append(blocks)
 
 	def insertHead(self, block):
 		if block != None:
 			if isinstance(block, Suite):
 				# Flatten hierachial suites
 				self.blocks[0:0] = block.blocks
+			elif isinstance(block, (list, tuple)):
+				for child in reversed(block):
+					self.insertHead(child)
 			else:
 				self.blocks.insert(0, block)
 
@@ -401,7 +397,12 @@ class Suite(ASTNode):
 			if isinstance(block, Suite):
 				# Flatten hierachial suites
 				self.blocks.extend(block.blocks)
-			else:
+			elif isinstance(block, (list, tuple)):
+				# Containers
+				for child in block:
+					self.append(child)
+			elif block is not None:
+				assert isinstance(block, Statement), block
 				self.blocks.append(block)
 
 	def significant(self):

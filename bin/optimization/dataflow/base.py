@@ -9,29 +9,6 @@ from programIR.python import ast
 class InternalError(Exception):
 	pass
 
-class ApplyToFunction(object):
-	__metaclass__ = typedispatcher
-
-	def __init__(self, strategy):
-		self.strategy = strategy
-
-	@dispatch(ast.Function)
-	def visitFunction(self, node):
-		self.strategy(node.code)
-		return node
-
-class MutateFunction(object):
-	__metaclass__ = typedispatcher
-
-	def __init__(self, strategy):
-		self.strategy = strategy
-
-	@dispatch(ast.Function)
-	def visitFunction(self, node):
-		node.code = self.strategy(node.code)
-		return node
-
-
 class ApplyToCode(object):
 	__metaclass__ = typedispatcher
 

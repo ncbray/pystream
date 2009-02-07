@@ -53,8 +53,7 @@ def findLiveFunctions(db, entryPoints):
 	cgf = CallGraphFinder(db)
 
 	entry = set()
-	for func, funcobj, args in entryPoints:
-		code = func.code # HACK
+	for code, funcobj, args in entryPoints:
 		assert isinstance(code, ast.Code), type(code)
 
 		entry.add(code)

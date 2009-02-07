@@ -649,11 +649,11 @@ class DestackVisitor(StandardVisitor):
 		return outblock, fstack
 
 
-	def visitFunction(self, block, stack):
+	def visitCodeBlock(self, block, stack):
 		assert isinstance(stack, PythonStack), stack
 		outblock, stack = self.handleLinearRegion(block, stack)
 		code = Code('unknown', Local('internal_self'), (), (), None, None, Local('internal_return'), outblock)
-		return Function('unknown', code), stack
+		return code, stack
 
 
 	# External entry point.
@@ -695,10 +695,9 @@ def destack(mname, fname, root, argnames, vargs, kargs, extractor, callback, tra
 	stack = PythonStack()
 	root = dv.process(root, stack)
 	root.name = fname
-	root.code.name = fname # HACK should get this from the code object, not the function...
-	root.code.parameternames = argnames
-	root.code.parameters = param
-	root.code.vparam = v
-	root.code.kparam = k
+	root.parameternames = argnames
+	root.parameters = param
+	root.vparam = v
+	root.kparam = k
 
 	return root

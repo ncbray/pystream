@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import unittest
 
 import analysis.cpa
+from common.compilerconsole import CompilerConsole
 from decompiler.programextractor import Extractor
 from util import replaceGlobals
 
@@ -21,7 +22,7 @@ class TestCPA(unittest.TestCase):
 		# There's one reference returned, and it's an integer.
 		self.assertEqual(len(refs), len(types))
 		for ref in refs:
-			self.assertIn(ref.obj.type, types)
+			self.assertIn(ref.xtype.obj.type, types)
 
 
 	def processFunc(self, func):
@@ -44,18 +45,18 @@ class TestCPA(unittest.TestCase):
 
 		func, funcast, funcobj = self.processFunc(func)
 
-		for paramname in funcast.code.parameternames:
+		for paramname in funcast.parameternames:
 			self.assertEqual(type(paramname), str)
 
 		a = self.extractor.getObject(3)
 		b = self.extractor.getObject(5)
 
-		result = analysis.cpa.evaluate(self.extractor, [(funcast, funcobj, (a, b))])
+		result = analysis.cpa.evaluate(CompilerConsole(), self.extractor, [(funcast, funcobj, (a, b))])
 
-		finfo  = result.db.functionInfo(funcast.code)
+		finfo  = result.db.functionInfo(funcast)
 		types = set((self.extractor.getObject(int),))
 
-		for param in funcast.code.parameters:
+		for param in funcast.parameters:
 			self.assertLocalRefTypes(finfo, param, types)
 
-		self.assertLocalRefTypes(finfo, funcast.code.returnparam, types)
+		self.assertLocalRefTypes(finfo, funcast.returnparam, types)

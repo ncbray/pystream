@@ -21,13 +21,13 @@ def standardFinallyFilter(prev, next):
 class StructuralAnalyzer(StandardVisitor):
 	def process(self, root, trace=False):
 		self.trace=trace
-		
+
 		# Visit the blocks in postorder.
 		post = list(postorder(BlockWrapper(), root))
 
 		for block in post:
 			self.walk(block)
-			
+
 			if block.isRegion():
 				self.process(block.entry())
 
@@ -46,7 +46,7 @@ class StructuralAnalyzer(StandardVisitor):
 				# The spurious exit complicates the flow graph when there is an else, so cut the link.
 				block.next.replacePrev(block, None)
 				block.replaceNext(merge, None)
-			
+
 	def visitReturn(self, block):
 		pass
 
@@ -61,10 +61,10 @@ class StructuralAnalyzer(StandardVisitor):
 
 	def visitNormalExit(self, block):
 		pass
-				
+
 	def visitLinear(self, block):
 		pass
-		
+
 ##		if isinstance(block.prev, Merge):
 ##			incoming = block.prev.incomingSet()
 ##			canMove = True
@@ -73,7 +73,7 @@ class StructuralAnalyzer(StandardVisitor):
 ##			for i in incoming:
 ##				if isinstance(i, Linear) and len(i.instructions) > 0:
 ##					print "PREV", i.instructions[-1], i.instructions[-1] == inst
-##					
+##
 ##					if inst == None:
 ##						inst = i.instructions[-1]
 ##					elif inst == i.instructions[-1]:
@@ -95,28 +95,28 @@ class StructuralAnalyzer(StandardVisitor):
 		elif block.loopMerge or (block.numEntries() == 2 and len(block.incomingSet()) == 2):
 			if isinstance(block.next, ForIter):
 				# Loop comprehensions will not be marked as "loop merge"
-				
+
 				body = block.next.iter
 				assert body.isSESE()
-				
+
 				assert body.next == block, (body.next, block)
 
 				entry = block.findLoopEntry(body)
-				
+
 				entryEdge = CFGEdge(entry, block)
 				exitEdge = CFGEdge(block.next, block.next.done)
 
 				region = ForLoop(block.region, block.next.iter)
 				self.moveIntoRegion(entryEdge, exitEdge, region)
 				return
-			
+
 			elif isinstance(block.next, Linear):
 				switch = block.next.next
 				if isinstance(switch, Switch):
 					body = switch.t
 					if body.isSESE() and body.next == block:
 						assert block.loopMerge
-						
+
 						entry = block.findLoopEntry(body)
 
 						cond = switch.cond.replaceDefault(block.next)
@@ -144,7 +144,7 @@ class StructuralAnalyzer(StandardVisitor):
 				entryEdge = CFGEdge(entry, block)
 				self.moveIntoRegion(entryEdge, None, region)
 				return
-			
+
 		assert not isinstance(block.next, ForIter), (block.numEntries(), len(block.incoming), block.incomingCount.values(), block.incoming)
 
 
@@ -156,7 +156,7 @@ class StructuralAnalyzer(StandardVisitor):
 			assert not entryEdge.source == exitEdge.source, (entryEdge, exitEdge)
 			start 	= entryEdge.destination
 			end 	= exitEdge.source
-			
+
 			if start != end:
 				region = SuiteRegion(entryEdge.destination.region)
 				self.moveIntoRegion(entryEdge, exitEdge, region)
@@ -191,7 +191,7 @@ class StructuralAnalyzer(StandardVisitor):
 			assert texit.destination == fexit.destination
 			assert isinstance(texit.destination, Merge), repr(texit.destination)
 			merge = texit.destination
-			exitEdge = merge.pulloutMerge(texit.source, fexit.source)			
+			exitEdge = merge.pulloutMerge(texit.source, fexit.source)
 		elif texit.destination and not fexit.destination:
 			exitEdge = texit
 		elif not texit.destination and fexit.destination:
@@ -204,7 +204,7 @@ class StructuralAnalyzer(StandardVisitor):
 	def spliceContinue(self, block):
 		assert block.numExits() == 1 and isinstance(block.next, Merge), block
 		#assert block.next.loopMerge, block
-		
+
 		c = Continue(block.region)
 
 		merge = block.next
@@ -217,7 +217,7 @@ class StructuralAnalyzer(StandardVisitor):
 	def spliceContinueContract(self, parent, block):
 		self.spliceContinue(block)
 		self.contractSuite(parent, block)
-		
+
 	def visitSwitch(self, block):
 		self.shortenSwitchExits(block)
 
@@ -245,7 +245,7 @@ class StructuralAnalyzer(StandardVisitor):
 						# Short circut OR
 
 						assert block.t.isShortCircutMerge()
-						
+
 						cond = block.f
 						entryEdge = CFGEdge(block.prev, block)
 						exitT = block.t.pulloutMerge(block, nextSwitch)
@@ -258,7 +258,7 @@ class StructuralAnalyzer(StandardVisitor):
 						exitT.destination.replacePrev(exitT.source, block)
 
 						block.replaceNext(block.f, exitF.destination)
-						exitF.destination.replacePrev(exitF.source, block)							
+						exitF.destination.replacePrev(exitF.source, block)
 
 						self.visitSwitch(block) # Try again.
 						return
@@ -281,13 +281,13 @@ class StructuralAnalyzer(StandardVisitor):
 						# Cut out the or graph.
 						block.replaceNext(block.t, exitT.destination)
 						exitT.destination.replacePrev(exitT.source, block)
-						
+
 						block.replaceNext(block.f, exitF.destination)
 						exitF.destination.replacePrev(exitF.source, block)
 
 						self.visitSwitch(block) # Try again.
 						return
-					
+
 				# We can't figure out what to do with this switch?
 				def shouldSplice(primary, alt):
 					# Don't splice if this is will be a short circut merge...
@@ -299,10 +299,10 @@ class StructuralAnalyzer(StandardVisitor):
 
 				if block.isShortCircut():
 					return
-				
+
 				if shouldSplice(texit, fexit):
 					self.spliceContinueContract(block, block.t)
-					
+
 				elif shouldSplice(fexit, texit):
 					self.spliceContinueContract(block, block.f)
 				else:
@@ -326,7 +326,7 @@ class StructuralAnalyzer(StandardVisitor):
 		fentry = CFGEdge(block, block.f)
 		fexit = self.findLinearExit(fentry, standardSuiteFilter)
 
-		
+
 		if texit.destination and fexit.destination:
 			assert texit.destination == fexit.destination
 			assert isinstance(texit.destination, Merge), repr(texit.destination)
@@ -342,12 +342,12 @@ class StructuralAnalyzer(StandardVisitor):
 		f = None if isinstance(block.f, Merge) else block.f
 
 		region = SwitchRegion(block.region, block.cond, t, f)
-		
+
 		self.moveIntoRegion(entryEdge, exitEdge, region)
 
 
 	def isWhileLoopHeader(self, block):
-		if isinstance(block.region, LoopRegion):		
+		if isinstance(block.region, LoopRegion):
 			if hasattr(block, 'prev') and isinstance(block.prev, NormalEntry) and isinstance(block, Linear) and isinstance(block.next, Switch):
 				switch = block.next
 
@@ -360,7 +360,7 @@ class StructuralAnalyzer(StandardVisitor):
 					return True
 		return False
 
-		
+
 
 	def visitForIter(self, block):
 		self.contractSuite(block, block.iter)
@@ -370,7 +370,7 @@ class StructuralAnalyzer(StandardVisitor):
 			# This is the start of a loop with no exit.
 
 			assert block.next
-			
+
 			# Should have alread been taken care of.
 			assert not isinstance(block.next, Merge)
 			assert not (isinstance(block.next, Linear) and isinstance(block.next.next, Merge))
@@ -387,14 +387,14 @@ class StructuralAnalyzer(StandardVisitor):
 
 				entryEdge = CFGEdge(entry, linear)
 				exitEdge = CFGEdge(switch, switch.f)
-				
+
 				self.moveIntoRegion(entryEdge, exitEdge, region)
 
 			elif isinstance(block.next, Linear) and isinstance(block.next.next, ForIter):
 				# Degenerate for loop
 				linear = block.next
 				it = linear.next
-				
+
 				entryEdge = CFGEdge(linear, it)
 				exitEdge = CFGEdge(it, it.done)
 
@@ -415,7 +415,7 @@ class StructuralAnalyzer(StandardVisitor):
 
 				entryEdge = CFGEdge(block, block.next)
 				self.moveIntoRegion(entryEdge, None, region)
-				
+
 # This doesn't work as expected, as it may cause spurrious "else" statements to be attached to nestled loops.
 
 ##	def unwindLoopMerge(self, merge, entry):
@@ -426,7 +426,7 @@ class StructuralAnalyzer(StandardVisitor):
 ##
 ##		if merge.numEntries() == 1:
 ##			merge.eliminate()
-	
+
 	def visitLoopRegion(self, block):
 		entry = block.entry().next
 
@@ -443,12 +443,12 @@ class StructuralAnalyzer(StandardVisitor):
 
 
 		elif isinstance(entry, Linear) and isinstance(entry.next, Merge):
-			# Normal for loop			
+			# Normal for loop
 			merge = entry.next
-			
+
 			merge.setLoopEntry(entry)
 			#self.unwindLoopMerge(merge, entry)
-			
+
 		elif isinstance(entry, Linear) and isinstance(entry.next, Switch):
 			# Degenerate while loop
 			pass
@@ -462,7 +462,7 @@ class StructuralAnalyzer(StandardVisitor):
 
 
 
-		
+
 		if block.normal:
 			if block.normal == block.exceptional:
 				# No "else"
@@ -479,15 +479,15 @@ class StructuralAnalyzer(StandardVisitor):
 				if isinstance(dest, Merge) and dest.loopMerge and dest != block.exceptional:
 					cont = self.spliceContinue(exitEdge.source)
 					exitEdge = CFGEdge(cont, None)
-				
+
 				self.makeSuite(entryEdge, exitEdge)
 
 				if block.normal.isSESE() and block.normal.next != None:
-					
+
 					if block.normal.next != block.exceptional:
 						block.mark()
 						block.normal.next.mark()
-					
+
 					assert block.normal.next == block.exceptional, ("Loop does not merge?", block.normal, block.normal.next, block.exceptional)
 					assert isinstance(block.normal.next, Merge)
 					exitEdge = block.exceptional.pulloutMerge(block.normal, block)
@@ -515,7 +515,7 @@ class StructuralAnalyzer(StandardVisitor):
 
 		if block.normal:
 			assert isinstance(block.exceptional, Merge), "Finally exit is not a merge point?"
-			assert block.exceptional.numEntries() == 2			
+			assert block.exceptional.numEntries() == 2
 			self.contractSuite(block.exceptional, block.exceptional.next, standardFinallyFilter)
 			exitEdge = CFGEdge(block.exceptional, block.exceptional.next)
 		else:
@@ -539,11 +539,11 @@ class StructuralAnalyzer(StandardVisitor):
 		if isinstance(block.exceptional.next, SwitchRegion):
 			# Tests
 			exitEdge = CFGEdge(block.exceptional.next, block.exceptional.next.next)
-		else:			
+		else:
 			# No tests, single except.
 			exitEdge = self.findLinearExit(entryEdge, standardSuiteFilter)
 			#exitEdge = CFGEdge(block.exceptional, block.exceptional.next)
-		
+
 		self.makeSuite(entryEdge, exitEdge)
 
 
@@ -582,7 +582,7 @@ class StructuralAnalyzer(StandardVisitor):
 				b = CFGEdge(block, block.exceptional)
 				exceptBlock = None
 
-			exitEdge = self.findSwitchExitEdge(a, b)			
+			exitEdge = self.findSwitchExitEdge(a, b)
 		else:
 			self.makeExceptionalSuite(block)
 			exitEdge = CFGEdge(block.exceptional, block.exceptional.next)
@@ -601,8 +601,8 @@ class StructuralAnalyzer(StandardVisitor):
 		entryEdge = CFGEdge(block.prev, block)
 		self.moveIntoRegion(entryEdge, exitEdge, region)
 
-	def visitFunction(self, block):
-		assert False, "Cannot deal with functions."
+	def visitCodeBlock(self, block):
+		assert False, "Cannot deal with code blocks."
 		pass
 
 
@@ -619,10 +619,10 @@ class StructuralAnalyzer(StandardVisitor):
 			exitInside = exitEdge.source
 			exitOutside = exitEdge.destination
 
-		assert entryEdge.destination 
+		assert entryEdge.destination
 
 		entrySentinal = NormalEntry(entryInside.region)
-		
+
 		region.replacePrev(None, entryOutside)
 		entryOutside.replaceNext(entryInside, region)
 		entryInside.replacePrev(entryOutside, entrySentinal)
@@ -634,7 +634,7 @@ class StructuralAnalyzer(StandardVisitor):
 		# Unlink the exit.
 		if exitEdge and exitOutside:
 			exitSentinal = NormalExit(exitInside.region)
-			
+
 			region.replaceNext(None, exitOutside)
 			exitOutside.replacePrev(exitInside, region)
 			exitInside.replaceNext(exitOutside, exitSentinal)
@@ -658,7 +658,7 @@ class StructuralAnalyzer(StandardVisitor):
 	def findLinearExit(self, edge, f):
 		block = edge.source
 		next = edge.destination
-		
+
 		while next and f(block, next):
 			block = next
 			nexts = block.getNext()
@@ -670,11 +670,11 @@ class StructuralAnalyzer(StandardVisitor):
 				next = None
 
 		return CFGEdge(block, next)
-	
+
 
 	def updateRegion(self, block, oldregion, newregion):
 		assert oldregion != newregion
-		
+
 		if block.region != newregion:
 			assert block.region == oldregion
 			block.setRegion(newregion)

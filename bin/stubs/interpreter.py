@@ -97,8 +97,7 @@ def makeInterpreterStubs(collector):
 
 		name = 'buildTuple'
 		code = Code(name, None, a, n, vargs, None, retp, b)
-		f = Function(name, code)
-		return f
+		return code
 
 	### A low-level stub (multiple return values?)
 	### Abstract (no iteration)
@@ -165,9 +164,7 @@ def makeInterpreterStubs(collector):
 
 		fname = 'interpreterLoadGlobal'
 		code = Code(fname, None, [function, name], ['function', 'name'], None, None, retp, b)
-		f = Function(fname, code)
-
-		return f
+		return code
 
 
 	@export
@@ -189,9 +186,7 @@ def makeInterpreterStubs(collector):
 
 		fname = 'interpreterStoreGlobal'
 		code = Code(fname, None, [function, name, value], ['function', 'name', 'value'], None, None, retp, b)
-		f = Function(fname, code)
-
-		return f
+		return code
 
 	def simpleAttrCall(name, attr, argnames):
 		assert isinstance(name, str), name
@@ -219,8 +214,7 @@ def makeInterpreterStubs(collector):
 			b.append(Return(retval))
 
 			code = Code(name, None, args, list(argnames), None, None, retp, b)
-			f = Function(name, code)
-			return f
+			return code
 
 		return simpleAttrCallBuilder
 

@@ -34,8 +34,6 @@ class GetLocals(object):
 		return self.locals
 
 def getLocals(node):
-	if isinstance(node, ast.Function):
-		node = node.code
 	return GetLocals().process(node)
 
 class ShapeConstraintBuilder(object):
@@ -140,7 +138,7 @@ class ShapeConstraintBuilder(object):
 
 
 	def _makeCalleeParams(self, node):
-		code = node.code
+		code = node
 		selfparam = self.localExpr(code.selfparam)
 		params = [self.localExpr(arg) for arg in code.parameters]
 		paramnames = code.parameternames
@@ -363,22 +361,22 @@ class ShapeConstraintBuilder(object):
 		self.post(node)
 
 
-	@dispatch(ast.Function)
+	@dispatch(ast.Code)
 	def visitFunciton(self, node):
 		pre = self.pre(node)
 
-		self.returnValue = node.code.returnparam
+		self.returnValue = node.returnparam
 
 		self.returnPoint = self.newID()
 
-		self(node.code.ast)
+		self(node.ast)
 
 
 		self.current = self.returnPoint
 
 		if True:
 			# Generate a kill constraint for the locals.
-			returnSlot = self.sys.canonical.localSlot(node.code.returnparam)
+			returnSlot = self.sys.canonical.localSlot(node.returnparam)
 			lcls = self.functionLocalSlots[self.function] - set((returnSlot,))
 			self.forgetAll(lcls)
 

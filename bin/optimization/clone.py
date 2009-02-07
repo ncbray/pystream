@@ -226,10 +226,10 @@ class ProgramCloner(object):
 		# This will be the case for most situations we're interested in... but still.  Ugly.
 		newEP = []
 		for func, funcobj, args in entryPoints:
-			groups = newfunc[func.code]
+			groups = newfunc[func]
 			assert len(groups) == 1
 			clonecode = groups.items()[0][1]
-			func.code = clonecode
+			func = clonecode
 			newEP.append((func, funcobj, args))
 
 

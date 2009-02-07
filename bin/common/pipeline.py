@@ -38,8 +38,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 		live = db.liveFunctions()
 		desc = extractor.desc
 
-		for func in desc.functions:
-			code = func.code
+		for code in desc.functions:
 			if code not in extractor.stubs.descriptiveLUT and code in live:
 				simplify(extractor, adb, code)
 		console.end()

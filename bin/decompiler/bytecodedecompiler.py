@@ -100,7 +100,7 @@ class Decompiler(object):
 			root = ssitransform.ssiTransform(root)
 
 		# Flow sensitive, works without a ssa or ssi transform.
-		optimization.simplify.simplify(self.extractor, analysis.analysisdatabase.DummyAnalysisDatabase(), root.code)
+		optimization.simplify.simplify(self.extractor, analysis.analysisdatabase.DummyAnalysisDatabase(), root)
 
 
 		if trace:
@@ -268,7 +268,7 @@ class BlockBuilder(object):
 		self.merges	= {}
 		self.regionExit = {}
 
-		func = Function(None)
+		func = CodeBlock(None)
 
 		self.queue = [(0, func)]
 

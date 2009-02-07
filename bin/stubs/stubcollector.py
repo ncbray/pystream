@@ -100,9 +100,10 @@ class StubCollector(object):
 		return funcast
 
 	def llast(self, f):
-		funcast = f()
-		self.llastLUT.append(funcast)
-		return funcast
+		llast = f()
+		assert isinstance(llast, ast.Code), type(llast)
+		self.llastLUT.append(llast)
+		return llast
 
 	def cfuncptr(self, obj):
 		try:
@@ -121,20 +122,20 @@ class StubCollector(object):
 		meth = getattr(t, attr)
 		ptr = self.cfuncptr(meth)
 
-		def callback(funcast):
-			assert isinstance(funcast, ast.Function), funcast
-			self.ptrAST.append((ptr, funcast))
-			return funcast
+		def callback(code):
+			assert isinstance(code, ast.Code), Code
+			self.ptrAST.append((ptr, code))
+			return code
 		return callback
 
 
 	def attachPtr(self, obj):
 		ptr = self.cfuncptr(obj)
 
-		def callback(funcast):
-			assert isinstance(funcast, ast.Function), funcast
-			self.ptrAST.append((ptr, funcast))
-			return funcast
+		def callback(code):
+			assert isinstance(code, ast.Code), code
+			self.ptrAST.append((ptr, code))
+			return code
 		return callback
 
 	def bindStubs(self, extractor):
@@ -143,16 +144,16 @@ class StubCollector(object):
 
 
 	def fold(self, func):
-		def callback(funcast):
-			assert isinstance(funcast, ast.Function), type(funcast)
-			self.foldLUT[funcast.code] = func
-			return funcast
+		def callback(code):
+			assert isinstance(code, ast.Code), type(code)
+			self.foldLUT[code] = func
+			return code
 		return callback
 
-	def descriptive(self, funcast):
-		assert isinstance(funcast, ast.Function), type(funcast)
-		self.descriptiveLUT[funcast.code] = True
-		return funcast
+	def descriptive(self,code):
+		assert isinstance(code, ast.Code), type(code)
+		self.descriptiveLUT[code] = True
+		return code
 
 
 	##################

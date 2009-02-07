@@ -11,7 +11,7 @@ class FlowBlockDump(StandardVisitor):
 	def process(self, name, root):
 		self.processed = set()
 		self.queue = collections.deque()
-		self.regiongraph = {}		
+		self.regiongraph = {}
 
 		self.g = dot.Digraph(compound='true')
 
@@ -31,7 +31,7 @@ class FlowBlockDump(StandardVisitor):
 
 ##		if a and b: # HACK
 			assert a and b, (a, b)
-			
+
 			self.g.edge(a, b, **style)
 			self.enqueue(b)
 ##		else:
@@ -68,7 +68,7 @@ class FlowBlockDump(StandardVisitor):
 	def clusterEdge(self, cluster, label):
 		return {'label':label, 'ltail':cluster.name}
 
-	def visitFunction(self, block):
+	def visitCodeBlock(self, block):
 		self.makeNode(block, self.flowStyle('function', block.marked))
 		self.enqueue(block.entry())
 
@@ -91,7 +91,7 @@ class FlowBlockDump(StandardVisitor):
 		if block.normal: self.makeEdge(block, block.normal)
 		self.makeEdge(block, block.exceptional, self.labeledEdge('except'))
 
-		
+
 	def visitLinear(self, block):
 		label = '\n'.join((inst.opcodeString() for inst in block.instructions))
 		self.makeNode(block, self.instructionStyle(label, block.marked))
@@ -235,6 +235,6 @@ class FlowBlockDump(StandardVisitor):
 
 				if region.marked:
 					attr['color'] = 'red'
-				
+
 				self.regiongraph[region] = parent.cluster(region, **attr)
 			return self.regiongraph[region]

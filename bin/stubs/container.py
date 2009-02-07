@@ -45,9 +45,8 @@ def makeContainerStubs(collector):
 			b.append(Return(inst))
 
 			code = Code(name, selfp, [self], ['self'], None, None, retp, b)
-			f = Function(name, code)
-			descriptive(f)
-			return f
+			descriptive(code)
+			return code
 
 		return makeIteratorWrap
 
@@ -79,11 +78,8 @@ def makeContainerStubs(collector):
 			b.append(Return(inst))
 
 			code = Code(name, selfp, args, list(argnames), None, None, retp, b)
-			f = Function(name, code)
-
-			collector.descriptive(f)
-
-			return f
+			collector.descriptive(code)
+			return code
 
 		return simpleDescriptorBuilder
 
@@ -109,9 +105,7 @@ def makeContainerStubs(collector):
 
 		name = 'listappend'
 		code = Code(name, selfp, [self, value], ['self', 'value'], None, None, retp, b)
-		f = Function(name, code)
-
-		return f
+		return code
 
 
 	makeIterator('list__iter__', list, xtypes.ListIteratorType)
@@ -138,9 +132,7 @@ def makeContainerStubs(collector):
 
 		name = 'listiterator__next__'
 		code = Code(name, selfp, [self], ['self'], None, None, retp, b)
-		f = Function(name, code)
-
-		return f
+		return code
 
 	### xrange ###
 	makeIterator('xrange__iter__', xrange, xtypes.XRangeIteratorType)

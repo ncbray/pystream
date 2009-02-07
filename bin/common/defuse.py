@@ -91,9 +91,6 @@ class DefUseVisitor(CodeVisitor):
 	def visitSuite(self, node):
 		pass
 
-	def visitFunction(self, node):
-		pass
-
 	def visitCode(self, node):
 		if node.selfparam:
 			self.define(node, node.selfparam)
@@ -361,10 +358,6 @@ class Collapser(StandardVisitor):
 
 ##		for assign in reversed(node.onEntry):
 ##			self.process(assign)
-
-
-	def visitFunction(self, node):
-		self.process(node.code)
 
 	def visitCode(self, node):
 		self.process(node.ast)

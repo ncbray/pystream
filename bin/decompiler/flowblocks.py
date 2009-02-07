@@ -32,12 +32,12 @@ class CFGEdge(object):
 		else:
 			return True
 
-	
+
 class FlowBlock(object):
 	def __init__(self, region):
 		self.setRegion(region)
 		self.marked = False
-	
+
 	def setPrevious(self, prev):
 		#assert self.prev == None
 		assert prev.region == self.region
@@ -117,7 +117,7 @@ class Merge(FlowBlock):
 		self.incoming = set()
 		self.incomingCount = collections.defaultdict(lambda: 0)
 		self.totalCount = 0
-		
+
 		self.next = None
 
 		self.loopMerge = False
@@ -134,7 +134,7 @@ class Merge(FlowBlock):
 
 	def replacePrev(self, current, new):
 		assert self.totalCount == self.__total()
-		
+
 		if current:
 			assert current in self.incoming, (current, new, self.incoming)
 			self.removeIncoming(current)
@@ -155,7 +155,7 @@ class Merge(FlowBlock):
 	def addIncoming(self, block):
 		assert block.region == self.region
 		assert self.incomingCount[block] < block.numExits()
-		
+
 		self.incoming.add(block)
 
 		self.incomingCount[block] += 1
@@ -168,7 +168,7 @@ class Merge(FlowBlock):
 
 		self.incomingCount[block] -= 1
 		self.totalCount -= 1
-		
+
 		if not self.incomingCount[block]:
 			self.incoming.remove(block)
 			del self.incomingCount[block]
@@ -216,7 +216,7 @@ class Merge(FlowBlock):
 			assert entry
 		else:
 			assert entry in self.incoming
-		
+
 		return entry
 
 
@@ -225,7 +225,7 @@ class Merge(FlowBlock):
 
 		assert t in self.incoming
 		assert f in self.incoming
-		
+
 		if self.numEntries() > 2:
 			m = Merge(self.region)
 
@@ -247,14 +247,14 @@ class Merge(FlowBlock):
 
 			assert m.numEntries() == 2
 			assert self.incomingCount[m] == 1, self.incomingCount[m]
-			
+
 			return CFGEdge(m, self)
 		else:
 			assert self.numEntries() == 2
 			assert self.isPrevious(t)
 			assert self.isPrevious(f)
 			assert self.next.isPrevious(self), self.next
-			
+
 			return CFGEdge(self, self.next)
 
 
@@ -265,7 +265,7 @@ class Merge(FlowBlock):
 
 		if self.numEntries() > 1:
 			m = Merge(self.region)
-			
+
 			self.replacePrev(t, None)
 			t.replaceNext(self, m)
 			m.setPrevious(t)
@@ -287,12 +287,12 @@ class Merge(FlowBlock):
 		next.replacePrev(self, prev)
 
 		self.replaceNext(next, None)
-		self.replacePrev(prev, None)		
+		self.replacePrev(prev, None)
 
 class AbstractSwitch(FlowBlock):
 	def __init__(self, region):
 		FlowBlock.__init__(self, region)
-		
+
 		self.prev = None
 		self.t = None
 		self.f = None
@@ -356,14 +356,14 @@ class ForIter(FlowBlock):
 
 	def numExits(self):
 		return 2
-	
+
 	def hasNormalExit(self):
 		return False
 
 
 class NormalEntry(FlowBlock):
 	def __init__(self, region):
-		FlowBlock.__init__(self, region)		
+		FlowBlock.__init__(self, region)
 		self.prev = None
 		self.next = None
 
@@ -386,10 +386,10 @@ class NormalEntry(FlowBlock):
 
 	def numEntries(self):
 		return 0
-	
+
 class NormalExit(FlowBlock):
 	def __init__(self, region):
-		FlowBlock.__init__(self, region)		
+		FlowBlock.__init__(self, region)
 		self.prev = None
 		self.next = None
 
@@ -408,13 +408,13 @@ class NormalExit(FlowBlock):
 
 class ExceptionalFlowBlock(FlowBlock):
 	def __init__(self, region):
-		FlowBlock.__init__(self, region)		
+		FlowBlock.__init__(self, region)
 		self.prev = None
 
 
 	def replaceNext(self, current, next):
 		assert False
-		
+
 	def setNext(self):
 		pass
 
@@ -478,7 +478,7 @@ class FlowRegion(FlowBlock):
 
 		self.next = None # HACK for switches.
 
-		self._entry 	= NormalEntry(self)		
+		self._entry 	= NormalEntry(self)
 		self._exit 	= NormalExit(self)
 
 	def entry(self):
@@ -492,7 +492,7 @@ class FlowRegion(FlowBlock):
 
 	def replaceNext(self, current, next):
 		assert self.normal == current or self.exceptional == current, (current, self.normal, self.exceptional)
-		
+
 		if self.normal == current:
 			self.normal = next
 		elif self.exceptional == current:
@@ -547,7 +547,7 @@ class SESERegion(FlowRegion):
 
 class SwitchRegion(SESERegion):
 	__slots__ = 'cond', 't', 'f'
-	
+
 	name = 'switch region'
 
 	def __init__(self, region, cond, t, f):
@@ -559,7 +559,7 @@ class SwitchRegion(SESERegion):
 class AbstractShortCircut(object):
 	def __init__(self, region, *terms):
 		self.region = region
-		
+
 		self.terms = []
 
 		assert len(terms) > 1
@@ -583,7 +583,7 @@ class AbstractShortCircut(object):
 			return self.terms[0].complete()
 
 	def replaceDefault(self, newterm):
-		inital = self.terms[0].replaceDefault(newterm)			
+		inital = self.terms[0].replaceDefault(newterm)
 		return type(self)(self.region, inital, *self.terms[1:])
 
 	def dump(self, tabs = ''):
@@ -600,7 +600,7 @@ class AbstractShortCircut(object):
 class CheckStack(object):
 	def __init__(self, region):
 		self.region = region
-		
+
 	def complete(self):
 		return False
 
@@ -651,9 +651,9 @@ class TryExcept(SESERegion):
 class SuiteRegion(SESERegion):
 	name = 'suite'
 
-class Function(FlowRegion):
+class CodeBlock(FlowRegion):
 	name = 'function'
-	
+
 	def setNext(self, head):
 		assert False
 		self.entry().setNext(head)
@@ -678,7 +678,7 @@ class FinallyRegion(FlowRegion):
 
 class ForLoop(SESERegion):
 	__slots__ = 'body'
-	
+
 	name = 'for loop'
 
 	def __init__(self, region, body):

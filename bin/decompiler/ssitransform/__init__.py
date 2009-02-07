@@ -500,16 +500,18 @@ class SSITransformer(StandardVisitor):
 
 		ast = self.process(node.ast)
 
-		newnode = Code(node.name, selfparam, params, node.parameternames, vparam, kparam, node.returnparam, ast)
+		# Mutate the code
+		node.selfparam = selfparam
+		node.parameters = params
+		node.vparam = vparam
+		node.kparam = kparam
+		node.ast = ast
+
 		returns = self.handlers.returns.pop()
 
 		self.locals = old
 
-		return newnode
-
-	def visitFunction(self, node):
-		code = self.process(node.code)
-		return Function(node.name, code)
+		return node
 
 	def transform(self, node):
 		(defines, uses), (globaldefines, globaluses), collapsable = defuse(node)

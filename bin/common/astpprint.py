@@ -10,7 +10,7 @@ class ASTPrettyPrinter(object):
 	def visitLeaf(self, node, label, tabs):
 		self.out.write("%s%s%r\n" % (tabs, label, node))
 
-	@dispatch(ast.Code, ast.Function)
+	@dispatch(ast.Code)
 	def visitShared(self, node, label, tabs):
 		self.out.write("%s%s(%s, ...)\n" % (tabs, type(node).__name__, node.name))
 

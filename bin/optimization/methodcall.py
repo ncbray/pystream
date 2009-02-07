@@ -51,16 +51,16 @@ class MethodPatternFinder(object):
 
 	def findOriginals(self, extractor):
 		exports = extractor.stubs.exports
-		self.iget = exports['interpreter_getattribute'].code
-		self.oget = exports['object__getattribute__'].code
+		self.iget = exports['interpreter_getattribute']
+		self.oget = exports['object__getattribute__']
 
 		fgetpyobj = exports['function__get__']
 		fgetobj = extractor.getObject(fgetpyobj)
-		self.fget = extractor.getCall(fgetobj).code
+		self.fget = extractor.getCall(fgetobj)
 
-		self.mdget = exports['methoddescriptor__get__'].code
+		self.mdget = exports['methoddescriptor__get__']
 
-		self.mcall = exports['method__call__'].code
+		self.mcall = exports['method__call__']
 
 
 	def findExisting(self, adb):

@@ -26,11 +26,8 @@ def simpleDescriptor(collector, name, argnames, rt, hasSelfParam=True):
 		b.append(ast.Return(inst))
 
 		code = ast.Code(name, selfp, args, list(argnames), None, None, retp, b)
-		f = ast.Function(name, code)
-
-		collector.descriptive(f)
-
-		return f
+		collector.descriptive(code)
+		return code
 
 	return simpleDescriptorBuilder
 

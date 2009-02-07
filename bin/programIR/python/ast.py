@@ -475,16 +475,6 @@ class Code(CompoundStatement):
 	def __repr__(self):
 		return "Code(%s/%d)" % (self.name, id(self))
 
-# TODO what's the type?
-class Function(CompoundStatement):
-	__metaclass__ 	= astnode
-	__fields__ 	= 'name', 'code'
-	__types__ 	= {'name':str, 'code':Code}
-	__optional__    = 'code' # HACK for function cloning, allows function to be created without code.
-	__shared__      = True
-
-
-
 class Allocate(LLExpression):
 	__metaclass__ = astnode
 	__fields__    = 'expr'

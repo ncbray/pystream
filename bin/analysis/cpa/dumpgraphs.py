@@ -38,8 +38,7 @@ def dumpGraph(name, g, format='svg', prog='dot'):
 def dump(data, entryPoints, links, reportDir):
 	stack = []
 	processed = set()
-	for func, funcobj, args in entryPoints:
-		code = func.code
+	for code, funcobj, args in entryPoints:
 		info = data.db.functionInfo(code)
 		for context in info.contexts:
 			context = None

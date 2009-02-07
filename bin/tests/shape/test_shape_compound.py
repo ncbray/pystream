@@ -12,7 +12,7 @@ class TestSimpleCase(TestCompoundConstraintBase):
 		q, self.qSlot, self.qExpr  = self.makeLocalObjs('q')
 		ret, self.retSlot, self.retExpr  = self.makeLocalObjs('internal_return')
 
-		self.nSlot  = self.sys.canonical.fieldSlot(None, ('LowLevel', 'n'))
+		self.nSlot  = self.sys.canonical.fieldSlot(None, ('LowLevel', self.extractor.getObject('n')))
 
 		self.xRef   = self.refs(self.xSlot)
 		self.yRef   = self.refs(self.ySlot)
@@ -40,12 +40,12 @@ class TestSimpleCase(TestCompoundConstraintBase):
 
 		body = ast.Suite([
 			ast.Assign(x, t),
-			ast.Assign(ast.Load(t, 'LowLevel', ast.Existing('n')), x),
-			ast.Assign(ast.Load(y, 'LowLevel', ast.Existing('n')), q),
-			ast.Store(t, 'LowLevel', ast.Existing('n'), q),
+			ast.Assign(ast.Load(t, 'LowLevel', self.existing('n')), x),
+			ast.Assign(ast.Load(y, 'LowLevel', self.existing('n')), q),
+			ast.Store(t, 'LowLevel', self.existing('n'), q),
 			ast.Delete(q),
-			ast.Store(y, 'LowLevel', ast.Existing('n'), t),
-			ast.Assign(ast.Load(t, 'LowLevel', ast.Existing('n')), y),
+			ast.Store(y, 'LowLevel', self.existing('n'), t),
+			ast.Assign(ast.Load(t, 'LowLevel', self.existing('n')), y),
 			])
 
 		else_ = ast.Suite([])
@@ -60,8 +60,6 @@ class TestSimpleCase(TestCompoundConstraintBase):
 
 
 		self.code = ast.Code('test', None, [x, y], ['x', 'y'], None, None, ret, self.body)
-		self.func = ast.Function('test', self.code)
-
 
 		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
 		b, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
@@ -79,16 +77,16 @@ class TestSimpleCase(TestCompoundConstraintBase):
 			ast.Assign(dc, c),
 			])
 
-		invocation = (self.caller, dc, self.func)
+		invocation = (self.caller, dc, self.code)
 
 
 		self.context = None
 		self.cs = True
 
 		# Make a dummy invocation
-		self.db.addInvocation(self.caller, self.context, dc, self.func, self.context)
+		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
 
-		self.funcInput,  self.funcOutput   = self.makeConstraints(self.func)
+		self.funcInput,  self.funcOutput   = self.makeConstraints(self.code)
 		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
 
 		self.setInOut(self.callerInput, self.callerOutput)
@@ -165,7 +163,7 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 		x, self.xSlot, self.xExpr  = self.makeLocalObjs('x')
 		y, self.ySlot, self.yExpr  = self.makeLocalObjs('y')
 		ret, self.retSlot, self.retExpr  = self.makeLocalObjs('internal_return')
-		self.nSlot = self.sys.canonical.fieldSlot(None, ('LowLevel', 'n'))
+		self.nSlot = self.sys.canonical.fieldSlot(None, ('LowLevel', self.extractor.getObject('n')))
 
 		self.xRef   = self.refs(self.xSlot)
 		self.retRef = self.refs(self.retSlot)
@@ -177,13 +175,12 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 
 
 		body = ast.Suite([
-			ast.Assign(ast.Load(x, 'LowLevel', ast.Existing('n')), y),
+			ast.Assign(ast.Load(x, 'LowLevel', self.existing('n')), y),
 			ast.Return(y)
 			])
 
 
 		self.code = ast.Code('loadTest', None, [x], ['x'], None, None, ret, body)
-		self.func = ast.Function('loadTest', self.code)
 
 
 		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
@@ -203,16 +200,16 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 			ast.Assign(dc, c),
 			])
 
-		invocation = (self.caller, dc, self.func)
+		invocation = (self.caller, dc, self.code)
 
 
 		self.context = None
 		self.cs = True
 
 		# Make a dummy invocation
-		self.db.addInvocation(self.caller, self.context, dc, self.func, self.context)
+		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
 
-		self.funcInput,  self.funcOutput   = self.makeConstraints(self.func)
+		self.funcInput,  self.funcOutput   = self.makeConstraints(self.code)
 		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
 
 		self.setInOut(self.callerInput, self.callerOutput)

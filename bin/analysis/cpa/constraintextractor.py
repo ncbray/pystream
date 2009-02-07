@@ -130,7 +130,7 @@ class ExtractDataflow(object):
 
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node, target):
-		return self.directCall(node, self.exports['convertToBool'].code,
+		return self.directCall(node, self.exports['convertToBool'],
 			None, [self(node.expr)],
 			None, None, target)
 
@@ -141,26 +141,26 @@ class ExtractDataflow(object):
 		else:
 			opname = opnames.forward[node.op]
 
-		return self.directCall(node, self.exports['interpreter%s' % opname].code,
+		return self.directCall(node, self.exports['interpreter%s' % opname],
 			None, [self(node.left), self(node.right)],
 			None, None, target)
 
 	@dispatch(ast.UnaryPrefixOp)
 	def visitUnaryPrefixOp(self, node, target):
 		opname = opnames.unaryPrefixLUT[node.op]
-		return self.directCall(node, self.exports['interpreter%s' % opname].code,
+		return self.directCall(node, self.exports['interpreter%s' % opname],
 			None, [self(node.expr)],
 			None, None, target)
 
 	@dispatch(ast.GetGlobal)
 	def visitGetGlobal(self, node, target):
-		return self.directCall(node, self.exports['interpreterLoadGlobal'].code,
+		return self.directCall(node, self.exports['interpreterLoadGlobal'],
 			None, [self(self.code.selfparam), self(node.name)],
 			None, None, target)
 
 	@dispatch(ast.GetIter)
 	def visitGetIter(self, node, target):
-		return self.directCall(node, self.exports['interpreter_iter'].code,
+		return self.directCall(node, self.exports['interpreter_iter'],
 			None, [self(node.expr)],
 			None, None, target)
 
@@ -178,13 +178,13 @@ class ExtractDataflow(object):
 
 	@dispatch(ast.BuildList)
 	def visitBuildList(self, node, target):
-		return self.directCall(node, self.exports['buildList'].code,
+		return self.directCall(node, self.exports['buildList'],
 			None, self(node.args),
 			None, None, target)
 
 	@dispatch(ast.BuildTuple)
 	def visitBuildTuple(self, node, target):
-		return self.directCall(node, self.exports['buildTuple'].code,
+		return self.directCall(node, self.exports['buildTuple'],
 			None, self(node.args),
 			None, None, target)
 
@@ -194,19 +194,19 @@ class ExtractDataflow(object):
 		for i, arg in enumerate(node.targets):
 			obj = self.system.extractor.getObject(i)
 			target = self.localSlot(arg)
-			self.directCall(node, self.exports['interpreter_getitem'].code,
+			self.directCall(node, self.exports['interpreter_getitem'],
 				None, [self(node.expr), self(ast.Existing(obj))],
 				None, None, target)
 
 	@dispatch(ast.GetAttr)
 	def visitGetAttr(self, node, target):
-		return self.directCall(node, self.exports['interpreter_getattribute'].code,
+		return self.directCall(node, self.exports['interpreter_getattribute'],
 			None, [self(node.expr), self(node.name)],
 			None, None, target)
 
 	@dispatch(ast.SetAttr)
 	def visitSetAttr(self, node):
-		return self.directCall(node, self.exports['interpreter_setattr'].code,
+		return self.directCall(node, self.exports['interpreter_setattr'],
 			None, [self(node.expr), self(node.name), self(node.value)],
 			None, None, None)
 

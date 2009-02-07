@@ -140,7 +140,7 @@ class InterproceduralDataflow(object):
 
 	def getCall(self, obj):
 		start = time.clock()
-		result = self.extractor.getCall(obj).code
+		result = self.extractor.getCall(obj)
 		self.decompileTime += time.clock()-start
 		return result
 
@@ -341,7 +341,7 @@ class InterproceduralDataflow(object):
 				targetcontext.bindParameters(self, caller)
 
 	def makeExternalSlot(self, name):
-		code = base.externalFunction.code
+		code = base.externalFunction
 		dummyLocal = ast.Local(name)
 		dummyName = self.canonical.localName(code, dummyLocal, base.externalFunctionContext)
 		dummySlot = self.roots.root(self, dummyName, self.roots.regionHint)
@@ -350,7 +350,7 @@ class InterproceduralDataflow(object):
 	def addEntryPoint(self, func, funcobj, args):
 		# The call point
 		# TODO generate bogus ops?
-		dummyOp = self.canonical.opContext(base.externalFunction.code, externalOp, base.externalFunctionContext)
+		dummyOp = self.canonical.opContext(base.externalFunction, externalOp, base.externalFunctionContext)
 
 
 		funcobjxtype = self.canonical.existingType(funcobj)
@@ -372,7 +372,7 @@ class InterproceduralDataflow(object):
 
 
 		# Generate the calling context
-		context = self.getContext(dummyOp, func.code, funcobj, args)
+		context = self.getContext(dummyOp, func, funcobj, args)
 
 		# Make an invocation
 		self.bindCall(dummyOp, caller, context)
@@ -401,7 +401,7 @@ def evaluate(console, extractor, entryPoints):
 	base.externalFunctionContext.opPath = dataflow.initalOpPath()
 
 	for funcast, funcobj, args in entryPoints:
-		assert isinstance(funcast, ast.Function), type(funcast)
+		assert isinstance(funcast, ast.Code), type(funcast)
 		assert isinstance(funcobj, program.Object), type(funcobj)
 		assert isinstance(args, (list, tuple)), type(args)
 		dataflow.addEntryPoint(funcast, funcobj, args)

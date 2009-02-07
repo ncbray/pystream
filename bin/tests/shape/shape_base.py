@@ -10,6 +10,7 @@ import analysis.shape
 
 from programIR.python import ast
 
+import decompiler.programextractor
 
 import util.compressedset
 from util.tvl import *
@@ -29,13 +30,17 @@ class TestConstraintBase(unittest.TestCase):
 	def setUp(self):
 		self.db  = MockDB()
 		self.sys = analysis.shape.RegionBasedShapeAnalysis(self.db)
+		self.extractor = decompiler.programextractor.Extractor()
 		self.setInOut((None, 0), (None, 1))
 
 		self.shapeSetUp()
 
+	def existing(self, obj):
+		return ast.Existing(self.extractor.getObject(obj))
+
 	def shapeSetUp(self):
 		raise NotImplementedError
-		
+
 	def refs(self, *args):
 		return self.sys.canonical.refs(*args)
 
@@ -59,12 +64,12 @@ class TestConstraintBase(unittest.TestCase):
 	def convert(self, row, entry):
 		type_  = None
 		region = None
-		
+
 		if len(row) == 3:
 			current, hits, misses = row
 		else:
 			current, hits, misses, unknowns = row
-			
+
 		hits = util.compressedset.copy(hits)
 		misses = util.compressedset.copy(misses)
 		external = False
@@ -75,7 +80,7 @@ class TestConstraintBase(unittest.TestCase):
 		index = self.sys.canonical.configuration(type_, region, entry, current)
 		paths = self.sys.canonical.paths(hits, misses)
 		secondary = self.sys.canonical.secondary(paths, external)
-		return index,secondary 
+		return index,secondary
 
 	def countOutputs(self):
 		count = 0
@@ -122,7 +127,7 @@ class TestConstraintBase(unittest.TestCase):
 		try:
 			for row in results:
 				econf, esecondary = self.convert(row, entry)
-				
+
 				secondary = self.sys.environment.secondary(outputPoint, context, econf)
 
 				self.assertNotEqual(secondary, None, "Expected output %r not found." % econf)
@@ -166,7 +171,7 @@ class TestConstraintBase(unittest.TestCase):
 
 	def dumpPoint(self, givenPoint):
 		mapping = self.sys.environment._secondary
-		       
+
 		for (point, context, conf), secondary in mapping.iteritems():
 			if point != givenPoint: continue
 

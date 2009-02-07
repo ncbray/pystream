@@ -707,10 +707,5 @@ class SimpleCodeGen(StandardVisitor):
 		#assert not node.cells
 		self.visit(node.code)
 
-	# HACK
-	def visitFunction(self, node):
-		self.visit(node.code, node.name)
-
-
 	def visitLibrary(self, node):
 		self.emitStatement("# CANNOT GENERATE CODE FOR LIBRARY.")

@@ -43,8 +43,7 @@ def makeLLFunc(collector):
 
 		name = 'object__init__'
 		code = Code(name, selfp, [self], ['self'], vargs, None, retp, b)
-		f = Function(name, code)
-		return f
+		return code
 
 
 	# TODO incomplete
@@ -131,9 +130,7 @@ def makeLLFunc(collector):
 
 		name = 'object__getattribute__'
 		code = Code(name, selfp, [self, field], ['self', 'field'], None, None, retp, b)
-		f = Function(name, code)
-
-		return f
+		return code
 
 
 	#@export
@@ -172,10 +169,10 @@ def makeLLFunc(collector):
 	#		raise AttributeError, field
 
 
-	@export
-	@highLevelStub
-	def default__get__(self, inst, cls):
-		return self
+#	@export
+#	@highLevelStub
+#	def default__get__(self, inst, cls):
+#		return self
 
 	# TODO incomplete
 	# set object__getattribute__
@@ -253,9 +250,7 @@ def makeLLFunc(collector):
 
 		name = 'object__setattr__'
 		code = Code(name, selfp, [self, field, value], ['self', 'field', 'value'], None, None, retp, b)
-		f = Function(name, code)
-
-		return f
+		return code
 
 
 	############
@@ -281,8 +276,7 @@ def makeLLFunc(collector):
 
 		name = 'object__new__'
 		code = Code(name, self, [type_], ['type'], vargs, None, retp, b)
-		f = Function(name, code)
-		return f
+		return code
 
 
 	# Does not exist, hardwired in interpreter?
@@ -329,8 +323,7 @@ def makeLLFunc(collector):
 		# Function definition
 		name ='type__call__'
 		code = Code(name, self, [], [], vargs, None, retp, b)
-		f = Function(name, code)
-		return f
+		return code
 
 	##def type__call__(cls, *args, **kargs):
 	##	# TODO arg matching behavior?
@@ -398,9 +391,7 @@ def makeLLFunc(collector):
 
 		name = 'method__call__'
 		code = Code(name, self, [], [], vargs, None, retp, b)
-		f = Function(name, code)
-
-		return f
+		return code
 
 	### TODO what can be done about the ugly argument passing?  Will the analysis figure it out?
 	##@replaceObject(xtypes.MethodType.__get__)
@@ -435,9 +426,7 @@ def makeLLFunc(collector):
 
 		name = 'methoddescriptor__get__'
 		code = Code(name, selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
-		func = Function(name, code)
-
-		return func
+		return code
 
 	#########################
 	### Member Descriptor ###
@@ -467,8 +456,7 @@ def makeLLFunc(collector):
 
 		name = 'memberdescriptor__get__'
 		code = Code(name, selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
-		f = Function(name, code)
-		return f
+		return code
 
 	# For data descriptors, __set__
 	# Low level, involves slot manipulation.
@@ -493,9 +481,7 @@ def makeLLFunc(collector):
 
 		name = 'memberdescriptor__set__'
 		code = Code(name, selfp, [self, inst, value], ['self', 'inst', 'value'], None, None, retp, b)
-		f = Function(name, code)
-
-		return f
+		return code
 
 	###########################
 	### Property Descriptor ###
@@ -526,9 +512,7 @@ def makeLLFunc(collector):
 
 		name = 'property__get__'
 		code = Code(name, selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
-		func = Function(name, code)
-
-		return func
+		return code
 
 	###############
 	### Numeric ###
@@ -559,9 +543,7 @@ def makeLLFunc(collector):
 
 		name = 'dummyBinaryOperation'
 		code = Code(name, selfp, args, ['self', 'other'], None, None, retp, b)
-		f = Function(name, code)
-
-		return f
+		return code
 
 
 	@descriptive
@@ -585,9 +567,7 @@ def makeLLFunc(collector):
 
 		name = 'dummyUnaryOperation'
 		code = Code(name, selfp, args, ['self'], None, None, retp, b)
-		f = Function(name, code)
-
-		return f
+		return code
 
 	from common import opnames
 	def attachDummyNumerics(t, dummyBinary, dummyUnary):
@@ -645,8 +625,7 @@ def makeLLFunc(collector):
 
 		name = 'tuple__getitem__'
 		code = Code(name, self, [inst, key], ['self', 'key'], None, None, retp, b)
-		f = Function(name, code)
-		return f
+		return code
 
 	#########################
 	### Builtin functions ###
@@ -685,13 +664,12 @@ def makeLLFunc(collector):
 		b = Suite()
 		b.append(collector.getType(obj, type_))
 		# HACK we don't actually know the real "self" for issubclass, so we use our own to prevent the call from failing.
-		b.append(Assign(DirectCall(issubclass_stub.code, self, [type_, classinfo], [], None, None), result))
+		b.append(Assign(DirectCall(issubclass_stub, self, [type_, classinfo], [], None, None), result))
 		b.append(Return(result))
 
 		name = 'isinstance'
 		code = Code(name, self, [obj, classinfo], ['object', 'classinfo'], None, None, retp, b)
-		f = Function(name, code)
-		return f
+		return code
 
 
 	# HACK nothing like what max and min actually do.

@@ -8,6 +8,8 @@ from common import opnames, defuse
 # HACK
 import programIR.python.ast as code
 cfg = code
+from programIR.python import ast, program
+
 
 import re
 isIdentifier = re.compile(r'^([a-zA-Z_]\w*)?$')
@@ -115,6 +117,16 @@ class SimpleExprGen(StandardVisitor):
 
 
 	def visitAllocate(self, node):
+		# Synax for allocating containers.
+		if isinstance(node.expr, code.Existing):
+			obj = node.expr.object
+			if isinstance(obj, program.Object):
+				pyobj = obj.pyobj
+				if pyobj is list:
+					return "[]", 2
+				elif pyobj is dict:
+					return "{}", 2
+
 		return ("<allocate>(%s)" % (self.process(node.expr, 24))), 4
 
 	def visitLoad(self, node):

@@ -98,7 +98,7 @@ class Makefile(object):
 		console = compilerconsole.CompilerConsole()
 
 		console.begin("makefile")
-		console.output("Processing {0}".format(self.filename))
+		console.output("Processing %s" % self.filename)
 		self.executeFile()
 		console.end()
 

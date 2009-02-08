@@ -17,5 +17,3 @@ All Rights Reserved.
 
 PADS
 Public Domain
-
-CUDD/PyCUDD are also used, but slated for removal.

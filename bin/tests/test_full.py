@@ -13,7 +13,9 @@ confusion = False
 loops = False
 tuples = False
 
-physics = True
+physics   = False
+recursive = False
+pystone   = True
 
 class FullTestBase(unittest.TestCase):
 	def setUp(self):
@@ -234,9 +236,16 @@ if physics:
 ##	def testF(self):
 ##		self.compare('testF')
 
+if recursive:
+	class TestRecursiveFull(FullTestBase):
+		makefile = 'full/makerecursive.py'
 
-class TestRecursiveFull(FullTestBase):
-	makefile = 'full/makerecursive.py'
+		def testFact(self):
+			self.compare('fact', 10)
 
-	def testFact(self):
-		self.compare('fact', 10)
+if pystone:
+	class TestPystoneFull(FullTestBase):
+		makefile = 'full/makepystone.py'
+
+		def testFact(self):
+			self.compare('main', 1000)

@@ -38,7 +38,7 @@ class ConvertCalls(object):
 	def default(self, node):
 		assert False, repr(type(node))
 
-	@dispatch(str, type(None), ast.Local, ast.Existing, ast.Code)
+	@dispatch(str, type(None), ast.Local, ast.Existing, ast.Code, ast.Break, ast.Continue)
 	def visitLeaf(self, node):
 		return node
 
@@ -61,6 +61,10 @@ class ConvertCalls(object):
 	def visitConvertToBool(self, node):
 		return self.directCall(node, self.exports['convertToBool'], None, [self(node.expr)])
 
+	@dispatch(ast.Not)
+	def visitNot(self, node):
+		return self.directCall(node, self.exports['invertedConvertToBool'], None, [self(node.expr)])
+
 
 	@dispatch(ast.BinaryOp)
 	def visitBinaryOp(self, node):
@@ -79,6 +83,12 @@ class ConvertCalls(object):
 	@dispatch(ast.GetGlobal)
 	def visitGetGlobal(self, node):
 		return self.directCall(node, self.exports['interpreterLoadGlobal'], None, [self(self.code.selfparam), self(node.name)])
+
+	@dispatch(ast.SetGlobal)
+	def visitSetGlobal(self, node):
+		call = self.directCall(node, self.exports['interpreterStoreGlobal'], None, [self(self.code.selfparam), self(node.name), self(node.value)])
+		return ast.Discard(call)
+
 
 	@dispatch(ast.GetIter)
 	def visitGetIter(self, node):
@@ -113,6 +123,15 @@ class ConvertCalls(object):
 	@dispatch(ast.SetAttr)
 	def visitSetAttr(self, node):
 		return ast.Discard(self.directCall(node, self.exports['interpreter_setattr'], None, [self(node.expr), self(node.name), self(node.value)]))
+
+	@dispatch(ast.GetSubscript)
+	def visitGetSubscript(self, node):
+		return self.directCall(node, self.exports['interpreter_getitem'], None, [self(node.expr), self(node.subscript)])
+
+	@dispatch(ast.SetSubscript)
+	def visitSetSubscript(self, node):
+		return ast.Discard(self.directCall(node, self.exports['interpreter_setitem'], None, [self(node.expr), self(node.subscript), self(node.value)]))
+
 
 ##	def visitWhile(self, node):
 ##		self.visit(node.condition)

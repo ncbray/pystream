@@ -26,6 +26,8 @@ def makeInterpreterStubs(collector):
 	# 	True
 	fold(bool)(export(llast(simpleDescriptor(collector, 'convertToBool', ('o',), bool, hasSelfParam=False))))
 
+	fold(lambda o: not o)(export(llast(simpleDescriptor(collector, 'invertedConvertToBool', ('o',), bool, hasSelfParam=False))))
+
 
 	# BUG recursive definition.  Needs HasAttr instead.
 	##@fold(bool)

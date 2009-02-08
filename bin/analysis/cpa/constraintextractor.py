@@ -134,6 +134,12 @@ class ExtractDataflow(object):
 			None, [self(node.expr)],
 			None, None, target)
 
+	@dispatch(ast.Not)
+	def visitNot(self, node, target):
+		return self.directCall(node, self.exports['invertedConvertToBool'],
+			None, [self(node.expr)],
+			None, None, target)
+
 	@dispatch(ast.BinaryOp)
 	def visitBinaryOp(self, node, target):
 		if node.op in opnames.inplaceOps:
@@ -157,6 +163,12 @@ class ExtractDataflow(object):
 		return self.directCall(node, self.exports['interpreterLoadGlobal'],
 			None, [self(self.code.selfparam), self(node.name)],
 			None, None, target)
+
+	@dispatch(ast.SetGlobal)
+	def visitSetGlobal(self, node):
+		return self.directCall(node, self.exports['interpreterStoreGlobal'],
+			None, [self(self.code.selfparam), self(node.name), self(node.value)],
+			None, None, None)
 
 	@dispatch(ast.GetIter)
 	def visitGetIter(self, node, target):
@@ -210,6 +222,19 @@ class ExtractDataflow(object):
 			None, [self(node.expr), self(node.name), self(node.value)],
 			None, None, None)
 
+	@dispatch(ast.GetSubscript)
+	def visitGetSubscript(self, node, target):
+		return self.directCall(node, self.exports['interpreter_getitem'],
+			None, [self(node.expr), self(node.subscript)],
+			None, None, target)
+
+	@dispatch(ast.SetSubscript)
+	def visitSetSubscript(self, node):
+		return self.directCall(node, self.exports['interpreter_setitem'],
+			None, [self(node.expr), self(node.subscript), self(node.value)],
+			None, None, None)
+
+
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		self(node.expr, self(node.lcl))
@@ -223,13 +248,22 @@ class ExtractDataflow(object):
 		self.assign(self(node.expr), self(self.code.returnparam))
 
 	@dispatch(ast.Local)
-	def visitLocal(self, node):
-		return self.localSlot(node)
+	def visitLocal(self, node, target=None):
+		value = self.localSlot(node)
+
+		if target is not None:
+			self.assign(value, target)
+		else:
+			return value
 
 	@dispatch(ast.Existing)
-	def visitExisting(self, node):
-		# TODO refine?
-		return self.init(node.object, node.object)
+	def visitExisting(self, node, target=None):
+		value = self.init(node.object, node.object)
+
+		if target is not None:
+			self.assign(value, target)
+		else:
+			return value
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, target):
@@ -254,6 +288,23 @@ class ExtractDataflow(object):
 		cond = self.localSlot(node.condition.conditional)
 		con = DeferedSwitchConstraint(self, cond, node.t, node.f)
 		con.attach(self.system) # TODO move inside constructor?
+
+	@dispatch(ast.Break)
+	def visitBreak(self, node):
+		pass # Flow insensitive
+
+	@dispatch(ast.Continue)
+	def visitContinue(self, node):
+		pass # Flow insensitive
+
+
+	@dispatch(ast.While)
+	def visitWhile(self, node):
+		self(node.condition)
+		self(node.body)
+
+		if node.else_:
+			self(node.else_)
 
 	@dispatch(ast.For)
 	def visitFor(self, node):

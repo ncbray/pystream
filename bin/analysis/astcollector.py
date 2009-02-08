@@ -14,7 +14,7 @@ class GetOps(object):
 	def default(self, node):
 		assert False, repr(node)
 
-	@dispatch(str, type(None), ast.Existing, ast.Return)
+	@dispatch(str, type(None), ast.Existing, ast.Return, ast.Break, ast.Continue)
 	def visitJunk(self, node):
 		pass
 
@@ -29,9 +29,11 @@ class GetOps(object):
 
 	@dispatch(ast.Load, ast.Store, ast.Check, ast.Allocate, ast.BinaryOp, ast.UnaryPrefixOp,
 		  ast.GetGlobal, ast.SetGlobal,
+		  ast.GetSubscript, ast.SetSubscript,
 		  ast.Call, ast.DirectCall, ast.MethodCall,
 		  ast.UnpackSequence,
-		  ast.GetAttr, ast.SetAttr, ast.ConvertToBool,
+		  ast.GetAttr, ast.SetAttr,
+		  ast.ConvertToBool, ast.Not,
 		  ast.BuildTuple, ast.BuildList, ast.GetIter)
 	def visitOp(self, node):
 		self.ops.append(node)

@@ -53,7 +53,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 				callConverter(extractor, adb, func)
 		console.end()
 
-	if True:
+	if False:
 		console.begin('clone')
 		clone(console, extractor, entryPoints, adb)
 		console.end()

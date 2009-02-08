@@ -189,12 +189,16 @@ class MethodAnalysis(object):
 		self.arg(node)
 
 	# ast.Code is a leaf due to direct calls.
-	@dispatch(ast.Existing, str, ast.BuildList, ast.Allocate, ast.GetGlobal, type(None), ast.Code)
+	@dispatch(ast.Existing, str, ast.BuildList, ast.Allocate,
+			ast.GetGlobal, type(None), ast.Code,
+			ast.Break, ast.Continue,)
 	def visitLeaf(self, node):
 		return node
 
 	@dispatch(ast.Load, ast.Store, ast.Check, ast.Return, ast.SetAttr,
-		  ast.Discard, ast.GetIter, ast.ConvertToBool,
+		  ast.SetGlobal, ast.GetSubscript, ast.SetSubscript,
+		  ast.Discard, ast.GetIter,
+		  ast.ConvertToBool, ast.Not,
 		  ast.BinaryOp, ast.UnaryPrefixOp,
 		  ast.BuildTuple, list, ast.Call, ast.DirectCall, ast.MethodCall, ast.GetAttr)
 	def visitMayLeak(self, node):

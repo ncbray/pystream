@@ -88,6 +88,46 @@ def makeContainerStubs(collector):
 
 
 	### List ###
+	@attachAttrPtr(list, '__getitem__')
+	@descriptive
+	@llast
+	def list__getitem__():
+
+		# Param
+		selfp = Local('internal_self')
+		self = Local('self')
+		retp = Local('internal_return')
+		value = Local('value')
+
+		b = Suite()
+		b.append(Assign(Load(self, 'Array', collector.existing(-1)), value))
+		b.append(Return(value))
+
+		name = 'list__getitem__'
+		code = Code(name, selfp, [self, value], ['self', 'value'], None, None, retp, b)
+		return code
+
+
+	@attachAttrPtr(list, '__setitem__')
+	@descriptive
+	@llast
+	def list__getitem__():
+
+		# Param
+		selfp = Local('internal_self')
+		self = Local('self')
+		retp = Local('internal_return')
+		value = Local('value')
+
+		b = Suite()
+		b.append(Store(self, 'Array', collector.existing(-1), value))
+		b.append(collector.returnNone())
+
+		name = 'list__setitem__'
+		code = Code(name, selfp, [self, value], ['self', 'value'], None, None, retp, b)
+		return code
+
+
 	@attachAttrPtr(list, 'append')
 	@descriptive
 	@llast

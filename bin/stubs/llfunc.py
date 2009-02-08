@@ -675,3 +675,10 @@ def makeLLFunc(collector):
 	# HACK nothing like what max and min actually do.
 	max_stub = fold(max)(attachPtr(max)(descriptive(llast(simpleDescriptor(collector, 'max', ('a',  'b'), float)))))
 	min_stub = fold(min)(attachPtr(min)(descriptive(llast(simpleDescriptor(collector, 'min', ('a',  'b'), float)))))
+
+	chr_stub = fold(chr)(attachPtr(chr)(descriptive(llast(simpleDescriptor(collector, 'chr', ('i',), str)))))
+	ord_stub = fold(ord)(attachPtr(ord)(descriptive(llast(simpleDescriptor(collector, 'ord', ('c',), int)))))
+
+
+	# String funcitons
+	str_getitem_stub = attachAttrPtr(str, '__getitem__')(descriptive(llast(simpleDescriptor(collector, 'str__getitem__', ('index',), str))))

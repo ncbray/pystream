@@ -230,6 +230,8 @@ class Extractor(object):
 		self.ensureLoaded(o)
 
 		if o not in self.desc.callLUT:
+			assert o.type.pyobj not in ((xtypes.FunctionType,)+xtypes.TypeNeedsStub), ("No call stub for %r" % o)
+
 			self.desc.callLUT[o] = None # Prevent recursion.
 
 			typedict = self.getTypeDict(o.type)

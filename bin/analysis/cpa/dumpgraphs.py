@@ -36,26 +36,32 @@ def dumpGraph(name, g, format='svg', prog='dot'):
 	return fn
 
 def dump(data, entryPoints, links, reportDir):
+	# Find live functions
 	stack = []
 	processed = set()
+
+	head = None
+	invokeLUT = {}
+	invokeLUT[head] = set()
+
+	# Process the entry points
 	for code, funcobj, args in entryPoints:
 		info = data.db.functionInfo(code)
 		for context in info.contexts:
 			context = None
+			invokeLUT[head].add(code)
 			key = (code, context)
 			if key not in processed:
 				stack.append(key)
 				processed.add(key)
 
-
-	invokeLUT = {}
-
+	# Find live invocations
 	while stack:
 		node =  stack.pop()
 		code, context = node
 		ops, lcls = getOps(code)
 
-		invokeLUT[node] = set()
+		invokeLUT[code] = set()
 
 		info = data.db.functionInfo(code)
 		for op in ops:
@@ -68,26 +74,25 @@ def dump(data, entryPoints, links, reportDir):
 			for c, f in invokes:
 				c = None
 				key = (f, c)
-				invokeLUT[node].add(key)
+				invokeLUT[code].add(f)
 				if key not in processed:
 					stack.append(key)
 					processed.add(key)
 
-	head = None
-	util.graphalgorithim.dominator.makeSingleHead(invokeLUT, head)
+	# Make dominator tree
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(invokeLUT, head)
 
-	#idons = {}
-
+	# Start graph creation
 	g = pydot.Dot(graph_type='digraph',
 			#overlap='scale',
 			rankdir='LR',
 			#concentrate=True,
 			)
 
+	# Create nodes
 	def makeNode(tree, sg, node):
 		if node is not None:
-			code, context = node
+			code = node
 
 			if data.db.functionInfo(code).descriptive:
 				nodecolor = "#FF3333"
@@ -95,18 +100,21 @@ def dump(data, entryPoints, links, reportDir):
 				nodecolor = '#BBBBBB'
 			else:
 				nodecolor = '#33FF33'
-			sg.add_node(pydot.Node(node, label=codeShortName(code), shape='box', style="filled", fontsize=8, fillcolor=nodecolor, URL=links.codeRef(*node)))
+			sg.add_node(pydot.Node(str(id(node)), label=codeShortName(code),
+				shape='box', style="filled", fontsize=8,
+				fillcolor=nodecolor, URL=links.codeRef(node, None)))
 
 
 		children = tree.get(node)
 		if children:
-			csg = pydot.Cluster(str(id(node)))#rank='same')
+			csg = pydot.Cluster(str(id(node)))
 			sg.add_subgraph(csg)
 			for child in children:
 				makeNode(tree, csg, child)
 
 	makeNode(tree, g, head)
 
+	# Create edges
 	for src, dsts in invokeLUT.iteritems():
 		if src is head: continue
 		for dst in dsts:
@@ -114,7 +122,7 @@ def dump(data, entryPoints, links, reportDir):
 				weight = 10
 			else:
 				weight = 1
-			g.add_edge(pydot.Edge(src, dst, weight=weight))
+			g.add_edge(pydot.Edge(str(id(src)), str(id(dst)), weight=weight))
 
+	# Output
 	dumpGraph(os.path.join(reportDir, 'invocations'), g, prog='dot')
-	#g.write('dump.txt')

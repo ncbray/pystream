@@ -33,10 +33,33 @@ def foldUnaryPrefixOpAST(extractor, uop):
 			pass
 	return uop
 
+def foldBoolAST(extractor, op):
+	expr = op.expr
+
+	if existingConstant(expr):
+		try:
+			value = fold.foldBool(expr.object.pyobj)
+			obj = extractor.getObject(value)
+			return ast.Existing(obj)
+		except fold.FoldError:
+			pass
+	return op
+
+def foldNotAST(extractor, op):
+	expr = op.expr
+
+	if existingConstant(expr):
+		try:
+			value = fold.foldNot(expr.object.pyobj)
+			obj = extractor.getObject(value)
+			return ast.Existing(obj)
+		except fold.FoldError:
+			pass
+	return op
 
 def foldCallAST(extractor, node, func, args=(), kargs={}):
 	assert not kargs, kargs
-	
+
 	for arg in args:
 		if not existingConstant(arg):
 			return node

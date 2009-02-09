@@ -4,7 +4,8 @@ from util import xform
 
 from dataflow.forward import *
 
-from programIR.python.fold import existingConstant, foldBinaryOpAST, foldUnaryPrefixOpAST, foldCallAST
+import programIR.python.fold as fold
+
 
 class FoldRewrite(object):
 	__metaclass__ = typedispatcher
@@ -121,14 +122,28 @@ class FoldRewrite(object):
 
 	@dispatch(ast.BinaryOp)
 	def visitBinaryOp(self, node):
-		result = foldBinaryOpAST(self.extractor, node)
+		result = fold.foldBinaryOpAST(self.extractor, node)
 		#self.adb.trackRewrite(node, result)
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.UnaryPrefixOp)
 	def visitUnaryPrefixOp(self, node):
-		result = foldUnaryPrefixOpAST(self.extractor, node)
+		result = fold.foldUnaryPrefixOpAST(self.extractor, node)
+		#self.adb.trackRewrite(node, result)
+		self.logCreated(result)
+		return result
+
+	@dispatch(ast.ConvertToBool)
+	def visitConvertToBool(self, node):
+		result = fold.foldBoolAST(self.extractor, node)
+		#self.adb.trackRewrite(node, result)
+		self.logCreated(result)
+		return result
+
+	@dispatch(ast.Not)
+	def visitNot(self, node):
+		result = fold.foldNotAST(self.extractor, node)
 		#self.adb.trackRewrite(node, result)
 		self.logCreated(result)
 		return result
@@ -139,7 +154,7 @@ class FoldAnalysis(object):
 
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
-		if existingConstant(node.expr):
+		if fold.existingConstant(node.expr):
 			self.flow.define(node.lcl, node.expr.object)
 		else:
 			self.flow.define(node.lcl, top)
@@ -190,7 +205,7 @@ def constMeet(values):
 			return top
 	return prototype
 
-def fold(extractor, adb, node):
+def foldConstants(extractor, adb, node):
 	assert isinstance(node, ast.Code), type(node)
 
 	analyze = FoldAnalysis()

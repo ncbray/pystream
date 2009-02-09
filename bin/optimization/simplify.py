@@ -1,4 +1,4 @@
-from fold import fold
+from fold import foldConstants
 from dce import dce
 from dataflow.base import InternalError
 
@@ -17,7 +17,7 @@ from programIR.python import ast
 def simplify(extractor, adb, node):
 	assert isinstance(node, ast.Code), type(node)
 	try:
-		node = fold(extractor, adb, node)
+		node = foldConstants(extractor, adb, node)
 		node = dce(extractor, adb, node)
 	except InternalError:
 		print

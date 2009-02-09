@@ -22,4 +22,4 @@ def makeRandomStubs(collector):
 
 	# HACK where should this be declared?
 	import time
-	attachPtr(time.clock)(llast(simpleDescriptor(collector, 'clock', ('self',), float)))
+	attachPtr(time.clock)(llast(simpleDescriptor(collector, 'clock', (), float)))

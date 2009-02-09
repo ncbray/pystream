@@ -7,6 +7,7 @@ from . llutil import simpleDescriptor
 #, allocate, getType, call, returnNone, type_lookup, inst_lookup, loadAttribute
 import types
 
+import operator
 
 @stubgenerator
 def makeInterpreterStubs(collector):
@@ -237,7 +238,13 @@ def makeInterpreterStubs(collector):
 	from common import opnames
 
 	for op in opnames.forward.itervalues():
-		export(llast(simpleAttrCall('interpreter%s' % op, op, ['self', 'other'])))
+		f = export(llast(simpleAttrCall('interpreter%s' % op, op, ['self', 'other'])))
+
+		# HACK?
+		if op in ('__eq__', '__ne__', '__gt__', '__ge__', '__lt__', '__le__'):
+			foldF = getattr(operator, op)
+			if foldF:
+				fold(foldF)(f)
 
 	for op in opnames.inplace.itervalues():
 		export(llast(simpleAttrCall('interpreter%s' % op, op, ['self', 'other'])))

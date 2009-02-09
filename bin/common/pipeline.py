@@ -77,7 +77,7 @@ def cpaAnalyze(console, e, entryPoints):
 def cpaPass(console, e, entryPoints):
 	console.begin('depython')
 	result = cpaAnalyze(console, e, entryPoints)
-	codeConditioning(console, e, entryPoints, result)
+#	codeConditioning(console, e, entryPoints, result)
 	console.end()
 	return result
 

@@ -42,6 +42,9 @@ __version__ = "1.1"
 
 class Record(object):
 	# TODO slots?
+	# HACK
+	__slots__ = 'PtrComp', 'Discr', 'EnumComp', 'IntComp', 'StringComp'
+
 	def __init__(self, PtrComp = None, Discr = 0, EnumComp = 0,
 					   IntComp = 0, StringComp = 0):
 		self.PtrComp = PtrComp
@@ -73,7 +76,10 @@ Char1Glob = '\0'
 Char2Glob = '\0'
 Array1Glob = [0]*51
 Array2Glob = map(lambda x: x[:], [Array1Glob]*51)
-PtrGlb = None
+
+# HACK polutes flow-insensitive analysis.
+# TODO handle better?
+#PtrGlb = None
 PtrGlbNext = None
 
 def Proc0(loops=LOOPS):
@@ -91,8 +97,8 @@ def Proc0(loops=LOOPS):
 		pass
 	nulltime = clock() - starttime
 
-	PtrGlbNext = Record()
-	PtrGlb = Record()
+	PtrGlbNext = Record(None, 0, 0, 0, 0)
+	PtrGlb = Record(None, 0, 0, 0, 0)
 	PtrGlb.PtrComp = PtrGlbNext
 	PtrGlb.Discr = Ident1
 	PtrGlb.EnumComp = Ident3
@@ -135,6 +141,8 @@ def Proc0(loops=LOOPS):
 	return benchtime, loopsPerBenchtime
 
 def Proc1(PtrParIn):
+	global PtrGlb
+
 	PtrParIn.PtrComp = NextRecord = PtrGlb.copy()
 	PtrParIn.IntComp = 5
 	NextRecord.IntComp = PtrParIn.IntComp
@@ -162,6 +170,7 @@ def Proc2(IntParIO):
 	return IntParIO
 
 def Proc3(PtrParOut):
+	global PtrGlb
 	global IntGlob
 
 	if PtrGlb is not None:
@@ -240,7 +249,7 @@ def Func2(StrParI1, StrParI2):
 	if CharLoc >= 'W':
 		if CharLoc <= 'Z':
 			IntLoc = 7
-			
+
 	if CharLoc == 'X':
 		return TRUE
 	else:

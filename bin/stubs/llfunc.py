@@ -545,6 +545,28 @@ def makeLLFunc(collector):
 		code = Code(name, selfp, args, ['self', 'other'], None, None, retp, b)
 		return code
 
+	@descriptive
+	@llast
+	def dummyCompareOperation():
+		selfp = Local('internal_self')
+		t = Local('type_')
+		inst = Local('inst')
+		retp = Local('internal_return')
+
+		args = []
+		args.append(Local('self'))
+		args.append(Local('other'))
+
+		b = Suite()
+		b.append(collector.allocate(collector.existing(bool), inst))
+		# HACK no init?  Don't know what arguments to pass...
+
+		# Return the allocated object
+		b.append(Return(inst))
+
+		name = 'dummyCompareOperation'
+		code = Code(name, selfp, args, ['self', 'other'], None, None, retp, b)
+		return code
 
 	@descriptive
 	@llast
@@ -570,14 +592,20 @@ def makeLLFunc(collector):
 		return code
 
 	from common import opnames
-	def attachDummyNumerics(t, dummyBinary, dummyUnary):
+	def attachDummyNumerics(t, dummyBinary, dummyCompare, dummyUnary):
 		for name in opnames.forward.itervalues():
 			if hasattr(t, name):
-				attachAttrPtr(t, name)(dummyBinary)
+				if name in ('__eq__', '__ne__', '__lt__', '__le__', '__gt__', '__ge__'):
+					attachAttrPtr(t, name)(dummyCompare)
+				else:
+					attachAttrPtr(t, name)(dummyBinary)
 
 		for name in opnames.reverse.itervalues():
 			if hasattr(t, name):
-				attachAttrPtr(t, name)(dummyBinary)
+				if name in ('__eq__', '__ne__', '__lt__', '__le__', '__gt__', '__ge__'):
+					attachAttrPtr(t, name)(dummyCompare)
+				else:
+					attachAttrPtr(t, name)(dummyBinary)
 
 		for name in opnames.inplace.itervalues():
 			if hasattr(t, name):
@@ -591,10 +619,10 @@ def makeLLFunc(collector):
 	##		nz = descriptive(llast(simpleDescriptor('%s__nonzero__' % t.__name__, (), bool)))
 	##		attachAttrPtr(t, '__nonzero__')(nz)
 
-	attachDummyNumerics(int,   dummyBinaryOperation, dummyUnaryOperation)
-	attachDummyNumerics(float, dummyBinaryOperation, dummyUnaryOperation)
-	attachDummyNumerics(long,  dummyBinaryOperation, dummyUnaryOperation)
-	attachDummyNumerics(str,   dummyBinaryOperation, dummyUnaryOperation)
+	attachDummyNumerics(int,   dummyBinaryOperation, dummyCompareOperation, dummyUnaryOperation)
+	attachDummyNumerics(float, dummyBinaryOperation, dummyCompareOperation, dummyUnaryOperation)
+	attachDummyNumerics(long,  dummyBinaryOperation, dummyCompareOperation, dummyUnaryOperation)
+	attachDummyNumerics(str,   dummyBinaryOperation, dummyCompareOperation, dummyUnaryOperation)
 
 	int_rich_compare_stub = export(descriptive(llast(simpleDescriptor(collector, 'int_rich_compare', ('a',  'b'), bool))))
 

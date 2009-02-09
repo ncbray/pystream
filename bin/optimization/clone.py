@@ -366,6 +366,8 @@ def clone(console, extractor, entryPoints, adb):
 
 	console.end()
 
+	assert cloner.realizable
+
 	# Is cloning worth while?
 	if numGroups > originalNumGroups:
 		console.begin('rewrite')

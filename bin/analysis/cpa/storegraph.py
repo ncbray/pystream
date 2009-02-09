@@ -157,7 +157,7 @@ class ObjectNode(MergableNode):
 			if self.xtype.isExisting():
 				ref = sys.existingSlotRef(self.xtype, slotName)
 				if ref is not None:
-					field.initializeType(sys, ref)
+					field.initializeTypes(sys, ref)
 			return field
 		else:
 			# TODO merge region?
@@ -221,6 +221,10 @@ class SlotNode(MergableNode):
 		self.object = self.object.getForward()
 
 		return self
+
+	def initializeTypes(self, sys, xtypes):
+		for xtype in xtypes:
+			self.initializeType(sys, xtype)
 
 	def initializeType(self, sys, xtype):
 		self = self.getForward()

@@ -261,7 +261,8 @@ class ExtractDataflow(object):
 		value = self.init(node.object, node.object)
 
 		if target is not None:
-			self.assign(value, target)
+			target.initializeType(self.system, self.system.canonical.existingType(node.object))
+			#self.assign(value, target)
 		else:
 			return value
 

@@ -213,6 +213,10 @@ class InterproceduralDataflow(object):
 			elif slottype == 'Attribute':
 				subdict = obj.slot
 			elif slottype == 'Array':
+				# HACK
+				if isinstance(obj.pyobj, list):
+					return set([self.canonical.existingType(t) for t in obj.array.itervalues()])
+
 				subdict = obj.array
 			elif slottype == 'Dictionary':
 				subdict = obj.dictionary
@@ -220,7 +224,7 @@ class InterproceduralDataflow(object):
 				assert False, slottype
 
 			if key in subdict:
-				return self.canonical.existingType(subdict[key])
+				return (self.canonical.existingType(subdict[key]),)
 
 		# Not found
 		return None

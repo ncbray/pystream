@@ -325,6 +325,7 @@ class InterproceduralDataflow(object):
 		# HACK still called functionInfo
 		info = self.db.functionInfo(code)
 		info.descriptive = code in self.extractor.stubs.descriptiveLUT
+		info.fold        = code in self.extractor.stubs.foldLUT
 		info.returnSlot  = code.returnparam
 
 	def bindCall(self, cop, caller, targetcontext):

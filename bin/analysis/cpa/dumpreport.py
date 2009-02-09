@@ -186,11 +186,19 @@ def dumpFunctionInfo(func, data, links, out, scg):
 	funcLocals = data.adb.functionLocals(func)
 
 	if info.descriptive:
-		out.begin('p')
+		out.begin('div')
 		out.begin('b')
 		out << 'descriptive'
 		out.end('b')
-		out.end('p')
+		out.end('div')
+
+	if info.fold:
+		out.begin('div')
+		out.begin('b')
+		out << 'fold'
+		out.end('b')
+		out.end('div')
+
 
 	# Psedo-python output
 	if func is not None:
@@ -453,6 +461,12 @@ def dumpHeapInfo(heap, data, links, out):
 
 	heapInfo = data.db.heapInfo(heap)
 	contexts = heapInfo.contexts
+
+	call = data.sys.extractor.getCall(heap)
+	if call:
+		out.begin('div')
+		out << 'call: %r'  % call
+		out.end('div')
 
 	out.begin('div')
 	out.begin('b')

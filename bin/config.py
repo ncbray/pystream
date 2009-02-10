@@ -1,9 +1,12 @@
-usePsyco        = False
+# Use a JIT?
+usePsyco = False
 
-# Absolute path, as durring development the script
-# may be called from different working directories...
-outputDirectory = "c:/projects/pystream/summaries"
+# Create output directory relative to this config file.
+import os.path
+base, junk = os.path.split(__file__)
+outputDirectory = os.path.normpath(os.path.join(base, '..', 'summaries'))
 
+# Select which tests to run.
 if True:
 	limitedTest = [
 		'tests.shape.test_shape',

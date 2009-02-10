@@ -10,14 +10,20 @@ if major != 2 or minor < 6:
 
 import scriptsetup
 import config
-import testspider
 
 root = scriptsetup.scriptRoot(__file__)
 scriptsetup.libraryDirectory(root, os.path.join("..", "lib"))
 if config.usePsyco: scriptsetup.initPsyco()
 
-testList    = getattr(config, 'limitedTest', None)
-testExclude = getattr(config, 'testExclude', ())
+
+# Get white and black lists for tests
+def testConfigToFiles(testFiles):
+	return frozenset([os.path.normpath(os.path.join(root, *path)) for path in testFiles])
+
+testOnly    = testConfigToFiles(getattr(config, 'testOnly', ()))
+testExclude = testConfigToFiles(getattr(config, 'testExclude', ()))
+
+import testspider
+testspider.runTests(root, testOnly, testExclude)
 
 
-testspider.runTests(root, testList, testExclude)

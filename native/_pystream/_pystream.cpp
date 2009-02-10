@@ -46,41 +46,8 @@ PyCFunction_cfuncptr(PyObject *self, PyObject *args)
 	return PyInt_FromSsize_t(Py_ssize_t(ptr)); 
 }
 
-
-inline unsigned int bijection(unsigned int a, unsigned int b)
-{
-	unsigned int c = a+b;
-	return (c*(c+1))/2+a;
-}
-
-PyObject *
-PyCFunction_bijection(PyObject *self, PyObject *args)
-{
-	if (!PyTuple_CheckExact(args)) return NULL;
-
-	const int n = (int)PyTuple_GET_SIZE(args);
-
-	unsigned int accum;
-
-	if(n==0)
-	{
-		accum = 0;
-	}
-	else
-	{
-		accum = PyInt_AsLong(PyTuple_GET_ITEM(args, 0));
-		for(int i=1;i<n;++i)
-		{
-			accum = bijection(PyInt_AsLong(PyTuple_GET_ITEM(args, i)), accum);
-		}
-	}
-
-	return PyInt_FromLong((int)accum);
-}
-
 static PyMethodDef BindMethods[] = {
 	{"cfuncptr", PyCFunction_cfuncptr, METH_VARARGS, ""},
-	{"bijection", PyCFunction_bijection, METH_VARARGS, ""},
 	{NULL, NULL, 0, NULL}
 };
 

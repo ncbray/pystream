@@ -29,8 +29,6 @@ from . import ssitransform
 from decompiler.flowblockdump import FlowBlockDump
 from common.simplecodegen import SimpleCodeGen
 
-
-import analysis.analysisdatabase
 import optimization.simplify
 
 def decompile(func, extractor, trace=False, ssa=True):
@@ -100,7 +98,7 @@ class Decompiler(object):
 			root = ssitransform.ssiTransform(root)
 
 		# Flow sensitive, works without a ssa or ssi transform.
-		optimization.simplify.simplify(self.extractor, analysis.analysisdatabase.DummyAnalysisDatabase(), root)
+		optimization.simplify.simplify(self.extractor, None, root)
 
 
 		if trace:

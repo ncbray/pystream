@@ -17,6 +17,7 @@ def makeLLFunc(collector):
 	attachAttrPtr = collector.attachAttrPtr
 	descriptive   = collector.descriptive
 	llast         = collector.llast
+	llfunc        = collector.llfunc
 	export        = collector.export
 	highLevelStub = collector.highLevelStub
 	replaceObject = collector.replaceObject
@@ -591,6 +592,16 @@ def makeLLFunc(collector):
 		code = Code(name, selfp, args, ['self'], None, None, retp, b)
 		return code
 
+	@descriptive
+	@llfunc
+	def int_binary_op(self, other):
+		if isinstance(other, int):
+			return allocate(int)
+		elif isinstance(other, float):
+			return allocate(float)
+		else:
+			return NotImplemented
+
 	from common import opnames
 	def attachDummyNumerics(t, dummyBinary, dummyCompare, dummyUnary):
 		for name in opnames.forward.itervalues():
@@ -619,7 +630,7 @@ def makeLLFunc(collector):
 	##		nz = descriptive(llast(simpleDescriptor('%s__nonzero__' % t.__name__, (), bool)))
 	##		attachAttrPtr(t, '__nonzero__')(nz)
 
-	attachDummyNumerics(int,   dummyBinaryOperation, dummyCompareOperation, dummyUnaryOperation)
+	attachDummyNumerics(int,   int_binary_op, dummyCompareOperation, dummyUnaryOperation)
 	attachDummyNumerics(float, dummyBinaryOperation, dummyCompareOperation, dummyUnaryOperation)
 	attachDummyNumerics(long,  dummyBinaryOperation, dummyCompareOperation, dummyUnaryOperation)
 	attachDummyNumerics(str,   dummyBinaryOperation, dummyCompareOperation, dummyUnaryOperation)

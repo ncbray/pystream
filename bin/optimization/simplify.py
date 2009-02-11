@@ -7,6 +7,8 @@ from common.simplecodegen import SimpleCodeGen
 
 from programIR.python import ast
 
+import analysis.analysisdatabase
+
 #
 # Leverages type inference to eliminate indirect calls,
 # fold and propigate constants, etc.
@@ -16,6 +18,10 @@ from programIR.python import ast
 
 def simplify(extractor, adb, node):
 	assert isinstance(node, ast.Code), type(node)
+
+	if adb is None:
+		adb = analysis.analysisdatabase.DummyAnalysisDatabase()
+
 	try:
 		node = foldConstants(extractor, adb, node)
 		node = dce(extractor, adb, node)

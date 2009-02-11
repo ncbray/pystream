@@ -6,6 +6,8 @@ from programIR.python import ast
 
 import util
 
+from . import lltranslator
+
 class StubCollector(object):
 	def __init__(self, extractor):
 		self.extractor = extractor
@@ -104,6 +106,11 @@ class StubCollector(object):
 		assert isinstance(llast, ast.Code), type(llast)
 		self.llastLUT.append(llast)
 		return llast
+
+	def llfunc(self, f):
+		code = self.extractor.decompileFunction(f)
+		code = lltranslator.translate(self.extractor, code)
+		return code
 
 	def cfuncptr(self, obj):
 		try:

@@ -83,6 +83,9 @@ class Extractor(object):
 		self.pointerToObject = {}
 		self.pointerToStub   = {}
 
+		# ptr -> list(obj) where cfuncptr(obj) == ptr
+		self.registeredPointers = collections.defaultdict(list)
+
 		self.attrLUT = collections.defaultdict(dict)
 
 		self.complete = collections.defaultdict(lambda: False)
@@ -109,18 +112,18 @@ class Extractor(object):
 		# Used for debugging, prevents new object from being extracted when set to true.
 		self.finalized = False
 
-		self.stubs = makeStubs(self)
-		self.initalizeObjects()
-
 		self.typeDictCache = {}
 		self.typeDictType = {}
+
+		self.stubs = makeStubs(self)
+		self.initalizeObjects()
 
 
 
 	def flatTypeDict(self, cls):
 		assert isinstance(cls, type)
 
-		if not cls in self.typeDictCache:
+		if cls not in self.typeDictCache:
 			self.typeDictCache[cls] = flatTypeDict(cls)
 
 		return self.typeDictCache[cls]
@@ -131,15 +134,6 @@ class Extractor(object):
 		self.desc.objects.append(obj)
 		return obj
 
-
-	def linkObjToStub(self, ptr):
-		# If there is both an object and a stub for a pointer, link them together.
-		# Designed so the objects and stubs can be defined in any order.
-		if ptr in self.pointerToObject and ptr in self.pointerToStub:
-			obj  = self.pointerToObject[ptr]
-			stub = self.pointerToStub[ptr]
-			self.desc.bindCall(obj, stub)
-
 	def makeImaginaryFunctionObject(self, name):
 		t = self.__getObject(xtypes.BuiltinFunctionType)
 		return self.makeImaginary(name, t, True)
@@ -147,8 +141,8 @@ class Extractor(object):
 	def makeHiddenFunction(self, parent, ptr):
 		if ptr not in self.pointerToObject:
 			obj = self.makeImaginaryFunctionObject("stub_%d" % ptr)
+			self.registerPointer(ptr, obj)
 			self.pointerToObject[ptr] = obj
-			self.linkObjToStub(ptr)
 		else:
 			obj = self.pointerToObject[ptr]
 
@@ -160,7 +154,9 @@ class Extractor(object):
 	def attachStubToPtr(self, stub, ptr):
 		if not ptr in self.pointerToStub:
 			self.pointerToStub[ptr] = stub
-			self.linkObjToStub(ptr)
+
+			for obj in self.registeredPointers[ptr]:
+				self.desc.bindCall(obj, stub)
 		else:
 			assert self.pointerToStub[ptr] == stub, stub
 
@@ -178,20 +174,12 @@ class Extractor(object):
 		self.attrLUT[id(obj)][attr] = replacement
 
 	def initalizeObjects(self):
-		self.stubs.replaceAttrs(self)
-
-		# Stick low level stubs into the list of functions.
-		self.desc.functions.extend(self.stubs.llastLUT)
-		self.stubs.bindStubs(self)
-
-		# Prevents uglyness by masking the module dictionary.  This prevents leakage.
+		# HACK Prevents uglyness by masking the module dictionary.  This prevents leakage.
 		if not self.lazy:
 			self.replaceObject(sys.modules, {})
-		self.stubs.replaceObjects(self)
 
 		# Always need it, but might miss it in some cases (interpreter has internal refernece).
 		self.__getObject(__builtins__)
-
 
 		# Strings for mutating the image
 		self.desc.functionNameObj = self.getObject('function')
@@ -343,6 +331,11 @@ class Extractor(object):
 		else:
 			return None
 
+	def registerPointer(self, ptr, obj):
+		if ptr in self.pointerToStub:
+			self.desc.bindCall(obj, self.pointerToStub[ptr])
+		self.registeredPointers[ptr].append(obj)
+
 	def postProcessMutate(self, obj):
 		pyobj = obj.pyobj
 
@@ -370,8 +363,7 @@ class Extractor(object):
 		if isinstance(pyobj, xtypes.TypeNeedsStub):
 			try:
 				ptr = cfuncptr(pyobj)
-				if ptr in self.pointerToStub:
-					self.desc.bindCall(obj, self.pointerToStub[ptr])
+				self.registerPointer(ptr, obj)
 			except TypeError:
 				print "Cannot get pointer:", f
 

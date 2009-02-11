@@ -13,19 +13,11 @@ class StubCollector(object):
 		self.extractor = extractor
 
 		self.exports = {}
-
-		self.llastLUT = []
-
-		self.ptrAST = []
-
 		self.foldLUT = {}
 		self.descriptiveLUT = {}
 
 		self.highLevelGlobals 	= {'method':xtypes.MethodType}
 		self.highLevelLUT 	= {}
-		self.objectReplacements	= []
-		self.attrReplacements	= []
-
 
 	##############################
 	### AST building utilities ###
@@ -102,14 +94,15 @@ class StubCollector(object):
 		return funcast
 
 	def llast(self, f):
-		llast = f()
-		assert isinstance(llast, ast.Code), type(llast)
-		self.llastLUT.append(llast)
-		return llast
+		code = f()
+		assert isinstance(code, ast.Code), type(code)
+		self.extractor.desc.functions.append(code)
+		return code
 
 	def llfunc(self, f):
 		code = self.extractor.decompileFunction(f)
 		code = lltranslator.translate(self.extractor, code)
+		self.extractor.desc.functions.append(code)
 		return code
 
 	def cfuncptr(self, obj):
@@ -131,24 +124,31 @@ class StubCollector(object):
 
 		def callback(code):
 			assert isinstance(code, ast.Code), Code
-			self.ptrAST.append((ptr, code))
+			self.extractor.attachStubToPtr(code, ptr)
 			return code
 		return callback
 
 
-	def attachPtr(self, obj):
-		ptr = self.cfuncptr(obj)
+	def attachPtr(self, pyobj):
+		ptr = self.cfuncptr(pyobj)
 
 		def callback(code):
 			assert isinstance(code, ast.Code), code
-			self.ptrAST.append((ptr, code))
+			self.extractor.attachStubToPtr(code, ptr)
+
+			# Check the binding.
+			obj  = self.extractor.getObject(pyobj)
+			call = self.extractor.getCall(obj)
+
+			if code is not call:
+				print self.extractor.pointerToObject
+				print self.extractor.pointerToStub
+
+			assert code is call, (code, call)
+
 			return code
+
 		return callback
-
-	def bindStubs(self, extractor):
-		for ptr, funcast in self.ptrAST:
-			extractor.attachStubToPtr(funcast, ptr)
-
 
 	def fold(self, func):
 		def callback(code):
@@ -184,25 +184,16 @@ class StubCollector(object):
 	def replaceObject(self, o):
 		def callback(f):
 			assert self.highLevelLUT[f.func_name] == f, "Must declare as high level stub before replacing."
-			self.objectReplacements.append((o, f))
+			self.extractor.replaceObject(o, f)
 			return f
 		return callback
-
-	def replaceObjects(self, extractor):
-		for o, f in self.objectReplacements:
-			extractor.replaceObject(o, f)
-
 
 	def replaceAttr(self, o, attr):
 		def callback(f):
 			assert self.highLevelLUT[f.func_name] == f, "Must declare as high level stub before replacing."
-			self.attrReplacements.append((o, attr, f))
+			self.extractor.replaceAttr(o, attr, f)
 			return f
 		return callback
-
-	def replaceAttrs(self, extractor):
-		for o, attr, f in self.attrReplacements:
-			extractor.replaceAttr(o, attr, f)
 
 stubgenerators = []
 def stubgenerator(f):

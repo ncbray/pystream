@@ -554,31 +554,9 @@ def makeLLFunc(collector):
 	issubclass_stub = fold(issubclass)(attachPtr(issubclass)(llast(simpleDescriptor(collector, 'issubclass', ('class',  'classinfo'), bool))))
 
 	@attachPtr(isinstance)
-	@llast
-	def isinstance_stub():
-		# Self
-		self = Local('internal_self')
-		retp = Local('internal_return')
-
-		# Param
-		obj 	   = Local('object')
-		classinfo  = Local('classinfo')
-
-		# Temporaries
-		type_   = Local('type_')
-		result  = Local('result')
-
-		# Instructions
-		b = Suite()
-		b.append(collector.getType(obj, type_))
-		# HACK we don't actually know the real "self" for issubclass, so we use our own to prevent the call from failing.
-		b.append(Assign(DirectCall(issubclass_stub, self, [type_, classinfo], [], None, None), result))
-		b.append(Return(result))
-
-		name = 'isinstance'
-		code = Code(name, self, [obj, classinfo], ['object', 'classinfo'], None, None, retp, b)
-		return code
-
+	@llfunc
+	def isinstance_stub(obj, classinfo):
+		return issubclass(load(obj, 'type'), classinfo)
 
 	# HACK nothing like what max and min actually do.
 	max_stub = fold(max)(attachPtr(max)(descriptive(llast(simpleDescriptor(collector, 'max', ('a',  'b'), float)))))

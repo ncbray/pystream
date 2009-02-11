@@ -26,7 +26,9 @@ class LLTranslator(object):
 	def resolveGlobal(self, name):
 		pyobj = __builtins__[name]
 		obj = self.extractor.getObject(pyobj)
-		return ast.Existing(obj)
+		e = ast.Existing(obj)
+		self.defn[e] = e
+		return e
 
 	@defaultdispatch
 	def default(self, node):
@@ -85,6 +87,12 @@ class LLTranslator(object):
 					node = ast.Check(node.args[0], 'Dictionary', node.args[1])
 				else:
 					assert False
+			elif isinstance(defn, ast.Existing):
+				# Try to make it a direct call.
+				# Not always possible, depends on the order of declaration.
+				code = self.extractor.getCall(defn.object)
+				if code:
+					node = ast.DirectCall(code, node.expr, node.args, node.kwds, node.vargs, node.kargs)
 		return node
 
 	@dispatch(ast.Assign)

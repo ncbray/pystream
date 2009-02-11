@@ -21,7 +21,10 @@ class LLTranslator(object):
 		self.extractor = extractor
 		self.defn      = {}
 
-		self.specialGlobals = set(('allocate', 'load', 'store', 'check', 'loadDict', 'storeDict', 'checkDict'))
+		self.specialGlobals = set(('allocate',
+			'load',      'store',      'check',
+			'loadDict',  'storeDict',  'checkDict',
+			'loadArray', 'storeArray', 'checkArray'))
 
 	def resolveGlobal(self, name):
 		pyobj = __builtins__[name]
@@ -34,7 +37,7 @@ class LLTranslator(object):
 	def default(self, node):
 		assert False, repr(node)
 
-	@dispatch(type(None))
+	@dispatch(type(None), str)
 	def visitLeaf(self, node):
 		return node
 
@@ -76,6 +79,9 @@ class LLTranslator(object):
 				elif defn is 'load':
 					checkCallArgs(node, 2)
 					node = ast.Load(node.args[0], 'LowLevel', node.args[1])
+				elif defn is 'store':
+					checkCallArgs(node, 3)
+					node = ast.Store(node.args[0], 'LowLevel', node.args[1], node.args[2])
 				elif defn is 'check':
 					checkCallArgs(node, 2)
 					node = ast.Check(node.args[0], 'LowLevel', node.args[1])
@@ -85,8 +91,17 @@ class LLTranslator(object):
 				elif defn is 'checkDict':
 					checkCallArgs(node, 2)
 					node = ast.Check(node.args[0], 'Dictionary', node.args[1])
+				elif defn is 'loadArray':
+					checkCallArgs(node, 2)
+					node = ast.Load(node.args[0], 'Array', node.args[1])
+				elif defn is 'storeArray':
+					checkCallArgs(node, 3)
+					node = ast.Store(node.args[0], 'Array', node.args[1], node.args[2])
+				elif defn is 'checkArray':
+					checkCallArgs(node, 2)
+					node = ast.Check(node.args[0], 'Array', node.args[1])
 				else:
-					assert False
+					assert False, defn
 			elif isinstance(defn, ast.Existing):
 				# Try to make it a direct call.
 				# Not always possible, depends on the order of declaration.
@@ -99,11 +114,26 @@ class LLTranslator(object):
 	def visitAssign(self, node):
 		expr = self(node.expr)
 
-
 		if node.lcl in self.defn:
 			self.defn[node.lcl] = None
 		else:
 			self.defn[node.lcl] = expr
+
+		assert not isinstance(expr, ast.Store), "Must discard stores."
+
+		if expr not in self.specialGlobals:
+			node.expr = expr
+			return node
+		else:
+			return ()
+
+
+	@dispatch(ast.Discard)
+	def visitDiscard(self, node):
+		expr = self(node.expr)
+
+		if isinstance(expr, ast.Store):
+			return expr
 
 		if expr not in self.specialGlobals:
 			node.expr = expr
@@ -114,6 +144,10 @@ class LLTranslator(object):
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
 		# TODO eliminate unessisary?
+		return xform.allChildren(self, node)
+
+	@dispatch(ast.BinaryOp)
+	def visitExpr(self, node):
 		return xform.allChildren(self, node)
 
 	@dispatch(ast.Suite, list, tuple, ast.Switch, ast.Condition, ast.Return)

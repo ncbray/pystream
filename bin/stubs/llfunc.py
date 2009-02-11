@@ -31,20 +31,9 @@ def makeLLFunc(collector):
 
 	@attachAttrPtr(object, '__init__')
 	@descriptive
-	@llast
-	def object__init__():
-		# Param
-		selfp = Local('internal_self')
-		self  = Local('self')
-		vargs = Local('vargs')
-		retp  = Local('internal_return')
-
-		b = Suite()
-		b.append(collector.returnNone())
-
-		name = 'object__init__'
-		code = Code(name, selfp, [self], ['self'], vargs, None, retp, b)
-		return code
+	@llfunc
+	def object__init__(self, *vargs):
+		pass
 
 	# Exported for the method finding optimization
 	@export
@@ -170,27 +159,11 @@ def makeLLFunc(collector):
 	############
 
 	@attachAttrPtr(object, '__new__')
-	@llast
-	def object__new__():
-		# Args
-		self = Local('self')
-		type_ = Local('type')
-		vargs = Local('vargs')
+	@llfunc
+	def object__new__(cls, *vargs):
+		return allocate(cls)
 
-		retp = Local('internal_return')
-
-		# Locals
-		inst = Local('inst')
-
-		b = Suite()
-		b.append(collector.allocate(type_, inst))
-		b.append(Return(inst))
-
-		name = 'object__new__'
-		code = Code(name, self, [type_], ['type'], vargs, None, retp, b)
-		return code
-
-
+	# Ugly: directly uses internal_self parameter
 	@attachAttrPtr(type, '__call__')
 	@llast
 	def type__call__():
@@ -252,6 +225,7 @@ def makeLLFunc(collector):
 	# The __call__ function for a bound method.
 	# TODO unbound method?
 	# High level, give or take argument uglyness.
+	# Exported for method call optimization
 	@export
 	@attachAttrPtr(xtypes.MethodType, '__call__')
 	@llast
@@ -550,7 +524,6 @@ def makeLLFunc(collector):
 
 	# Easiest as a descriptive stub.
 	# Should be a implementation, for precision, however.
-
 	issubclass_stub = fold(issubclass)(attachPtr(issubclass)(llast(simpleDescriptor(collector, 'issubclass', ('class',  'classinfo'), bool))))
 
 	@attachPtr(isinstance)
@@ -558,13 +531,23 @@ def makeLLFunc(collector):
 	def isinstance_stub(obj, classinfo):
 		return issubclass(load(obj, 'type'), classinfo)
 
-	# HACK nothing like what max and min actually do.
-	max_stub = fold(max)(attachPtr(max)(descriptive(llast(simpleDescriptor(collector, 'max', ('a',  'b'), float)))))
-	min_stub = fold(min)(attachPtr(min)(descriptive(llast(simpleDescriptor(collector, 'min', ('a',  'b'), float)))))
+	# TODO multiarg?
+	@fold(max)
+	@attachPtr(max)
+	@llfunc
+	def max_stub(a, b):
+		return b if a < b else a
+
+	# TODO multiarg?
+	@fold(min)
+	@attachPtr(min)
+	@llfunc
+	def min_stub(a, b):
+		return a if a < b else b
+
 
 	chr_stub = fold(chr)(attachPtr(chr)(descriptive(llast(simpleDescriptor(collector, 'chr', ('i',), str)))))
 	ord_stub = fold(ord)(attachPtr(ord)(descriptive(llast(simpleDescriptor(collector, 'ord', ('c',), int)))))
-
 
 	# String funcitons
 	str_getitem_stub = attachAttrPtr(str, '__getitem__')(descriptive(llast(simpleDescriptor(collector, 'str__getitem__', ('self', 'index',), str))))

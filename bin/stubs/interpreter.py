@@ -9,11 +9,16 @@ import types
 
 import operator
 
+def noself(code):
+	code.selfparam = None
+	return code
+
 @stubgenerator
 def makeInterpreterStubs(collector):
 	attachAttrPtr = collector.attachAttrPtr
 	descriptive   = collector.descriptive
 	llast         = collector.llast
+	llfunc        = collector.llfunc
 	export        = collector.export
 	highLevelStub = collector.highLevelStub
 	replaceObject = collector.replaceObject
@@ -26,114 +31,20 @@ def makeInterpreterStubs(collector):
 	# 	__len__
 	# 	True
 	fold(bool)(export(llast(simpleDescriptor(collector, 'convertToBool', ('o',), bool, hasSelfParam=False))))
-
 	fold(lambda o: not o)(export(llast(simpleDescriptor(collector, 'invertedConvertToBool', ('o',), bool, hasSelfParam=False))))
 
-
-	# BUG recursive definition.  Needs HasAttr instead.
-	##@fold(bool)
-	##@export
-	###@descriptive
-	##@llast
-	##def convertToBool():
-	##	# Param
-	##	self = Local('self')
-	##	field = Local('field')
-	##
-	##	# Locals
-	##	cls 	= Local('cls')
-	##	meth 	= Local('meth')
-	##
-	##	result = Local('result')
-	##
-	##	b = Suite()
-	##
-	##	# Load the attribute from the class
-	##	getType(b, self, cls)
-	##	b.append(Assign(Load(cls, 'Attribute', Existing('__nonzero__')), meth))
-	##
-	##
-	##	t = Suite([])
-	##	f = Suite([])
-	##
-	##	# Descriptor
-	##	call(t, meth, [self], None, None, result)
-	##
-	##	# No descriptor
-	##	f.append(Assign(Existing(True), result))
-	##
-	##
-	##	conditional = Local('conditional')
-	##	cond = Condition(Suite([Assign(ConvertToBool(meth), conditional)]), conditional)
-	##	b.append(Switch(cond, t, f))
-	##
-	##	b.append(Return(result))
-	##
-	##
-	##	code = Code(None, ['o'], [self, field], None, None, b)
-	##	f = Function('convertToBool', code)
-	##
-	##	return f
-
-
-	# A low-level stub (directly manipulates array slots)
 	# Horrible hack, as vargs depend on creating a tuple,
 	# and creating a tuple depends on vargs.
 	@export
-	@descriptive # This is such a hack, treat it opaquely.
-	@llast
-	def buildTuple():
-		# Self
-		#self = Local('self')
-		vargs = Local('vargs')
-
-		# Param
-		n = []
-		a = []
-
-		# Temporaries
-		retp    = Local('internal_return')
-
-		# Instructions
-		b = Suite()
-		b.append(Return(vargs))
-
-		name = 'buildTuple'
-		code = Code(name, None, a, n, vargs, None, retp, b)
-		return code
-
-	### A low-level stub (multiple return values?)
-	### Abstract (no iteration)
-	##@export
-	##@llast
-	##def unpackSequence():
-	##	# Self
-	##	self = Local('self')
-	##
-	##	# Param
-	##	inst 	= Local('inst')
-	##
-	##	# Temporaries
-	##	temps = [Local('t%d'%i) for i in range(8)]
-	##
-	##
-	##	# Instructions
-	##	b = Suite()
-	##	for i in range(8):
-	##		b.append(Assign(temps[i], Load(inst, 'Array', Existing(i))))
-	##
-	##	b.append(Return(temps))
-	##
-	##	sig = FunctionSignature(self, ['inst'], [inst], [], None, None)
-	##
-	##	f = Function('unpackSequence', sig, b)
-	##
-	##	return f
+	@descriptive
+	@noself
+	@llfunc
+	def buildTuple(*vargs):
+		return vargs
 
 	# TODO accept arguments
 	#export(llast(simpleDescriptor(collector, 'buildList', (), list, hasSelfParam=False)))
 	#export(llast(simpleDescriptor(collector, 'buildMap', (), dict, hasSelfParam=False)))
-
 
 	@export
 	@llast

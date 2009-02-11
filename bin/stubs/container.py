@@ -12,6 +12,7 @@ def makeContainerStubs(collector):
 	attachAttrPtr = collector.attachAttrPtr
 	descriptive   = collector.descriptive
 	llast         = collector.llast
+	llfunc        = collector.llfunc
 	export        = collector.export
 	highLevelStub = collector.highLevelStub
 	replaceObject = collector.replaceObject
@@ -90,92 +91,29 @@ def makeContainerStubs(collector):
 	### List ###
 	@attachAttrPtr(list, '__getitem__')
 	@descriptive
-	@llast
-	def list__getitem__():
-
-		# Param
-		selfp = Local('internal_self')
-		self = Local('self')
-		index = Local('index')
-		value = Local('value')
-		retp = Local('internal_return')
-
-		b = Suite()
-		b.append(Assign(Load(self, 'Array', collector.existing(-1)), value))
-		b.append(Return(value))
-
-		name = 'list__getitem__'
-		code = Code(name, selfp, [self, index], ['self', 'index'], None, None, retp, b)
-		return code
-
+	@llfunc
+	def list__getitem__(self, index):
+		return loadArray(self, -1)
 
 	@attachAttrPtr(list, '__setitem__')
 	@descriptive
-	@llast
-	def list__setitem__():
-
-		# Param
-		selfp = Local('internal_self')
-		self  = Local('self')
-		index = Local('index')
-		value = Local('value')
-
-		retp = Local('internal_return')
-
-		b = Suite()
-		b.append(Store(self, 'Array', collector.existing(-1), value))
-		b.append(collector.returnNone())
-
-		name = 'list__setitem__'
-		code = Code(name, selfp, [self, index, value], ['self', 'index', 'value'], None, None, retp, b)
-		return code
-
+	@llfunc
+	def list__setitem__(self, index, value):
+		storeArray(self, -1, value)
 
 	@attachAttrPtr(list, 'append')
 	@descriptive
-	@llast
-	def listappend():
-
-		# Param
-		selfp = Local('internal_self')
-		self = Local('self')
-		retp = Local('internal_return')
-		value = Local('value')
-
-		b = Suite()
-		b.append(Store(self, 'Array', collector.existing(-1), value))
-		b.append(collector.returnNone())
-
-		name = 'listappend'
-		code = Code(name, selfp, [self, value], ['self', 'value'], None, None, retp, b)
-		return code
-
+	@llfunc
+	def list_append(self, value):
+		storeArray(self, -1, value)
 
 	makeIterator('list__iter__', list, xtypes.ListIteratorType)
 
 	@attachAttrPtr(xtypes.ListIteratorType, 'next')
 	@descriptive
-	@llast
-	def listiterator__next__():
-
-		# Param
-		selfp = Local('internal_self')
-		self = Local('self')
-		retp = Local('internal_return')
-
-
-		parent = Local('parent')
-		value = Local('value')
-
-		b = Suite()
-
-		b.append(Assign(Load(self, 'LowLevel', collector.existing('parent')), parent))
-		b.append(Assign(Load(parent, 'Array',collector.existing(-1)), value))
-		b.append(Return(value))
-
-		name = 'listiterator__next__'
-		code = Code(name, selfp, [self], ['self'], None, None, retp, b)
-		return code
+	@llfunc
+	def listiterator__next__(self):
+		return loadArray(load(self, 'parent'), -1)
 
 	### xrange ###
 	makeIterator('xrange__iter__', xrange, xtypes.XRangeIteratorType)

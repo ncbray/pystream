@@ -8,6 +8,12 @@ from common import astpprint
 
 import optimization.simplify
 
+def checkCallArgs(node, count):
+	assert len(node.args) == count, node
+	assert not node.kwds, node
+	assert not node.vargs, node
+	assert not node.kargs, node
+
 class LLTranslator(object):
 	__metaclass__ = typedispatcher
 
@@ -15,7 +21,7 @@ class LLTranslator(object):
 		self.extractor = extractor
 		self.defn      = {}
 
-		self.specialGlobals = set(('allocate', 'load'))
+		self.specialGlobals = set(('allocate', 'load', 'store', 'check', 'loadDict', 'storeDict', 'checkDict'))
 
 	def resolveGlobal(self, name):
 		pyobj = __builtins__[name]
@@ -63,11 +69,20 @@ class LLTranslator(object):
 			defn = self.defn[node.expr]
 			if defn in self.specialGlobals:
 				if defn is 'allocate':
-					assert len(node.args) == 1
-					assert not node.kwds
-					assert not node.vargs
-					assert not node.kargs
+					checkCallArgs(node, 1)
 					node = ast.Allocate(node.args[0])
+				elif defn is 'load':
+					checkCallArgs(node, 2)
+					node = ast.Load(node.args[0], 'LowLevel', node.args[1])
+				elif defn is 'check':
+					checkCallArgs(node, 2)
+					node = ast.Check(node.args[0], 'LowLevel', node.args[1])
+				elif defn is 'loadDict':
+					checkCallArgs(node, 2)
+					node = ast.Load(node.args[0], 'Dictionary', node.args[1])
+				elif defn is 'checkDict':
+					checkCallArgs(node, 2)
+					node = ast.Check(node.args[0], 'Dictionary', node.args[1])
 				else:
 					assert False
 		return node

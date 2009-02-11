@@ -46,134 +46,45 @@ def makeLLFunc(collector):
 		code = Code(name, selfp, [self], ['self'], vargs, None, retp, b)
 		return code
 
-
-	# TODO incomplete
-	# case: method descriptor blocked by dict attr
-	# case: class variable
-	# case: exception
+	# Exported for the method finding optimization
 	@export
 	@attachAttrPtr(object, '__getattribute__')
-	@llast
-	def object__getattribute__():
-		# Param
-		selfp = Local('internal_self')
-		self = Local('self')
-		field = Local('field')
+	@llfunc
+	def object__getattribute__(self, field):
+		selfType = load(self, 'type')
+		typeDict = load(selfType, 'dictionary')
 
-		# Locals
-		cls      = Local('cls')
-		clsDict  = Local('clsDict')
+		getter = False
+		setter = False
+		exists = checkDict(typeDict, field)
 
-		desc     = Local('desc')
-		descCls  = Local('descCls')
-		descDict = Local('descDict')
-		descFunc = Local('descFunc')
+		if exists:
+			desc     = loadDict(typeDict, field)
+			descDict = load(load(desc, 'type'), 'dictionary')
+			getter   = checkDict(descDict, '__get__')
+			setter   = checkDict(descDict, '__set__')
 
-		hasGetter = Local('hasGetter')
-		hasSetter = Local('hasSetter')
+		# TODO support ShortCircutAnd?
+		if getter:
+			if setter:
+				# It's a data descriptor
+				return loadDict(descDict, '__get__')(desc, self, selfType)
 
-		d = Local('instDict')
+		if check(self, 'dictionary'):
+			selfDict = load(self, 'dictionary')
+			if checkDict(selfDict, field):
+				# Field in instance dictionary
+				return loadDict(selfDict, field)
 
-		result   = Local('result')
+		if getter:
+			# It's a method descriptor
+			return loadDict(descDict, '__get__')(desc, self, selfType)
+		elif exists:
+			# It's a class variable
+			return desc
 
-		retp     = Local('internal_return')
-
-		b = Suite()
-
-		b.append(collector.getType(self, cls))
-		b.append(Assign(Load(cls, 'LowLevel', collector.existing('dictionary')), clsDict))
-
-
-		t = Suite([])
-
-		t.append(Assign(Load(clsDict, 'Dictionary', field), desc))
-		t.append(collector.getType(desc, descCls))
-		t.append(Assign(Load(descCls, 'LowLevel', collector.existing('dictionary')), descDict))
-
-		condSuite = Suite([])
-		condSuite.append(Assign(Check(descDict, 'Dictionary', collector.existing('__set__')), hasSetter))
-		cond = Condition(condSuite, hasSetter)
-
-		gst = Suite([])
-		gst.append(Assign(Call(descFunc, [desc, self, cls], [], None, None), result))
-		gst.append(Return(result))
-
-		gt = Suite([])
-		gt.append(Assign(Load(descDict, 'Dictionary', collector.existing('__get__')), descFunc))
-		gt.append(Switch(cond, gst, Suite([])))
-
-		condSuite = Suite([])
-		condSuite.append(Assign(Check(descDict, 'Dictionary', collector.existing('__get__')), hasGetter))
-		cond = Condition(condSuite, hasGetter)
-
-		t.append(Switch(cond, gt, Suite([])))
-
-
-		# Call the descriptor
-		t.append(Assign(Call(descFunc, [desc, self, cls], [], None, None), result))
-		t.append(Return(result))
-
-
-
-		# No descriptor
-		f = Suite([])
-		f.append(Assign(Load(self, 'LowLevel', collector.existing('dictionary')), d))
-		f.append(Assign(Load(d, 'Dictionary', field), result))
-		f.append(Return(result))
-
-
-		conditional = Local('conditional')
-		condSuite = Suite([])
-		condSuite.append(Assign(Check(clsDict, 'Dictionary', field), conditional))
-		cond = Condition(condSuite, conditional)
-
-		b.append(Switch(cond, t, f))
-
-		name = 'object__getattribute__'
-		code = Code(name, selfp, [self, field], ['self', 'field'], None, None, retp, b)
-		return code
-
-
-	#@export
-	#@attachAttrPtr(object, '__getattribute__')
-	#@descriptive   # HACK should work in most cases.
-	#@llcode
-	#def object__getattribute__(self, field):
-	#	cls     = self.type
-	#	clsDict = cls.dictionary
-
-	#	if checkDict(clsDict, field):
-	#		desc = loadDict(clsDict, field)
-	#		descDict = desc.type.dictionary
-
-	#		if checkDict(descDict, '__get__'):
-	#			if checkDict(descDict, '__set__'):
-	#				# Data descriptor
-	#				f = loadDict(descDict, '__get__')
-	#				return f(desc, cls, self)
-
-	#	if hasattr(self, 'dictionary'):
-	#		d = self.dictionary
-	#		if checkDict(d, field):
-	#			# Dictionary attribute
-	#			return loadDict(d, field)
-
-	#	if checkDict(clsDict, field):
-	#		if checkDict(descDict, '__get__'):
-	#			# Method descriptor
-	#			f = loadDict(descDict, '__get__')
-	#			return f(desc, cls, self)
-	#		else:
-	#			# Class variable
-	#			return desc
-	#	else:
-	#		raise AttributeError, field
-
-
-#	@export
-#	@highLevelStub
-#	def default__get__(self, inst, cls):
-#		return self
+		# HACK not found?
+		return desc
 
 	# TODO incomplete
 	# set object__getattribute__
@@ -280,20 +191,6 @@ def makeLLFunc(collector):
 		return code
 
 
-	# Does not exist, hardwired in interpreter?
-	##@attachAttrPtr(object, '__nonzero__')
-	##@llast
-	##def object__nonzero__():
-	##	# Args
-	##	self = Local('self')
-	##
-	##	b = Suite()
-	##	b.append(Return(Existing(True)))
-	##
-	##	code = Code(self, [], [], None, None, b)
-	##	f = Function('object__nonzero__', code)
-	##	return f
-
 	@attachAttrPtr(type, '__call__')
 	@llast
 	def type__call__():
@@ -326,20 +223,6 @@ def makeLLFunc(collector):
 		code = Code(name, self, [], [], vargs, None, retp, b)
 		return code
 
-	##def type__call__(cls, *args, **kargs):
-	##	# TODO arg matching behavior?
-	##	# No override to new or init - no args
-	##	# Override new or init - args must match overriden
-	##	# Override both - just call both with given arguments?
-	##
-	##	inst = cls.__new__(*args, **kargs)
-	##
-	##	if type(inst) == cls:
-	##		# TODO get __init__ from class via lookup...
-	##		inst.__init__(*args, **kargs)
-	##
-	##	return inst
-
 
 	################
 	### Function ###
@@ -352,7 +235,6 @@ def makeLLFunc(collector):
 	@highLevelStub
 	def function__get__(self, inst, cls):
 		return method(self, inst, cls)
-
 
 
 	##############
@@ -394,12 +276,6 @@ def makeLLFunc(collector):
 		code = Code(name, self, [], [], vargs, None, retp, b)
 		return code
 
-	### TODO what can be done about the ugly argument passing?  Will the analysis figure it out?
-	##@replaceObject(xtypes.MethodType.__get__)
-	##@highLevelStub
-	##def method__call__(self, *args, **kargs):
-	##	self.im_func(self.im_self, *args, **kargs)
-
 
 	# Low level, requires hidden function.
 	# Getter for function, returns method.
@@ -428,6 +304,7 @@ def makeLLFunc(collector):
 		name = 'methoddescriptor__get__'
 		code = Code(name, selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
 		return code
+
 
 	#########################
 	### Member Descriptor ###
@@ -484,10 +361,10 @@ def makeLLFunc(collector):
 		code = Code(name, selfp, [self, inst, value], ['self', 'inst', 'value'], None, None, retp, b)
 		return code
 
+
 	###########################
 	### Property Descriptor ###
 	###########################
-
 
 	# Low level, requires hidden function.
 	# Getter for function, returns method.
@@ -514,6 +391,7 @@ def makeLLFunc(collector):
 		name = 'property__get__'
 		code = Code(name, selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
 		return code
+
 
 	###############
 	### Numeric ###
@@ -672,15 +550,6 @@ def makeLLFunc(collector):
 
 	# Easiest as a descriptive stub.
 	# Should be a implementation, for precision, however.
-
-
-	# HACK should just hijack pointer.
-	# This would require decompiling a high-level function, however.
-	# Decompiling is ugly, as the decompiler depends on the stub functions.
-	##@replaceObject(isinstance)
-	##@highLevelStub
-	##def isinstance_stub(object, classinfo):
-	##	return issubclass(type(object), classinfo)
 
 	issubclass_stub = fold(issubclass)(attachPtr(issubclass)(llast(simpleDescriptor(collector, 'issubclass', ('class',  'classinfo'), bool))))
 

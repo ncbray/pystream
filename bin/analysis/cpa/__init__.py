@@ -382,6 +382,7 @@ class InterproceduralDataflow(object):
 		# Make an invocation
 		self.bindCall(dummyOp, caller, context)
 
+		context.entryPoint = True
 
 	def solve(self):
 		start = time.clock()

@@ -53,7 +53,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 				callConverter(extractor, adb, func)
 		console.end()
 
-	if False:
+	if True:
 		console.begin('clone')
 		clone(console, extractor, entryPoints, adb)
 		console.end()
@@ -77,7 +77,7 @@ def cpaAnalyze(console, e, entryPoints):
 def cpaPass(console, e, entryPoints):
 	console.begin('depython')
 	result = cpaAnalyze(console, e, entryPoints)
-#	codeConditioning(console, e, entryPoints, result)
+	codeConditioning(console, e, entryPoints, result)
 	console.end()
 	return result
 

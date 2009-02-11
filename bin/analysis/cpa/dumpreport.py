@@ -465,7 +465,8 @@ def dumpHeapInfo(heap, data, links, out):
 	call = data.sys.extractor.getCall(heap)
 	if call:
 		out.begin('div')
-		out << 'call: %r'  % call
+		out << 'On call: '
+		outputCodeShortName(out, call, links)
 		out.end('div')
 
 	out.begin('div')

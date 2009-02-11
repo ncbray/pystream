@@ -709,4 +709,4 @@ def makeLLFunc(collector):
 
 
 	# String funcitons
-	str_getitem_stub = attachAttrPtr(str, '__getitem__')(descriptive(llast(simpleDescriptor(collector, 'str__getitem__', ('index',), str))))
+	str_getitem_stub = attachAttrPtr(str, '__getitem__')(descriptive(llast(simpleDescriptor(collector, 'str__getitem__', ('self', 'index',), str))))

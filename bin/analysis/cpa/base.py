@@ -35,12 +35,14 @@ def calleeSlotsFromContext(sys, context):
 
 
 class AnalysisContext(CanonicalObject):
-	__slots__ = 'signature', 'opPath', 'group'
+	__slots__ = 'signature', 'opPath', 'group', 'entryPoint'
 
 	def __init__(self, signature, opPath, group):
-		self.signature = signature
-		self.opPath    = opPath
-		self.group     = group
+		self.signature  = signature
+		self.opPath     = opPath
+		self.group      = group
+		self.entryPoint = False
+
 		self.setCanonical(self.signature, self.opPath)
 
 	def _bindObjToSlot(self, sys, obj, slot):

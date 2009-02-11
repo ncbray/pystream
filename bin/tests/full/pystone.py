@@ -77,9 +77,7 @@ Char2Glob = '\0'
 Array1Glob = [0]*51
 Array2Glob = map(lambda x: x[:], [Array1Glob]*51)
 
-# HACK polutes flow-insensitive analysis.
-# TODO handle better?
-#PtrGlb = None
+PtrGlb = None
 PtrGlbNext = None
 
 def Proc0(loops=LOOPS):
@@ -169,11 +167,15 @@ def Proc2(IntParIO):
 			break
 	return IntParIO
 
+NoneType = type(None)
+
 def Proc3(PtrParOut):
 	global PtrGlb
 	global IntGlob
 
-	if PtrGlb is not None:
+	# HACK
+	#if PtrGlb is not None:
+	if isinstance(PtrGlb, NoneType):
 		PtrParOut = PtrGlb.PtrComp
 	else:
 		IntGlob = 100

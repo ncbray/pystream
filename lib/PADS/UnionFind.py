@@ -60,3 +60,5 @@ class UnionFind(object):
             if r != heaviest:
                 self.weights[heaviest] += self.weights[r]
                 self.parents[r] = heaviest
+
+        return heaviest

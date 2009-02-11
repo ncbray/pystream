@@ -9,7 +9,7 @@ outputDirectory = os.path.normpath(os.path.join(base, '..', 'summaries'))
 
 if False:
 	testOnly = [
-		('tests', 'shape'),
+		('tests', 'test_full'),
 	]
 
 testExclude = [

@@ -17,7 +17,7 @@ class CallGraphFinder(Finder):
 		self.db = db
 
 		self.liveFunc = set()
-		self.liveFuncContext = set()
+		self.liveFuncContext = {}
 		self.invokes = {}
 		self.invokesContext = {}
 
@@ -25,7 +25,10 @@ class CallGraphFinder(Finder):
 		code, context = node
 
 		self.liveFunc.add(code)
-		self.liveFuncContext.add(node)
+
+		if code not in self.liveFuncContext:
+			self.liveFuncContext[code] = set()
+		self.liveFuncContext[code].add(context)
 
 		if code not in self.invokes:
 			self.invokes[code] = set()
@@ -48,19 +51,23 @@ class CallGraphFinder(Finder):
 				children.append(child)
 		return children
 
-
-def findLiveFunctions(db, entryPoints):
+def makeCGF(db, entryPoints):
 	cgf = CallGraphFinder(db)
 
-	entry = set()
 	for code, funcobj, args in entryPoints:
 		assert isinstance(code, ast.Code), type(code)
-
-		entry.add(code)
 
 		# HACK for finding the entry context, assumes there's only one context.
 		for context in db.functionInfo(code).contexts:
 			cgf.process((code, context))
+	return cgf
+
+def findLiveFunctions(db, entryPoints):
+	cgf = makeCGF(db, entryPoints)
+
+	entry = set()
+	for code, funcobj, args in entryPoints:
+		entry.add(code)
 
 	live = cgf.liveFunc
 	G = cgf.invokes
@@ -69,3 +76,6 @@ def findLiveFunctions(db, entryPoints):
 
 	return live, G
 
+def findLiveContexts(db, entryPoints):
+	cgf = makeCGF(db, entryPoints)
+	return cgf.liveFuncContext

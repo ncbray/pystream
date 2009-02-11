@@ -15,30 +15,141 @@ from simplify import simplify
 
 import copy
 
+from analysis.cpa import programculler
+
 # Figures out what functions should have seperate implementations,
 # to improve optimization / realizability
 class ProgramCloner(object):
-	def __init__(self, console, adb):
+	def __init__(self, console, adb, liveContexts):
 		self.console = console
 		self.adb = adb
 
 		# func -> context -> context set
 		self.different = collections.defaultdict(lambda: collections.defaultdict(set))
 
-		self.liveFunctions = self.adb.liveFunctions()
+		self.liveFunctions = set(liveContexts.iterkeys())
+		self.liveContexts  = liveContexts
 
-		self.liveContexts = {}
 		self.liveOps = {}
 
+
 		for code in self.liveFunctions:
-			self.liveContexts[code] = frozenset(self.adb.functionContexts(code))
 			self.liveOps[code] = self.adb.functionOps(code)
 
 		# HACK, ensure the keys exist
 		for func in self.liveFunctions:
 			different = self.different[func]
-			for context in adb.functionContexts(func):
+			for context in self.liveContexts[func]:
 				different[context]
+
+		# For finding the maximal clone.
+		self.unify         = UnionFind()
+		self.unifyGroups   = {}
+		self.indirectGroup = {}
+		self.dirty         = set()
+
+
+	def doUnify(self, code, contexts, indirect):
+		# indirect indicates the contexts can be called from an object.
+		# All indirect contexts must be unified, as only one function
+		# can be called indirectly.
+		if indirect and code in self.indirectGroup:
+			contexts.add(self.indirectGroup[code])
+
+		if len(contexts) > 1:
+			indirectGroup =  self.indirectGroup.get(code)
+			# Build the new group
+			group = set()
+			for context in contexts:
+				assert self.unify[context] is context, (context, self.unify[context])
+
+				group.update(self.unifyGroups[context])
+				del self.unifyGroups[context]
+
+				# The context may be unified, so make sure it doesn't hand arround.
+				if context in self.dirty:
+					self.dirty.remove(context)
+
+				if context is indirectGroup: indirect = True
+
+			# Unify the contexts
+			result = self.unify.union(*contexts)
+
+			assert result is self.unify[context]
+			assert result not in self.unifyGroups
+			assert result not in self.dirty
+
+			# Set the new group, and mark the context for processing.
+			self.unifyGroups[result] = group
+			self.dirty.add(result)
+
+			if indirect: self.indirectGroup[code] = result
+		elif indirect:
+			self.indirectGroup[code] = contexts.pop()
+
+	def unifyContexts(self):
+		# Calculates the fully cloned, realizable solution.
+		# This is used as an upper bound for cloning.
+		# This will never generate more functions than there are contexts.
+		# It is undesirable to use it directly, as it gets crazy large
+		# when path sensitivity is used.
+		# TODO what happens if we can insert type switches?
+
+		# All of the contexts are dirty
+		self.dirty = set()
+		for code, contexts in self.liveContexts.iteritems():
+			for context in contexts:
+				self.unify[context]
+				self.unifyGroups[context] = set((context,))
+				self.dirty.add(context)
+
+				if context.entryPoint:
+					self.doUnify(code, set((context,)), True)
+
+		print "PRE", len(self.unifyGroups)
+
+		while self.dirty:
+			current = self.dirty.pop()
+			code    = current.signature.code
+			group   = self.unifyGroups[self.unify[current]]
+
+			for op in self.liveOps[code]:
+				dsts = collections.defaultdict(set)
+				for context in group:
+					invocations = self.adb.invocationsForContextOp(code, op, context)
+					for dst in invocations:
+						udst = self.unify[dst]
+						assert self.unify[udst] is udst
+						dsts[udst.signature.code].add(udst)
+
+				indirect = len(dsts) > 1
+
+				for dstcode, dstcontexts in dsts.iteritems():
+					self.doUnify(dstcode, dstcontexts, indirect)
+
+		print "POST", len(self.unifyGroups)
+
+		self.codeGroups = {}
+		self.groupsInvokeGroup = {}
+
+		for gid in self.unifyGroups.iterkeys():
+			code = gid.signature.code
+			if code not in self.codeGroups:
+				self.codeGroups[code] = set()
+			self.codeGroups[code].add(gid)
+			self.groupsInvokeGroup[gid] = set()
+
+		for code, contexts in self.liveContexts.iteritems():
+			for op in self.liveOps[code]:
+				for context in contexts:
+					src = self.unify[context]
+					invocations = self.adb.invocationsForContextOp(code, op, context)
+					for inv in invocations:
+						dst = self.unify[inv]
+						self.groupsInvokeGroup[dst].add(src)
+
+
+
 
 	def listGroups(self):
 		for func, groups in self.groups.iteritems():
@@ -64,85 +175,183 @@ class ProgramCloner(object):
 		return numGroups
 
 	def makeFuncGroups(self, code):
-		groups = []
+		pack = []
 
 		different = self.different[code]
 
-		for context in self.adb.functionContexts(code):
-			assert context.signature.code is code, (context, code)
-			for group in groups:
-				assert context in different
-				if not different[context].intersection(group):
-					group.add(context)
+		# Pack the groups
+		for group in self.codeGroups[code]:
+			for packed in pack:
+				if not different[group].intersection(packed):
+					packed.add(group)
 					break
 			else:
-				groups.append(set((context,)))
+				pack.append(set((group,)))
+
+		# Expand the packed groups
+		groups = []
+		for packed in pack:
+			unpacked = set()
+			for group in packed:
+				unpacked.update(self.unifyGroups[group])
+			groups.append(unpacked)
+
 		return groups
 
+	def labelLoad(self, code, op, contexts):
+		codeinfo = self.adb.db.lifetime.readDB[code]
+		opinfo   = codeinfo[op]
+
+		slots = set()
+		for context in contexts:
+			cslots = opinfo[context]
+			if cslots:
+				for slot in cslots:
+					slots.add(slot.slotName)
+
+		if slots:
+			return frozenset(slots)
+		else:
+			return None
+
+
+	def labelStore(self, code, op, contexts):
+		codeinfo = self.adb.db.lifetime.modifyDB[code]
+		opinfo   = codeinfo[op]
+
+		slots = set()
+		for context in contexts:
+			cslots = opinfo[context]
+			if cslots:
+				for slot in cslots:
+					slots.add(slot.slotName)
+
+		if slots:
+			return frozenset(slots)
+		else:
+			return None
+
+	def labelAllocate(self, code, op, contexts):
+		codeinfo = self.adb.db.functionInfo(code)
+		clclInfo = codeinfo.localInfo(op.expr)
+
+		types = set()
+		for context in contexts:
+			lclInfo = clclInfo.context(context)
+			ctypes = frozenset([ref.xtype.obj for ref in lclInfo.references])
+
+			if ctypes:
+				types.update(ctypes)
+
+		if types:
+			if len(types) > 1:
+				# No point in giving it a unique label, as it is indirect.
+				return True
+			else:
+				return types.pop()
+
+			return frozenset(types)
+		else:
+			return None
+
+	def labelInvoke(self, code, op, contexts):
+		targets = set()
+		for context in contexts:
+			invocations = self.adb.invocationsForContextOp(code, op, context)
+
+			for inv in invocations:
+				targets.add(inv.signature.code)
+
+		if targets:
+			if len(targets) > 1:
+				# No point in giving it a unique label, as it is indirect.
+				return True
+			else:
+				return targets.pop()
+		else:
+			return None
+
+
+
+	def labeledMark(self, code, op, groups, labeler):
+		lut = collections.defaultdict(set)
+		wildcards = set()
+
+		for group in groups:
+			label = labeler(code, op, self.unifyGroups[group])
+
+			if label is not None:
+				lut[label].add(group)
+			else:
+				# This load won't happen, so it can be paired with any other.
+				# TODO when we support exceptions, be more precise.
+				wildcards.add(group)
+
+		if len(lut) > 1:
+			self.markDifferentContexts(code, groups, lut, wildcards)
+
+	def processCode(self, code):
+		for code, groups in self.codeGroups.iteritems():
+			for op in self.liveOps[code]:
+				lut = {}
+				for group in groups:
+					invs = set()
+					for context in self.unifyGroups[group]:
+						invocations = self.adb.invocationsForContextOp(code, op, context)
+						invs.update([self.unify[inv] for inv in invocations])
+
+					if len(invs) == 1:
+						inv = invs.pop()
+						invCode = inv.signature.code
+
+						for otherGroup, otherInv in lut.iteritems():
+							if not self.isDifferent(code, group, otherGroup):
+								otherCode = otherInv.signature.code
+								if invCode is otherCode:
+									if self.isDifferent(invCode, inv, otherInv):
+										assert inv is not otherInv
+										self.markDifferentSimple(code, group, otherGroup)
+
+						lut[group] = inv
 	def findInitialConflicts(self):
+		self.unifyContexts()
+
+		assert not self.dirty
+
 		# Clone loads from different fields
-		for code, codeinfo in self.adb.db.lifetime.readDB:
-			contexts = self.liveContexts[code]
-			for op, opinfo in codeinfo:
+		for code, groups in self.codeGroups.iteritems():
+			for op in self.liveOps[code]:
 				# Only split loads for reading different fields
 				if isinstance(op, ast.Load):
-					lut = collections.defaultdict(set)
-					for context, slots in opinfo:
-						if slots:
-							fields = frozenset([slot.slotName for slot in slots])
-							lut[fields].add(context)
+					self.labeledMark(code, op, groups, self.labelLoad)
+				elif isinstance(op, ast.Store):
+					self.labeledMark(code, op, groups, self.labelStore)
+				elif isinstance(op, ast.Allocate):
+					self.labeledMark(code, op, groups, self.labelAllocate)
+				else:
+					# Critical, as it allows calls to be turned into direct calls.
+					self.labeledMark(code, op, groups, self.labelInvoke)
 
-					self.markDifferentContexts(code, contexts, lut)
+		while self.dirty:
+			current = self.dirty.pop()
+			self.processCode(current)
 
+		num = self.makeGroups()
 
-		# Clone stores to different fields
-		for code, codeinfo in self.adb.db.lifetime.modifyDB:
-			contexts = self.liveContexts[code]
-			for op, opinfo in codeinfo:
-				# Only split loads for reading different fields
-				if isinstance(op, ast.Store):
-					lut = collections.defaultdict(set)
-					for context, slots in opinfo:
-						if slots:
-							fields = frozenset([slot.slotName for slot in slots])
-							lut[fields].add(context)
-
-					self.markDifferentContexts(code, contexts, lut)
-
-
-		# Clone different allocates based on the type pointer
-		for code in self.liveFunctions:
-			# Two contexts should not be the same if they contain an op that
-			# invokes different sets of functions.
-			codeInfo = self.adb.db.functionInfo(code)
-			contexts = self.liveContexts[code]
-
-			for op in self.adb.functionOps(code):
-				if isinstance(op, ast.Allocate):
-					lut = collections.defaultdict(set)
-
-					typeExpr = op.expr
-					clclInfo = codeInfo.localInfo(typeExpr)
-					for context, lclInfo in clclInfo.contexts.iteritems():
-						types = frozenset([ref.xtype.obj for ref in lclInfo.references])
-						lut[types].add(context)
-
-					self.markDifferentContexts(code, contexts, lut)
-
+		print "FINAL", num
+		return num
 
 	def findConflicts(self):
 		self.realizable = True
-		for code in self.liveFunctions:
+		for code, contexts in self.liveContexts.iteritems():
 			# Two contexts should not be the same if they contain an op that
 			# invokes different sets of functions.
+
 			for op in self.liveOps[code]:
-
-				# Cache the contexts, as we'll need them later.
-				contexts = self.liveContexts[code]
-
-				lut = collections.defaultdict(set)
+				lut   = collections.defaultdict(set)
 				label = {}
-				u = UnionFind()
+				u     = UnionFind()
+				wildcards = set()
 
 				# Find the different call patterns.
 				# Using union find on the invocation edges
@@ -152,10 +361,23 @@ class ProgramCloner(object):
 					assert context.signature.code is code, (context, code)
 
 					invocations = self.adb.invocationsForContextOp(code, op, context)
-					translated = [self.groupLUT[dst] for dst in invocations]
 
-					label[context] = translated[0] if translated else None
+					translated = []
+					for dst in invocations:
+						dstcode = dst.signature.code
+						assert dstcode in self.liveFunctions
+						assert dst  in self.liveContexts[dstcode]
+						group = self.groupLUT[dst]
+						translated.append(group)
+
+					if translated:
+						label[context] = translated[0]
+					else:
+						wildcards.add(context)
+
 					translated = frozenset(translated)
+
+					# A conflict if the invocation goes to two different groups?
 					if len(translated) >= 2:
 						u.union(*translated)
 
@@ -169,23 +391,59 @@ class ProgramCloner(object):
 						# More that one call target.
 						self.realizable = False
 
-				for context in contexts:
+				for context in contexts-wildcards:
 					group = u[label[context]]
 					lut[group].add(context)
 
-				self.markDifferentContexts(code, contexts, lut)
+				self.markDifferentContexts(code, contexts, lut, wildcards)
 
-	def markDifferentContexts(self, code, contexts, lut):
-		# Mark contexts with different call patterns as different.
+	def isDifferent(self, code, c1, c2):
+		diff = self.different[code]
+		return c2 in diff[c1]
+
+	def markDirty(self, context):
+		newDirty = [c.signature.code for c in self.groupsInvokeGroup[context]]
+		self.dirty.update(newDirty)
+
+
+	def markDifferentSimple(self, code, a, b):
 		different = self.different[code]
+		if b not in different[a]:
+			different[a].add(b)
+			different[b].add(a)
+			self.markDirty(a)
+			self.markDirty(b)
+
+	def markDifferentContexts(self, code, contexts, lut, wildcards=None):
+		# Mark contexts with different call patterns as different.
+		# This is nasty n^2, we should be keeping track of similar?
+		different = self.different[code]
+
+		if wildcards:
+			certain = contexts-wildcards
+		else:
+			certain = contexts
+
 		for group in lut.itervalues():
-			assert contexts.issuperset(group), (func.name, [c.code.name for c in group])
+			if not certain.issuperset(group):
+				print
+				for c in certain:
+					print c
+				print
+				for c in group:
+					print c
+
+
+			assert certain.issuperset(group), group
 
 			# Contexts not in the current group
-			diff = contexts-group
+			other = certain-group
 
 			for context in group:
-				different[context].update(diff)
+				diff = other-different[context]
+				if diff:
+					different[context].update(diff)
+					self.markDirty(context)
 
 	def createNewCodeNodes(self):
 		newfunc = {}
@@ -221,21 +479,30 @@ class ProgramCloner(object):
 				simplify(extractor, self.adb, newcode)
 
 
+		def getIndirect(code):
+			oldContext = self.indirectGroup[code]
+			return newfunc[code][self.groupLUT[oldContext]]
 
-		# HACK Horrible, horrible hack: assumes that the entry point cannot be cloned.
-		# This will be the case for most situations we're interested in... but still.  Ugly.
+		# Entry points are considered to be "indirect"
+		# As there is only one indirect function, we know it is the entry point.
 		newEP = []
 		for func, funcobj, args in entryPoints:
-			groups = newfunc[func]
-			assert len(groups) == 1
-			clonecode = groups.items()[0][1]
-			func = clonecode
+			func = getIndirect(func)
 			newEP.append((func, funcobj, args))
-
 
 		# HACK Mutate the list.
 		# Used so everyone gets the update version
 		entryPoints[:] = newEP
+
+
+		# Mutate the callLUT
+
+		newCallLUT = {}
+		for obj, code in extractor.desc.callLUT.iteritems():
+			if code in self.indirectGroup:
+				newCallLUT[obj] = getIndirect(code)
+
+		extractor.desc.callLUT = newCallLUT
 
 		# Collect and return the new functions.
 		funcs = []
@@ -343,30 +610,34 @@ class FunctionCloner(object):
 
 def clone(console, extractor, entryPoints, adb):
 	console.begin('analysis')
-	cloner = ProgramCloner(console, adb)
 
-	cloner.findInitialConflicts()
-	cloner.makeGroups()
+	liveContexts = programculler.findLiveContexts(adb.db, entryPoints)
 
-	oldNumGroups = 0
+	cloner = ProgramCloner(console, adb, liveContexts)
+
+	numGroups = cloner.findInitialConflicts()
+	#cloner.makeGroups()
+
+#	oldNumGroups = 0
 	originalNumGroups = len(cloner.liveFunctions)
-	numGroups = originalNumGroups
+#	numGroups = originalNumGroups
 
-	while numGroups > oldNumGroups:
-		oldNumGroups = numGroups
+#	while numGroups > oldNumGroups:
+#		oldNumGroups = numGroups
 
-		cloner.findConflicts()
-		numGroups = cloner.makeGroups()
+#		cloner.findConflicts()
+#		numGroups = cloner.makeGroups()
 
 	console.output("=== Split ===")
 	cloner.listGroups()
-	console.output("Realizable: %r" % cloner.realizable)
-	console.output("Num groups %d / %d / %d" %  (numGroups, oldNumGroups, originalNumGroups))
-	console.output('')
+	#console.output("Realizable: %r" % cloner.realizable)
+	#console.output("Num groups %d / %d / %d" %  (numGroups, oldNumGroups, originalNumGroups))
+	console.output("Num groups %d / %d" %  (numGroups, originalNumGroups))
 
+	console.output('')
 	console.end()
 
-	assert cloner.realizable
+	#assert cloner.realizable
 
 	# Is cloning worth while?
 	if numGroups > originalNumGroups:

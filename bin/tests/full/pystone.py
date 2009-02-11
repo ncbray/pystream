@@ -175,7 +175,7 @@ def Proc3(PtrParOut):
 
 	# HACK
 	#if PtrGlb is not None:
-	if isinstance(PtrGlb, NoneType):
+	if not isinstance(PtrGlb, NoneType):
 		PtrParOut = PtrGlb.PtrComp
 	else:
 		IntGlob = 100

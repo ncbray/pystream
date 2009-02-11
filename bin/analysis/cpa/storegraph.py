@@ -205,12 +205,12 @@ class SlotNode(MergableNode):
 			odiff = sys.setManager.diff(self.refs, refs)
 
 
-			if sdiff:
+			if sdiff or (not self.null and other.null):
 				self._update(sys, sdiff)
 
 			self.observers.extend(observers)
 
-			if odiff:
+			if odiff or (self.null and not other.null):
 				for o in observers:
 					o.mark(sys)
 

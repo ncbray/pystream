@@ -487,14 +487,16 @@ def dumpHeapInfo(heap, data, links, out):
 		out.endl()
 
 		for slot in context:
-			out << '\t\t%r' % slot.slotName
-			if slot.null:
-				out << " (null?)"
-			out.endl()
-			for ref in slot:
-				out << '\t\t\t'
-				outputObjectShortName(out, ref, links)
+			# Only print the slot if it can point to something.
+			if slot.refs:
+				out << '\t\t%r' % slot.slotName
+				if slot.null:
+					out << " (null?)"
 				out.endl()
+				for ref in slot:
+					out << '\t\t\t'
+					outputObjectShortName(out, ref, links)
+					out.endl()
 
 		out.end('div')
 		out.endl()

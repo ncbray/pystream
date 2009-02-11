@@ -173,14 +173,6 @@ class CheckConstraint(CachedConstraint):
 		self.key      = key
 		self.target   = target
 
-	def emit(self, sys, pyobj):
-		obj = sys.extractor.getObject(pyobj)
-		xtype = sys.canonical.existingType(obj)
-
-		# HACK initalize type implies then reference is never null...
-		# Make sound?
-		self.target.initializeType(sys, xtype)
-
 	def concreteUpdate(self, sys, exprType, keyType):
 		assert keyType.isExisting() or keyType.isExternal(), keyType
 
@@ -191,13 +183,44 @@ class CheckConstraint(CachedConstraint):
 
 		slot = obj.field(sys, name, obj.region.group.regionHint)
 
-		if slot.refs:
+		con = SimpleCheckConstraint(self.op, slot, self.target)
+		con.attach(sys)
+
+		# Constraints are usually not marked based on an existing null...
+		if slot.null: con.mark(sys)
+
+class SimpleCheckConstraint(Constraint):
+	__slots__ = 'op', 'slot', 'target', 'refs', 'null'
+	def __init__(self, op, slot, target):
+		Constraint.__init__(self)
+		self.op       = op
+		self.slot     = slot
+		self.target   = target
+
+		self.refs     = False
+		self.null     = False
+
+	def emit(self, sys, pyobj):
+		obj = sys.extractor.getObject(pyobj)
+		xtype = sys.canonical.existingType(obj)
+
+		# HACK initalize type implies then reference is never null...
+		# Make sound?
+		self.target.initializeType(sys, xtype)
+
+	def update(self, sys):
+		if not self.refs and self.slot.refs:
 			self.emit(sys, True)
+			self.refs = True
 
-		# TODO make sure the constraint is reevaluated if "null" changes.
-		if slot.null:
+		if not self.null and self.slot.null:
 			self.emit(sys, False)
+			self.null = True
 
+	def attach(self, sys):
+		sys.constraint(self)
+		self.slot.dependsRead(sys, self)
+		self.target.dependsWrite(sys, self)
 
 # Resolves the type of the expression, varg, and karg
 class AbstractCallConstraint(CachedConstraint):

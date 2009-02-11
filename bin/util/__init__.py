@@ -67,3 +67,13 @@ def uniqueSlotName(descriptor):
 	name     = descriptor.__name__
 	objClass = descriptor.__objclass__
 	return "%s#%s#%d" % (name, objClass.__name__, id(objClass))
+
+def _bijection(a, b):
+	c = a+b
+	return (c*(c+1))//2+a
+
+def bijection(a, b, *others):
+	result = _bijection(a, b)
+	for o in others:
+		result = _bijection(result, o)
+	return result

@@ -261,6 +261,7 @@ class InterproceduralDataflow(object):
 	def createAssign(self, source, dest):
 		con = AssignmentConstraint(source, dest)
 		con.attach(self)
+		return con
 
 	def fold(self, targetcontext):
 		def notConst(obj):

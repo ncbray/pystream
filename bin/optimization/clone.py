@@ -4,17 +4,10 @@
 # Whole program optimization
 
 import collections
-
 from PADS.UnionFind import UnionFind
-
 from util.typedispatch import *
-
 from programIR.python import ast
-
 from simplify import simplify
-
-import copy
-
 from analysis.cpa import programculler
 
 # Figures out what functions should have seperate implementations,
@@ -106,8 +99,6 @@ class ProgramCloner(object):
 				if context.entryPoint:
 					self.doUnify(code, set((context,)), True)
 
-		print "PRE", len(self.unifyGroups)
-
 		while self.dirty:
 			current = self.dirty.pop()
 			code    = current.signature.code
@@ -127,10 +118,10 @@ class ProgramCloner(object):
 				for dstcode, dstcontexts in dsts.iteritems():
 					self.doUnify(dstcode, dstcontexts, indirect)
 
-		print "POST", len(self.unifyGroups)
-
 		self.codeGroups = {}
 		self.groupsInvokeGroup = {}
+
+		self.groupOpInvokes = {}
 
 		for gid in self.unifyGroups.iterkeys():
 			code = gid.signature.code
@@ -139,14 +130,18 @@ class ProgramCloner(object):
 			self.codeGroups[code].add(gid)
 			self.groupsInvokeGroup[gid] = set()
 
-		for code, contexts in self.liveContexts.iteritems():
+		for code, groups in self.codeGroups.iteritems():
 			for op in self.liveOps[code]:
-				for context in contexts:
-					src = self.unify[context]
-					invocations = self.adb.invocationsForContextOp(code, op, context)
-					for inv in invocations:
-						dst = self.unify[inv]
-						self.groupsInvokeGroup[dst].add(src)
+				for group in groups:
+					ginv = set()
+					for context in self.unifyGroups[group]:
+						src = self.unify[context]
+						invocations = self.adb.invocationsForContextOp(code, op, context)
+						for inv in invocations:
+							dst = self.unify[inv]
+							self.groupsInvokeGroup[dst].add(src)
+							ginv.add(dst)
+					self.groupOpInvokes[(group, op)] = ginv
 
 
 
@@ -198,7 +193,9 @@ class ProgramCloner(object):
 
 		return groups
 
-	def labelLoad(self, code, op, contexts):
+	def labelLoad(self, code, op, group):
+		contexts = self.unifyGroups[group]
+
 		codeinfo = self.adb.db.lifetime.readDB[code]
 		opinfo   = codeinfo[op]
 
@@ -215,7 +212,10 @@ class ProgramCloner(object):
 			return None
 
 
-	def labelStore(self, code, op, contexts):
+
+	def labelStore(self, code, op, group):
+		contexts = self.unifyGroups[group]
+
 		codeinfo = self.adb.db.lifetime.modifyDB[code]
 		opinfo   = codeinfo[op]
 
@@ -231,7 +231,9 @@ class ProgramCloner(object):
 		else:
 			return None
 
-	def labelAllocate(self, code, op, contexts):
+	def labelAllocate(self, code, op, group):
+		contexts = self.unifyGroups[group]
+
 		codeinfo = self.adb.db.functionInfo(code)
 		clclInfo = codeinfo.localInfo(op.expr)
 
@@ -254,13 +256,8 @@ class ProgramCloner(object):
 		else:
 			return None
 
-	def labelInvoke(self, code, op, contexts):
-		targets = set()
-		for context in contexts:
-			invocations = self.adb.invocationsForContextOp(code, op, context)
-
-			for inv in invocations:
-				targets.add(inv.signature.code)
+	def labelInvoke(self, code, op, group):
+		targets = set([other.signature.code for other in self.groupOpInvokes[(group, op)]])
 
 		if targets:
 			if len(targets) > 1:
@@ -269,7 +266,8 @@ class ProgramCloner(object):
 			else:
 				return targets.pop()
 		else:
-			return None
+			# Do not make it a wildcard...
+			return False
 
 
 
@@ -278,7 +276,7 @@ class ProgramCloner(object):
 		wildcards = set()
 
 		for group in groups:
-			label = labeler(code, op, self.unifyGroups[group])
+			label = labeler(code, op, group)
 
 			if label is not None:
 				lut[label].add(group)
@@ -295,13 +293,10 @@ class ProgramCloner(object):
 			for op in self.liveOps[code]:
 				lut = {}
 				for group in groups:
-					invs = set()
-					for context in self.unifyGroups[group]:
-						invocations = self.adb.invocationsForContextOp(code, op, context)
-						invs.update([self.unify[inv] for inv in invocations])
+					invs = self.groupOpInvokes[(group, op)]
 
 					if len(invs) == 1:
-						inv = invs.pop()
+						inv = tuple(invs)[0]
 						invCode = inv.signature.code
 
 						for otherGroup, otherInv in lut.iteritems():
@@ -314,8 +309,6 @@ class ProgramCloner(object):
 
 						lut[group] = inv
 	def findInitialConflicts(self):
-		self.unifyContexts()
-
 		assert not self.dirty
 
 		# Clone loads from different fields
@@ -332,70 +325,13 @@ class ProgramCloner(object):
 					# Critical, as it allows calls to be turned into direct calls.
 					self.labeledMark(code, op, groups, self.labelInvoke)
 
+	def process(self):
 		while self.dirty:
 			current = self.dirty.pop()
 			self.processCode(current)
 
-		num = self.makeGroups()
 
-		print "FINAL", num
-		return num
 
-	def findConflicts(self):
-		self.realizable = True
-		for code, contexts in self.liveContexts.iteritems():
-			# Two contexts should not be the same if they contain an op that
-			# invokes different sets of functions.
-
-			for op in self.liveOps[code]:
-				lut   = collections.defaultdict(set)
-				label = {}
-				u     = UnionFind()
-				wildcards = set()
-
-				# Find the different call patterns.
-				# Using union find on the invocation edges
-				# helps avoid a problem where the edges in one context
-				# May be a subset of another context.
-				for context in contexts:
-					assert context.signature.code is code, (context, code)
-
-					invocations = self.adb.invocationsForContextOp(code, op, context)
-
-					translated = []
-					for dst in invocations:
-						dstcode = dst.signature.code
-						assert dstcode in self.liveFunctions
-						assert dst  in self.liveContexts[dstcode]
-						group = self.groupLUT[dst]
-						translated.append(group)
-
-					if translated:
-						label[context] = translated[0]
-					else:
-						wildcards.add(context)
-
-					translated = frozenset(translated)
-
-					# A conflict if the invocation goes to two different groups?
-					if len(translated) >= 2:
-						u.union(*translated)
-
-						print "Conflict"
-						print code.name
-						print type(op)
-						for inv in invocations:
-							print '\t*', self.groupLUT[inv], inv
-						print
-
-						# More that one call target.
-						self.realizable = False
-
-				for context in contexts-wildcards:
-					group = u[label[context]]
-					lut[group].add(context)
-
-				self.markDifferentContexts(code, contexts, lut, wildcards)
 
 	def isDifferent(self, code, c1, c2):
 		diff = self.different[code]
@@ -495,8 +431,7 @@ class ProgramCloner(object):
 		entryPoints[:] = newEP
 
 
-		# Mutate the callLUT
-
+		# Rewrite the callLUT
 		newCallLUT = {}
 		for obj, code in extractor.desc.callLUT.iteritems():
 			if code in self.indirectGroup:
@@ -615,29 +550,18 @@ def clone(console, extractor, entryPoints, adb):
 
 	cloner = ProgramCloner(console, adb, liveContexts)
 
-	numGroups = cloner.findInitialConflicts()
-	#cloner.makeGroups()
-
-#	oldNumGroups = 0
+	cloner.unifyContexts()
+	cloner.findInitialConflicts()
+	cloner.process()
+	numGroups = cloner.makeGroups()
 	originalNumGroups = len(cloner.liveFunctions)
-#	numGroups = originalNumGroups
-
-#	while numGroups > oldNumGroups:
-#		oldNumGroups = numGroups
-
-#		cloner.findConflicts()
-#		numGroups = cloner.makeGroups()
 
 	console.output("=== Split ===")
 	cloner.listGroups()
-	#console.output("Realizable: %r" % cloner.realizable)
-	#console.output("Num groups %d / %d / %d" %  (numGroups, oldNumGroups, originalNumGroups))
 	console.output("Num groups %d / %d" %  (numGroups, originalNumGroups))
-
 	console.output('')
-	console.end()
 
-	#assert cloner.realizable
+	console.end()
 
 	# Is cloning worth while?
 	if numGroups > originalNumGroups:

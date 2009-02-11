@@ -60,7 +60,7 @@ class ExtractDataflow(object):
 		return target
 
 	def assign(self, src, dst):
-		self.system.createAssign(src, dst)
+		return self.system.createAssign(src, dst)
 
 	def init(self, node, obj):
 		result = self.existingSlot(obj)
@@ -262,7 +262,6 @@ class ExtractDataflow(object):
 
 		if target is not None:
 			target.initializeType(self.system, self.system.canonical.existingType(node.object))
-			#self.assign(value, target)
 		else:
 			return value
 

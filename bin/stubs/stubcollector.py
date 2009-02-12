@@ -207,6 +207,7 @@ def stubgenerator(f):
 
 def makeStubs(extractor):
 	collector = StubCollector(extractor)
+	extractor.stubs = collector
 	for gen in stubgenerators:
 		gen(collector)
 	return collector

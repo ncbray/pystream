@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from . stubcollector import stubgenerator
+from .. stubcollector import stubgenerator
 
 from util import xtypes
 tupleiterator  = xtypes.TupleIteratorType

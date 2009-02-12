@@ -8,7 +8,7 @@ from util import xtypes
 method  = xtypes.MethodType
 function = xtypes.FunctionType
 
-from . stubcollector import stubgenerator
+from .. stubcollector import stubgenerator
 
 @stubgenerator
 def makeLLFunc(collector):

@@ -3,19 +3,13 @@ import copy
 import os
 import os.path
 
-#import optimization
-
 from util import assureDirectoryExists
-
 from decompiler.programextractor import extractProgram
-
-import imp
-
 import common.pipeline
+from . import compilerconsole
 
 import cProfile
 
-from . import compilerconsole
 
 # Thin wrappers made to work with decompiler.programextractor
 class InstWrapper(object):
@@ -109,10 +103,8 @@ class Makefile(object):
 		assert self.outdir, "No output directory declared."
 
 		e, entryPoints = extractProgram(self.moduleName, self.module, self.rawEntryPoints)
-
 		common.pipeline.evaluate(console, self.moduleName, e, entryPoints)
 
-##		# Output
+		# Output
 		assureDirectoryExists(self.outdir)
 		self.outfile = os.path.join(self.outdir, self.moduleName+'.py')
-##		marshal(self, program, self.entryPoints, self.outfile)

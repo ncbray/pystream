@@ -4,8 +4,6 @@ import collections
 
 import programIR.python.program as program
 
-from stubs import makeStubs
-
 from . decompiler import decompile
 from . errors import IrreducibleGraphException
 
@@ -117,8 +115,6 @@ class Extractor(object):
 
 		self.initalizeObjects()
 
-		self.stubs = makeStubs(self)
-
 
 
 	def flatTypeDict(self, cls):
@@ -178,9 +174,6 @@ class Extractor(object):
 		# HACK Prevents uglyness by masking the module dictionary.  This prevents leakage.
 		if not self.lazy:
 			self.replaceObject(sys.modules, {})
-
-		# Always need it, but might miss it in some cases (interpreter has internal refernece).
-		self.__getObject(__builtins__)
 
 		# Strings for mutating the image
 		self.desc.functionNameObj = self.getObject('function')
@@ -577,8 +570,13 @@ class Extractor(object):
 		return function
 
 
+from stubs import makeStubs
+
 def extractProgram(moduleName, module, rawEntryPoints):
 	extractor = Extractor()
+
+	# Create stub functions
+	makeStubs(extractor)
 
 	# Seed the search
 	moduleObj = extractor.getObject(module)

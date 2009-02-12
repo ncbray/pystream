@@ -2,14 +2,18 @@ from __future__ import absolute_import
 
 from  programIR.python.ast import *
 
-from . stubcollector import stubgenerator
-import types
+from .. stubcollector import stubgenerator
 
+import types
 import operator
+import util
 
 def noself(code):
 	code.selfparam = None
 	return code
+
+# HACK for hand-op
+func_globals_attr = util.uniqueSlotName(types.FunctionType.__dict__['func_globals'])
 
 @stubgenerator
 def makeInterpreterStubs(collector):
@@ -31,7 +35,6 @@ def makeInterpreterStubs(collector):
 	# 	__nonzero__
 	# 	__len__
 	# 	True
-#	fold(bool)(export(llast(simpleDescriptor(collector, 'convertToBool', ('o',), bool, hasSelfParam=False))))
 	@fold(bool)
 	@descriptive
 	@interpfunc
@@ -51,61 +54,22 @@ def makeInterpreterStubs(collector):
 	def buildTuple(*vargs):
 		return vargs
 
-	@export
-	@llast
-	def interpreterLoadGlobal():
-		# Param
-		function, name = Local('function'), Local('name')
+	@interpfunc
+	def interpreterLoadGlobal(function, name):
+		# HACK Causes a problem for cloning?
+		#globalDict = function.func_globals
+		globalDict = loadAttr(function, func_globals_attr)
 
-		# Temporaries
-		globalDict = Local('globalDict')
-		temp 	= Local('temp')
-		result 	= Local('result')
-		retp    = Local('internal_return')
+		if checkDict(globalDict, name):
+			return loadDict(globalDict, name)
+		else:
+			return loadDict(__builtins__, name)
 
-		# Instructions
-		b = Suite()
+	@interpfunc
+	def interpreterStoreGlobal(function, name, value):
+		globalDict = function.func_globals
+		storeDict(globalDict, name, value)
 
-		b.append(collector.loadAttribute(function, types.FunctionType, 'func_globals', globalDict))
-		b.append(Assign(Check(globalDict, 'Dictionary', name), temp))
-
-
-		t = Suite()
-		t.append(Assign(Load(globalDict, 'Dictionary', name), result))
-
-		f = Suite()
-		f.append(Assign(Load(collector.existing(__builtins__), 'Dictionary', name), result))
-
-		c = Condition(Suite(), temp)
-		b.append(Switch(c, t, f))
-
-		b.append(Return(result))
-
-		fname = 'interpreterLoadGlobal'
-		code = Code(fname, None, [function, name], ['function', 'name'], None, None, retp, b)
-		return code
-
-
-	@export
-	@llast
-	def interpreterStoreGlobal():
-		# Param
-		function, name, value = Local('function'), Local('name'), Local('value')
-		args = [function, name, value]
-
-		# Temporaries
-		globalDict = Local('globalDict')
-		retp    = Local('internal_return')
-
-		# Instructions
-		b = Suite()
-		b.append(collector.loadAttribute(function, types.FunctionType, 'func_globals', globalDict))
-		b.append(Store(globalDict, 'Dictionary', name, value))
-		b.append(collector.returnNone())
-
-		fname = 'interpreterStoreGlobal'
-		code = Code(fname, None, [function, name, value], ['function', 'name', 'value'], None, None, retp, b)
-		return code
 
 	def simpleAttrCall(name, attr, argnames):
 		assert isinstance(name, str), name
@@ -139,16 +103,12 @@ def makeInterpreterStubs(collector):
 
 	@interpfunc
 	def interpreter_getattribute(self, key):
-		selfType     = load(self, 'type')
-		selfTypeDict = load(selfType, 'dictionary')
-		call         = loadDict(selfTypeDict, '__getattribute__')
+		call = loadDict(load(load(self, 'type'), 'dictionary'), '__getattribute__')
 		return call(self, key)
 
 	@interpfunc
 	def interpreter_setattr(self, key, value):
-		selfType     = load(self, 'type')
-		selfTypeDict = load(selfType, 'dictionary')
-		call         = loadDict(selfTypeDict, '__setattr__')
+		call = loadDict(load(load(self, 'type'), 'dictionary'), '__setattr__')
 		return call(self, key, value)
 
 
@@ -179,9 +139,4 @@ def makeInterpreterStubs(collector):
 		export(llast(simpleAttrCall('interpreter%s' % op, op, ['self'])))
 
 
-
-	##export(llast(simpleAttrCall('interpreteris', 'is', ['self', 'other'])))
-	##export(llast(simpleAttrCall('interpreteris not', 'is not', ['self', 'other'])))
-	##
-	##export(llast(simpleAttrCall('interpreterin', 'in', ['self', 'other'])))
-	##export(llast(simpleAttrCall('interpreternot in', 'not in', ['self', 'other'])))
+	# TODO is / is not / in / not in

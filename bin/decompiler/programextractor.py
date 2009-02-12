@@ -115,8 +115,9 @@ class Extractor(object):
 		self.typeDictCache = {}
 		self.typeDictType = {}
 
-		self.stubs = makeStubs(self)
 		self.initalizeObjects()
+
+		self.stubs = makeStubs(self)
 
 
 

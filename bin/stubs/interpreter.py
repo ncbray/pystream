@@ -3,8 +3,6 @@ from __future__ import absolute_import
 from  programIR.python.ast import *
 
 from . stubcollector import stubgenerator
-from . llutil import simpleDescriptor
-#, allocate, getType, call, returnNone, type_lookup, inst_lookup, loadAttribute
 import types
 
 import operator
@@ -26,25 +24,32 @@ def makeInterpreterStubs(collector):
 	fold          = collector.fold
 	attachPtr     = collector.attachPtr
 
+	def interpfunc(f):
+		return export(noself(llfunc(f)))
+
 	# TODO should call:
 	# 	__nonzero__
 	# 	__len__
 	# 	True
-	fold(bool)(export(llast(simpleDescriptor(collector, 'convertToBool', ('o',), bool, hasSelfParam=False))))
-	fold(lambda o: not o)(export(llast(simpleDescriptor(collector, 'invertedConvertToBool', ('o',), bool, hasSelfParam=False))))
+#	fold(bool)(export(llast(simpleDescriptor(collector, 'convertToBool', ('o',), bool, hasSelfParam=False))))
+	@fold(bool)
+	@descriptive
+	@interpfunc
+	def convertToBool(o):
+		return allocate(bool)
+
+	@fold(lambda o: not o)
+	@descriptive
+	@interpfunc
+	def invertedConvertToBool(o):
+		return allocate(bool)
 
 	# Horrible hack, as vargs depend on creating a tuple,
 	# and creating a tuple depends on vargs.
-	@export
 	@descriptive
-	@noself
-	@llfunc
+	@interpfunc
 	def buildTuple(*vargs):
 		return vargs
-
-	# TODO accept arguments
-	#export(llast(simpleDescriptor(collector, 'buildList', (), list, hasSelfParam=False)))
-	#export(llast(simpleDescriptor(collector, 'buildMap', (), dict, hasSelfParam=False)))
 
 	@export
 	@llast
@@ -132,9 +137,19 @@ def makeInterpreterStubs(collector):
 
 		return simpleAttrCallBuilder
 
+	@interpfunc
+	def interpreter_getattribute(self, key):
+		selfType     = load(self, 'type')
+		selfTypeDict = load(selfType, 'dictionary')
+		call         = loadDict(selfTypeDict, '__getattribute__')
+		return call(self, key)
 
-	export(llast(simpleAttrCall('interpreter_getattribute', '__getattribute__', ['self', 'key'])))
-	export(llast(simpleAttrCall('interpreter_setattr', '__setattr__', ['self', 'key', 'value'])))
+	@interpfunc
+	def interpreter_setattr(self, key, value):
+		selfType     = load(self, 'type')
+		selfTypeDict = load(selfType, 'dictionary')
+		call         = loadDict(selfTypeDict, '__setattr__')
+		return call(self, key, value)
 
 
 	export(llast(simpleAttrCall('interpreter_getitem', '__getitem__', ['self', 'key'])))

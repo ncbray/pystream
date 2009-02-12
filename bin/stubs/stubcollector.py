@@ -99,9 +99,9 @@ class StubCollector(object):
 		self.extractor.desc.functions.append(code)
 		return code
 
-	def llfunc(self, f):
-		code = self.extractor.decompileFunction(f)
-		code = lltranslator.translate(self.extractor, code)
+	def llfunc(self, func):
+		code = self.extractor.decompileFunction(func)
+		code = lltranslator.translate(self.extractor, func, code)
 		self.extractor.desc.functions.append(code)
 		return code
 
@@ -129,7 +129,13 @@ class StubCollector(object):
 		return callback
 
 
-	def attachPtr(self, pyobj):
+	def attachPtr(self, pyobj, attr=None):
+		original = pyobj
+		if attr is not None:
+			d = pyobj.__dict__
+			assert attr in d, (pyobj, attr)
+			pyobj = pyobj.__dict__[attr]
+
 		ptr = self.cfuncptr(pyobj)
 
 		def callback(code):
@@ -144,7 +150,7 @@ class StubCollector(object):
 				print self.extractor.pointerToObject
 				print self.extractor.pointerToStub
 
-			assert code is call, (code, call)
+			assert code is call, (original, pyobj, code, call)
 
 			return code
 

@@ -1,20 +1,17 @@
 from __future__ import absolute_import
 
+# TODO remove once type__call__ and method__call__ are made into a functions.
 from programIR.python.ast import *
 
 # HACK for highlevel functions?
 from util import xtypes
-method = xtypes.MethodType
+method  = xtypes.MethodType
 function = xtypes.FunctionType
 
 from . stubcollector import stubgenerator
-from . llutil import simpleDescriptor
-#, allocate, getType, returnNone, call, operation, type_lookup, inst_lookup, loadAttribute
-
 
 @stubgenerator
 def makeLLFunc(collector):
-	attachAttrPtr = collector.attachAttrPtr
 	descriptive   = collector.descriptive
 	llast         = collector.llast
 	llfunc        = collector.llfunc
@@ -29,15 +26,16 @@ def makeLLFunc(collector):
 	### Object ###
 	##############
 
-	@attachAttrPtr(object, '__init__')
+	@attachPtr(object, '__init__')
 	@descriptive
 	@llfunc
 	def object__init__(self, *vargs):
 		pass
 
+	# TODO __getattr__ fallback?
 	# Exported for the method finding optimization
 	@export
-	@attachAttrPtr(object, '__getattribute__')
+	@attachPtr(object, '__getattribute__')
 	@llfunc
 	def object__getattribute__(self, field):
 		selfType = load(self, 'type')
@@ -75,96 +73,42 @@ def makeLLFunc(collector):
 		# HACK not found?
 		return desc
 
-	# TODO incomplete
-	# set object__getattribute__
-	@attachAttrPtr(object, '__setattr__')
-	@llast
-	def object__setattr__():
-		selfp = Local('internal_self')
-		self = Local('self')
 
-		# Param
-		field = Local('field')
-		value = Local('value')
-		retp  = Local('internal_return')
+	@attachPtr(object, '__setattr__')
+	@llfunc
+	def object__setattr__(self, field, value):
+		selfType     = load(self, 'type')
+		selfTypeDict = load(selfType, 'dictionary')
 
-		# Locals
-		cls     = Local('cls')
-		clsDict = Local('clsDict')
+		if checkDict(selfTypeDict, field):
+			desc = loadDict(selfTypeDict, field)
+			descTypeDict = load(load(desc, 'type'), 'dictionary')
+			if checkDict(descTypeDict, '__set__'):
+				loadDict(descTypeDict, '__set__')(desc, self, value)
+				return
+			elif check(self, 'dictionary'):
+				storeDict(load(self, 'dictionary'), field, value)
+				return
+		elif check(self, 'dictionary'):
+			# Duplicated to ensure the compiler sees it as mutually exclusive.
+			storeDict(load(self, 'dictionary'), field, value)
+			return
 
-		desc     = Local('desc')
-		descCls  = Local('descCls')
-		descDict = Local('descDict')
-		setter   = Local('setter')
+		# TODO exception
 
-		descExists = Local('descExists')
-		hasSetter  = Local('hasSetter')
-
-		selfDict   = Local('selfDict')
-
-		b = Suite()
-
-		b.append(collector.getType(self, cls))
-		b.append(Assign(Load(cls, 'LowLevel', collector.existing('dictionary')), clsDict))
-
-
-
-
-		t = Suite([])
-		t.append(Assign(Load(clsDict, 'Dictionary', field), desc))
-		t.append(collector.getType(desc, descCls))
-		t.append(Assign(Load(descCls, 'LowLevel', collector.existing('dictionary')), descDict))
-
-
-		ts = Suite()
-		ts.append(Assign(Load(descDict, 'Dictionary', collector.existing('__set__')),setter))
-		ts.append(Discard(Call(setter, [desc, self, value], [], None, None)))
-		ts.append(collector.returnNone())
-
-
-		f = Suite([])
-		f.append(Assign(Load(self, 'LowLevel', collector.existing('dictionary')), selfDict))
-		f.append(Store(selfDict, 'Dictionary', field, value))
-		f.append(collector.returnNone())
-
-		conditional = Local('conditional')
-		condSuite = Suite([])
-		condSuite.append(Assign(Check(descDict, 'Dictionary', collector.existing('__set__')), hasSetter))
-		cond = Condition(condSuite, hasSetter)
-		t.append(Switch(cond, ts, f))
-
-
-		f = Suite([])
-		f.append(Assign(Load(self, 'LowLevel', collector.existing('dictionary')), selfDict))
-		f.append(Store(selfDict, 'Dictionary', field, value))
-		f.append(collector.returnNone())
-
-
-		conditional = Local('conditional')
-		condSuite = Suite([])
-		condSuite.append(Assign(Check(clsDict, 'Dictionary', field), descExists))
-		cond = Condition(condSuite, descExists)
-		b.append(Switch(cond, t, f))
-
-		b.append(collector.returnNone())
-
-
-		name = 'object__setattr__'
-		code = Code(name, selfp, [self, field, value], ['self', 'field', 'value'], None, None, retp, b)
-		return code
 
 
 	############
 	### Type ###
 	############
 
-	@attachAttrPtr(object, '__new__')
+	@attachPtr(object, '__new__')
 	@llfunc
 	def object__new__(cls, *vargs):
 		return allocate(cls)
 
 	# Ugly: directly uses internal_self parameter
-	@attachAttrPtr(type, '__call__')
+	@attachPtr(type, '__call__')
 	@llast
 	def type__call__():
 		# Parameters
@@ -201,7 +145,7 @@ def makeLLFunc(collector):
 	### Function ###
 	################
 
-	## TODO create unbound methods if inst == None?
+	# TODO create unbound methods if inst == None?
 	# Replace object must be on outside?
 	@export
 	@replaceObject(xtypes.FunctionType.__get__)
@@ -214,7 +158,6 @@ def makeLLFunc(collector):
 	### Method ###
 	##############
 
-	#@export
 	@replaceAttr(xtypes.MethodType, '__init__')
 	@highLevelStub
 	def method__init__(self, func, inst, cls):
@@ -227,7 +170,7 @@ def makeLLFunc(collector):
 	# High level, give or take argument uglyness.
 	# Exported for method call optimization
 	@export
-	@attachAttrPtr(xtypes.MethodType, '__call__')
+	@attachPtr(xtypes.MethodType, '__call__')
 	@llast
 	def method__call__():
 		self = Local('self')
@@ -251,33 +194,13 @@ def makeLLFunc(collector):
 		return code
 
 
-	# Low level, requires hidden function.
 	# Getter for function, returns method.
 	@export
-	@attachAttrPtr(xtypes.MethodDescriptorType, '__get__')
-	@attachAttrPtr(xtypes.WrapperDescriptorType, '__get__') # HACK?
-	@llast
-	def methoddescriptor__get__():
-
-		# Param
-		selfp = Local('internal_self')
-		self = Local('self')
-		inst = Local('inst')
-		cls = Local('cls')
-		retp = Local('internal_return')
-
-		# Locals
-		func 	= Local('func')
-		result 	= Local('result')
-
-		b = Suite()
-		b.append(Assign(Load(self, 'LowLevel', collector.existing('function')), func))
-		b.append(Assign(Call(collector.existing(xtypes.MethodType), [func, inst, cls], [], None, None), result))
-		b.append(Return(result))
-
-		name = 'methoddescriptor__get__'
-		code = Code(name, selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
-		return code
+	@attachPtr(xtypes.MethodDescriptorType, '__get__')
+	@attachPtr(xtypes.WrapperDescriptorType, '__get__') # HACK?
+	@llfunc
+	def methoddescriptor__get__(self, inst, cls):
+		return method(load(self, 'function'), inst, cls)
 
 
 	#########################
@@ -286,86 +209,29 @@ def makeLLFunc(collector):
 
 	# Used for a slot data getter.
 	# Low level, gets slot attribute.
-	@attachAttrPtr(xtypes.MemberDescriptorType, '__get__')
-	@llast
-	def memberdescriptor__get__():
-		# Param
-		selfp = Local('internal_self')
-		self = Local('self')
-		inst = Local('inst')
-		cls = Local('cls')
-		retp = Local('internal_return')
-
-		# Locals
-		slot = Local('slot')
-		result = Local('result')
-
-		b = Suite()
-		b.append(Assign(Load(self, 'LowLevel', collector.existing('slot')), slot))
-		b.append(Assign(Load(inst, 'Attribute', slot), result))
-		b.append(Return(result))
-
-
-		name = 'memberdescriptor__get__'
-		code = Code(name, selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
-		return code
+	@attachPtr(xtypes.MemberDescriptorType, '__get__')
+	@llfunc
+	def memberdescriptor__get__(self, inst, cls):
+		return loadAttr(inst, load(self, 'slot'))
 
 	# For data descriptors, __set__
 	# Low level, involves slot manipulation.
-	@attachAttrPtr(xtypes.MemberDescriptorType, '__set__')
-	@llast
-	def memberdescriptor__set__():
-		# Self
-		selfp = Local('internal_self')
-		self = Local('self')
-
-		# Param
-		inst 	= Local('inst')
-		value 	= Local('value')
-		slot 	= Local('slot')
-		retp    = Local('internal_return')
-
-		# Instructions
-		b = Suite()
-		b.append(Assign(Load(self, 'LowLevel', collector.existing('slot')), slot))
-		b.append(Store(inst, 'Attribute', slot, value))
-		b.append(collector.returnNone())
-
-		name = 'memberdescriptor__set__'
-		code = Code(name, selfp, [self, inst, value], ['self', 'inst', 'value'], None, None, retp, b)
-		return code
+	@attachPtr(xtypes.MemberDescriptorType, '__set__')
+	@llfunc
+	def memberdescriptor__set__(self, inst, value):
+		storeAttr(inst, load(self, 'slot'), value)
 
 
 	###########################
 	### Property Descriptor ###
 	###########################
 
-	# Low level, requires hidden function.
-	# Getter for function, returns method.
-	@attachAttrPtr(property, '__get__')
+	# TODO test?
+	@attachPtr(property, '__get__')
 	@descriptive # HACK for debugging.
-	@llast
-	def property__get__():
-		# Param
-		selfp = Local('internal_self')
-		self = Local('self')
-		inst = Local('inst')
-		cls = Local('cls')
-		retp = Local('internal_return')
-
-		# Locals
-		func 	= Local('func')
-		result 	= Local('result')
-
-		b = Suite()
-
-		b.append(collector.attributeCall(self, property, 'fget', [inst], [], None, None, result))
-		b.append(Return(result))
-
-		name = 'property__get__'
-		code = Code(name, selfp, [self, inst, cls], ['self', 'inst', 'cls'], None, None, retp, b)
-		return code
-
+	@llfunc
+	def property__get__(self, inst, cls):
+		return self.fget(self, inst)
 
 	###############
 	### Numeric ###
@@ -373,76 +239,22 @@ def makeLLFunc(collector):
 
 	# A rough approximation for most binary and unary operations.
 	# Descriptive stub, and a hack.
-	#@export
 	@descriptive
-	@llast
-	def dummyBinaryOperation():
-		selfp = Local('internal_self')
-		t = Local('type_')
-		inst = Local('inst')
-		retp = Local('internal_return')
-
-		args = []
-		args.append(Local('self'))
-		args.append(Local('other'))
-
-		b = Suite()
-		b.append(collector.getType(args[0], t))
-		b.append(collector.allocate(t, inst))
-		# HACK no init?  Don't know what arguments to pass...
-
-		# Return the allocated object
-		b.append(Return(inst))
-
-		name = 'dummyBinaryOperation'
-		code = Code(name, selfp, args, ['self', 'other'], None, None, retp, b)
-		return code
+	@llfunc
+	def dummyBinaryOperation(self, other):
+		selfType = load(self, 'type')
+		return allocate(selfType)
 
 	@descriptive
-	@llast
-	def dummyCompareOperation():
-		selfp = Local('internal_self')
-		t = Local('type_')
-		inst = Local('inst')
-		retp = Local('internal_return')
-
-		args = []
-		args.append(Local('self'))
-		args.append(Local('other'))
-
-		b = Suite()
-		b.append(collector.allocate(collector.existing(bool), inst))
-		# HACK no init?  Don't know what arguments to pass...
-
-		# Return the allocated object
-		b.append(Return(inst))
-
-		name = 'dummyCompareOperation'
-		code = Code(name, selfp, args, ['self', 'other'], None, None, retp, b)
-		return code
+	@llfunc
+	def dummyCompareOperation(self, other):
+		return allocate(bool)
 
 	@descriptive
-	@llast
-	def dummyUnaryOperation():
-		selfp = Local('internal_self')
-		t = Local('type_')
-		inst = Local('inst')
-		retp = Local('internal_return')
-
-		args = []
-		args.append(Local('self'))
-
-		b = Suite()
-		b.append(collector.getType(args[0], t))
-		b.append(collector.allocate(t, inst))
-		# HACK no init?  Don't know what arguments to pass...
-
-		# Return the allocated object
-		b.append(Return(inst))
-
-		name = 'dummyUnaryOperation'
-		code = Code(name, selfp, args, ['self'], None, None, retp, b)
-		return code
+	@llfunc
+	def dummyUnaryOperation(self):
+		selfType = load(self, 'type')
+		return allocate(selfType)
 
 	@descriptive
 	@llfunc
@@ -455,81 +267,70 @@ def makeLLFunc(collector):
 			return NotImplemented
 
 	from common import opnames
+	def typehasattr(t, name):
+		return name in t.__dict__
+
 	def attachDummyNumerics(t, dummyBinary, dummyCompare, dummyUnary):
 		for name in opnames.forward.itervalues():
-			if hasattr(t, name):
+			if typehasattr(t, name):
 				if name in ('__eq__', '__ne__', '__lt__', '__le__', '__gt__', '__ge__'):
-					attachAttrPtr(t, name)(dummyCompare)
+					attachPtr(t, name)(dummyCompare)
 				else:
-					attachAttrPtr(t, name)(dummyBinary)
+					attachPtr(t, name)(dummyBinary)
 
 		for name in opnames.reverse.itervalues():
-			if hasattr(t, name):
+			if typehasattr(t, name):
 				if name in ('__eq__', '__ne__', '__lt__', '__le__', '__gt__', '__ge__'):
-					attachAttrPtr(t, name)(dummyCompare)
+					attachPtr(t, name)(dummyCompare)
 				else:
-					attachAttrPtr(t, name)(dummyBinary)
+					attachPtr(t, name)(dummyBinary)
 
 		for name in opnames.inplace.itervalues():
-			if hasattr(t, name):
-				attachAttrPtr(t, name)(dummyBinary)
+			if typehasattr(t, name):
+				attachPtr(t, name)(dummyBinary)
 
 		for name in opnames.unaryPrefixLUT.itervalues():
-			if hasattr(t, name):
-				attachAttrPtr(t, name)(dummyUnary)
+			if typehasattr(t, name):
+				attachPtr(t, name)(dummyUnary)
 
-	##	if hasattr(t, '__nonzero__'):
-	##		nz = descriptive(llast(simpleDescriptor('%s__nonzero__' % t.__name__, (), bool)))
-	##		attachAttrPtr(t, '__nonzero__')(nz)
-
-	attachDummyNumerics(int,   int_binary_op, dummyCompareOperation, dummyUnaryOperation)
+	attachDummyNumerics(int,   int_binary_op,        dummyCompareOperation, dummyUnaryOperation)
 	attachDummyNumerics(float, dummyBinaryOperation, dummyCompareOperation, dummyUnaryOperation)
 	attachDummyNumerics(long,  dummyBinaryOperation, dummyCompareOperation, dummyUnaryOperation)
 	attachDummyNumerics(str,   dummyBinaryOperation, dummyCompareOperation, dummyUnaryOperation)
 
-	int_rich_compare_stub = export(descriptive(llast(simpleDescriptor(collector, 'int_rich_compare', ('a',  'b'), bool))))
-
+	@export
+	@descriptive
+	@llfunc
+	def int_rich_compare(self, other):
+		return allocate(bool)
 
 	#############
 	### Tuple ###
 	#############
 
-	@attachAttrPtr(xtypes.TupleType, '__getitem__')
+	@attachPtr(xtypes.TupleType, '__getitem__')
 	@descriptive
-	@llast
-	def tuple__getitem__():
-		# Self
-		self = Local('internal_self')
-
-		# Param
-		inst 	= Local('self')
-		key 	= Local('key')
-		retp    = Local('internal_return')
-
-		# Temporaries
-		result  = Local('result')
-
-		# Instructions
-		b = Suite()
-		b.append(Assign(Load(inst, 'Array', key), result))
-		b.append(Return(result))
-
-		name = 'tuple__getitem__'
-		code = Code(name, self, [inst, key], ['self', 'key'], None, None, retp, b)
-		return code
+	@llfunc
+	def tuple__getitem__(self, key):
+		return loadArray(self, key)
 
 	#########################
 	### Builtin functions ###
 	#########################
 
-	# Easiest as a descriptive stub.
-	# Should be a implementation, for precision, however.
-	issubclass_stub = fold(issubclass)(attachPtr(issubclass)(llast(simpleDescriptor(collector, 'issubclass', ('class',  'classinfo'), bool))))
+	# TODO full implementation requires loop unrolling?
+	@fold(issubclass)
+	@attachPtr(issubclass)
+	@descriptive
+	@llfunc
+	def issubclass_stub(cls, clsinfo):
+		return allocate(bool)
 
 	@attachPtr(isinstance)
 	@llfunc
 	def isinstance_stub(obj, classinfo):
 		return issubclass(load(obj, 'type'), classinfo)
+
 
 	# TODO multiarg?
 	@fold(max)
@@ -546,8 +347,22 @@ def makeLLFunc(collector):
 		return a if a < b else b
 
 
-	chr_stub = fold(chr)(attachPtr(chr)(descriptive(llast(simpleDescriptor(collector, 'chr', ('i',), str)))))
-	ord_stub = fold(ord)(attachPtr(ord)(descriptive(llast(simpleDescriptor(collector, 'ord', ('c',), int)))))
+	@fold(chr)
+	@attachPtr(chr)
+	@descriptive
+	@llfunc
+	def chr_stub(i):
+		return allocate(str)
 
-	# String funcitons
-	str_getitem_stub = attachAttrPtr(str, '__getitem__')(descriptive(llast(simpleDescriptor(collector, 'str__getitem__', ('self', 'index',), str))))
+	@fold(ord)
+	@attachPtr(ord)
+	@descriptive
+	@llfunc
+	def ord_stub(c):
+		return allocate(int)
+
+	@attachPtr(str, '__getitem__')
+	@descriptive
+	@llfunc
+	def str__getitem__(self, index):
+		return allocate(str)

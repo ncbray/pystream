@@ -17,17 +17,26 @@ def checkCallArgs(node, count):
 class LLTranslator(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, extractor):
+	def __init__(self, extractor, func):
 		self.extractor = extractor
+		self.func = func
+
 		self.defn      = {}
 
 		self.specialGlobals = set(('allocate',
 			'load',      'store',      'check',
+			'loadAttr',  'storeAttr',  'checkAttr',
 			'loadDict',  'storeDict',  'checkDict',
 			'loadArray', 'storeArray', 'checkArray'))
 
 	def resolveGlobal(self, name):
-		pyobj = __builtins__[name]
+		glbls = self.func.func_globals
+
+		if name in glbls:
+			pyobj = glbls[name]
+		else:
+			pyobj = __builtins__[name]
+
 		obj = self.extractor.getObject(pyobj)
 		e = ast.Existing(obj)
 		self.defn[e] = e
@@ -85,9 +94,21 @@ class LLTranslator(object):
 				elif defn is 'check':
 					checkCallArgs(node, 2)
 					node = ast.Check(node.args[0], 'LowLevel', node.args[1])
+				elif defn is 'loadAttr':
+					checkCallArgs(node, 2)
+					node = ast.Load(node.args[0], 'Attribute', node.args[1])
+				elif defn is 'storeAttr':
+					checkCallArgs(node, 3)
+					node = ast.Store(node.args[0], 'Attribute', node.args[1], node.args[2])
+				elif defn is 'checkAttr':
+					checkCallArgs(node, 2)
+					node = ast.Check(node.args[0], 'Attribute', node.args[1])
 				elif defn is 'loadDict':
 					checkCallArgs(node, 2)
 					node = ast.Load(node.args[0], 'Dictionary', node.args[1])
+				elif defn is 'storeDict':
+					checkCallArgs(node, 3)
+					node = ast.Store(node.args[0], 'Dictionary', node.args[1], node.args[2])
 				elif defn is 'checkDict':
 					checkCallArgs(node, 2)
 					node = ast.Check(node.args[0], 'Dictionary', node.args[1])
@@ -146,7 +167,7 @@ class LLTranslator(object):
 		# TODO eliminate unessisary?
 		return xform.allChildren(self, node)
 
-	@dispatch(ast.BinaryOp)
+	@dispatch(ast.BinaryOp, ast.GetAttr)
 	def visitExpr(self, node):
 		return xform.allChildren(self, node)
 
@@ -160,6 +181,6 @@ class LLTranslator(object):
 		#astpprint.pprint(node)
 		return node
 
-def translate(extractor, code):
-	llt = LLTranslator(extractor)
+def translate(extractor, func, code):
+	llt = LLTranslator(extractor, func)
 	return llt.process(code)

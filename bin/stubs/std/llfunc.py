@@ -57,7 +57,14 @@ def makeLLFunc(collector):
 				# It's a data descriptor
 				return loadDict(descDict, '__get__')(desc, self, selfType)
 
-		if check(self, 'dictionary'):
+		if checkDict(typeDict, '__dict__'):
+			# TODO Get the self dictionary using the dictionary descriptor.
+			# Requires get/set support
+#			dictDesc     = loadDict(typeDict, '__dict__')
+#			dictDescType = load(dictDesc, 'type')
+#			dictDescDict = load(dictDescType, 'dictionary')
+#			selfDict     = loadDict(dictDescDict, '__get__')(dictDesc, self, selfType)
+
 			selfDict = load(self, 'dictionary')
 			if checkDict(selfDict, field):
 				# Field in instance dictionary

@@ -46,8 +46,36 @@ PyCFunction_cfuncptr(PyObject *self, PyObject *args)
 	return PyInt_FromSsize_t(Py_ssize_t(ptr)); 
 }
 
+PyObject *
+PyCFunction_getsetptrs(PyObject *self, PyObject *args)
+{
+	PyObject *func;
+	PyObject *tup;
+	void *get = 0;
+	void *set = 0;
+
+	if (!PyArg_ParseTuple(args, "O:getsetptrs", &func)) return NULL;
+
+	if (strcmp(func->ob_type->tp_name, "getset_descriptor") == 0)
+	{
+		get = ((PyGetSetDescrObject *)func)->d_getset->get;
+		set = ((PyGetSetDescrObject *)func)->d_getset->set;
+	}
+	else
+	{
+		PyErr_SetString(PyExc_TypeError, "Argument must be a getset.");
+		return NULL;
+	}
+
+	tup = PyTuple_New(2);
+	PyTuple_SET_ITEM(tup, 0, PyInt_FromSsize_t(Py_ssize_t(get)));
+	PyTuple_SET_ITEM(tup, 1, PyInt_FromSsize_t(Py_ssize_t(set)));
+	return tup;
+}
+
 static PyMethodDef BindMethods[] = {
-	{"cfuncptr", PyCFunction_cfuncptr, METH_VARARGS, ""},
+	{"cfuncptr",  PyCFunction_cfuncptr,   METH_VARARGS, ""},
+	{"getsetptrs", PyCFunction_getsetptrs, METH_VARARGS, ""},
 	{NULL, NULL, 0, NULL}
 };
 

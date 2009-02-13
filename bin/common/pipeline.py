@@ -39,7 +39,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 		desc = extractor.desc
 
 		for code in desc.functions:
-			if code not in extractor.stubs.descriptiveLUT and code in live:
+			if not code.annotation.descriptive and code in live:
 				simplify(extractor, adb, code)
 		console.end()
 
@@ -49,8 +49,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 		# Needs to be done before cloning, as cloning can only
 		# redirect direct calls.
 		for func in adb.liveFunctions():
-			if not func in extractor.stubs.descriptiveLUT:
-				callConverter(extractor, adb, func)
+			callConverter(extractor, adb, func)
 		console.end()
 
 	if True:
@@ -63,12 +62,13 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 def cpaAnalyze(console, e, entryPoints):
 	console.begin('cpa analysis')
 	result = analysis.cpa.evaluate(console, e, entryPoints)
+	console.output('')
 	console.output("Constraints:   %d" % len(result.constraints))
 	console.output("Contexts:      %d" % len(result.liveContexts))
 	console.output("Code:          %d" % len(result.liveCode))
 	console.output("Contexts/Code: %.1f" % (len(result.liveContexts)/max(len(result.liveCode), 1)))
 	console.output("Slot Memory:   %s" % util.memorySizeString(result.slotMemory()))
-
+	console.output('')
 	console.output("Decompile:     %s" % util.elapsedTimeString(result.decompileTime))
 	console.output("Solve:         %s" % util.elapsedTimeString(result.solveTime))
 	console.end()

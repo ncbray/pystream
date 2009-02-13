@@ -35,16 +35,18 @@ def makeInit(name, fields, types, optional):
 			inits.append('\tif %s: %s\n' % (t, r))
 		elif field not in optional:
 			inits.append('\tassert %s != None, "Field %s.%s is not optional."\n' % (field, name, field))
-			
+
 		inits.append('\tself.%s = %s\n' % (field, field))
-	
+
+	inits.append('\tself.annotation = self.emptyAnnotation')
+
 	code = "def __init__(%s):\n\tsuper(%s, self).__init__()\n%s" % (args, name, ''.join(inits))
 	return code
 
 def makeRepr(name, fields):
 	interp = ", ".join(['%r']*len(fields))
 	fields = " ".join("self.%s,"%field for field in fields)
-	
+
 	code = """def __repr__(self):
 	return "%s(%s)" %% (%s)
 """ % (name, interp, fields)
@@ -60,7 +62,7 @@ def makeAccept(name):
 	return code
 
 def makeGetChildren(fields):
-	children = ' '.join(["self.%s," % field for field in fields])		
+	children = ' '.join(["self.%s," % field for field in fields])
 	code = """def children(self):
 	return (%s)
 """ % (children)
@@ -78,7 +80,7 @@ def makeGetFields(fields):
 
 
 def makeHash(fields):
-	children = ' '.join(["self.%s," % field for field in fields])	
+	children = ' '.join(["self.%s," % field for field in fields])
 	code = """def asthash(self):
 	return id(type(self))^hash((%s))
 """ % (children)
@@ -107,10 +109,10 @@ def makeSetter(name, field, types, optional):
 		inits.append('\tassert not(%s), (type(self), %r, value)\n' % (t, field))
 	elif not optional:
 		inits.append('\tassert value != None, "Field %s.%s is not optional."\n' % (name, field))
-			
+
 	inits.append('\tself._%s = value\n' % (field))
 
-	
+
 	code = "def __set_%s__(self, value):\n%s" % (field, ''.join(inits))
 
 	return code

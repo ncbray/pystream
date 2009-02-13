@@ -1,8 +1,20 @@
+from .. import annotations
+
+
+emptyCodeAnnotation  = annotations.CodeAnnotation()
+emptyOpAnnotation    = annotations.OpAnnotation()
+emptySlotAnnotation  = annotations.OpAnnotation()
+
 def isPythonAST(ast):
 	return isinstance(ast, ASTNode)
 
 class ASTNode(object):
-	__slots__ = '__weakref__'
+	__slots__ = 'annotation', '__weakref__'
+
+	emptyAnnotation = None
+
+	def __init__(self):
+		self.annotation = self.emptyAnnotation
 
 ##	def isConstant(self):
 ##		return False
@@ -19,8 +31,13 @@ class ASTNode(object):
 	def isReference(self):
 		return False
 
+	def rewriteAnnotation(self, **kwds):
+		self.annotation = self.annotation.rewrite(**kwds)
+
 class Expression(ASTNode):
 	__slots__ = ()
+
+	emptyAnnotation = emptyOpAnnotation
 
 	def returnsValue(self):
 		return True
@@ -34,11 +51,15 @@ class LLExpression(Expression):
 class Reference(Expression):
 	__slots__ = ()
 
+	emptyAnnotation = emptySlotAnnotation
+
 	def isReference(self):
 		return True
 
 class Statement(ASTNode):
 	__slots__ = ()
+
+	emptyAnnotation = emptyOpAnnotation
 
 class SimpleStatement(Statement):
 	__slots__ = ()

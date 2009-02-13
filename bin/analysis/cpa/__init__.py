@@ -270,7 +270,7 @@ class InterproceduralDataflow(object):
 		sig = targetcontext.signature
 		code = sig.code
 
-		if code in self.extractor.stubs.foldLUT:
+		if code.annotation.fold:
 			# It's foldable.
 			assert code.vparam is None, code.name
 			assert code.kparam is None, code.name
@@ -282,7 +282,7 @@ class InterproceduralDataflow(object):
 				if notConst(param): return False
 
 			params = [param.obj for param in sig.params]
-			result = foldFunctionIR(self.extractor, self.extractor.stubs.foldLUT[code], params)
+			result = foldFunctionIR(self.extractor, code.annotation.fold, params)
 			resultxtype = self.canonical.existingType(result)
 
 			# Set the return value
@@ -325,9 +325,6 @@ class InterproceduralDataflow(object):
 	def initCodeInfo(self, code):
 		# HACK still called functionInfo
 		info = self.db.functionInfo(code)
-		info.descriptive = code in self.extractor.stubs.descriptiveLUT
-		info.fold        = code in self.extractor.stubs.foldLUT
-		info.returnSlot  = code.returnparam
 
 	def bindCall(self, cop, caller, targetcontext):
 		assert isinstance(cop, base.OpContext), type(cop)
@@ -394,6 +391,10 @@ class InterproceduralDataflow(object):
 
 		self.solveTime = end-start-self.decompileTime
 
+	def annotate(self):
+		for code, contexts in self.codeContexts.iteritems():
+			code.annotation = code.annotation.rewrite(contexts=tuple(contexts))
+
 	def checkConstraints(self):
 		for c in self.constraints:
 			c.check(self.console)
@@ -414,8 +415,8 @@ def evaluate(console, extractor, entryPoints):
 		dataflow.addEntryPoint(funcast, funcobj, args)
 
 	dataflow.solve()
-
 	dataflow.checkConstraints()
+	dataflow.annotate()
 
 	# HACK?
 	dataflow.db.load(dataflow)

@@ -35,7 +35,7 @@ class ClassBuilder(object):
 			self.d['__fields__'] = fields
 		else:
 			fields = self.d['__fields__']
-		
+
 			if isinstance(fields, str):
 				fields = (fields,)
 				self.d['__fields__'] = fields
@@ -58,7 +58,7 @@ class ClassBuilder(object):
 
 	def getOptional(self, fields):
 		optional = self.d.get('__optional__', ())
-		
+
 		if isinstance(optional, str):
 			optional = (optional,)
 
@@ -90,15 +90,13 @@ class ClassBuilder(object):
 			return self.makeWrappedFieldSlots(fields, types, optional)
 		else:
 			return self.makeDirectFieldSlots(fields, types, optional)
-		
-		return slots
 
 	def appendToExistingSlots(self, slots):
 		# Prepend the fields to the existing slots declaration.
 		existing = self.d.get('__slots__', ())
 		if isinstance(existing, str):
 			existing = (existing,)
-			
+
 		slots.extend(existing)
 		self.d['__slots__'] = tuple(slots)
 		return slots
@@ -134,12 +132,12 @@ class ClassBuilder(object):
 		optional = self.getOptional(fields)
 
 		shared   = self.getShared()
-		
+
 		slots = self.makeFieldSlots(fields, types, optional)
 		slots = self.appendToExistingSlots(slots)
 
 		self.addDefaultMethods(fields, types, optional)
-		
+
 		return self
 
 	def build(self):
@@ -170,7 +168,7 @@ def children(node):
 		return node
 	else:
 		return node.children()
-	
+
 def reconstruct(node, newchildren):
 	if isinstance(node, LeafTypes):
 		assert not newchildren, newchildren
@@ -179,7 +177,10 @@ def reconstruct(node, newchildren):
 		return type(node)(newchildren)
 	else:
 		try:
-			return type(node)(*newchildren)
+			newnode = type(node)(*newchildren)
+			assert hasattr(node, 'annotation'), node
+			newnode.annotation = node.annotation
+			return newnode
 		except:
 			print "error", node
 			print newchildren

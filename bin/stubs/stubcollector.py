@@ -13,8 +13,6 @@ class StubCollector(object):
 		self.extractor = extractor
 
 		self.exports = {}
-		self.foldLUT = {}
-		self.descriptiveLUT = {}
 
 		self.highLevelGlobals 	= {'method':xtypes.MethodType}
 		self.highLevelLUT 	= {}
@@ -159,13 +157,13 @@ class StubCollector(object):
 	def fold(self, func):
 		def callback(code):
 			assert isinstance(code, ast.Code), type(code)
-			self.foldLUT[code] = func
+			code.rewriteAnnotation(fold=func)
 			return code
 		return callback
 
 	def descriptive(self,code):
 		assert isinstance(code, ast.Code), type(code)
-		self.descriptiveLUT[code] = True
+		code.rewriteAnnotation(descriptive=True)
 		return code
 
 

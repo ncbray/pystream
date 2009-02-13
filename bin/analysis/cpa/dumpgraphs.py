@@ -94,7 +94,7 @@ def dump(data, entryPoints, links, reportDir):
 		if node is not None:
 			code = node
 
-			if data.db.functionInfo(code).descriptive:
+			if code.annotation.descriptive:
 				nodecolor = "#FF3333"
 			elif code.selfparam is None:
 				nodecolor = '#BBBBBB'

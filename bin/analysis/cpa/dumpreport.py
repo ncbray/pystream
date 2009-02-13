@@ -177,6 +177,7 @@ def dumpHeader(out):
 
 
 def dumpFunctionInfo(func, data, links, out, scg):
+	code = func
 	out.begin('h3')
 	outputCodeShortName(out, func)
 	out.end('h3')
@@ -185,14 +186,14 @@ def dumpFunctionInfo(func, data, links, out, scg):
 	funcOps = data.adb.functionOps(func)
 	funcLocals = data.adb.functionLocals(func)
 
-	if info.descriptive:
+	if code.annotation.descriptive:
 		out.begin('div')
 		out.begin('b')
 		out << 'descriptive'
 		out.end('b')
 		out.end('div')
 
-	if info.fold:
+	if code.annotation.fold:
 		out.begin('div')
 		out.begin('b')
 		out << 'fold'

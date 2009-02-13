@@ -391,11 +391,14 @@ class ProgramCloner(object):
 			for group in groups:
 				if len(groups) > 1:
 					name = "%s_clone_%d" % (code.name, uid)
+					uid += 1
 				else:
 					name = code.name
 
-				newfunc[code][id(group)] = ast.Code(name, None, None, None, None, None, None, None)
-				uid += 1
+				newcode =  ast.Code(name, None, None, None, None, None, None, None)
+				newcode.annotation = code.annotation
+
+				newfunc[code][id(group)] = newcode
 		return newfunc
 
 
@@ -461,14 +464,11 @@ class FunctionCloner(object):
 
 		self.localMap = {}
 
-
 		self.originalInfo = self.adb.db.functionInfo(self.sourcefunction)
 		self.newInfo      = self.adb.db.functionInfo(self.destfunction)
 
 		# Keep the function annotations.
 		self.newInfo.original    = self.originalInfo.original
-		self.newInfo.descriptive = self.originalInfo.descriptive
-		self.newInfo.returnSlot  = self.translateLocal(self.originalInfo.returnSlot)
 
 		self.newInfo.contexts.update(group)
 

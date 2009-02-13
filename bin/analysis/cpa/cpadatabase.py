@@ -11,9 +11,6 @@ class FunctionInfo(object):
 	def __init__(self, function):
 		self.function    = function
 		self.original    = function
-		self.descriptive = False
-		self.fold        = False
-		self.returnSlot  = None
 
 		self.contexts    = set()
 

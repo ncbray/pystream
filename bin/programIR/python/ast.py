@@ -472,6 +472,8 @@ class Code(CompoundStatement):
 	__optional__ 	= 'selfparam', 'parameters', 'parameternames', 'vparam', 'kparam', 'returnparam', 'ast'
 	__shared__      = True
 
+	emptyAnnotation = emptyCodeAnnotation
+
 	def __repr__(self):
 		return "Code(%s/%d)" % (self.name, id(self))
 

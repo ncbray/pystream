@@ -15,15 +15,23 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 
 	# Returns a set of non-contextual functions
 	def invocationsForOp(self, function, op):
-		opinfo = self.db.functionInfo(function).opInfo(op).merged
-		return set([func for context, func in opinfo.invokes])
+		#assert op.annotation.invokes is not None, op
+
+		if op.annotation.invokes is not None:
+			return set([func for func, context in op.annotation.invokes[0]])
+		else:
+			return None
 
 	# Returns a set of contexts.
 	# TODO Should return a set of context functions?
-	def _invocationsForContextOp(self, function, op, context):
-		opinfo = self.db.functionInfo(function).opInfo(op).context(context)
-		return set([context for context, func in opinfo.invokes])
+	def _invocationsForContextOp(self, code, op, context):
+		cindex  = code.annotation.contexts.index(context)
+		invokes = op.annotation.invokes
 
+		if invokes is not None:
+			return set([context for func, context in invokes[1][cindex]])
+		else:
+			return set()
 
 	# Returns a set of contextual objects
 	def modificationsForOp(self, function, op):
@@ -54,9 +62,8 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 		if original is newast or isinstance(original, dontTrack) or isinstance(newast, dontTrack):
 			return
 
-		# CPA transfer
-		finfo = self.db.functionInfo(function)
-		finfo.trackRewrite(original, newast)
+		#Annotation transfer
+		newast.annotation = original.annotation
 
 		# Lifetime info transfer
 		if hasattr(self.db, 'lifetime'):
@@ -85,24 +92,6 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 		assert isinstance(srcOp, (ast.Expression, ast.Statement)), srcOp
 		assert isinstance(dstOp, (ast.Expression, ast.Statement)), dstOp
 
-		# CPA transfter
-		srcInfo = self.db.functionInfo(srcFunc).opInfo(srcOp)
-		dstInfo = self.db.functionInfo(dstFunc).opInfo(dstOp)
-
-		for context in contexts:
-			cSrcInfo = srcInfo.context(context)
-			cDstInfo = dstInfo.context(context)
-
-			if invokeMap:
-				cDstInfo.references.update(cSrcInfo.references)
-				cDstInfo.invokes.update([invokeMap(inv) for inv in cSrcInfo.invokes])
-			else:
-
-				cDstInfo.merge(cSrcInfo)
-
-		dstInfo.merge()
-		
-
 		# Lifetime info transfer
 		if hasattr(self.db, 'lifetime'):
 			readDB = self.db.lifetime.readDB
@@ -116,13 +105,13 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 			dstInfo = modifyDB[dstFunc][dstOp]
 			for context in contexts:
 				dstInfo.merge(context, srcInfo[context])
-				
-			
+
+
 	def trackLocalTransfer(self, srcFunc, srcLcl, dstFunc, dstLcl, contexts):
 		# CPA transfter
 		srcInfo = self.db.functionInfo(srcFunc).localInfo(srcLcl)
 		dstInfo = self.db.functionInfo(dstFunc).localInfo(dstLcl)
-		
+
 		# Transfer the cloned contexts
 		for context in contexts:
 			csrc = srcInfo.context(context)
@@ -130,7 +119,7 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 			cdst.merge(csrc)
 
 		dstInfo.merge()
-		
+
 	def origin(self, function, op):
 		return op
 

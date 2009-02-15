@@ -10,19 +10,20 @@ def isShared(node):
 	#return hasattr(node, '__shared__') and node.__shared__
 	return getattr(node, '__shared__', False)
 
-					     
-def allChildren(s, node):
+
+def allChildren(s, node, clone=False):
 	if isShared(node):
+		assert not clone
 		return node
 
 	oldchildren = children(node)
 	newchildren = [s(child) for child in oldchildren]
 
-	if identicalChildren(oldchildren, newchildren):
+	if identicalChildren(oldchildren, newchildren) and not clone:
 		return node
 	else:
 		return reconstruct(node, newchildren)
-		
+
 
 def visitAllChildren(s, node):
 	if isShared(node):
@@ -34,7 +35,7 @@ def visitAllChildren(s, node):
 def allChildrenReversed(s, node):
 	if isShared(node):
 		return node
-	
+
 	oldchildren = list(reversed(children(node)))
 	newchildren = [s(child) for child in oldchildren]
 
@@ -64,7 +65,7 @@ class Innermost(object):
 	def __call__(self, node):
 		if id(node) in self.canonical:
 			return node
-		
+
 		while True:
 			node = allChildren(self, node)
 			try:
@@ -112,5 +113,5 @@ class Try(object):
 			node = self.strategy(node)
 		except TransformFailiure:
 			pass
-		
+
 		return node

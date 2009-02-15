@@ -399,6 +399,11 @@ class ProgramCloner(object):
 				newcode.annotation = code.annotation
 
 				newfunc[code][id(group)] = newcode
+
+		# All live functions accounted for?
+		for code in self.liveFunctions:
+			assert code in newfunc, code
+
 		return newfunc
 
 
@@ -409,9 +414,6 @@ class ProgramCloner(object):
 		for code, groups in self.groups.iteritems():
 			for group in groups:
 				newcode = newfunc[code][id(group)]
-
-				# Transfer information that is tied to the context.
-				self.adb.trackContextTransfer(code, newcode, group)
 
 				fc = FunctionCloner(self.adb, newfunc, self.groupLUT, code, newcode, group)
 				fc.process()
@@ -455,12 +457,24 @@ class FunctionCloner(object):
 	__metaclass__ = typedispatcher
 
 	def __init__(self, adb, newfuncLUT, groupLUT, sourcefunction, destfunction, group):
-		self.adb = adb
-		self.newfuncLUT = newfuncLUT
-		self.groupLUT = groupLUT
+		self.adb            = adb
+		self.newfuncLUT     = newfuncLUT
+		self.groupLUT       = groupLUT
 		self.sourcefunction = sourcefunction
 		self.destfunction   = destfunction
-		self.group    = group
+		self.group          = group
+
+		# Remap contexts.
+		self.contextRemap = []
+		for i, context in enumerate(sourcefunction.annotation.contexts):
+			if context in group:
+				self.contextRemap.append(i)
+
+		destfunction.annotation = sourcefunction.annotation.contextSubset(self.contextRemap)
+
+		# Transfer information that is tied to the code.
+		self.adb.trackContextTransfer(sourcefunction, destfunction, group)
+
 
 		self.localMap = {}
 
@@ -471,6 +485,7 @@ class FunctionCloner(object):
 		self.newInfo.original    = self.originalInfo.original
 
 		self.newInfo.contexts.update(group)
+
 
 	def translateLocal(self, node):
 		if not node in self.localMap:
@@ -483,13 +498,18 @@ class FunctionCloner(object):
 
 	@defaultdispatch
 	def default(self, node):
-		result = allChildren(self, node)
+		result = allChildren(self, node, clone=True)
 		self.transferAnalysisData(node, result)
 		return result
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
 		return self.translateLocal(node)
+
+	# Has internal slots, so as a hack it is "shared", so we must manually rewrite
+	@dispatch(ast.Existing)
+	def visitExisting(self, node):
+		return ast.Existing(node.object)
 
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node):
@@ -506,26 +526,41 @@ class FunctionCloner(object):
 				raise Exception, "Cannot clone the direct call, as it has multiple targets. %r" % names
 			result = ast.DirectCall(func, *tempresult.children()[1:])
 
-			self.adb.trackRewrite(self.destfunction, tempresult, result)
+			self.transferAnalysisData(node, result)
 		else:
 			result = tempresult
 
 		return result
+
+	@dispatch(ast.Code)
+	def visitCode(self, node):
+		return node
 
 	def translateFunctionContext(self, func, context):
 		newfunc = self.newfuncLUT[func][self.groupLUT[context]]
 		return context, newfunc
 
 	def transferAnalysisData(self, original, replacement):
-
 		if not isinstance(original, (ast.Expression, ast.Statement)):    return
 		if not isinstance(replacement, (ast.Expression, ast.Statement)): return
+
+		assert original is not replacement, original
 
 		def mapper(target):
 			c, func = target
 			return self.translateFunctionContext(func, c)
 
 		self.adb.trackOpTransfer(self.sourcefunction, original, self.destfunction, replacement, self.group, mapper)
+
+
+		def annotationMapper(target):
+			code, context = target
+			group = self.groupLUT[context]
+			newcode = self.newfuncLUT[code][group]
+			return newcode, context
+
+		replacement.annotation = original.annotation.contextSubset(self.contextRemap, annotationMapper)
+
 
 	def transferLocal(self, original, replacement):
 		self.adb.trackLocalTransfer(self.sourcefunction, original, self.destfunction, replacement, self.group)

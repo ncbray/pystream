@@ -415,11 +415,13 @@ class LifetimeAnalysis(object):
 			assert isinstance(code, ast.Code), type(code)
 			ops, lcls = getOps(code)
 			for op in ops:
-				opinfo = funcinfo.opInfo(op)
-				for context, info in opinfo.contexts.iteritems():
-					for dstC, dstF in info.invokes:
-						assert isinstance(dstF, ast.Code)
-						invokes[code][op][context].add(dstF, dstC)
+				if op.annotation.invokes is not None:
+					for cindex, context in enumerate(code.annotation.contexts):
+						opInvokes = op.annotation.invokes[1][cindex]
+
+						for dstF, dstC in opInvokes:
+							assert isinstance(dstF, ast.Code)
+							invokes[code][op][context].add(dstF, dstC)
 
 
 			for lcl in lcls:

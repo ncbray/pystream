@@ -36,19 +36,20 @@ class CallGraphFinder(Finder):
 		if node not in self.invokesContext:
 			self.invokesContext[node] = set()
 
+		cindex = code.annotation.contexts.index(context)
+
 		children = []
 
 		funcinfo = self.db.functionInfo(code)
 		ops, lcls = getOps(code)
 		for op in ops:
-			opinfo = funcinfo.opInfo(op)
-			copinfo = opinfo.context(context)
-
-			for dstc, dstf in copinfo.invokes:
-				child = (dstf, dstc)
-				self.invokes[code].add(dstf)
-				self.invokesContext[node].add(child)
-				children.append(child)
+			invokes = op.annotation.invokes
+			if invokes is not None:
+				for dstf, dstc in invokes[1][cindex]:
+					child = (dstf, dstc)
+					self.invokes[code].add(dstf)
+					self.invokesContext[node].add(child)
+					children.append(child)
 		return children
 
 def makeCGF(db, entryPoints):

@@ -40,7 +40,7 @@ class AbstractAnalysisDatabase(object):
 	# Returns function
 	def singleCall(self, function, b):
 		funcs = self.invocationsForOp(function, self.origin(function, b))
-
+		assert isinstance(funcs, (tuple, list, set, frozenset)), repr(funcs)
 		if len(funcs) == 1:
 			func = tuple(funcs)[0]
 			return func

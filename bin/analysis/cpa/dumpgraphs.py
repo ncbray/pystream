@@ -65,19 +65,21 @@ def dump(data, entryPoints, links, reportDir):
 
 		info = data.db.functionInfo(code)
 		for op in ops:
-			opinfo = info.opInfo(op)
-			if context is None:
-				cinfo = opinfo.merged
-			else:
-				cinfo = opinfo.context(context)
-			invokes = cinfo.invokes
-			for c, f in invokes:
-				c = None
-				key = (f, c)
-				invokeLUT[code].add(f)
-				if key not in processed:
-					stack.append(key)
-					processed.add(key)
+			invokes = op.annotation.invokes
+			if invokes is not None:
+				if context is None:
+					cinvokes = invokes[0]
+				else:
+					cindex = code.annotation.contexts.index(context)
+					cinvokes = invokes[1][cindex]
+
+				for f, c in cinvokes:
+					c = None
+					key = (f, c)
+					invokeLUT[code].add(f)
+					if key not in processed:
+						stack.append(key)
+						processed.add(key)
 
 	# Make dominator tree
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(invokeLUT, head)

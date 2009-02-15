@@ -222,7 +222,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 	out.end('div')
 
 
-	for context in data.functionContexts(func):
+	for cindex, context in enumerate(code.annotation.contexts):
 		out.tag('hr')
 		out.begin('div')
 
@@ -311,29 +311,22 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			else:
 				ops.append(slot)
 
-		def printTabbed(name, values):
-			out << '\t'
-			out << name
-			out.endl()
-
-			for value in values:
-				out << '\t\t'
-				link = links.objectRef(value)
-				if link: out.begin('a', href=link)
-				out << objectShortName(value)
-				if link: out.end('a')
-				out.endl()
-
-
 		out.begin('pre')
 		for op in funcOps:
-			printTabbed(op, info.opInfo(op).context(context).references)
+			out << '\t'
+			out << op
+			out.endl()
 
-			callees = data.opCallees(func, op, context)
-			for dstC, dstF in callees:
-				out << '\t\t'
-				outputCodeShortName(out, dstF, links, dstC)
+			if op.annotation.invokes:
+				callees = op.annotation.invokes[1][cindex]
+				for dstF, dstC in callees:
+					out << '\t\t'
+					outputCodeShortName(out, dstF, links, dstC)
+					out.endl()
+			else:
+				out << "\t\t?"
 				out.endl()
+
 
 			if hasattr(data.db, 'lifetime'):
 				read   = data.db.lifetime.readDB[func][op][context]
@@ -350,6 +343,20 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.endl()
 
 		out.endl()
+
+
+		def printTabbed(name, values):
+			out << '\t'
+			out << name
+			out.endl()
+
+			for value in values:
+				out << '\t\t'
+				link = links.objectRef(value)
+				if link: out.begin('a', href=link)
+				out << objectShortName(value)
+				if link: out.end('a')
+				out.endl()
 
 		for lcl in funcLocals:
 			printTabbed(lcl, info.localInfo(lcl).context(context).references)
@@ -707,13 +714,14 @@ class CPAData(object):
 		for func, funcinfo in self.db.functionInfos.iteritems():
 			ops, lcls = getOps(func)
 			for op in ops:
-				copinfo = funcinfo.opInfo(op)
-				for context, opinfo in copinfo.contexts.iteritems():
-					src = (func, context)
-					for dstC, dstF in opinfo.invokes:
-						dst = (dstF, dstC)
-						self.invokeDestination[src].add(dst)
-						self.invokeSource[dst].add(src)
+				invokes = op.annotation.invokes
+				if invokes is not None:
+					for cindex, context in enumerate(func.annotation.contexts):
+						src = (func, context)
+
+						for dst in invokes[1][cindex]:
+							self.invokeDestination[src].add(dst)
+							self.invokeSource[dst].add(src)
 
 
 	def calcReadModify(self):
@@ -733,8 +741,6 @@ class CPAData(object):
 						if modifies:
 							self.funcModifies[func][context].update(modifies)
 
-
-
 	def liveFunctions(self):
 		return self.db.liveFunctions()
 
@@ -749,10 +755,6 @@ class CPAData(object):
 
 	def callees(self, function, context):
 		return self.invokeDestination[(function, context)]
-
-	def opCallees(self, code, op, context):
-		return self.db.functionInfo(code).opInfo(op).context(context).invokes
-
 
 	def slot(self, slot):
 		return self.inter.slots[slot]

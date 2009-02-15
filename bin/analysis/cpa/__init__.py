@@ -20,6 +20,7 @@ from programIR.python import program
 
 from util.fold import foldFunction
 
+from analysis.astcollector import getOps
 
 from . cpadatabase import CPADatabase
 
@@ -355,6 +356,7 @@ class InterproceduralDataflow(object):
 		# TODO generate bogus ops?
 		dummyOp = self.canonical.opContext(base.externalFunction, externalOp, base.externalFunctionContext)
 
+		self.codeContexts[base.externalFunction].add(base.externalFunctionContext)
 
 		funcobjxtype = self.canonical.existingType(funcobj)
 		argxtypes    = tuple([self.canonical.externalType(arg) for arg in args])
@@ -392,8 +394,25 @@ class InterproceduralDataflow(object):
 		self.solveTime = end-start-self.decompileTime
 
 	def annotate(self):
+		# Re-index the invocations
+		lut = collections.defaultdict(lambda: collections.defaultdict(set))
+		for srcop, dsts in self.opInvokes.iteritems():
+			for dst in dsts:
+				lut[(srcop.code, srcop.op)][srcop.context].add((dst.code, dst.context))
+
 		for code, contexts in self.codeContexts.iteritems():
-			code.annotation = code.annotation.rewrite(contexts=tuple(contexts))
+			code.rewriteAnnotation(contexts=tuple(contexts))
+			ops, lcls = getOps(code)
+
+			for op in ops:
+				if op is not externalOp:
+					contextLUT = lut[(code, op)]
+
+					merged = set()
+					cinvokes = tuple([sorted(contextLUT[context]) for context in code.annotation.contexts])
+					for inv in cinvokes:
+						merged.update(inv)
+					op.rewriteAnnotation(invokes=(tuple(sorted(merged)), cinvokes))
 
 	def checkConstraints(self):
 		for c in self.constraints:

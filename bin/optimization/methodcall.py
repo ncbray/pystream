@@ -18,19 +18,17 @@ def contextsThatOnlyInvoke(adb, funcs, invocations):
 
 	# HACK There's only one op in the object getter that will invoke?
 	for func in funcs:
-		funcinfo = db.functionInfo(func)
 		for op in adb.functionOps(func):
-			opinfo = funcinfo.opInfo(op)
-			if opinfo.merged.invokes:
-				for context, cinfo in opinfo.contexts.iteritems():
-					invokes = set()
-					for dc, df in cinfo.invokes:
-						invokes.add((df, dc))
+			invokes = op.annotation.invokes
+			if invokes is not None:
+				for cindex, context in enumerate(func.annotation.contexts):
+					cinvokes = invokes[1][cindex]
 
-					match = invokes.intersection(invocations)
+					invokesSet = set(cinvokes)
+					match = invokesSet.intersection(invocations)
 
 					# There must be invocations, and they must all be to fget.
-					if match and match == invokes:
+					if match and match == invokesSet:
 						output.add((func, context))
 	return output
 
@@ -39,8 +37,8 @@ def opThatInvokes(adb, func):
 	invokeOp = None
 	funcinfo = adb.db.functionInfo(func)
 	for op in adb.functionOps(func):
-		opinfo = funcinfo.opInfo(op)
-		if opinfo.merged.invokes:
+		invokes = op.annotation.invokes
+		if invokes is not None and invokes[0]:
 			assert invokeOp is None
 			invokeOp = op
 	assert invokeOp
@@ -108,8 +106,7 @@ class MethodPatternFinder(object):
 
 
 	def isMethodGetter(self, node, invokes):
-		#invokes = self.info.opInfo(node).merged.invokes
-		invokes = frozenset([(f, c) for c, f in invokes]) # Flip the info.
+		invokes = frozenset(invokes)
 
 		marked = invokes.intersection(self.igetsC)
 
@@ -211,9 +208,9 @@ class MethodAnalysis(object):
 
 		self.target(node.lcl)
 
-		invokes = self.info.opInfo(node.expr).merged.invokes
-		if invokes:
-			flag, expr, name = self.pattern(node.expr, invokes)
+		invokes = node.expr.annotation.invokes
+		if invokes is not None:
+			flag, expr, name = self.pattern(node.expr, invokes[0])
 
 			if flag:
 				key = (expr, name, node.lcl)
@@ -250,38 +247,37 @@ class MethodRewrite(object):
 		return node
 
 	def isMethodCall(self, node, meth):
-		invokes = self.info.opInfo(node).merged.invokes
-
-		# HACK should be considering funcinfo.original, not the function itself.
-		originalFuncs = frozenset([f for c, f in invokes])
-		if originalFuncs == frozenset([self.pattern.mcall]):
-			key = self.flow.lookup(('meth', node.expr))
-			if isinstance(key, tuple):
-				expr, name, meth = key
-				return True, expr, name
+		invokes = node.annotation.invokes
+		if invokes is not None:
+			# HACK should be considering funcinfo.original, not the function itself.
+			originalFuncs = frozenset([f for f, c in invokes[0]])
+			if originalFuncs == frozenset([self.pattern.mcall]):
+				key = self.flow.lookup(('meth', node.expr))
+				if isinstance(key, tuple):
+					expr, name, meth = key
+					return True, expr, name
 
 		return False, None, None
 
 	def transferOpInfo(self, node, rewrite):
-		srcInfo = self.info.opInfo(node)
-		dstInfo = self.info.opInfo(rewrite)
+		invokes = node.annotation.invokes
+		if invokes is not None:
+			invokesM = set()
+			cinvokesNew = []
+			for cinvokes in invokes[1]:
+				cinvokesM = set()
+				for f, c in cinvokes:
+					cindex = f.annotation.contexts.index(c)
+					op = opThatInvokes(self.adb, f)
+					newinv = op.annotation.invokes[1][cindex]
 
-		for context, srccopinfo in srcInfo.contexts.iteritems():
-			dstcopinfo = dstInfo.context(context)
-
-			dstcopinfo.references.update(srccopinfo.references)
-			#dstcopinfo.reads.update(srccopinfo.reads)
-			#dstcopinfo.modifies.update(srccopinfo.modifies)
-			#dstcopinfo.allocates.update(srccopinfo.allocates)
-
-			# Reach for the function that the method call invokes.
-			for c, f in srccopinfo.invokes:
-				op = opThatInvokes(self.adb, f)
-				invokes = self.adb.db.functionInfo(f).opInfo(op).context(c).invokes
-				dstcopinfo.invokes.update(invokes)
-
-
-		dstInfo.merge()
+					cinvokesM.update(newinv)
+				cinvokesNew.append(tuple(sorted(cinvokesM)))
+				invokesM.update(cinvokesM)
+			invokes = (tuple(sorted(invokesM)), tuple(cinvokesNew))
+			rewrite.annotation = node.annotation.rewrite(invokes=invokes)
+		else:
+			rewrite.annotation = node.annotation
 
 	def rewriteCall(self, node, expr, name):
 		rewrite = ast.MethodCall(expr, name, node.args, node.kwds, node.vargs, node.kargs)

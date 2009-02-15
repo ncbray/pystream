@@ -14,30 +14,7 @@ class FunctionInfo(object):
 
 		self.contexts    = set()
 
-		self.opInfos     = weakref.WeakKeyDictionary()
 		self.localInfos  = weakref.WeakKeyDictionary()
-
-	def trackRewrite(self, source, dest):
-		# TODO make sure this is an op.
-
-		#assert source in self.opInfos, source
-		assert not dest in self.opInfos, dest
-
-		info = self.opInfo(source)
-		self.opInfos[dest] = info
-
-	def opInfo(self, op):
-		assert not isinstance(op, str), op
-		if op is None:
-			op = base.externalOp
-
-		assert op
-
-		info = self.opInfos.get(op)
-		if not info:
-			info = ContextualOpInfo()
-			self.opInfos[op] = info
-		return info
 
 	def localInfo(self, lcl):
 		assert lcl
@@ -49,9 +26,6 @@ class FunctionInfo(object):
 		return info
 
 	def merge(self):
-		for info in self.opInfos.itervalues():
-			info.merge()
-
 		for info in self.localInfos.itervalues():
 			info.merge()
 
@@ -75,34 +49,6 @@ class HeapInfo(object):
 	def merge(self):
 		for info in self.slotInfos.itervalues():
 			info.merge()
-
-class OpInfo(object):
-	__slots__ = 'references', 'invokes'
-	def __init__(self):
-		self.references = set()
-		self.invokes    = set()
-
-	def merge(self, other):
-		self.invokes.update(other.invokes)
-		self.references.update(other.references)
-
-class ContextualOpInfo(object):
-	def __init__(self):
-		self.merged = OpInfo()
-		self.contexts = {}
-
-	def context(self, context):
-		info = self.contexts.get(context)
-		if not info:
-			info = OpInfo()
-			self.contexts[context] = info
-		return info
-
-	def merge(self):
-		self.merged = OpInfo()
-		for info in self.contexts.itervalues():
-			self.merged.merge(info)
-
 
 
 class ContextualSlotInfo(object):
@@ -214,16 +160,16 @@ class CPADatabase(object):
 			info = self.functionInfo(code)
 			info.contexts.update(contexts)
 
-		for srcop, dsts in sys.opInvokes.iteritems():
-			assert isinstance(dsts, set)
-			for dstfunc in dsts:
-				# src -> dst
-				info = self.contextOpInfo(srcop.code, srcop.op, srcop.context)
-				info.invokes.add((dstfunc.context, dstfunc.code))
+#		for srcop, dsts in sys.opInvokes.iteritems():
+#			assert isinstance(dsts, set)
+#			for dstfunc in dsts:
+#				# src -> dst
+#				info = self.contextOpInfo(srcop.code, srcop.op, srcop.context)
+#				info.invokes.add((dstfunc.context, dstfunc.code))
 
-				# dst <- src
-				info = self.functionInfo(dstfunc.code)
-				info.contexts.add(dstfunc.context)
+#				# dst <- src
+#				info = self.functionInfo(dstfunc.code)
+#				info.contexts.add(dstfunc.context)
 
 		self.loadObjects(sys)
 

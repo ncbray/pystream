@@ -84,8 +84,7 @@ class MethodPatternFinder(object):
 		self.ogetsC = set()
 		self.igetsC = set()
 		for func in self.fgets:
-			funcinfo = db.functionInfo(func)
-			for context in funcinfo.contexts:
+			for context in func.annotation.contexts:
 				self.fgetsC.add((func, context))
 
 		# HACK There's only one op in the object getter that will invoke?

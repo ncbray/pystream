@@ -213,7 +213,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		common.astpprint.pprint(func, out)
 		out.end('pre')
 
-	numContexts = len(data.functionContexts(func))
+	numContexts = len(code.annotation.contexts)
 
 	out.begin('div')
 	out.begin('b')
@@ -601,7 +601,7 @@ def dumpReport(name, data, entryPoints):
 				out.begin('li')
 				makeFunctionFile(func)
 				outputCodeShortName(out, func, links)
-				numContexts = len(data.functionContexts(func))
+				numContexts = len(func.annotation.contexts)
 				if numContexts > 1:
 					out << " "
 					out << numContexts

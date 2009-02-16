@@ -46,8 +46,7 @@ def dump(data, entryPoints, links, reportDir):
 
 	# Process the entry points
 	for code, funcobj, args in entryPoints:
-		info = data.db.functionInfo(code)
-		for context in info.contexts:
+		for context in code.annotation.contexts:
 			context = None
 			invokeLUT[head].add(code)
 			key = (code, context)

@@ -484,7 +484,6 @@ class FunctionCloner(object):
 		# Keep the function annotations.
 		self.newInfo.original    = self.originalInfo.original
 
-		self.newInfo.contexts.update(group)
 
 
 	def translateLocal(self, node):

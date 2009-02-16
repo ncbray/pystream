@@ -59,7 +59,8 @@ def makeCGF(db, entryPoints):
 		assert isinstance(code, ast.Code), type(code)
 
 		# HACK for finding the entry context, assumes there's only one context.
-		for context in db.functionInfo(code).contexts:
+		assert code.annotation.contexts is not None
+		for context in code.annotation.contexts:
 			cgf.process((code, context))
 	return cgf
 

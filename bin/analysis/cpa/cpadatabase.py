@@ -12,8 +12,6 @@ class FunctionInfo(object):
 		self.function    = function
 		self.original    = function
 
-		self.contexts    = set()
-
 		self.localInfos  = weakref.WeakKeyDictionary()
 
 	def localInfo(self, lcl):
@@ -156,23 +154,7 @@ class CPADatabase(object):
 			info.merge()
 
 	def load(self, sys):
-		for code, contexts in sys.codeContexts.iteritems():
-			info = self.functionInfo(code)
-			info.contexts.update(contexts)
-
-#		for srcop, dsts in sys.opInvokes.iteritems():
-#			assert isinstance(dsts, set)
-#			for dstfunc in dsts:
-#				# src -> dst
-#				info = self.contextOpInfo(srcop.code, srcop.op, srcop.context)
-#				info.invokes.add((dstfunc.context, dstfunc.code))
-
-#				# dst <- src
-#				info = self.functionInfo(dstfunc.code)
-#				info.contexts.add(dstfunc.context)
-
 		self.loadObjects(sys)
-
 
 		# Find all the locals
 		for slot in sys.roots:

@@ -295,20 +295,6 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.endl()
 		out.endl()
 
-
-
-		ops  = []
-		lcls = []
-		other = []
-
-		for slot in data.functionContextSlots(func, context):
-			if slot.slotName.isLocal():
-				lcls.append(slot)
-			elif slot.slotName.isExisting():
-				other.append(slot)
-			else:
-				ops.append(slot)
-
 		out.begin('pre')
 		for op in funcOps:
 			out << '\t'
@@ -326,18 +312,17 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				out.endl()
 
 
-			if hasattr(data.db, 'lifetime'):
-				read   = data.db.lifetime.readDB[func][op][context]
-				modify = data.db.lifetime.modifyDB[func][op][context]
+			read   = op.annotation.reads
+			modify = op.annotation.modifies
 
-				# HACK?
-				if read or modify:
-					out << '\t\t'
-					out.begin('i')
-					if read: out << "R"
-					if modify: out << "M"
-					out.end('i')
-					out.endl()
+			if read or modify:
+				out << '\t\t'
+				out.begin('i')
+				if read[1][cindex]: out << "R"
+				if modify[1][cindex]: out << "M"
+				out.end('i')
+				out.endl()
+
 			out.endl()
 
 		out.endl()
@@ -416,52 +401,50 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				out.end('p')
 
 
-			reads = data.funcReads[func][context]
+		reads = data.funcReads[func][context]
+		if reads:
+			out.begin('h3')
+			out << "Reads"
+			out.end('h3')
+			out.begin('p')
+			out.begin('ul')
+			for obj, slots in itergroupings(reads, lambda slot: slot.object, lambda slot: slot.slotName):
+				out.begin('li')
+				outputObjectShortName(out, obj, links)
 
-			if reads:
-				out.begin('h3')
-				out << "Reads"
-				out.end('h3')
-				out.begin('p')
 				out.begin('ul')
-				for obj, slots in itergroupings(reads, lambda slot: slot.object, lambda slot: slot.slotName):
+				for slot in slots:
 					out.begin('li')
-					outputObjectShortName(out, obj, links)
-
-					out.begin('ul')
-					for slot in slots:
-						out.begin('li')
-						out << "%r" % slot
-						out.end('li')
-					out.end('ul')
-
+					out << "%r" % slot
 					out.end('li')
 				out.end('ul')
-				out.end('p')
+
+				out.end('li')
+			out.end('ul')
+			out.end('p')
 
 
-			modifies = data.funcModifies[func][context]
+		modifies = data.funcModifies[func][context]
+		if modifies:
+			out.begin('h3')
+			out << "Modifies"
+			out.end('h3')
+			out.begin('p')
+			out.begin('ul')
+			for obj, slots in itergroupings(modifies, lambda slot: slot.object, lambda slot: slot.slotName):
+				out.begin('li')
+				outputObjectShortName(out, obj, links)
 
-			if modifies:
-				out.begin('h3')
-				out << "Modifies"
-				out.end('h3')
-				out.begin('p')
 				out.begin('ul')
-				for obj, slots in itergroupings(modifies, lambda slot: slot.object, lambda slot: slot.slotName):
+				for slot in slots:
 					out.begin('li')
-					outputObjectShortName(out, obj, links)
-
-					out.begin('ul')
-					for slot in slots:
-						out.begin('li')
-						out << "%r" % slot
-						out.end('li')
-					out.end('ul')
-
+					out << "%r" % slot
 					out.end('li')
 				out.end('ul')
-				out.end('p')
+
+				out.end('li')
+			out.end('ul')
+			out.end('p')
 		out.end('div')
 
 
@@ -689,12 +672,14 @@ class CPAData(object):
 				self.lcls[name.code][name.context].add(slot)
 
 		self.calcInvocations()
-		self.calcReadModify()
 
 	def calcInvocations(self):
 		# Derived
 		self.invokeDestination = collections.defaultdict(set)
 		self.invokeSource      = collections.defaultdict(set)
+
+		self.funcReads    = collections.defaultdict(lambda: collections.defaultdict(set))
+		self.funcModifies = collections.defaultdict(lambda: collections.defaultdict(set))
 
 		for func in self.db.liveFunctions():
 			ops, lcls = getOps(func)
@@ -708,23 +693,19 @@ class CPAData(object):
 							self.invokeDestination[src].add(dst)
 							self.invokeSource[dst].add(src)
 
+				reads = op.annotation.reads
+				if reads is not None:
+					for cindex, context in enumerate(func.annotation.contexts):
+						creads = reads[1][cindex]
+						self.funcReads[func][context].update(creads)
 
-	def calcReadModify(self):
-		self.funcReads    = collections.defaultdict(lambda: collections.defaultdict(set))
-		self.funcModifies = collections.defaultdict(lambda: collections.defaultdict(set))
+				modifies = op.annotation.modifies
+				if modifies is not None:
+					for cindex, context in enumerate(func.annotation.contexts):
+						cmods = modifies[1][cindex]
+						self.funcModifies[func][context].update(cmods)
 
-		if hasattr(self.db, 'lifetime'):
-			for func, ops in self.db.lifetime.readDB:
-				for op, contexts in ops:
-					for context, reads in contexts:
-						if reads:
-							self.funcReads[func][context].update(reads)
 
-			for func, ops in self.db.lifetime.modifyDB:
-				for op, contexts in ops:
-					for context, modifies in contexts:
-						if modifies:
-							self.funcModifies[func][context].update(modifies)
 
 	def functionContextSlots(self, function, context):
 		return self.lcls[function][context]
@@ -734,9 +715,6 @@ class CPAData(object):
 
 	def callees(self, function, context):
 		return self.invokeDestination[(function, context)]
-
-	def slot(self, slot):
-		return self.inter.slots[slot]
 
 	def liveHeap(self):
 		return self.objs.keys()

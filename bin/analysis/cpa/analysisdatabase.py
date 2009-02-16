@@ -39,12 +39,7 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 
 	# Returns a set of contextual objects
 	def modificationsForOp(self, function, op):
-		if hasattr(self.db, 'lifetime'):
-			# HACK
-			result = self.db.lifetime.modifyDB[function][op].forget()
-			return result
-		else:
-			return ()
+		return op.annotation.modifies[0]
 
 	# Make standard?
 	def functionOps(self, func):
@@ -60,18 +55,8 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 		if original is newast or isinstance(original, dontTrack) or isinstance(newast, dontTrack):
 			return
 
-		#Annotation transfer
+		# Annotation transfer
 		newast.annotation = original.annotation
-
-		# Lifetime info transfer
-		if hasattr(self.db, 'lifetime'):
-			if isinstance(original, (ast.Expression, ast.Statement)):
-				if isinstance(newast, (ast.Expression, ast.Statement)):
-					readDB = self.db.lifetime.readDB
-					readDB[function].merge(newast, readDB[function][original])
-
-					modifyDB = self.db.lifetime.modifyDB
-					modifyDB[function].merge(newast, modifyDB[function][original])
 
 	def trackContextTransfer(self, srcFunc, dstFunc, contexts):
 		if hasattr(self.db, 'lifetime'):
@@ -84,26 +69,3 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 
 				data = killed.get((srcFunc, context))
 				if data: killed[(dstFunc, context)] = data
-
-
-	def trackOpTransfer(self, srcFunc, srcOp, dstFunc, dstOp, contexts, invokeMap=None):
-		assert isinstance(srcOp, (ast.Expression, ast.Statement)), srcOp
-		assert isinstance(dstOp, (ast.Expression, ast.Statement)), dstOp
-
-		# Lifetime info transfer
-		if hasattr(self.db, 'lifetime'):
-			readDB = self.db.lifetime.readDB
-			srcInfo = readDB[srcFunc][srcOp]
-			dstInfo = readDB[dstFunc][dstOp]
-			for context in contexts:
-				dstInfo.merge(context, srcInfo[context])
-
-			modifyDB = self.db.lifetime.modifyDB
-			srcInfo = modifyDB[srcFunc][srcOp]
-			dstInfo = modifyDB[dstFunc][dstOp]
-			for context in contexts:
-				dstInfo.merge(context, srcInfo[context])
-
-	def origin(self, function, op):
-		return op
-

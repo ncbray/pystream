@@ -43,6 +43,5 @@ class DummyAnalysisDatabase(AbstractAnalysisDatabase):
 	def hasSideEffects(self, function, op):
 		return True
 
-
 	def trackRewrite(self, function, original, newast):
 		pass

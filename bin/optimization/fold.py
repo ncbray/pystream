@@ -132,28 +132,24 @@ class FoldRewrite(object):
 	@dispatch(ast.BinaryOp)
 	def visitBinaryOp(self, node):
 		result = fold.foldBinaryOpAST(self.extractor, node)
-		#self.adb.trackRewrite(node, result)
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.UnaryPrefixOp)
 	def visitUnaryPrefixOp(self, node):
 		result = fold.foldUnaryPrefixOpAST(self.extractor, node)
-		#self.adb.trackRewrite(node, result)
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
 		result = fold.foldBoolAST(self.extractor, node)
-		#self.adb.trackRewrite(node, result)
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.Not)
 	def visitNot(self, node):
 		result = fold.foldNotAST(self.extractor, node)
-		#self.adb.trackRewrite(node, result)
 		self.logCreated(result)
 		return result
 

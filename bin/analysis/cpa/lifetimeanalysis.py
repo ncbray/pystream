@@ -484,10 +484,44 @@ class LifetimeAnalysis(object):
 
 		self.rm = ReadModifyAnalysis(self.killed, self.invokedBy)
 		self.rm.process(sys)
-		self.createDB()
+		self.createDB(sys)
 
-	def createDB(self):
-		self.readDB = self.rm.opReadDB
+	def createDB(self, sys):
+		self.readDB   = self.rm.opReadDB
 		self.modifyDB = self.rm.opModifyDB
 
 
+		for code in sys.db.liveFunctions():
+			ops, lcls = getOps(code)
+			for op in ops:
+				reads    = self.readDB[code][op]
+				modifies = self.modifyDB[code][op]
+
+				mr = set()
+				rout = []
+
+				mm = set()
+				mout = []
+
+				for cindex, context in enumerate(code.annotation.contexts):
+					creads = reads[context]
+					if creads:
+						mr.update(creads)
+						creads = tuple(sorted(creads))
+					else:
+						creads = ()
+
+					rout.append(creads)
+
+					cmod = modifies[context]
+					if cmod:
+						mm.update(cmod)
+						cmod = tuple(sorted(cmod))
+					else:
+						cmod = ()
+					mout.append(cmod)
+
+				opReads    = (tuple(sorted(mr)), tuple(rout))
+				opModifies = (tuple(sorted(mm)), tuple(mout))
+
+				op.rewriteAnnotation(reads=opReads, modifies=opModifies)

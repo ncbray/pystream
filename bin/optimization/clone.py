@@ -196,15 +196,12 @@ class ProgramCloner(object):
 	def labelLoad(self, code, op, group):
 		contexts = self.unifyGroups[group]
 
-		codeinfo = self.adb.db.lifetime.readDB[code]
-		opinfo   = codeinfo[op]
-
 		slots = set()
 		for context in contexts:
-			cslots = opinfo[context]
-			if cslots:
-				for slot in cslots:
-					slots.add(slot.slotName)
+			cindex = code.annotation.contexts.index(context)
+			cslots = op.annotation.reads[1][cindex]
+			for slot in cslots:
+				slots.add(slot.slotName)
 
 		if slots:
 			return frozenset(slots)
@@ -216,15 +213,12 @@ class ProgramCloner(object):
 	def labelStore(self, code, op, group):
 		contexts = self.unifyGroups[group]
 
-		codeinfo = self.adb.db.lifetime.modifyDB[code]
-		opinfo   = codeinfo[op]
-
 		slots = set()
 		for context in contexts:
-			cslots = opinfo[context]
-			if cslots:
-				for slot in cslots:
-					slots.add(slot.slotName)
+			cindex = code.annotation.contexts.index(context)
+			cslots = op.annotation.modifies[1][cindex]
+			for slot in cslots:
+				slots.add(slot.slotName)
 
 		if slots:
 			return frozenset(slots)
@@ -385,6 +379,8 @@ class ProgramCloner(object):
 	def createNewCodeNodes(self):
 		newfunc = {}
 
+		self.newLive = set()
+
 		# Create the new functions.
 		for code, groups in self.groups.iteritems():
 			newfunc[code] = {}
@@ -400,6 +396,7 @@ class ProgramCloner(object):
 				newcode.annotation = code.annotation
 
 				newfunc[code][id(group)] = newcode
+				self.newLive.add(newcode)
 
 		# All live functions accounted for?
 		for code in self.liveFunctions:
@@ -545,13 +542,6 @@ class FunctionCloner(object):
 
 		assert original is not replacement, original
 
-		def mapper(target):
-			c, func = target
-			return self.translateFunctionContext(func, c)
-
-		self.adb.trackOpTransfer(self.sourcefunction, original, self.destfunction, replacement, self.group, mapper)
-
-
 		def annotationMapper(target):
 			code, context = target
 			group = self.groupLUT[context]
@@ -602,3 +592,5 @@ def clone(console, extractor, entryPoints, adb):
 		console.begin('rewrite')
 		cloner.rewriteProgram(extractor, entryPoints)
 		console.end()
+
+		adb.db.liveCode = cloner.newLive

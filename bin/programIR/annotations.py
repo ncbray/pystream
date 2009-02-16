@@ -68,8 +68,12 @@ class OpAnnotation(Annotation):
 		return OpAnnotation(invokes, reads, modifies, allocates)
 
 	def contextSubset(self, remap, invokeMapper):
-		invokes = remapContextual(self.invokes, remap, invokeMapper)
-		return self.rewrite(invokes=invokes)
+		invokes   = remapContextual(self.invokes,   remap, invokeMapper)
+		reads     = remapContextual(self.reads,     remap)
+		modifies  = remapContextual(self.modifies,  remap)
+		allocates = remapContextual(self.allocates, remap)
+
+		return OpAnnotation(invokes, reads, modifies, allocates)
 
 	def compatable(self, codeAnnotation):
 		if self.invokes is not None:

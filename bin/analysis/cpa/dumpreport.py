@@ -266,16 +266,16 @@ def dumpFunctionInfo(func, data, links, out, scg):
 
 		sig = context.signature
 		if code.selfparam is not None:
-			objs = info.localInfo(code.selfparam).context(context).references
+			objs = code.selfparam.annotation.references[1][cindex]
 			tableRow('self', *objs)
 
 		numParam = len(sig.code.parameters)
 		for i, param in enumerate(code.parameters):
-			objs = info.localInfo(param).context(context).references
+			objs = param.annotation.references[1][cindex]
 			tableRow('param %d' % i, *objs)
 
 		if code.vparam is not None:
-			objs = info.localInfo(code.vparam).context(context).references
+			objs = code.vparam.annotation.references[1][cindex]
 			tableRow('vparamObj', *objs)
 
 			for vparamObj in objs:
@@ -285,12 +285,11 @@ def dumpFunctionInfo(func, data, links, out, scg):
 					tableRow('vparam %d' % i, *slot)
 
 		if code.kparam is not None:
-			objs = info.localInfo(code.kparam).context(context).references
+			objs = code.kparam.annotation.references[1][cindex]
 			tableRow('kparamObj', *objs)
 
-		returnSlot = func.returnparam
-		values = info.localInfo(returnSlot).context(context).references
-		tableRow('return', *values)
+		objs = code.returnparam.annotation.references[1][cindex]
+		tableRow('return', *objs)
 
 		out.end('table')
 		out.end('p')
@@ -359,7 +358,13 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				out.endl()
 
 		for lcl in funcLocals:
-			printTabbed(lcl, info.localInfo(lcl).context(context).references)
+			crefs = lcl.annotation.references
+			if crefs is not None:
+				refs = lcl.annotation.references[1][cindex]
+			else:
+				print "No refs for local?", code, lcl
+				refs = ('?',)
+			printTabbed(lcl, refs)
 		out.end('pre')
 		out.endl()
 

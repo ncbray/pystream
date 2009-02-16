@@ -204,18 +204,18 @@ class MethodAnalysis(object):
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		self(node.expr)
-
 		self.target(node.lcl)
 
-		invokes = node.expr.annotation.invokes
-		if invokes is not None:
-			flag, expr, name = self.pattern(node.expr, invokes[0])
+		if not isinstance(node.expr, (ast.Local, ast.Existing)):
+			invokes = node.expr.annotation.invokes
+			if invokes is not None:
+				flag, expr, name = self.pattern(node.expr, invokes[0])
 
-			if flag:
-				key = (expr, name, node.lcl)
-				self.flow.define(('expr', expr), key)
-				self.flow.define(('name', name), key)
-				self.flow.define(('meth', node.lcl), key)
+				if flag:
+					key = (expr, name, node.lcl)
+					self.flow.define(('expr', expr), key)
+					self.flow.define(('name', name), key)
+					self.flow.define(('meth', node.lcl), key)
 
 		return node
 

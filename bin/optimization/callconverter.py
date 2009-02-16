@@ -27,7 +27,8 @@ class ConvertCalls(object):
 	def directCall(self, node, code, selfarg, args, vargs=None, kargs=None):
 		kwds = [] # HACK
 		result = ast.DirectCall(code, selfarg, args, kwds, vargs, kargs)
-		self.adb.trackRewrite(self.code, node, result)
+		if node is not None:
+			self.adb.trackRewrite(self.code, node, result)
 		return result
 
 	@property
@@ -111,7 +112,7 @@ class ConvertCalls(object):
 
 		for i, arg in enumerate(node.targets):
 			obj = self.extractor.getObject(i)
-			call = self.directCall(arg, self.exports['interpreter_getitem'], None, [self(node.expr), self(ast.Existing(obj))])
+			call = self.directCall(None, self.exports['interpreter_getitem'], None, [self(node.expr), self(ast.Existing(obj))])
 			calls.append(ast.Assign(call, arg))
 
 		return calls

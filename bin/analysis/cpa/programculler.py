@@ -43,6 +43,7 @@ class CallGraphFinder(Finder):
 		funcinfo = self.db.functionInfo(code)
 		ops, lcls = getOps(code)
 		for op in ops:
+			assert hasattr(op.annotation, 'invokes'), op
 			invokes = op.annotation.invokes
 			if invokes is not None:
 				for dstf, dstc in invokes[1][cindex]:

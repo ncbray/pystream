@@ -425,9 +425,12 @@ class LifetimeAnalysis(object):
 
 
 			for lcl in lcls:
-				lclinfo = funcinfo.localInfo(lcl)
-				for context, info in lclinfo.contexts.iteritems():
-					for ref in info.references:
+				refs = lcl.annotation.references
+				if refs is None:
+					continue
+
+				for cindex, context in enumerate(code.annotation.contexts):
+					for ref in refs[1][cindex]:
 						obj = self.getObjectInfo(ref)
 						obj.localReference.add(code)
 

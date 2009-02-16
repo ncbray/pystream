@@ -395,10 +395,21 @@ class InterproceduralDataflow(object):
 
 	def annotate(self):
 		# Re-index the invocations
-		lut = collections.defaultdict(lambda: collections.defaultdict(set))
+		opLut = collections.defaultdict(lambda: collections.defaultdict(set))
 		for srcop, dsts in self.opInvokes.iteritems():
 			for dst in dsts:
-				lut[(srcop.code, srcop.op)][srcop.context].add((dst.code, dst.context))
+				opLut[(srcop.code, srcop.op)][srcop.context].add((dst.code, dst.context))
+
+
+		# Re-index the locals
+		lclLUT = collections.defaultdict(lambda: collections.defaultdict(set))
+		for slot in self.roots:
+			name = slot.slotName
+			if name.isLocal():
+				lclLUT[(name.code, name.local)][name.context] = slot
+
+			# TODO existing?
+
 
 		for code, contexts in self.codeContexts.iteritems():
 			code.rewriteAnnotation(contexts=tuple(contexts))
@@ -406,13 +417,28 @@ class InterproceduralDataflow(object):
 
 			for op in ops:
 				if op is not externalOp:
-					contextLUT = lut[(code, op)]
+					contextLUT = opLut[(code, op)]
+
+					cinvokes = tuple([sorted(contextLUT[context]) for context in code.annotation.contexts])
 
 					merged = set()
-					cinvokes = tuple([sorted(contextLUT[context]) for context in code.annotation.contexts])
-					for inv in cinvokes:
-						merged.update(inv)
+					for inv in cinvokes: merged.update(inv)
+
 					op.rewriteAnnotation(invokes=(tuple(sorted(merged)), cinvokes))
+
+			# TODO existing nodes?
+
+			for lcl in lcls:
+				contextLUT = lclLUT[(code, lcl)]
+				crefs = tuple([sorted(contextLUT[context]) for context in code.annotation.contexts])
+
+				merged = set()
+				for refs in crefs: merged.update(refs)
+
+
+				lcl.rewriteAnnotation(references=(tuple(sorted(merged)), crefs))
+
+
 
 	def checkConstraints(self):
 		for c in self.constraints:

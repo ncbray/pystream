@@ -234,16 +234,17 @@ class ProgramCloner(object):
 	def labelAllocate(self, code, op, group):
 		contexts = self.unifyGroups[group]
 
-		codeinfo = self.adb.db.functionInfo(code)
-		clclInfo = codeinfo.localInfo(op.expr)
+		crefs = op.expr.annotation.references
 
 		types = set()
-		for context in contexts:
-			lclInfo = clclInfo.context(context)
-			ctypes = frozenset([ref.xtype.obj for ref in lclInfo.references])
 
-			if ctypes:
-				types.update(ctypes)
+		if crefs is not None:
+			for context in contexts:
+				cindex = code.annotation.contexts.index(context)
+				refs = crefs[1][cindex]
+				ctypes = frozenset([ref.xtype.obj for ref in refs])
+
+				if ctypes: types.update(ctypes)
 
 		if types:
 			if len(types) > 1:
@@ -562,7 +563,7 @@ class FunctionCloner(object):
 
 
 	def transferLocal(self, original, replacement):
-		self.adb.trackLocalTransfer(self.sourcefunction, original, self.destfunction, replacement, self.group)
+		replacement.annotation = original.annotation.contextSubset(self.contextRemap)
 
 	def process(self):
 		srccode = self.sourcefunction

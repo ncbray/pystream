@@ -12,21 +12,6 @@ class FunctionInfo(object):
 		self.function    = function
 		self.original    = function
 
-		self.localInfos  = weakref.WeakKeyDictionary()
-
-	def localInfo(self, lcl):
-		assert lcl
-
-		info = self.localInfos.get(lcl)
-		if not info:
-			info = ContextualSlotInfo()
-			self.localInfos[lcl] = info
-		return info
-
-	def merge(self):
-		for info in self.localInfos.itervalues():
-			info.merge()
-
 class HeapInfo(object):
 	def __init__(self, heap):
 		self.heap        = heap
@@ -147,25 +132,11 @@ class CPADatabase(object):
 
 	def finalizeInfos(self):
 		# Finalize the datastructures
-		for info in self.functionInfos.itervalues():
-			info.merge()
-
 		for info in self.heapInfos.itervalues():
 			info.merge()
 
 	def load(self, sys):
 		self.loadObjects(sys)
-
-		# Find all the locals
-		for slot in sys.roots:
-			name = slot.slotName
-			if name.isLocal():
-				info = self.functionInfo(name.code).localInfo(name.local).context(name.context)
-				info.references.update(slot)
-			elif name.isExisting():
-				info = self.functionInfo(name.code).localInfo(name.object).context(name.context)
-				info.references.update(slot)
-
 
 		self.finalizeInfos()
 

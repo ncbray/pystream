@@ -16,10 +16,8 @@ class TestCPA(unittest.TestCase):
 			raise self.failureException, (msg or '%r not in %r' % (first, second))
 
 
-	def assertLocalRefTypes(self, finfo, lcl, types):
-		self.assertIn(lcl, finfo.localInfos)
-		linfo  = finfo.localInfos[lcl].merged
-		refs   = linfo.references
+	def assertLocalRefTypes(self, lcl, types):
+		refs   = lcl.annotation.references[0]
 
 		# There's one reference returned, and it's an integer.
 		self.assertEqual(len(refs), len(types))
@@ -56,10 +54,9 @@ class TestCPA(unittest.TestCase):
 
 		result = analysis.cpa.evaluate(CompilerConsole(), self.extractor, [(funcast, funcobj, (a, b))])
 
-		finfo  = result.db.functionInfo(funcast)
 		types = set((self.extractor.getObject(int),))
 
 		for param in funcast.parameters:
-			self.assertLocalRefTypes(finfo, param, types)
+			self.assertLocalRefTypes(param, types)
 
-		self.assertLocalRefTypes(finfo, funcast.returnparam, types)
+		self.assertLocalRefTypes(funcast.returnparam, types)

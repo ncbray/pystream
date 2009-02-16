@@ -11,7 +11,11 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 
 	# Returns a set of contextual objects
 	def objectsForLocal(self, function, local):
-		return self.db.functionInfo(function).localInfo(local).merged.references
+		refs = local.annotation.references
+		if refs is not None:
+			return refs[0]
+		else:
+			return ()
 
 	# Returns a set of non-contextual functions
 	def invocationsForOp(self, function, op):
@@ -105,20 +109,6 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 			dstInfo = modifyDB[dstFunc][dstOp]
 			for context in contexts:
 				dstInfo.merge(context, srcInfo[context])
-
-
-	def trackLocalTransfer(self, srcFunc, srcLcl, dstFunc, dstLcl, contexts):
-		# CPA transfter
-		srcInfo = self.db.functionInfo(srcFunc).localInfo(srcLcl)
-		dstInfo = self.db.functionInfo(dstFunc).localInfo(dstLcl)
-
-		# Transfer the cloned contexts
-		for context in contexts:
-			csrc = srcInfo.context(context)
-			cdst = dstInfo.context(context)
-			cdst.merge(csrc)
-
-		dstInfo.merge()
 
 	def origin(self, function, op):
 		return op

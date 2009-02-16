@@ -35,7 +35,11 @@ class FoldRewrite(object):
 
 	def getObjects(self, ref):
 		if isinstance(ref, ast.Local):
-			return self.adb.db.functionInfo(self.code).localInfo(ref).merged.references
+			refs = ref.annotation.references
+			if refs is not None:
+				return refs[0]
+			else:
+				return () # HACK?
 		elif isinstance(ref, ast.Existing):
 			# HACK creating a de-contextualized existing object?  This should really be a "global" object...
 			obj = ref.object
@@ -53,8 +57,12 @@ class FoldRewrite(object):
 
 	def getExistingNames(self, ref):
 		if isinstance(ref, ast.Local):
-			refs = self.adb.db.functionInfo(self.code).localInfo(ref).merged.references
-			return [ref.xtype.obj for ref in refs]
+			refs = ref.annotation.references
+			if refs is not None:
+				return [ref.xtype.obj for ref in refs[0]]
+			else:
+				return () # HACK?
+
 		elif isinstance(ref, ast.Existing):
 			return (ref.object,)
 
@@ -75,6 +83,7 @@ class FoldRewrite(object):
 		nameObjs = self.getExistingNames(name)
 
 		for exprObj in exprObjs:
+			assert not isinstance(exprObj, tuple), exprObj
 			typeObjs = cobjSlotRefs(exprObj, 'LowLevel', typeStrObj)
 			for t in typeObjs:
 				dictObjs = cobjSlotRefs(t, 'LowLevel', dictStrObj)

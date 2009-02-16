@@ -3,7 +3,7 @@ from .. import annotations
 
 emptyCodeAnnotation  = annotations.CodeAnnotation()
 emptyOpAnnotation    = annotations.OpAnnotation()
-emptySlotAnnotation  = annotations.OpAnnotation()
+emptySlotAnnotation  = annotations.SlotAnnotation()
 
 def isPythonAST(ast):
 	return isinstance(ast, ASTNode)

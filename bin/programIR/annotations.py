@@ -2,6 +2,29 @@ import util.canonical
 
 noMod = util.canonical. Sentinel('<no mod>')
 
+def ordered(data):
+	return tuple(sorted(data))
+
+def remapContextual(cdata, remap, translator=None):
+	if cdata is None: return None
+
+	mdata = set()
+	cout  = []
+
+	if translator:
+		for i in remap:
+			data = ordered([translator(item) for item in cdata[1][i]])
+			mdata.update(data)
+			cout.append(data)
+	else:
+		for i in remap:
+			data = cdata[1][i]
+			mdata.update(data)
+			cout.append(data)
+
+	return (ordered(mdata), tuple(cout))
+
+
 class Annotation(object):
 	__slots__ = ()
 
@@ -45,19 +68,7 @@ class OpAnnotation(Annotation):
 		return OpAnnotation(invokes, reads, modifies, allocates)
 
 	def contextSubset(self, remap, invokeMapper):
-		if self.invokes is None:
-			invokes = None
-		else:
-			minvokes = set()
-			cinvokes = []
-			for i in remap:
-				inv = self.invokes[1][i]
-				inv = tuple(sorted([invokeMapper(dst) for dst in inv]))
-
-				minvokes.update(inv)
-				cinvokes.append(inv)
-			invokes = (minvokes, tuple(cinvokes))
-
+		invokes = remapContextual(self.invokes, remap, invokeMapper)
 		return self.rewrite(invokes=invokes)
 
 	def compatable(self, codeAnnotation):
@@ -75,3 +86,7 @@ class SlotAnnotation(Annotation):
 		if references is noMod: references = self.references
 
 		return SlotAnnotation(references)
+
+	def contextSubset(self, remap):
+		references = remapContextual(self.references, remap)
+		return self.rewrite(references=references)

@@ -46,12 +46,6 @@ class CPAAnalysisDatabase(AbstractAnalysisDatabase):
 		else:
 			return ()
 
-	def liveFunctions(self):
-		return set(self.db.functionInfos.keys())
-
-	def functionContexts(self, function):
-		return self.db.functionInfo(function).contexts
-
 	# Make standard?
 	def functionOps(self, func):
 		ops, lcls = getOps(func)

@@ -35,7 +35,6 @@ def contextsThatOnlyInvoke(adb, funcs, invocations):
 def opThatInvokes(adb, func):
 	# Find the single op in the function that invokes.
 	invokeOp = None
-	funcinfo = adb.db.functionInfo(func)
 	for op in adb.functionOps(func):
 		invokes = op.annotation.invokes
 		if invokes is not None and invokes[0]:
@@ -68,8 +67,10 @@ class MethodPatternFinder(object):
 		self.ogets = set()
 		self.igets = set()
 
-		for func, funcinfo in db.functionInfos.iteritems():
-			original = funcinfo.original
+		for func in db.liveFunctions():
+			original = func.annotation.original
+			if original is None:
+				original = func
 			if original is self.iget: self.igets.add(func)
 			if original is self.oget: self.ogets.add(func)
 			if original is self.fget: self.fgets.add(func)
@@ -135,8 +136,7 @@ class MethodPatternFinder(object):
 class MethodAnalysis(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, info, pattern):
-		self.info = info
+	def __init__(self, pattern):
 		self.pattern = pattern
 
 	def target(self, node):
@@ -234,9 +234,8 @@ class MethodAnalysis(object):
 class MethodRewrite(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, adb, info, pattern):
+	def __init__(self, adb, pattern):
 		self.adb     = adb
-		self.info    = info
 		self.pattern = pattern
 
 		self.rewritten = set()
@@ -321,9 +320,9 @@ def methodCall(console, extractor, adb):
 
 
 	numrewritten = 0
-	for code, funcinfo in db.functionInfos.iteritems():
-		analyze = MethodAnalysis(funcinfo, pattern)
-		rewrite = MethodRewrite(adb, funcinfo, pattern)
+	for code in db.liveFunctions():
+		analyze = MethodAnalysis(pattern)
+		rewrite = MethodRewrite(adb, pattern)
 
 		meet = methodMeet
 

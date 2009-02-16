@@ -40,7 +40,6 @@ class CallGraphFinder(Finder):
 
 		children = []
 
-		funcinfo = self.db.functionInfo(code)
 		ops, lcls = getOps(code)
 		for op in ops:
 			assert hasattr(op.annotation, 'invokes'), op

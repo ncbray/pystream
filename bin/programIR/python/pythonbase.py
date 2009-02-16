@@ -9,15 +9,12 @@ def isPythonAST(ast):
 	return isinstance(ast, ASTNode)
 
 class ASTNode(object):
-	__slots__ = 'annotation', '__weakref__'
+	__slots__ = 'annotation'
 
 	emptyAnnotation = None
 
 	def __init__(self):
 		self.annotation = self.emptyAnnotation
-
-##	def isConstant(self):
-##		return False
 
 	def returnsValue(self):
 		return False

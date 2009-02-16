@@ -323,18 +323,11 @@ class InterproceduralDataflow(object):
 			return True
 		return False
 
-	def initCodeInfo(self, code):
-		# HACK still called functionInfo
-		info = self.db.functionInfo(code)
-
 	def bindCall(self, cop, caller, targetcontext):
 		assert isinstance(cop, base.OpContext), type(cop)
 
 		sig = targetcontext.signature
 		code = sig.code
-
-		# HACK should initalize elsewhere?
-		self.initCodeInfo(code)
 
 		dst = self.canonical.codeContext(code, targetcontext)
 		if dst not in self.opInvokes[cop]:

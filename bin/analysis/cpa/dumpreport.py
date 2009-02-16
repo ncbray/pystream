@@ -182,7 +182,6 @@ def dumpFunctionInfo(func, data, links, out, scg):
 	outputCodeShortName(out, func)
 	out.end('h3')
 
-	info = data.db.functionInfo(func)
 	funcOps = data.adb.functionOps(func)
 	funcLocals = data.adb.functionLocals(func)
 
@@ -518,25 +517,6 @@ def dumpHeapInfo(heap, data, links, out):
 
 import util.graphalgorithim.dominator
 
-def makeFunctionTree(data):
-	liveFunctions = data.liveFunctions()
-
-	head = None
-	invokes = {}
-	for func in liveFunctions:
-		info = data.db.functionInfo(func)
-
-		invokes[func] = set()
-
-		for opinfo in info.opInfos.itervalues():
-			for dstc, dstf in opinfo.merged.invokes:
-				invokes[func].add(dstf)
-
-	util.graphalgorithim.dominator.makeSingleHead(invokes, head)
-	tree, idoms = util.graphalgorithim.dominator.dominatorTree(invokes, head)
-	return tree, head
-
-
 def makeHeapTree(data):
 	liveHeap = data.db.liveObjects()
 
@@ -716,7 +696,7 @@ class CPAData(object):
 		self.invokeDestination = collections.defaultdict(set)
 		self.invokeSource      = collections.defaultdict(set)
 
-		for func, funcinfo in self.db.functionInfos.iteritems():
+		for func in self.db.liveFunctions():
 			ops, lcls = getOps(func)
 			for op in ops:
 				invokes = op.annotation.invokes
@@ -745,12 +725,6 @@ class CPAData(object):
 					for context, modifies in contexts:
 						if modifies:
 							self.funcModifies[func][context].update(modifies)
-
-	def liveFunctions(self):
-		return self.db.liveFunctions()
-
-	def functionContexts(self, func):
-		return self.db.functionInfo(func).contexts
 
 	def functionContextSlots(self, function, context):
 		return self.lcls[function][context]

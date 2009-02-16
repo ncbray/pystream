@@ -411,7 +411,7 @@ class LifetimeAnalysis(object):
 	def gatherInvokes(self, sys):
 		invokes = invokesSchema.instance()
 
-		for code, funcinfo in sys.db.functionInfos.iteritems():
+		for code in sys.db.liveFunctions():
 			assert isinstance(code, ast.Code), type(code)
 			ops, lcls = getOps(code)
 			for op in ops:

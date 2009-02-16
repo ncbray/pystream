@@ -62,7 +62,6 @@ def dump(data, entryPoints, links, reportDir):
 
 		invokeLUT[code] = set()
 
-		info = data.db.functionInfo(code)
 		for op in ops:
 			invokes = op.annotation.invokes
 			if invokes is not None:

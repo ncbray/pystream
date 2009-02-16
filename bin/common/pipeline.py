@@ -35,11 +35,8 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 
 	if True:
 		console.begin('simplify')
-		live = db.liveFunctions()
-		desc = extractor.desc
-
-		for code in desc.functions:
-			if not code.annotation.descriptive and code in live:
+		for code in db.liveFunctions():
+			if not code.annotation.descriptive:
 				simplify(extractor, adb, code)
 		console.end()
 
@@ -48,7 +45,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 		# Flatten the interpreter calls.
 		# Needs to be done before cloning, as cloning can only
 		# redirect direct calls.
-		for func in adb.liveFunctions():
+		for func in db.liveFunctions():
 			callConverter(extractor, adb, func)
 		console.end()
 

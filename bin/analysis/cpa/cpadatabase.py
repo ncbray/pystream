@@ -77,21 +77,8 @@ def getLiveObjectNodes(group):
 
 class CPADatabase(object):
 	def __init__(self):
-		self.functionInfos = weakref.WeakKeyDictionary()
-		self.heapInfos    = weakref.WeakKeyDictionary()
-
-
-	def contextOpInfo(self, function, op, context):
-		return self.functionInfo(function).opInfo(op).context(context)
-
-	def functionInfo(self, func):
-		assert not isinstance(func, str), func
-		if not func in self.functionInfos:
-			info = FunctionInfo(func)
-			self.functionInfos[func] = info
-		else:
-			info = self.functionInfos[func]
-		return info
+		self.heapInfos     = weakref.WeakKeyDictionary()
+		self.liveCode      = set()
 
 	def heapInfo(self, heap):
 		if not heap in self.heapInfos:
@@ -136,19 +123,12 @@ class CPADatabase(object):
 			info.merge()
 
 	def load(self, sys):
+		self.liveCode.update(sys.codeContexts.iterkeys())
 		self.loadObjects(sys)
-
 		self.finalizeInfos()
 
 	def liveFunctions(self):
-		return set(self.functionInfos.keys())
+		return self.liveCode
 
 	def liveObjects(self):
 		return self.liveObjectGroups
-
-	def iterContextOp(self):
-		for func, funcInfo in self.functionInfos.iteritems():
-			for op, opInfos in funcInfo.opInfos.iteritems():
-				for context, cInfo in opInfos.contexts.iteritems():
-					yield func, op, context, cInfo
-

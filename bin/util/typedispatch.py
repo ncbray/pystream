@@ -1,6 +1,7 @@
-__all__ = ['typedispatcher', 'defaultdispatch', 'dispatch', 'allChildren']
+__all__ = ['typedispatcher', 'defaultdispatch', 'dispatch',
+           'allChildren', 'visitAllChildren']
 
-from xform import allChildren
+from xform import allChildren, visitAllChildren
 
 def dispatch(*types):
 	def dispatchF(f):
@@ -21,14 +22,14 @@ def defaultdispatch(f):
 
 def dispatch__call__(self, p, *args):
 	t = type(p)
-	
+
 	if not t in self.__dispatchTable__:
 		# Binds method.
 		return self.__dispatchDefault__(p, *args)
 	else:
 		# Does not bind method.
 		return self.__dispatchTable__[t](self, p, *args)
-	
+
 
 def null(self, p, *args):
 	return p
@@ -39,7 +40,7 @@ def typedispatcher(name, bases, d):
 	restore = {}
 
 	default = null
-	
+
 	for k, v in d.iteritems():
 		if hasattr(v, '__dispatch__') and hasattr(v, '__original__'):
 			types = v.__dispatch__
@@ -58,5 +59,5 @@ def typedispatcher(name, bases, d):
 	d['__dispatchTable__'] = lut
 	d['__dispatchDefault__'] = default
 	d['__call__'] = dispatch__call__
-		
+
 	return type(name, bases, d)

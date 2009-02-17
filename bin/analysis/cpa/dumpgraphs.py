@@ -17,7 +17,7 @@ def codeShortName(code):
 		kargs = None
 	else:
 		name = code.name
-		args = list(code.parameternames)
+		args = [p if p is not None else '!' for p in code.parameternames]
 		vargs = None if code.vparam is None else code.vparam.name
 		kargs = None if code.kparam is None else code.kparam.name
 

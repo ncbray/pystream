@@ -49,6 +49,19 @@ class SimpleExprGen(StandardVisitor):
 
 		self.parent = parent
 
+	def generateUniqueLocalName(self, base):
+		# The bytecode compiler can generate invalid names for list comprehensions/tuple comprehensions/etc.
+		if not isIdentifier.match(base):
+			base = ''
+
+		name = base
+
+		# Find a unique name.
+		while not name or name in self.names:
+			name = '%s_%d' % (base, self.uid)
+			self.uid += 1
+		return name
+
 	def getLocalName(self, node):
 		# HACK assumes locals will not conflict with non-local names
 		# TODO preregister globals and cells
@@ -56,29 +69,19 @@ class SimpleExprGen(StandardVisitor):
 
 		if not node in self.localLUT:
 			base = node.name if node.name else ''
-
-			# The bytecode compiler can generate invalid names for list comprehensions/tuple comprehensions/etc.
-			if not isIdentifier.match(base):
-				#base = 'xxx'
-				base = ''
-
-			name = base
-
-			# Find a unique name.
-			while not name or name in self.names:
-				name = '%s_%d' % (base, self.uid)
-				self.uid += 1
-
-##			if node in self.collapsable:
-##				name += '_c'
-
+			name = self.generateUniqueLocalName(base)
 			self.setLocalName(node, name)
 		return self.localLUT[node]
 
 	def setLocalName(self, node, name):
 		assert not node in self.localLUT, "%r has already been named: %s." % (node, self.localLUT[node])
 
-		if isIdentifier.match(name):
+		if name is None:
+			name = self.generateUniqueLocalName('')
+			name = '!'+name
+			self.names.add(name)
+			self.localLUT[node] = name
+		elif isIdentifier.match(name):
 			self.names.add(name)
 			self.localLUT[node] = name
 

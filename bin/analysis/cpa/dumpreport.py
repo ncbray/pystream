@@ -85,7 +85,7 @@ def codeShortName(code):
 		kargs = None
 	else:
 		name = code.name
-		args = list(code.parameternames)
+		args = [p if p is not None else '!' for p in code.parameternames]
 		vargs = None if code.vparam is None else code.vparam.name
 		kargs = None if code.kparam is None else code.kparam.name
 
@@ -270,7 +270,11 @@ def dumpFunctionInfo(func, data, links, out, scg):
 
 		numParam = len(sig.code.parameters)
 		for i, param in enumerate(code.parameters):
-			objs = param.annotation.references[1][cindex]
+			refs = param.annotation.references
+			if refs:
+				objs = refs[1][cindex]
+			else:
+				objs = ('?',)
 			tableRow('param %d' % i, *objs)
 
 		if code.vparam is not None:

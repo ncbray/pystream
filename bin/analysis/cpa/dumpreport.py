@@ -352,7 +352,8 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			else:
 				print "No refs for local?", code, lcl
 				refs = ('?',)
-			printTabbed(lcl, refs)
+			lclName = str(lcl) + ' / ' + scg.getLocalName(lcl)
+			printTabbed(lclName, refs)
 		out.end('pre')
 		out.endl()
 

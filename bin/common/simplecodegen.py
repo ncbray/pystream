@@ -330,6 +330,9 @@ class SimpleCodeGen(StandardVisitor):
 
 		self.supressStatements = 0
 
+	def getLocalName(self, node):
+		return self.seg.getLocalName(node)
+
 	def enterSupress(self):
 		self.supressStatements += 1
 

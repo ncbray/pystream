@@ -69,7 +69,7 @@ def cpaAnalyze(console, e, entryPoints):
 	console.output("Constraints:   %d" % len(result.constraints))
 	console.output("Contexts:      %d" % len(result.liveContexts))
 	console.output("Code:          %d" % len(result.liveCode))
-	console.output("Contexts/Code: %.1f" % (len(result.liveContexts)/max(len(result.liveCode), 1)))
+	console.output("Contexts/Code: %.1f" % (float(len(result.liveContexts))/max(len(result.liveCode), 1)))
 	console.output("Slot Memory:   %s" % util.memorySizeString(result.slotMemory()))
 	console.output('')
 	console.output("Decompile:     %s" % util.elapsedTimeString(result.decompileTime))

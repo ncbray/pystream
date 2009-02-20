@@ -124,8 +124,13 @@ class FoldRewrite(object):
 
 		# Replace with dataflow
 		const = self.flow.lookup(node)
-		if const is not undefined and const is not top:
-			return ast.Existing(const)
+		if const is not undefined:
+			if isinstance(const, ast.Local):
+				# Reach for the local definition
+				return const
+			elif const is not top:
+				# Reach for the constant definition
+				return ast.Existing(const)
 
 		return node
 
@@ -161,6 +166,14 @@ class FoldAnalysis(object):
 	def visitAssign(self, node):
 		if fold.existingConstant(node.expr):
 			self.flow.define(node.lcl, node.expr.object)
+		elif isinstance(node.expr, ast.Local):
+			# Propagate names.
+			if node.lcl.name and not node.expr.name:
+				node.expr.name = node.lcl.name
+			elif not node.lcl.name and node.expr.name:
+				node.lcl.name = node.expr.name
+
+			self.flow.define(node.lcl, node.expr)
 		else:
 			self.flow.define(node.lcl, top)
 		return node

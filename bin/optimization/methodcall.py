@@ -1,6 +1,5 @@
 from util.typedispatch import *
 from programIR.python import ast
-from util import xform
 
 import dataflow.forward
 
@@ -198,7 +197,7 @@ class MethodAnalysis(object):
 		  ast.BinaryOp, ast.UnaryPrefixOp,
 		  ast.BuildTuple, list, ast.Call, ast.DirectCall, ast.MethodCall, ast.GetAttr)
 	def visitMayLeak(self, node):
-		xform.visitAllChildren(self, node)
+		visitAllChildren(self, node)
 		return node
 
 	@dispatch(ast.Assign)
@@ -301,7 +300,7 @@ class MethodRewrite(object):
 
 	@dispatch(ast.Assign, ast.Discard)
 	def visitStatement(self, node):
-		return xform.allChildren(self, node)
+		return allChildren(self, node)
 
 def methodMeet(values):
 	prototype = values[0]

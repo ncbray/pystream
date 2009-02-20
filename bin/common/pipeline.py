@@ -15,6 +15,7 @@ from optimization.simplify import simplify
 from optimization.clone import clone
 from optimization.callconverter import callConverter
 from optimization.argumentnormalization import normalizeArguments
+from optimization.codeinlining import inlineCode
 
 
 def codeConditioning(console, extractor, entryPoints, dataflow):
@@ -58,6 +59,11 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 	if True:
 		console.begin('argument normalization')
 		normalizeArguments(dataflow, adb)
+		console.end()
+
+	if True:
+		console.begin('code inlining')
+		inlineCode(dataflow, entryPoints, adb)
 		console.end()
 
 	console.end()

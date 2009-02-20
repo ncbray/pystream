@@ -13,14 +13,21 @@ def remapContextual(cdata, remap, translator=None):
 
 	if translator:
 		for i in remap:
-			data = ordered([translator(item) for item in cdata[1][i]])
-			mdata.update(data)
-			cout.append(data)
+			if i >= 0:
+				data = ordered([translator(item) for item in cdata[1][i]])
+				mdata.update(data)
+				cout.append(data)
+			else:
+				cout.append(())
+
 	else:
 		for i in remap:
-			data = cdata[1][i]
-			mdata.update(data)
-			cout.append(data)
+			if i >= 0:
+				data = cdata[1][i]
+				mdata.update(data)
+				cout.append(data)
+			else:
+				cout.append(())
 
 	return (ordered(mdata), tuple(cout))
 
@@ -67,7 +74,7 @@ class OpAnnotation(Annotation):
 
 		return OpAnnotation(invokes, reads, modifies, allocates)
 
-	def contextSubset(self, remap, invokeMapper):
+	def contextSubset(self, remap, invokeMapper=None):
 		invokes   = remapContextual(self.invokes,   remap, invokeMapper)
 		reads     = remapContextual(self.reads,     remap)
 		modifies  = remapContextual(self.modifies,  remap)

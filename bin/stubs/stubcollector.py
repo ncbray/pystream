@@ -157,7 +157,14 @@ class StubCollector(object):
 	def fold(self, func):
 		def callback(code):
 			assert isinstance(code, ast.Code), type(code)
-			code.rewriteAnnotation(fold=func)
+			code.rewriteAnnotation(staticFold=func, dynamicFold=func)
+			return code
+		return callback
+
+	def staticFold(self, func):
+		def callback(code):
+			assert isinstance(code, ast.Code), type(code)
+			code.rewriteAnnotation(staticFold=func)
 			return code
 		return callback
 

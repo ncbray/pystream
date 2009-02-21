@@ -192,10 +192,18 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.end('b')
 		out.end('div')
 
-	if code.annotation.fold:
+	if code.annotation.staticFold:
 		out.begin('div')
 		out.begin('b')
-		out << 'fold'
+		out << 'static fold'
+		out.end('b')
+		out.end('div')
+
+
+	if code.annotation.dynamicFold:
+		out.begin('div')
+		out.begin('b')
+		out << 'dynamic fold'
 		out.end('b')
 		out.end('div')
 

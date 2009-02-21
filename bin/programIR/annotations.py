@@ -37,21 +37,23 @@ class Annotation(object):
 
 
 class CodeAnnotation(Annotation):
-	__slots__ = 'contexts', 'descriptive', 'fold', 'original'
+	__slots__ = 'contexts', 'descriptive', 'staticFold', 'dynamicFold', 'original'
 
-	def __init__(self, contexts=None, descriptive=False, fold=None, original=None):
+	def __init__(self, contexts=None, descriptive=False, staticFold=None, dynamicFold=None, original=None):
 		self.contexts    = contexts
 		self.descriptive = descriptive
-		self.fold        = fold
+		self.staticFold  = staticFold
+		self.dynamicFold = dynamicFold
 		self.original    = original
 
-	def rewrite(self, contexts=noMod, descriptive=noMod, fold=noMod, original=noMod):
-		if contexts is noMod:    contexts    = self.contexts
+	def rewrite(self, contexts=noMod, descriptive=noMod, staticFold=noMod, dynamicFold=noMod, original=noMod):
+		if contexts    is noMod: contexts    = self.contexts
 		if descriptive is noMod: descriptive = self.descriptive
-		if fold is noMod:        fold        = self.fold
-		if original is noMod:    original    = self.original
+		if staticFold  is noMod: staticFold  = self.staticFold
+		if dynamicFold is noMod: dynamicFold = self.dynamicFold
+		if original    is noMod: original    = self.original
 
-		return CodeAnnotation(contexts, descriptive, fold, original)
+		return CodeAnnotation(contexts, descriptive, staticFold, dynamicFold, original)
 
 	def contextSubset(self, remap):
 		contexts = [self.contexts[i] for i in remap]

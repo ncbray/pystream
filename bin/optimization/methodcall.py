@@ -13,8 +13,6 @@ analysis.analysisdatabase.DummyAnalysisDatabase
 def contextsThatOnlyInvoke(adb, funcs, invocations):
 	output = set()
 
-	db = adb.db
-
 	# HACK There's only one op in the object getter that will invoke?
 	for func in funcs:
 		for op in adb.functionOps(func):
@@ -60,13 +58,11 @@ class MethodPatternFinder(object):
 
 
 	def findExisting(self, adb):
-		db = adb.db
-
 		self.fgets = set()
 		self.ogets = set()
 		self.igets = set()
 
-		for func in db.liveFunctions():
+		for func in adb.db.liveFunctions():
 			original = func.annotation.original
 			if original is None:
 				original = func
@@ -77,7 +73,6 @@ class MethodPatternFinder(object):
 
 
 	def findContexts(self, adb):
-		db = adb.db
 		if not self.fgets: return False
 
 		self.fgetsC = set()
@@ -126,7 +121,7 @@ class MethodPatternFinder(object):
 		return False, None, None
 
 	@dispatch(ast.GetAttr)
-	def visitCall(self, node, invokes):
+	def visitGetAttr(self, node, invokes):
 		if self.isMethodGetter(node, invokes):
 			return True, node.expr, node.name
 		else:

@@ -6,29 +6,18 @@ from programIR.python import program
 from common import opnames
 
 
-##oldDispatch = dispatch
-##
-##def dispatch(*types):
-##	def traceF(f):
-##		def traceWrap(*args, **kargs):
-##			print "TRACE", [type(arg) for arg in args[1:]]
-##			return f(*args, **kargs)
-##		return oldDispatch(*types)(traceWrap)
-##	return traceF
-
 class ConvertCalls(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, extractor, adb, code):
+	def __init__(self, extractor, code):
 		self.extractor = extractor
-		self.adb = adb
 		self.code = code
 
 	def directCall(self, node, code, selfarg, args, vargs=None, kargs=None):
 		kwds = [] # HACK
 		result = ast.DirectCall(code, selfarg, args, kwds, vargs, kargs)
 		if node is not None:
-			self.adb.trackRewrite(self.code, node, result)
+			result.annotation = node.annotation
 		return result
 
 	@property
@@ -48,15 +37,11 @@ class ConvertCalls(object):
 		  ast.Allocate, ast.Store, ast.Load, ast.Check,
 		  ast.Switch, ast.For, ast.While)
 	def visitOK(self, node):
-		nodeT = allChildren(self, node)
-		self.adb.trackRewrite(self.code, node, nodeT)
-		return nodeT
+		return allChildren(self, node)
 
 	@dispatch(ast.Call, ast.DirectCall, ast.MethodCall)
 	def visitCall(self, node):
-		nodeT = allChildren(self, node)
-		self.adb.trackRewrite(self.code, node, nodeT)
-		return nodeT
+		return allChildren(self, node)
 
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
@@ -112,7 +97,8 @@ class ConvertCalls(object):
 
 		for i, arg in enumerate(node.targets):
 			obj = self.extractor.getObject(i)
-			call = self.directCall(None, self.exports['interpreter_getitem'], None, [self(node.expr), self(ast.Existing(obj))])
+			#call = self.directCall(None, self.exports['interpreter_getitem'], None, [self(node.expr), self(ast.Existing(obj))])
+			call = ast.Load(self(node.expr), 'Array', self(ast.Existing(obj)))
 			calls.append(ast.Assign(call, arg))
 
 		return calls
@@ -134,24 +120,7 @@ class ConvertCalls(object):
 		return ast.Discard(self.directCall(node, self.exports['interpreter_setitem'], None, [self(node.expr), self(node.subscript), self(node.value)]))
 
 
-##	def visitWhile(self, node):
-##		self.visit(node.condition)
-##		self.visit(node.body)
-##		if node.else_: self.visit(node.else_)
-##
-##	@dispatch(ast.For)
-##	def visitFor(self, node):
-##		iterator = self(node.iterator)
-##
-##		self.directCall(node.index, self.exports['interpreter_next'], None, [iterator])
-##
-##		self(node.body)
-##
-##		if node.else_:
-##			self(node.else_)
-
-
-def callConverter(extractor, adb, node):
+def callConverter(extractor, node):
 	assert isinstance(node, ast.Code), node
-	node.ast = ConvertCalls(extractor, adb, node)(node.ast)
+	node.ast = ConvertCalls(extractor, node)(node.ast)
 	return node

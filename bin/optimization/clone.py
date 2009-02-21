@@ -194,12 +194,16 @@ class ProgramCloner(object):
 		return groups
 
 	def labelLoad(self, code, op, group):
+		reads = op.annotation.reads
+		if not reads: return None
+
+
 		contexts = self.unifyGroups[group]
 
 		slots = set()
 		for context in contexts:
 			cindex = code.annotation.contexts.index(context)
-			cslots = op.annotation.reads[1][cindex]
+			cslots = reads[1][cindex]
 			for slot in cslots:
 				slots.add(slot.slotName)
 
@@ -211,12 +215,15 @@ class ProgramCloner(object):
 
 
 	def labelStore(self, code, op, group):
+		modifies = op.annotation.modifies
+		if not modifies: return None
+
 		contexts = self.unifyGroups[group]
 
 		slots = set()
 		for context in contexts:
 			cindex = code.annotation.contexts.index(context)
-			cslots = op.annotation.modifies[1][cindex]
+			cslots = modifies[1][cindex]
 			for slot in cslots:
 				slots.add(slot.slotName)
 

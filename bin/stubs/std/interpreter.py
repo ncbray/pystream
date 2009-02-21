@@ -26,6 +26,7 @@ def makeInterpreterStubs(collector):
 	replaceObject = collector.replaceObject
 	replaceAttr   = collector.replaceAttr
 	fold          = collector.fold
+	staticFold    = collector.staticFold
 	attachPtr     = collector.attachPtr
 
 	def interpfunc(f):
@@ -125,18 +126,24 @@ def makeInterpreterStubs(collector):
 
 	for op in opnames.forward.itervalues():
 		f = export(llast(simpleAttrCall('interpreter%s' % op, op, ['self', 'other'])))
+		foldF = getattr(operator, op)
+		if foldF: staticFold(foldF)(f)
+
 
 		# HACK?
 		if op in ('__eq__', '__ne__', '__gt__', '__ge__', '__lt__', '__le__'):
-			foldF = getattr(operator, op)
-			if foldF:
-				fold(foldF)(f)
+			if foldF: fold(foldF)(f)
 
 	for op in opnames.inplace.itervalues():
-		export(llast(simpleAttrCall('interpreter%s' % op, op, ['self', 'other'])))
+		f = export(llast(simpleAttrCall('interpreter%s' % op, op, ['self', 'other'])))
+		foldF = getattr(operator, op)
+		if foldF: staticFold(foldF)(f)
+
 
 	for op in opnames.unaryPrefixLUT.itervalues():
-		export(llast(simpleAttrCall('interpreter%s' % op, op, ['self'])))
+		f = export(llast(simpleAttrCall('interpreter%s' % op, op, ['self'])))
+		foldF = getattr(operator, op)
+		if foldF: staticFold(foldF)(f)
 
 
 	# TODO is / is not / in / not in

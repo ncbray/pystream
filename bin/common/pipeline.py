@@ -25,6 +25,16 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 	console.begin('conditioning')
 
 	if True:
+		console.begin('lower')
+		# Flatten the interpreter calls.
+		# Must be done before cloning, as cloning can only
+		# redirect direct calls.
+		for func in db.liveFunctions():
+			callConverter(extractor, func)
+		console.end()
+
+	if True:
+		# Try to identify and optimize method calls
 		console.begin('method call')
 		optimization.methodcall.methodCall(console, extractor, adb)
 		console.end()
@@ -36,6 +46,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 	console.end()
 
 	if True:
+		# Fold, DCE, etc.
 		console.begin('simplify')
 		for code in db.liveFunctions():
 			if not code.annotation.descriptive:
@@ -43,25 +54,19 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 		console.end()
 
 	if True:
-		console.begin('lower')
-		# Flatten the interpreter calls.
-		# Needs to be done before cloning, as cloning can only
-		# redirect direct calls.
-		for func in db.liveFunctions():
-			callConverter(extractor, adb, func)
-		console.end()
-
-	if True:
+		# Seperate different invocations of the same code.
 		console.begin('clone')
 		clone(console, extractor, entryPoints, adb)
 		console.end()
 
 	if True:
+		# Try to eliminate kwds, vargs, kargs, and default arguments.
 		console.begin('argument normalization')
 		normalizeArguments(dataflow, adb)
 		console.end()
 
 	if True:
+		# Try to eliminate trivial functions.
 		console.begin('code inlining')
 		inlineCode(dataflow, entryPoints, adb)
 		console.end()

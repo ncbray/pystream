@@ -28,8 +28,8 @@ class FoldRewrite(object):
 		func = self.adb.singleCall(self.code, node)
 		if func is not None:
 			result = ast.DirectCall(func, node.expr, node.args, node.kwds, node.vargs, node.kargs)
-			self.adb.trackRewrite(self.code, node, result)
-			return result
+			result.annotation = node.annotation
+			return self(result)
 
 		return node
 
@@ -68,12 +68,13 @@ class FoldRewrite(object):
 
 	def getMethodFunction(self, expr, name):
 		# Static setup
-		db = self.adb.db
+		canonical = self.adb.db.canonical
+
 		typeStrObj = self.extractor.getObject('type')
 		dictStrObj = self.extractor.getObject('dictionary')
 
 		def cobjSlotRefs(cobj, slotType, key):
-			fieldName = db.canonical.fieldName(slotType, key)
+			fieldName = canonical.fieldName(slotType, key)
 			slot = cobj.knownField(fieldName)
 			return tuple(iter(slot))
 
@@ -110,8 +111,8 @@ class FoldRewrite(object):
 			newargs = [node.expr]
 			newargs.extend(node.args)
 			result = ast.DirectCall(func, funcobj, newargs, node.kwds, node.vargs, node.kargs)
-			self.adb.trackRewrite(self.code, node, result)
-			return result
+			result.annotation = node.annotation
+			return self(result)
 		return node
 
 	@dispatch(ast.Local)
@@ -158,6 +159,20 @@ class FoldRewrite(object):
 		self.logCreated(result)
 		return result
 
+	@dispatch(ast.DirectCall)
+	def visitDirectCall(self, node):
+		foldFunc = node.func.annotation.staticFold
+		if foldFunc and not node.kwds and not node.vargs and not node.kargs:
+			result = fold.foldCallAST(self.extractor, node, foldFunc, node.args)
+
+#			print "?", node
+#			print foldFunc
+#			print result
+#			print
+
+			self.logCreated(result)
+			return result
+		return node
 
 class FoldAnalysis(object):
 	__metaclass__ = typedispatcher
@@ -197,10 +212,7 @@ class FoldTraverse(object):
 	@defaultdispatch
 	def default(self, node):
 		# Bottom up
-		nodeT = xform.allChildren(self, node)
-		self.adb.trackRewrite(self.code, node, nodeT)
-		result = self.strategy(nodeT)
-		return result
+		return self.strategy(allChildren(self, node))
 
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):

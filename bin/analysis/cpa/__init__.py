@@ -271,7 +271,7 @@ class InterproceduralDataflow(object):
 		sig = targetcontext.signature
 		code = sig.code
 
-		if code.annotation.fold:
+		if code.annotation.dynamicFold:
 			# It's foldable.
 			assert code.vparam is None, code.name
 			assert code.kparam is None, code.name
@@ -283,7 +283,7 @@ class InterproceduralDataflow(object):
 				if notConst(param): return False
 
 			params = [param.obj for param in sig.params]
-			result = foldFunctionIR(self.extractor, code.annotation.fold, params)
+			result = foldFunctionIR(self.extractor, code.annotation.dynamicFold, params)
 			resultxtype = self.canonical.existingType(result)
 
 			# Set the return value

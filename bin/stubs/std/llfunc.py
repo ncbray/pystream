@@ -20,6 +20,7 @@ def makeLLFunc(collector):
 	replaceObject = collector.replaceObject
 	replaceAttr   = collector.replaceAttr
 	fold          = collector.fold
+	staticFold    = collector.staticFold
 	attachPtr     = collector.attachPtr
 
 	##############
@@ -340,28 +341,28 @@ def makeLLFunc(collector):
 
 
 	# TODO multiarg?
-	@fold(max)
+	@staticFold(max)
 	@attachPtr(max)
 	@llfunc
 	def max_stub(a, b):
 		return b if a < b else a
 
 	# TODO multiarg?
-	@fold(min)
+	@staticFold(min)
 	@attachPtr(min)
 	@llfunc
 	def min_stub(a, b):
 		return a if a < b else b
 
 
-	@fold(chr)
+	@staticFold(chr)
 	@attachPtr(chr)
 	@descriptive
 	@llfunc
 	def chr_stub(i):
 		return allocate(str)
 
-	@fold(ord)
+	@staticFold(ord)
 	@attachPtr(ord)
 	@descriptive
 	@llfunc

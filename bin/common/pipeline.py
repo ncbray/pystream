@@ -97,8 +97,12 @@ def cpaPass(console, e, entryPoints):
 
 def cpaDump(console, name, e, result, entryPoints):
 	console.begin('dump')
-	start = time.clock()
 	analysis.cpa.dumpreport.dump(name, e, result, entryPoints)
+	console.end()
+
+def cull(console, entryPoints, db):
+	console.begin('cull')
+	cullProgram(entryPoints, db)
 	console.end()
 
 def evaluate(console, name, e, entryPoints):
@@ -109,6 +113,9 @@ def evaluate(console, name, e, entryPoints):
 
 	if False:
 		result = cpaPass(console, e, entryPoints)
+
+	# Get rid of dead functions/contexts
+	cull(console, entryPoints, result.db)
 
 	cpaDump(console, name, e, result, entryPoints)
 	console.end()

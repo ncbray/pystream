@@ -561,7 +561,7 @@ def dumpReport(name, data, entryPoints):
 
 
 	liveHeap = data.db.liveObjects()
-	liveFunctions, liveInvocations = programculler.findLiveFunctions(data.db, entryPoints)
+	liveFunctions, liveInvocations = programculler.findLiveFunctions(entryPoints)
 
 	out, scg = makeOutput(reportDir, 'function_index.html')
 	dumpHeader(out)

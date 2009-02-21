@@ -12,10 +12,8 @@ class Finder(object):
 				self.process(child)
 
 class CallGraphFinder(Finder):
-	def __init__(self, db):
+	def __init__(self):
 		Finder.__init__(self)
-		self.db = db
-
 		self.liveFunc = set()
 		self.liveFuncContext = {}
 		self.invokes = {}
@@ -52,8 +50,8 @@ class CallGraphFinder(Finder):
 					children.append(child)
 		return children
 
-def makeCGF(db, entryPoints):
-	cgf = CallGraphFinder(db)
+def makeCGF(entryPoints):
+	cgf = CallGraphFinder()
 
 	for code, funcobj, args in entryPoints:
 		assert isinstance(code, ast.Code), type(code)
@@ -64,8 +62,8 @@ def makeCGF(db, entryPoints):
 			cgf.process((code, context))
 	return cgf
 
-def findLiveFunctions(db, entryPoints):
-	cgf = makeCGF(db, entryPoints)
+def findLiveFunctions(entryPoints):
+	cgf = makeCGF(entryPoints)
 
 	entry = set()
 	for code, funcobj, args in entryPoints:
@@ -78,6 +76,6 @@ def findLiveFunctions(db, entryPoints):
 
 	return live, G
 
-def findLiveContexts(db, entryPoints):
-	cgf = makeCGF(db, entryPoints)
+def findLiveContexts(entryPoints):
+	cgf = makeCGF(entryPoints)
 	return cgf.liveFuncContext

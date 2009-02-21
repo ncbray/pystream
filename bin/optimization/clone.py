@@ -600,7 +600,7 @@ class FunctionCloner(object):
 def clone(console, extractor, entryPoints, adb):
 	console.begin('analysis')
 
-	liveContexts = programculler.findLiveContexts(adb.db, entryPoints)
+	liveContexts = programculler.findLiveContexts(entryPoints)
 
 	cloner = ProgramCloner(console, adb, liveContexts)
 

@@ -18,6 +18,8 @@ from constraints import AssignmentConstraint
 from programIR.python import ast
 from programIR.python import program
 
+from optimization.callconverter import callConverter
+
 from util.fold import foldFunction
 
 from analysis.astcollector import getOps
@@ -313,7 +315,12 @@ class InterproceduralDataflow(object):
 			if context not in self.liveContexts:
 				# Mark as initialized
 				self.liveContexts.add(context)
-				self.liveCode.add(context.signature.code)
+
+				code = context.signature.code
+				if code not in self.liveCode:
+					# HACK convert the calls before analysis to eliminate UnpackTuple nodes.
+					callConverter(self.extractor, code)
+					self.liveCode.add(code)
 
 				# Check to see if we can just fold it.
 				if not self.fold(context):

@@ -312,16 +312,6 @@ def makeLLFunc(collector):
 	def int_rich_compare(self, other):
 		return allocate(bool)
 
-	#############
-	### Tuple ###
-	#############
-
-	@attachPtr(xtypes.TupleType, '__getitem__')
-	@descriptive
-	@llfunc
-	def tuple__getitem__(self, key):
-		return loadArray(self, key)
-
 	#########################
 	### Builtin functions ###
 	#########################

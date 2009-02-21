@@ -29,6 +29,12 @@ def makeContainerStubs(collector):
 		store(iterator, 'iterCurrent', allocate(int))
 		return iterator
 
+	# TODO bounds check?
+	@attachPtr(xtypes.TupleType, '__getitem__')
+	@llfunc
+	def tuple__getitem__(self, key):
+		return loadArray(self, key)
+
 
 	### List ###
 	@attachPtr(list, '__getitem__')

@@ -97,8 +97,8 @@ class ConvertCalls(object):
 
 		for i, arg in enumerate(node.targets):
 			obj = self.extractor.getObject(i)
-			#call = self.directCall(None, self.exports['interpreter_getitem'], None, [self(node.expr), self(ast.Existing(obj))])
-			call = ast.Load(self(node.expr), 'Array', self(ast.Existing(obj)))
+			call = self.directCall(None, self.exports['interpreter_getitem'], None, [self(node.expr), self(ast.Existing(obj))])
+			#call = ast.Load(self(node.expr), 'Array', self(ast.Existing(obj)))
 			calls.append(ast.Assign(call, arg))
 
 		return calls

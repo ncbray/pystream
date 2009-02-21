@@ -10,6 +10,53 @@ from programIR.python import ast
 from simplify import simplify
 from analysis.cpa import programculler
 
+class GroupUnifier(object):
+	def __init__(self):
+		self.unify         = UnionFind()
+		self.unifyGroups   = {}
+		self.dirty         = set()
+
+	def init(self, context):
+		self.unify[context]
+		self.unifyGroups[context] = set((context,))
+		self.dirty.add(context)
+
+	def unifyContexts(self, contexts):
+		for context in contexts:
+			assert self.unify[context] is context, (context, self.unify[context])
+
+		# Unify the contexts
+		result = self.unify.union(*contexts)
+
+		group = self.unifyGroups[result]
+
+		for context in contexts:
+			if context is result: continue
+
+			group.update(self.unifyGroups[context])
+			del self.unifyGroups[context]
+
+			# The context may be unified, so make sure it doesn't hang arround.
+			if context in self.dirty: self.dirty.remove(context)
+
+		# Mark the context for processing.
+		self.dirty.add(result)
+
+		return result
+
+	def iterdirty(self):
+		while self.dirty:
+			yield self.dirty.pop()
+
+	def iterGroups(self):
+		return self.unifyGroups.iterkeys()
+
+	def canonical(self, context):
+		return self.unify[context]
+
+	def group(self, context):
+		return self.unifyGroups[context]
+
 # Figures out what functions should have seperate implementations,
 # to improve optimization / realizability
 class ProgramCloner(object):
@@ -17,17 +64,17 @@ class ProgramCloner(object):
 		self.console = console
 		self.adb = adb
 
-		# func -> context -> context set
-		self.different = collections.defaultdict(lambda: collections.defaultdict(set))
-
 		self.liveFunctions = set(liveContexts.iterkeys())
 		self.liveContexts  = liveContexts
 
+
 		self.liveOps = {}
-
-
 		for code in self.liveFunctions:
 			self.liveOps[code] = self.adb.functionOps(code)
+
+
+		# func -> context -> context set
+		self.different = collections.defaultdict(lambda: collections.defaultdict(set))
 
 		# HACK, ensure the keys exist
 		for func in self.liveFunctions:
@@ -35,12 +82,9 @@ class ProgramCloner(object):
 			for context in self.liveContexts[func]:
 				different[context]
 
-		# For finding the maximal clone.
-		self.unify         = UnionFind()
-		self.unifyGroups   = {}
-		self.indirectGroup = {}
-		self.dirty         = set()
 
+		self.unifier = GroupUnifier()
+		self.indirectGroup = {}
 
 	def doUnify(self, code, contexts, indirect):
 		# indirect indicates the contexts can be called from an object.
@@ -51,30 +95,11 @@ class ProgramCloner(object):
 
 		if len(contexts) > 1:
 			indirectGroup =  self.indirectGroup.get(code)
-			# Build the new group
-			group = set()
+
 			for context in contexts:
-				assert self.unify[context] is context, (context, self.unify[context])
-
-				group.update(self.unifyGroups[context])
-				del self.unifyGroups[context]
-
-				# The context may be unified, so make sure it doesn't hand arround.
-				if context in self.dirty:
-					self.dirty.remove(context)
-
 				if context is indirectGroup: indirect = True
 
-			# Unify the contexts
-			result = self.unify.union(*contexts)
-
-			assert result is self.unify[context]
-			assert result not in self.unifyGroups
-			assert result not in self.dirty
-
-			# Set the new group, and mark the context for processing.
-			self.unifyGroups[result] = group
-			self.dirty.add(result)
+			result = self.unifier.unifyContexts(contexts)
 
 			if indirect: self.indirectGroup[code] = result
 		elif indirect:
@@ -89,28 +114,24 @@ class ProgramCloner(object):
 		# TODO what happens if we can insert type switches?
 
 		# All of the contexts are dirty
-		self.dirty = set()
 		for code, contexts in self.liveContexts.iteritems():
 			for context in contexts:
-				self.unify[context]
-				self.unifyGroups[context] = set((context,))
-				self.dirty.add(context)
+				self.unifier.init(context)
 
 				if context.entryPoint:
 					self.doUnify(code, set((context,)), True)
 
-		while self.dirty:
-			current = self.dirty.pop()
+		for current in self.unifier.iterdirty():
 			code    = current.signature.code
-			group   = self.unifyGroups[self.unify[current]]
+			group   = self.unifier.group(current)
 
 			for op in self.liveOps[code]:
 				dsts = collections.defaultdict(set)
 				for context in group:
 					invocations = self.adb.invocationsForContextOp(code, op, context)
 					for dst in invocations:
-						udst = self.unify[dst]
-						assert self.unify[udst] is udst
+						udst = self.unifier.canonical(dst)
+						assert self.unifier.canonical(udst) is udst
 						dsts[udst.signature.code].add(udst)
 
 				indirect = len(dsts) > 1
@@ -123,7 +144,7 @@ class ProgramCloner(object):
 
 		self.groupOpInvokes = {}
 
-		for gid in self.unifyGroups.iterkeys():
+		for gid in self.unifier.iterGroups():
 			code = gid.signature.code
 			if code not in self.codeGroups:
 				self.codeGroups[code] = set()
@@ -134,12 +155,11 @@ class ProgramCloner(object):
 			for op in self.liveOps[code]:
 				for group in groups:
 					ginv = set()
-					for context in self.unifyGroups[group]:
-						src = self.unify[context]
+					for context in self.unifier.group(group):
 						invocations = self.adb.invocationsForContextOp(code, op, context)
 						for inv in invocations:
-							dst = self.unify[inv]
-							self.groupsInvokeGroup[dst].add(src)
+							dst = self.unifier.canonical(inv)
+							self.groupsInvokeGroup[dst].add(group)
 							ginv.add(dst)
 					self.groupOpInvokes[(group, op)] = ginv
 
@@ -171,24 +191,28 @@ class ProgramCloner(object):
 
 	def makeFuncGroups(self, code):
 		pack = []
-
+		doPack = True
 		different = self.different[code]
 
 		# Pack the groups
 		for group in self.codeGroups[code]:
-			for packed in pack:
-				if not different[group].intersection(packed):
-					packed.add(group)
-					break
+			if doPack:
+				for packed in pack:
+					if not different[group].intersection(packed):
+						packed.add(group)
+						break
+				else:
+					pack.append(set((group,)))
 			else:
 				pack.append(set((group,)))
+
 
 		# Expand the packed groups
 		groups = []
 		for packed in pack:
 			unpacked = set()
 			for group in packed:
-				unpacked.update(self.unifyGroups[group])
+				unpacked.update(self.unifier.group(group))
 			groups.append(unpacked)
 
 		return groups
@@ -198,7 +222,7 @@ class ProgramCloner(object):
 		if not reads: return None
 
 
-		contexts = self.unifyGroups[group]
+		contexts = self.unifier.group(group)
 
 		slots = set()
 		for context in contexts:
@@ -218,7 +242,7 @@ class ProgramCloner(object):
 		modifies = op.annotation.modifies
 		if not modifies: return None
 
-		contexts = self.unifyGroups[group]
+		contexts = self.unifier.group(group)
 
 		slots = set()
 		for context in contexts:
@@ -230,10 +254,10 @@ class ProgramCloner(object):
 		if slots:
 			return frozenset(slots)
 		else:
-			return None
+			return False
 
 	def labelAllocate(self, code, op, group):
-		contexts = self.unifyGroups[group]
+		contexts = self.unifier.group(group)
 
 		crefs = op.expr.annotation.references
 
@@ -256,7 +280,7 @@ class ProgramCloner(object):
 
 			return frozenset(types)
 		else:
-			return None
+			return False
 
 	def labelInvoke(self, code, op, group):
 		targets = set([other.signature.code for other in self.groupOpInvokes[(group, op)]])
@@ -311,6 +335,7 @@ class ProgramCloner(object):
 
 						lut[group] = inv
 	def findInitialConflicts(self):
+		self.dirty = set()
 		assert not self.dirty
 
 		# Clone loads from different fields
@@ -331,8 +356,6 @@ class ProgramCloner(object):
 		while self.dirty:
 			current = self.dirty.pop()
 			self.processCode(current)
-
-
 
 
 	def isDifferent(self, code, c1, c2):
@@ -526,7 +549,7 @@ class FunctionCloner(object):
 			func = self.adb.singleCall(self.destfunction, tempresult)
 			if not func:
 				names = [inv.name for inv in invocations]
-				raise Exception, "Cannot clone the direct call, as it has multiple targets. %r" % names
+				raise Exception, "Cannot clone the direct call in %r, as it has multiple targets. %r" % (self.destfunction, names)
 			result = ast.DirectCall(func, *tempresult.children()[1:])
 
 			self.transferAnalysisData(node, result)

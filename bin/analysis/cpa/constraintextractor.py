@@ -12,10 +12,11 @@ from constraints import *
 class ExtractDataflow(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, system, context):
+	def __init__(self, system, context, folded):
 		self.system  = system
 		self.context = context
-		self.code = self.context.signature.code
+		self.folded  = folded
+		self.code    = self.context.signature.code
 
 		self.processed = set()
 
@@ -245,7 +246,8 @@ class ExtractDataflow(object):
 
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
-		self.assign(self(node.expr), self(self.code.returnparam))
+		if not self.folded:
+			self.assign(self(node.expr), self(self.code.returnparam))
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node, target=None):

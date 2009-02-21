@@ -323,10 +323,13 @@ class InterproceduralDataflow(object):
 					self.liveCode.add(code)
 
 				# Check to see if we can just fold it.
-				if not self.fold(context):
-					# Extract the constraints
-					exdf = ExtractDataflow(self, context)
-					exdf.process()
+				# Dynamic folding only calculates the output,
+				# so we still evaluate the constraints.
+				folded = self.fold(context)
+
+				# Extract the constraints
+				exdf = ExtractDataflow(self, context, folded)
+				exdf.process()
 			return True
 		return False
 

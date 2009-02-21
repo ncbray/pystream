@@ -78,11 +78,7 @@ class RegionAnalysis(object):
 
 		return lut
 
-import analysis.objectreadmodifyquery
 
 def evaluate(extractor, entryPoints, adb):
-	orm = analysis.objectreadmodifyquery.ObjectReadModifyQuery(adb.db)
-	
-	
 	ra = RegionAnalysis(extractor, entryPoints, adb)
 	return ra.process()

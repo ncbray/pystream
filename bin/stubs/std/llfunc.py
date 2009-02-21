@@ -234,12 +234,18 @@ def makeLLFunc(collector):
 	### Property Descriptor ###
 	###########################
 
-	# TODO test?
+	# TODO fget is None?
 	@attachPtr(property, '__get__')
-	@descriptive # HACK for debugging.
 	@llfunc
-	def property__get__(self, inst, cls):
-		return self.fget(self, inst)
+	def property__get__(self, inst, owner):
+		return self.fget(inst)
+
+	# TODO fset is None?
+	@attachPtr(property, '__set__')
+	@llfunc
+	def property__set__(self, inst, value):
+		return self.fset(inst, value)
+
 
 	###############
 	### Numeric ###

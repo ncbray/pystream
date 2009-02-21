@@ -1,7 +1,6 @@
 from util.typedispatch import *
 from programIR.python import ast
 from programIR.python import program
-from util import xform
 
 # HACK
 from common import astpprint
@@ -52,8 +51,9 @@ class LLTranslator(object):
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
-		if node in self.defn and isinstance(self.defn[node], ast.Existing):
-			return self.defn[node]
+		defn = self.defn.get(node)
+		if isinstance(defn, ast.Existing):
+			return defn
 		return node
 
 	@dispatch(ast.Existing)
@@ -63,7 +63,7 @@ class LLTranslator(object):
 
 	@dispatch(ast.GetGlobal)
 	def visitGetGlobal(self, node):
-		node = xform.allChildren(self, node)
+		node = allChildren(self, node)
 
 		namedefn = self.defn[node.name]
 		assert isinstance(namedefn, ast.Existing)
@@ -72,13 +72,12 @@ class LLTranslator(object):
 		if name in self.specialGlobals:
 			return name
 		else:
-			glbl = self.resolveGlobal(name)
-			return glbl
+			return self.resolveGlobal(name)
 
 
 	@dispatch(ast.Call)
 	def visitCall(self, node):
-		node = xform.allChildren(self, node)
+		node = allChildren(self, node)
 		if node.expr in self.defn:
 			defn = self.defn[node.expr]
 			if defn in self.specialGlobals:
@@ -134,13 +133,9 @@ class LLTranslator(object):
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		expr = self(node.expr)
-
-		if node.lcl in self.defn:
-			self.defn[node.lcl] = None
-		else:
-			self.defn[node.lcl] = expr
-
 		assert not isinstance(expr, ast.Store), "Must discard stores."
+
+		self.defn[node.lcl] = expr
 
 		if expr not in self.specialGlobals:
 			node.expr = expr
@@ -152,9 +147,7 @@ class LLTranslator(object):
 	@dispatch(ast.Discard)
 	def visitDiscard(self, node):
 		expr = self(node.expr)
-
-		if isinstance(expr, ast.Store):
-			return expr
+		if isinstance(expr, ast.Store): return expr
 
 		if expr not in self.specialGlobals:
 			node.expr = expr
@@ -164,16 +157,36 @@ class LLTranslator(object):
 
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
-		# TODO eliminate unessisary?
-		return xform.allChildren(self, node)
+		defn = self.defn.get(node.expr)
+		if isinstance(defn, (ast.Check, ast.ConvertToBool, ast.Not)):
+			# It will be a boolean, so don't bother converting...
+			return node.expr
+		else:
+			return allChildren(self, node)
 
 	@dispatch(ast.BinaryOp, ast.GetAttr)
 	def visitExpr(self, node):
-		return xform.allChildren(self, node)
+		return allChildren(self, node)
 
-	@dispatch(ast.Suite, list, tuple, ast.Switch, ast.Condition, ast.Return)
+	@dispatch(ast.Switch)
+	def visitSwitch(self, node):
+		cond = self(node.condition)
+		self.defn.clear()
+
+		t = self(node.t)
+		self.defn.clear()
+
+		f = self(node.f)
+		self.defn.clear()
+
+
+		result = ast.Switch(cond, t, f)
+		result.annotation = node.annotation
+		return result
+
+	@dispatch(ast.Suite, list, tuple, ast.Condition, ast.Return)
 	def visitOK(self, node):
-		return xform.allChildren(self, node)
+		return allChildren(self, node)
 
 	def process(self, node):
 		node.ast = self(node.ast)

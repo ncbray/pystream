@@ -165,9 +165,9 @@ class InterproceduralDataflow(object):
 	def _signature(self, code, selfparam, params):
 		assert isinstance(code, ast.Code), type(code)
 		#assert not isinstance(code, (AbstractSlot, extendedtypes.ExtendedType)), code
-		assert selfparam is None or isinstance(selfparam,  extendedtypes.ExtendedType), selfparam
+		assert selfparam is None or selfparam is util.cpa.Any or isinstance(selfparam,  extendedtypes.ExtendedType), selfparam
 		for param in params:
-			assert isinstance(param,  extendedtypes.ExtendedType), param
+			assert param is util.cpa.Any or isinstance(param, extendedtypes.ExtendedType), param
 
 		return util.cpa.CPASignature(code, selfparam, params)
 

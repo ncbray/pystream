@@ -8,6 +8,8 @@ from programIR.python import ast, program
 
 import util.tvl
 
+import util.cpa
+
 class Constraint(object):
 	__slots__ = 'dirty', 'path'
 
@@ -313,7 +315,7 @@ class DirectCallConstraint(AbstractCallConstraint):
 # and list of argument slots.
 # TODO make contextual?
 class SimpleCallConstraint(CachedConstraint):
-	__slots__ = 'op', 'code', 'selftype', 'slots', 'caller'
+	__slots__ = 'op', 'code', 'selftype', 'slots', 'caller', 'megamorphic'
 
 	def __init__(self, op, code, selftype, slots, caller):
 		assert isinstance(op, base.OpContext), type(op)
@@ -327,10 +329,44 @@ class SimpleCallConstraint(CachedConstraint):
 		self.slots    = slots
 		self.caller   = caller
 
+		self.megamorphic = [False for s in slots]
+
 	def concreteUpdate(self, sys, *argsTypes):
 		targetcontext = sys.canonicalContext(self.op, self.code, self.selftype, argsTypes)
 		sys.bindCall(self.op, self.caller, targetcontext)
 
+	def clearInvocations(self, sys):
+		# TODO eliminate constraints if target invocation is unused?
+		self.cache.clear()
+		sys.opInvokes[self.op].clear()
+
+	def processMegamorphic(self, values):
+		numValues = len(values)
+		limit = 4 if len(values) < 3 else 3
+
+		# Look for new megamorphic arguments
+		changed = False
+		for i, value in enumerate(values):
+			if not self.megamorphic[i]:
+				if len(value) > limit:
+					self.megamorphic[i] = True
+					changed = True
+
+			if self.megamorphic[i]:
+				values[i] = (util.cpa.Any,)
+		return changed
+
+	def update(self, sys):
+		values = [(None,) if slot is None else slot.refs for slot in self.observing]
+
+		changed = self.processMegamorphic(values)
+
+		if changed: self.clearInvocations(sys)
+
+		for args in itertools.product(*values):
+			if not args in self.cache:
+				self.cache.add(args)
+			self.concreteUpdate(sys, *args)
 
 class DeferedSwitchConstraint(Constraint):
 	def __init__(self, extractor, cond, t, f):

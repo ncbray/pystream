@@ -100,20 +100,35 @@ class AnalysisContext(CanonicalObject):
 
 		return vparamObj
 
+
+	def initalizeParameter(self, sys, param, cpaType, arg):
+		if param is None:
+			assert cpaType is None
+			assert arg is None
+		elif cpaType is util.cpa.Any:
+			assert isinstance(param, storegraph.SlotNode)
+			assert isinstance(arg,   storegraph.SlotNode)
+			sys.createAssign(arg, param)
+		else:
+			# TODO skip this if this context has already been bound
+			# but for a different caller
+			param.initializeType(sys, cpaType)
+
+
 	def bindParameters(self, sys, caller):
 		sig = self.signature
 
 		callee = calleeSlotsFromContext(sys, self)
 
 		# Bind self parameter
-		self._bindObjToSlot(sys, sig.selfparam, callee.selfparam)
+		self.initalizeParameter(sys, callee.selfparam, sig.selfparam, caller.selfarg)
 
 		# Bind the positional parameters
 		numArgs  = len(sig.params)
 		numParam = len(callee.params)
 		assert numArgs >= numParam
 		for arg, cpaType, param in zip(caller.args[:numParam], sig.params[:numParam], callee.params):
-			param.initializeType(sys, cpaType)
+			self.initalizeParameter(sys, param, cpaType, arg)
 
 		# An op context for implicit allocation
 		cop = sys.canonical.opContext(sig.code, None, self)
@@ -126,8 +141,8 @@ class AnalysisContext(CanonicalObject):
 			for i in range(numParam, numArgs):
 				arg     = caller.args[i]
 				cpaType = sig.params[i]
-				slot = self._vparamSlot(sys, vparamObj, i-numParam)
-				slot.initializeType(sys, cpaType)
+				param = self._vparamSlot(sys, vparamObj, i-numParam)
+				self.initalizeParameter(sys, param, cpaType, arg)
 		else:
 			assert numArgs == numParam
 

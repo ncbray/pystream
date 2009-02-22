@@ -8,7 +8,7 @@ from PADS.UnionFind import UnionFind
 from util.typedispatch import *
 from programIR.python import ast
 from simplify import simplify
-from analysis.cpa import programculler
+from analysis import programculler
 
 class GroupUnifier(object):
 	def __init__(self):

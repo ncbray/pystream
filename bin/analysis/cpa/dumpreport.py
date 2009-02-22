@@ -2,107 +2,19 @@ from util.xmloutput  import XMLOutput
 from common import simplecodegen
 import common.astpprint
 
+import config
 import os.path
 from util import assureDirectoryExists, itergroupings
 
-from programIR.python.ast import isPythonAST
-import programIR.python.ast as ast
-import programIR.python.program as program
-
-from . import base
-from . import storegraph
-
-from . import programculler
-
+from analysis import programculler
 from . import dumpgraphs
 
-import config
+import collections
+from analysis import tools
 
-class LinkManager(object):
-	def __init__(self):
-		self.functionFile = {}
-		self.objectFile = {}
-		self.contextName = {}
+import util.graphalgorithim.dominator
 
-		self.cid = 0
-
-	def contextRef(self, context):
-		if not context in self.contextName:
-			self.contextName[context] = "c%d" % self.cid
-			self.cid += 1
-			assert context in self.contextName
-		return self.contextName[context]
-
-	def objectRef(self, obj):
-		context = None
-		xtype   = None
-
-		if isinstance(obj, storegraph.ObjectNode):
-			context = obj
-			xtype   = obj.xtype
-			obj     = xtype.obj
-
-		if obj not in self.objectFile: return None
-
-		fn = self.objectFile[obj]
-
-		if context:
-			cn = self.contextRef(context)
-			fn = "%s#%s" % (fn, cn)
-
-		return fn
-
-
-	def codeRef(self, code, context):
-		if code not in self.functionFile:
-			return None
-
-		link = self.functionFile[code]
-
-		if context is not None:
-			link = "%s#%s" % (link,  self.contextRef(context))
-
-		return link
-
-# TODO share this with CPA?
-class CodeContext(object):
-	__slots__ = 'code', 'context',
-	def __init__(self, code, context):
-		assert isinstance(code, ast.Code), type(code)
-		self.code = code
-		self.context = context
-
-def codeShortName(code):
-	if isinstance(code, str):
-		name = func
-		args = []
-		vargs = None
-		kargs = None
-	elif code is None:
-		name = 'external'
-		args = []
-		vargs = None
-		kargs = None
-	else:
-		name = code.name
-		args = [p if p is not None else '!' for p in code.parameternames]
-		vargs = None if code.vparam is None else code.vparam.name
-		kargs = None if code.kparam is None else code.kparam.name
-
-	if vargs is not None: args.append("*"+vargs)
-	if kargs is not None: args.append("**"+kargs)
-
-	return "%s(%s)" % (name, ", ".join(args))
-
-
-def objectShortName(obj):
-	if isinstance(obj, storegraph.ObjectNode):
-		context = obj
-		xtype   = obj.xtype
-		obj     = xtype.obj
-		return repr(xtype)
-
-	return repr(obj)
+from . dumputil import *
 
 def outputCodeShortName(out, code, links=None, context=None):
 	link = links.codeRef(code, context) if links is not None else None
@@ -123,27 +35,6 @@ def outputObjectShortName(out, heap, links=None):
 	out << objectShortName(heap)
 	if link:
 		out.end('a')
-
-
-
-class TypeInferenceData(object):
-	def liveFunctions(self):
-		raise NotImplemented
-
-	def liveHeap(self):
-		raise NotImplemented
-
-	def heapContexts(self, heap):
-		raise NotImplemented
-
-	def heapContextSlots(self, heapC):
-		raise NotImplemented
-
-	def heapContextSlot(self, slot):
-		raise NotImplemented
-
-
-
 
 
 def makeReportDirectory(moduleName):
@@ -176,37 +67,47 @@ def dumpHeader(out):
 	out.tag('br')
 
 
+def printLabel(out, label):
+	out.begin('div')
+	out.begin('b')
+	out << label
+	out.end('b')
+	out.end('div')
+
+def tableRow(out, links, label, *args):
+	out.begin('tr')
+	out.begin('td')
+	out.begin('b')
+	out << label
+	out.end('b')
+	out.end('td')
+	out.begin('td')
+
+	first = True
+	for arg in args:
+		if not first: out.tag('br')
+		link = links.objectRef(arg)
+		if link: out.begin('a', href=link)
+		out << objectShortName(arg)
+		if link: out.end('a')
+
+		first = False
+
+	out.end('td')
+	out.end('tr')
+	out.endl()
+
 def dumpFunctionInfo(func, data, links, out, scg):
 	code = func
 	out.begin('h3')
 	outputCodeShortName(out, func)
 	out.end('h3')
 
-	funcOps = data.adb.functionOps(func)
-	funcLocals = data.adb.functionLocals(func)
+	funcOps, funcLocals = tools.codeOpsLocals(func)
 
-	if code.annotation.descriptive:
-		out.begin('div')
-		out.begin('b')
-		out << 'descriptive'
-		out.end('b')
-		out.end('div')
-
-	if code.annotation.staticFold:
-		out.begin('div')
-		out.begin('b')
-		out << 'static fold'
-		out.end('b')
-		out.end('div')
-
-
-	if code.annotation.dynamicFold:
-		out.begin('div')
-		out.begin('b')
-		out << 'dynamic fold'
-		out.end('b')
-		out.end('div')
-
+	if code.annotation.descriptive: printLabel(out, 'descriptive')
+	if code.annotation.staticFold:  printLabel(out, 'static fold')
+	if code.annotation.dynamicFold: printLabel(out, 'dynamic fold')
 
 	# Psedo-python output
 	if func is not None:
@@ -220,14 +121,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		common.astpprint.pprint(func, out)
 		out.end('pre')
 
-	numContexts = len(code.annotation.contexts)
-
-	out.begin('div')
-	out.begin('b')
-	out << '%d contexts' % numContexts
-	out.end('b')
-	out.end('div')
-
+	printLabel(out, '%d contexts' % len(code.annotation.contexts))
 
 	for cindex, context in enumerate(code.annotation.contexts):
 		out.tag('hr')
@@ -242,29 +136,6 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.endl()
 		out.endl()
 
-		def tableRow(label, *args):
-			first = True
-			out.begin('tr')
-			out.begin('td')
-			out.begin('b')
-			out << label
-			out.end('b')
-			out.end('td')
-			out.begin('td')
-
-			for arg in args:
-				if not first: out.tag('br')
-				link = links.objectRef(arg)
-				if link: out.begin('a', href=link)
-				out << objectShortName(arg)
-				if link: out.end('a')
-
-				first = False
-
-			out.end('td')
-			out.end('tr')
-			out.endl()
-
 
 		# Print call/return information for the function.
 		code = func
@@ -274,7 +145,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		sig = context.signature
 		if code.selfparam is not None:
 			objs = code.selfparam.annotation.references[1][cindex]
-			tableRow('self', *objs)
+			tableRow(out, links, 'self', *objs)
 
 		numParam = len(sig.code.parameters)
 		for i, param in enumerate(code.parameters):
@@ -283,24 +154,24 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				objs = refs[1][cindex]
 			else:
 				objs = ('?',)
-			tableRow('param %d' % i, *objs)
+			tableRow(out, links, 'param %d' % i, *objs)
 
 		if code.vparam is not None:
 			objs = code.vparam.annotation.references[1][cindex]
-			tableRow('vparamObj', *objs)
+			tableRow(out, links, 'vparamObj', *objs)
 
 			for vparamObj in objs:
 				for i, arg in enumerate(sig.params[numParam:]):
 					name = data.sys.canonical.fieldName('Array', data.sys.extractor.getObject(i))
 					slot = vparamObj.knownField(name)
-					tableRow('vparam %d' % i, *slot)
+					tableRow(out, links, 'vparam %d' % i, *slot)
 
 		if code.kparam is not None:
 			objs = code.kparam.annotation.references[1][cindex]
-			tableRow('kparamObj', *objs)
+			tableRow(out, links, 'kparamObj', *objs)
 
 		objs = code.returnparam.annotation.references[1][cindex]
-		tableRow('return', *objs)
+		tableRow(out, links, 'return', *objs)
 
 		out.end('table')
 		out.end('p')
@@ -477,11 +348,7 @@ def dumpHeapInfo(heap, data, links, out):
 		outputCodeShortName(out, call, links)
 		out.end('div')
 
-	out.begin('div')
-	out.begin('b')
-	out << '%d contexts' % len(contexts)
-	out.end('b')
-	out.end('div')
+	printLabel(out, '%d contexts' % len(contexts))
 
 	out.begin('pre')
 
@@ -511,7 +378,6 @@ def dumpHeapInfo(heap, data, links, out):
 
 	out.end('pre')
 
-import util.graphalgorithim.dominator
 
 def makeHeapTree(data):
 	liveHeap = data.db.liveObjects()
@@ -666,62 +532,48 @@ def dumpReport(name, data, entryPoints):
 
 	dumpgraphs.dump(data, entryPoints, links, reportDir)
 
-import collections
-import base
-from analysis.astcollector import getOps
 
-class CPAData(object):
-	def __init__(self, inter, db):
-
+class DerivedData(object):
+	def __init__(self, db):
 		self.db = db
-		self.inter = inter
 
-		self.lcls = collections.defaultdict(lambda: collections.defaultdict(set))
-		self.objs = collections.defaultdict(lambda: collections.defaultdict(set))
-
-		for slot in inter.roots:
-			name = slot.slotName
-			if name.isLocal():
-				self.lcls[name.code][name.context].add(slot)
-
-		self.calcInvocations()
-
-	def calcInvocations(self):
-		# Derived
 		self.invokeDestination = collections.defaultdict(set)
 		self.invokeSource      = collections.defaultdict(set)
+		self.funcReads         = collections.defaultdict(lambda: collections.defaultdict(set))
+		self.funcModifies      = collections.defaultdict(lambda: collections.defaultdict(set))
 
-		self.funcReads    = collections.defaultdict(lambda: collections.defaultdict(set))
-		self.funcModifies = collections.defaultdict(lambda: collections.defaultdict(set))
-
-		for func in self.db.liveFunctions():
-			ops, lcls = getOps(func)
+		for func in db.liveFunctions():
+			ops, lcls = tools.codeOpsLocals(func)
 			for op in ops:
-				invokes = op.annotation.invokes
-				if invokes is not None:
-					for cindex, context in enumerate(func.annotation.contexts):
-						src = (func, context)
-
-						for dst in invokes[1][cindex]:
-							self.invokeDestination[src].add(dst)
-							self.invokeSource[dst].add(src)
-
-				reads = op.annotation.reads
-				if reads is not None:
-					for cindex, context in enumerate(func.annotation.contexts):
-						creads = reads[1][cindex]
-						self.funcReads[func][context].update(creads)
-
-				modifies = op.annotation.modifies
-				if modifies is not None:
-					for cindex, context in enumerate(func.annotation.contexts):
-						cmods = modifies[1][cindex]
-						self.funcModifies[func][context].update(cmods)
+				self.handleOpInvokes(func, op)
+				self.handleOpReads(func, op)
+				self.handleOpModifies(func, op)
 
 
+	def handleOpInvokes(self, code, op):
+		invokes = op.annotation.invokes
+		if invokes is not None:
+			for cindex, context in enumerate(code.annotation.contexts):
+				src = (code, context)
 
-	def functionContextSlots(self, function, context):
-		return self.lcls[function][context]
+				for dst in invokes[1][cindex]:
+					self.invokeDestination[src].add(dst)
+					self.invokeSource[dst].add(src)
+
+	def handleOpReads(self, code, op):
+		reads = op.annotation.reads
+		if reads is not None:
+			for cindex, context in enumerate(code.annotation.contexts):
+				creads = reads[1][cindex]
+				self.funcReads[code][context].update(creads)
+
+	def handleOpModifies(self, code, op):
+		modifies = op.annotation.modifies
+		if modifies is not None:
+			for cindex, context in enumerate(code.annotation.contexts):
+				cmods = modifies[1][cindex]
+				self.funcModifies[code][context].update(cmods)
+
 
 	def callers(self, function, context):
 		return self.invokeSource[(function, context)]
@@ -729,22 +581,9 @@ class CPAData(object):
 	def callees(self, function, context):
 		return self.invokeDestination[(function, context)]
 
-	def liveHeap(self):
-		return self.objs.keys()
-
-	def heapContexts(self, heap):
-		return self.objs[heap].keys()
-
-	def heapContextSlots(self, heapC):
-		return self.objs[heapC.obj][heapC]
-
-
-from . analysisdatabase import CPAAnalysisDatabase
 
 def dump(name, extractor, dataflow, entryPoints):
-	adb = CPAAnalysisDatabase(dataflow.db)
-	data = CPAData(dataflow, dataflow.db)
-	data.adb = adb
+	data = DerivedData(dataflow.db)
 	data.sys = dataflow # HACK?
 	dumpReport(name, data, entryPoints)
 

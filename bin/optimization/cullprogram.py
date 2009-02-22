@@ -3,7 +3,7 @@ from programIR.python import ast
 
 from programIR.python.program import Object
 from decompiler.constantfinder import findCodeReferencedObjects
-from analysis.cpa.programculler import findLiveContexts
+from analysis import programculler
 
 
 # Eliminates all unreferenced code from a given program
@@ -51,7 +51,7 @@ class CodeContextCuller(object):
 
 def cullProgram(entryPoints, db):
 	ccc = CodeContextCuller()
-	liveContexts = findLiveContexts(entryPoints)
+	liveContexts = programculler.findLiveContexts(entryPoints)
 
 	for code, contexts in liveContexts.iteritems():
 		if len(code.annotation.contexts) != len(contexts):

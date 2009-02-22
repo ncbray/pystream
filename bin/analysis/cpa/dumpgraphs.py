@@ -3,29 +3,7 @@ import pydot
 import util.graphalgorithim.dominator
 from analysis.astcollector import getOps
 
-# HACK duplicated code
-def codeShortName(code):
-	if isinstance(code, str):
-		name = func
-		args = []
-		vargs = None
-		kargs = None
-	elif code is None:
-		name = 'external'
-		args = []
-		vargs = None
-		kargs = None
-	else:
-		name = code.name
-		args = [p if p is not None else '!' for p in code.parameternames]
-		vargs = None if code.vparam is None else code.vparam.name
-		kargs = None if code.kparam is None else code.kparam.name
-
-	if vargs is not None: args.append("*"+vargs)
-	if kargs is not None: args.append("**"+kargs)
-
-	return "%s(%s)" % (name, ", ".join(args))
-
+from . dumputil import *
 
 def dumpGraph(name, g, format='svg', prog='dot'):
 	s = g.create(prog=prog, format=format)

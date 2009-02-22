@@ -108,15 +108,19 @@ class ForwardFlowTraverse(object):
 
 	@dispatch(ast.While)
 	def visitWhile(self, node):
-		condition = self(node.condition)
+		conditionEntry = self.flow.pop()
 
 		originalbags = self.flow.saveBags()
-		current = self.flow.pop()
+
 
 		# Iterate until convergence
 		while 1:
-			self.flow.restore(current.split())
+			self.flow.restore(conditionEntry.split())
 
+			condition = self(node.condition)
+			conditionExit, bodyEntry = self.flow.popSplit()
+
+			self.flow.restore(bodyEntry)
 			body = self(node.body)
 
 			# Construct the state at loop exit
@@ -124,14 +128,13 @@ class ForwardFlowTraverse(object):
 			self.flow.mergeCurrent(self.meetF, 'continue')
 
 			if self.flow._current:
-				condition = self(node.condition)
-				loopExit = self.flow.pop()
+				bodyExit = self.flow.pop()
 
 				# Has a fixed point been reached for loop exit?
 				# Check merge(current, "normal exit") == current
 				# HACK does not iterate
 
-				current, changed = meet(self.meetF, current, loopExit)
+				conditionEntry, changed = meet(self.meetF, conditionEntry, bodyExit)
 				shouldTerminate = not changed
 			else:
 				# Degenerate loop.
@@ -158,7 +161,7 @@ class ForwardFlowTraverse(object):
 
 		# TODO If loop must be taken, do not merge in current.
 		# Use "c" instead.
-		out = current
+		out = conditionExit
 
 		# Evaluate else.
 		if out:

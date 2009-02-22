@@ -17,6 +17,9 @@ from programIR.python.fold import foldBinaryOpAST, foldUnaryPrefixOpAST, foldCal
 
 import operator
 
+import collections
+
+Origin = collections.namedtuple('Origin', 'name filename lineno')
 
 from common.simplecodegen import SimpleCodeGen
 import sys
@@ -36,7 +39,8 @@ def getConstant(node):
 # Does flow-insensitive constant folding.
 # This will hopefully make later analysis slightly more efficient.
 class InstructionTranslator(object):
-	def __init__(self, moduleName, ssa, lcls, extractor, callback, trace=False):
+	def __init__(self, code, moduleName, ssa, lcls, extractor, callback, trace=False):
+		self.code = code
 		self.moduleName = moduleName
 		self.ssa = ssa
 		self.initOpHandler()

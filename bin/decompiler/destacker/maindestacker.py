@@ -34,9 +34,10 @@ def appendSuite(current, next):
 
 
 class DestackVisitor(StandardVisitor):
-	def __init__(self, mname, extractor, callback, trace=False):
+	def __init__(self, code, mname, extractor, callback, trace=False):
 		StandardVisitor.__init__(self)
 		self.ssa = ssa.SSADefinitions()
+		self.code = code
 		self.moduleName = mname
 		self.locals = {}
 		self.defns = collections.defaultdict(dict)
@@ -113,7 +114,7 @@ class DestackVisitor(StandardVisitor):
 		# Insurance, but probabally unessisary
 		stack = stack.duplicate()
 
-		t = instructiontranslator.InstructionTranslator(self.moduleName, self.ssa, self.locals, self.extractor, self.callback, self.trace)
+		t = instructiontranslator.InstructionTranslator(self.code, self.moduleName, self.ssa, self.locals, self.extractor, self.callback, self.trace)
 		inst, defn, stack = t.translate(block.instructions, stack)
 
 		outblock = Suite(inst)
@@ -667,8 +668,8 @@ class DestackVisitor(StandardVisitor):
 
 
 
-def destack(mname, fname, root, argnames, vargs, kargs, extractor, callback, trace=False):
-	dv = DestackVisitor(mname, extractor, callback, trace)
+def destack(code, mname, fname, root, argnames, vargs, kargs, extractor, callback, trace=False):
+	dv = DestackVisitor(code, mname, extractor, callback, trace)
 
 	# Create the locals for each parameter.
 	param = []
@@ -699,5 +700,8 @@ def destack(mname, fname, root, argnames, vargs, kargs, extractor, callback, tra
 	root.parameters = param
 	root.vparam = v
 	root.kparam = k
+
+	origin = instructiontranslator.Origin(code.co_name, code.co_filename, code.co_firstlineno)
+	root.rewriteAnnotation(origin=origin)
 
 	return root

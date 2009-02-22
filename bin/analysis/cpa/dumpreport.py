@@ -109,6 +109,9 @@ def dumpFunctionInfo(func, data, links, out, scg):
 	if code.annotation.staticFold:  printLabel(out, 'static fold')
 	if code.annotation.dynamicFold: printLabel(out, 'dynamic fold')
 
+	origin = code.annotation.origin
+	if origin: printLabel(out, "%s - %s:%d" % origin)
+
 	# Psedo-python output
 	if func is not None:
 		out.begin('pre')

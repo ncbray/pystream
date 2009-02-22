@@ -92,7 +92,7 @@ class Decompiler(object):
 			if trace and post:
 				FlowBlockDump().process(name+"_post", root)
 
-		root = destack(mname, name, root, argnames, vargs, kargs, self.extractor, decompileCode, trace)
+		root = destack(code, mname, name, root, argnames, vargs, kargs, self.extractor, decompileCode, trace)
 
 		if ssa:
 			root = ssitransform.ssiTransform(root)

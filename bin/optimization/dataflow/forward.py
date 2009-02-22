@@ -4,9 +4,9 @@ from programIR.python.fold import existingConstant
 
 class ForwardFlowTraverse(object):
 	__metaclass__ = typedispatcher
+	__slots__ = 'analyze', 'rewrite', 'flow', 'tryLevel', 'mayRaise', 'meetF'
 
-	def __init__(self, adb, meetF, analyze, rewrite):
-		self.adb = adb
+	def __init__(self, meetF, analyze, rewrite):
 		self.analyze = analyze
 		self.rewrite = rewrite
 		self.flow = FlowDict()
@@ -373,20 +373,3 @@ class ForwardFlowTraverse(object):
 		result = self.processExpr(node)
 		self.flow.save('raise')
 		return result
-
-
-
-#	@dispatch(ast.Code)
-#	def visitCode(self, node):
-#		node = ast.Code(
-#			node.name,
-#			node.selfparam,
-#			node.parameters,
-#			node.parameternames,
-#			node.vparam,
-#			node.kparam,
-#			node.returnparam,
-#			self(node.ast)
-#			)
-
-#		return node

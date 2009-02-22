@@ -1,21 +1,19 @@
 from util.typedispatch import *
 from programIR.python import ast
 
+import util.xtypes
+from analysis import tools
 import dataflow.forward
 
-
-import util.xtypes
-
 import optimization.simplify
-import analysis.analysisdatabase
-analysis.analysisdatabase.DummyAnalysisDatabase
 
-def contextsThatOnlyInvoke(adb, funcs, invocations):
+
+def contextsThatOnlyInvoke(funcs, invocations):
 	output = set()
 
 	# HACK There's only one op in the object getter that will invoke?
 	for func in funcs:
-		for op in adb.functionOps(func):
+		for op in tools.codeOps(func):
 			invokes = op.annotation.invokes
 			if invokes is not None:
 				for cindex, context in enumerate(func.annotation.contexts):
@@ -29,10 +27,10 @@ def contextsThatOnlyInvoke(adb, funcs, invocations):
 						output.add((func, context))
 	return output
 
-def opThatInvokes(adb, func):
+def opThatInvokes(func):
 	# Find the single op in the function that invokes.
 	invokeOp = None
-	for op in adb.functionOps(func):
+	for op in tools.codeOps(func):
 		invokes = op.annotation.invokes
 		if invokes is not None and invokes[0]:
 			assert invokeOp is None
@@ -57,12 +55,12 @@ class MethodPatternFinder(object):
 		self.mcall = exports['method__call__']
 
 
-	def findExisting(self, adb):
+	def findExisting(self, db):
 		self.fgets = set()
 		self.ogets = set()
 		self.igets = set()
 
-		for func in adb.db.liveFunctions():
+		for func in db.liveFunctions():
 			original = func.annotation.original
 			if original is None:
 				original = func
@@ -72,7 +70,7 @@ class MethodPatternFinder(object):
 			if original is self.mdget: self.fgets.add(func)
 
 
-	def findContexts(self, adb):
+	def findContexts(self):
 		if not self.fgets: return False
 
 		self.fgetsC = set()
@@ -83,20 +81,20 @@ class MethodPatternFinder(object):
 				self.fgetsC.add((func, context))
 
 		# HACK There's only one op in the object getter that will invoke?
-		self.ogetsC = contextsThatOnlyInvoke(adb, self.ogets, self.fgetsC)
+		self.ogetsC = contextsThatOnlyInvoke(self.ogets, self.fgetsC)
 		if not self.ogetsC: return False
 
 
-		self.igetsC = contextsThatOnlyInvoke(adb, self.igets, self.ogetsC)
+		self.igetsC = contextsThatOnlyInvoke(self.igets, self.ogetsC)
 		if not self.igetsC: return False
 
 		return True
 
 
-	def preprocess(self, extractor, adb):
+	def preprocess(self, extractor, db):
 		self.findOriginals(extractor)
-		self.findExisting(adb)
-		return self.findContexts(adb)
+		self.findExisting(db)
+		return self.findContexts()
 
 
 	def isMethodGetter(self, node, invokes):
@@ -228,10 +226,8 @@ class MethodAnalysis(object):
 class MethodRewrite(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, adb, pattern):
-		self.adb     = adb
+	def __init__(self, pattern):
 		self.pattern = pattern
-
 		self.rewritten = set()
 
 	@defaultdispatch
@@ -260,7 +256,7 @@ class MethodRewrite(object):
 				cinvokesM = set()
 				for f, c in cinvokes:
 					cindex = f.annotation.contexts.index(c)
-					op = opThatInvokes(self.adb, f)
+					op = opThatInvokes(f)
 					newinv = op.annotation.invokes[1][cindex]
 
 					cinvokesM.update(newinv)
@@ -304,23 +300,20 @@ def methodMeet(values):
 			return dataflow.forward.top
 	return prototype
 
-def methodCall(console, extractor, adb):
+def methodCall(console, extractor, db):
 	pattern = MethodPatternFinder()
-	if not pattern.preprocess(extractor, adb):
+	if not pattern.preprocess(extractor, db):
 		console.output("No method calls to fuse.")
 		return
-
-	db = adb.db
-
 
 	numrewritten = 0
 	for code in db.liveFunctions():
 		analyze = MethodAnalysis(pattern)
-		rewrite = MethodRewrite(adb, pattern)
+		rewrite = MethodRewrite(pattern)
 
 		meet = methodMeet
 
-		traverse = dataflow.forward.ForwardFlowTraverse(adb, meet, analyze, rewrite)
+		traverse = dataflow.forward.ForwardFlowTraverse(meet, analyze, rewrite)
 		t = dataflow.forward.MutateCode(traverse)
 
 		# HACK
@@ -331,7 +324,7 @@ def methodCall(console, extractor, adb):
 
 		# HACK to turn attribute access assignments into discards.
 		if rewrite.rewritten:
-			optimization.simplify.simplify(extractor, analysis.analysisdatabase.DummyAnalysisDatabase(), code)
+			optimization.simplify.simplify(extractor, db, code)
 
 		if rewrite.rewritten:
 			numrewritten += len(rewrite.rewritten)

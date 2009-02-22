@@ -5,6 +5,8 @@ from dataflow.reverse import *
 
 import util.xform
 
+from analysis import tools
+
 class MarkLocals(object):
 	__metaclass__ = typedispatcher
 
@@ -22,13 +24,12 @@ nodesWithNoSideEffects = (ast.GetGlobal, ast.Existing, ast.Local, ast.Load, ast.
 class MarkLive(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, adb, function):
-		self.adb = adb
+	def __init__(self, function):
 		self.function = function
 		self.marker = MarkLocals()
 
 	def hasNoSideEffects(self, node):
-		return isinstance(node, nodesWithNoSideEffects) or not self.adb.hasSideEffects(self.function, node)
+		return isinstance(node, nodesWithNoSideEffects) or not tools.mightHaveSideEffect(node)
 
 	@dispatch(ast.Condition)
 	def visitCondition(self, node):
@@ -69,10 +70,8 @@ class MarkLive(object):
 		return node
 
 
-
-
-def dce(extractor, adb, node):
-	rewrite = MarkLive(adb, node)
+def dce(extractor, node):
+	rewrite = MarkLive(node)
 	traverse = ReverseFlowTraverse(rewrite)
 
 	# HACK

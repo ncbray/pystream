@@ -72,9 +72,8 @@ class ArgumentNormalizationAnalysis(object):
 class ArgumentNormalizationTransform(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, sys, adb):
+	def __init__(self, sys):
 		self.sys = sys
-		self.adb = adb
 
 	@defaultdispatch
 	def visitDefault(self, node):
@@ -88,7 +87,8 @@ class ArgumentNormalizationTransform(object):
 			kwds    = self(node.kwds)
 			kargs   = self(node.kargs)
 			result = ast.Call(expr, args, kwds, None, kargs)
-			self.adb.trackRewrite(self.code, node, result)
+
+			result.annotation = node.annotation
 			return result
 		else:
 			return allChildren(self, node)
@@ -101,7 +101,8 @@ class ArgumentNormalizationTransform(object):
 			kwds    = self(node.kwds)
 			kargs   = self(node.kargs)
 			result = ast.MethodCall(expr, node.name, args, kwds, None, kargs)
-			self.adb.trackRewrite(self.code, node, result)
+
+			result.annotation = node.annotation
 			return result
 		else:
 			return allChildren(self, node)
@@ -114,7 +115,8 @@ class ArgumentNormalizationTransform(object):
 			kwds    = self(node.kwds)
 			kargs   = self(node.kargs)
 			result = ast.DirectCall(node.func, selfarg, args, kwds, None, kargs)
-			self.adb.trackRewrite(self.code, node, result)
+
+			result.annotation = node.annotation
 			return result
 
 		else:
@@ -159,11 +161,11 @@ class ArgumentNormalizationTransform(object):
 
 		node.ast = self(node.ast)
 
-def normalizeArguments(dataflow, adb):
+def normalizeArguments(dataflow, db):
 	analysis  = ArgumentNormalizationAnalysis(dataflow)
-	transform = ArgumentNormalizationTransform(dataflow, adb)
+	transform = ArgumentNormalizationTransform(dataflow)
 
-	for code in adb.db.liveFunctions():
+	for code in db.liveFunctions():
 		applicable, vparamLen = analysis.process(code)
 		if applicable:
 			transform.process(code, vparamLen)

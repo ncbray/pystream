@@ -178,10 +178,10 @@ class OpInliningTransform(object):
 class CodeInliningTransform(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, analysis, dataflow, adb):
+	def __init__(self, analysis, dataflow, db):
 		self.analysis  = analysis
 		self.dataflow = dataflow
-		self.adb = adb
+		self.db = db
 		self.opinline = OpInliningTransform(analysis)
 		self.processed = set()
 		self.trace     = set()
@@ -309,15 +309,15 @@ class CodeInliningTransform(object):
 				node.ast = result
 				# Always done imediately after inlining, so if we inline
 				# this function, less needs to be processed.
-				simplify(self.dataflow.extractor, self.adb, node)
+				simplify(self.dataflow.extractor, self.db, node)
 
 			self.trace.remove(node)
 
-def inlineCode(dataflow, entryPoints, adb):
+def inlineCode(dataflow, entryPoints, db):
 	analysis  = CodeInliningAnalysis()
-	for code in adb.db.liveFunctions():
+	for code in db.liveFunctions():
 		analysis.process(code)
 
-	transform = CodeInliningTransform(analysis, dataflow, adb)
+	transform = CodeInliningTransform(analysis, dataflow, db)
 	for func, funcobj, args in entryPoints:
 		transform.process(func)

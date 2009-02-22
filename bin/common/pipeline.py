@@ -2,10 +2,8 @@ import time
 
 import analysis.cpa
 import analysis.cpa.lifetimeanalysis
-import analysis.cpa.analysisdatabase
 import analysis.cpa.dumpreport
 import analysis.shape
-#import analysis.fiapprox
 
 import util
 
@@ -20,7 +18,6 @@ from optimization.codeinlining import inlineCode
 
 def codeConditioning(console, extractor, entryPoints, dataflow):
 	db = dataflow.db
-	adb = analysis.cpa.analysisdatabase.CPAAnalysisDatabase(db)
 
 	console.begin('conditioning')
 
@@ -36,7 +33,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 	if True:
 		# Try to identify and optimize method calls
 		console.begin('method call')
-		optimization.methodcall.methodCall(console, extractor, adb)
+		optimization.methodcall.methodCall(console, extractor, db)
 		console.end()
 
 	console.begin('lifetime analysis')
@@ -50,25 +47,25 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 		console.begin('simplify')
 		for code in db.liveFunctions():
 			if not code.annotation.descriptive:
-				simplify(extractor, adb, code)
+				simplify(extractor, db, code)
 		console.end()
 
 	if True:
 		# Seperate different invocations of the same code.
 		console.begin('clone')
-		clone(console, extractor, entryPoints, adb)
+		clone(console, extractor, entryPoints, db)
 		console.end()
 
 	if True:
 		# Try to eliminate kwds, vargs, kargs, and default arguments.
 		console.begin('argument normalization')
-		normalizeArguments(dataflow, adb)
+		normalizeArguments(dataflow, db)
 		console.end()
 
 	if True:
 		# Try to eliminate trivial functions.
 		console.begin('code inlining')
-		inlineCode(dataflow, entryPoints, adb)
+		inlineCode(dataflow, entryPoints, db)
 		console.end()
 
 	console.end()

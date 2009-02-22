@@ -23,6 +23,7 @@ def liveMeet(values):
 
 class ReverseFlowTraverse(object):
 	__metaclass__ = typedispatcher
+	__slots__ = 'strategy', 'flow', 'mayRaise'
 
 	def __init__(self, strategy):
 		self.strategy = strategy

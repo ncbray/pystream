@@ -6,13 +6,14 @@ from dataflow.forward import *
 
 import programIR.python.fold as fold
 
+from analysis import tools
 
 class FoldRewrite(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, extractor, adb, code):
+	def __init__(self, extractor, db, code):
 		self.extractor = extractor
-		self.adb = adb
+		self.db = db
 		self.code = code
 
 		self.constLUT = DynamicDict()
@@ -25,7 +26,7 @@ class FoldRewrite(object):
 
 	@dispatch(ast.Call)
 	def visitCall(self, node):
-		func = self.adb.singleCall(self.code, node)
+		func = tools.singleCall(node)
 		if func is not None:
 			result = ast.DirectCall(func, node.expr, node.args, node.kwds, node.vargs, node.kargs)
 			result.annotation = node.annotation
@@ -41,9 +42,13 @@ class FoldRewrite(object):
 			else:
 				return () # HACK?
 		elif isinstance(ref, ast.Existing):
+			# May happen durring decompilation.
+			if self.db is None:
+				return ()
+
 			# HACK creating a de-contextualized existing object?  This should really be a "global" object...
 			obj = ref.object
-			sys = self.adb.db.system
+			sys = self.db.system
 			existingName = sys.canonical.existingName(self.code, obj, None)
 			slot = sys.roots.root(sys, existingName, sys.roots.regionHint)
 			slot.initializeType(sys, sys.canonical.existingType(obj))
@@ -68,7 +73,7 @@ class FoldRewrite(object):
 
 	def getMethodFunction(self, expr, name):
 		# Static setup
-		canonical = self.adb.db.canonical
+		canonical = self.db.canonical
 
 		typeStrObj = self.extractor.getObject('type')
 		dictStrObj = self.extractor.getObject('dictionary')
@@ -100,7 +105,7 @@ class FoldRewrite(object):
 
 	@dispatch(ast.MethodCall)
 	def visitMethodCall(self, node):
-		func = self.adb.singleCall(self.code, node)
+		func = tools.singleCall(node)
 		if func is not None:
 			funcobj = self.getMethodFunction(node.expr, node.name)
 
@@ -118,7 +123,7 @@ class FoldRewrite(object):
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
 		# Replace with query
-		obj = self.adb.singleObject(self.code, node)
+		obj = tools.singleObject(node)
 		if obj is not None:
 			replace = ast.Existing(obj)
 			return replace
@@ -204,8 +209,7 @@ class FoldAnalysis(object):
 class FoldTraverse(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, adb, strategy, function):
-		self.adb      = adb
+	def __init__(self, strategy, function):
 		self.strategy = strategy
 		self.code = function
 
@@ -235,14 +239,14 @@ def constMeet(values):
 			return top
 	return prototype
 
-def foldConstants(extractor, adb, node):
+def foldConstants(extractor, db, node):
 	assert isinstance(node, ast.Code), type(node)
 
-	analyze = FoldAnalysis()
-	rewrite = FoldRewrite(extractor, adb, node)
-	rewriteS = FoldTraverse(adb, rewrite, node)
+	analyze  = FoldAnalysis()
+	rewrite  = FoldRewrite(extractor, db, node)
+	rewriteS = FoldTraverse(rewrite, node)
 
-	traverse = ForwardFlowTraverse(adb, constMeet, analyze, rewriteS)
+	traverse = ForwardFlowTraverse(constMeet, analyze, rewriteS)
 	t = MutateCode(traverse)
 
 	# HACK

@@ -15,7 +15,7 @@ class RegionBasedShapeAnalysis(object):
 		self.canonical   = canonical.CanonicalObjects()
 		self.worklist    = dataflow.Worklist()
 		self.environment = dataflow.DataflowEnvironment()
-		
+
 		self.constraintbuilder = constraintbuilder.ShapeConstraintBuilder(self)
 
 		self.db = db
@@ -24,10 +24,10 @@ class RegionBasedShapeAnalysis(object):
 	def process(self):
 		self.worklist.process(self)
 
-def evaluate(extractor, entryPoints, adb):
+def evaluate(extractor, entryPoints, db):
 	print "Shape"
 
-	regionLUT = regionanalysis.evaluate(extractor, entryPoints, adb)
+	regionLUT = regionanalysis.evaluate(extractor, entryPoints, db)
 
 	rbsa = RegionBasedShapeAnalysis()
 	rbsa.process()

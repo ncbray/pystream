@@ -19,10 +19,10 @@ class Region(object):
 		return obj in self.objects
 
 class RegionAnalysis(object):
-	def __init__(self, extractor, entryPoints, adb):
+	def __init__(self, extractor, entryPoints, db):
 		self.extractor = extractor
 		self.entryPoints = entryPoints
-		self.adb = adb
+		self.db = db
 		self.uf = PADS.UnionFind.UnionFind()
 
 	def merge(self, references):
@@ -30,11 +30,11 @@ class RegionAnalysis(object):
 			self.uf.union(*references)
 
 	def process(self):
-		db = self.adb.db
+		db = self.db
 
 		functionSensitive = True
 		heapSensitive = True
-		
+
 		# Local references
 		for func in db.liveFunctions():
 			info = db.functionInfo(func)
@@ -47,7 +47,7 @@ class RegionAnalysis(object):
 
 		# Heap references
 		for heap, heapInfo in db.heapInfos.iteritems():
-			for (slottype, key), slotInfo in heapInfo.slotInfos.iteritems():				
+			for (slottype, key), slotInfo in heapInfo.slotInfos.iteritems():
 				if heapSensitive:
 					for context, cInfo in slotInfo.contexts.iteritems():
 						self.merge(cInfo.references)
@@ -70,7 +70,7 @@ class RegionAnalysis(object):
 			region = Region(children)
 			for child in children:
 				lut[child] = region
-			
+
 			if len(children) > 1:
 				for child in children:
 					print child
@@ -79,6 +79,6 @@ class RegionAnalysis(object):
 		return lut
 
 
-def evaluate(extractor, entryPoints, adb):
-	ra = RegionAnalysis(extractor, entryPoints, adb)
+def evaluate(extractor, entryPoints, db):
+	ra = RegionAnalysis(extractor, entryPoints, db)
 	return ra.process()

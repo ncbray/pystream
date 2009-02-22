@@ -9,6 +9,7 @@ from util.typedispatch import *
 from programIR.python import ast
 from simplify import simplify
 from analysis import programculler
+from analysis import tools
 
 class GroupUnifier(object):
 	def __init__(self):
@@ -60,9 +61,9 @@ class GroupUnifier(object):
 # Figures out what functions should have seperate implementations,
 # to improve optimization / realizability
 class ProgramCloner(object):
-	def __init__(self, console, adb, liveContexts):
+	def __init__(self, console, db, liveContexts):
 		self.console = console
-		self.adb = adb
+		self.db = db
 
 		self.liveFunctions = set(liveContexts.iterkeys())
 		self.liveContexts  = liveContexts
@@ -70,7 +71,7 @@ class ProgramCloner(object):
 
 		self.liveOps = {}
 		for code in self.liveFunctions:
-			self.liveOps[code] = self.adb.functionOps(code)
+			self.liveOps[code] = tools.codeOps(code)
 
 
 		# func -> context -> context set
@@ -128,7 +129,7 @@ class ProgramCloner(object):
 			for op in self.liveOps[code]:
 				dsts = collections.defaultdict(set)
 				for context in group:
-					invocations = self.adb.invocationsForContextOp(code, op, context)
+					invocations = tools.opInvokesContexts(code, op, context)
 					for dst in invocations:
 						udst = self.unifier.canonical(dst)
 						assert self.unifier.canonical(udst) is udst
@@ -156,7 +157,7 @@ class ProgramCloner(object):
 				for group in groups:
 					ginv = set()
 					for context in self.unifier.group(group):
-						invocations = self.adb.invocationsForContextOp(code, op, context)
+						invocations = tools.opInvokesContexts(code, op, context)
 						for inv in invocations:
 							dst = self.unifier.canonical(inv)
 							self.groupsInvokeGroup[dst].add(group)
@@ -443,9 +444,9 @@ class ProgramCloner(object):
 			for group in groups:
 				newcode = newfunc[code][id(group)]
 
-				fc = FunctionCloner(self.adb, newfunc, self.groupLUT, code, newcode, group)
+				fc = FunctionCloner(self.db, newfunc, self.groupLUT, code, newcode, group)
 				fc.process()
-				simplify(extractor, self.adb, newcode)
+				simplify(extractor, self.db, newcode)
 
 
 		def getIndirect(code):
@@ -484,8 +485,7 @@ class ProgramCloner(object):
 class FunctionCloner(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, adb, newfuncLUT, groupLUT, sourcefunction, destfunction, group):
-		self.adb            = adb
+	def __init__(self, db, newfuncLUT, groupLUT, sourcefunction, destfunction, group):
 		self.newfuncLUT     = newfuncLUT
 		self.groupLUT       = groupLUT
 		self.sourcefunction = sourcefunction
@@ -507,8 +507,7 @@ class FunctionCloner(object):
 			destfunction.rewriteAnnotation(original=sourcefunction)
 
 		# Transfer information that is tied to the code.
-		self.adb.trackContextTransfer(sourcefunction, destfunction, group)
-
+		db.trackContextTransfer(sourcefunction, destfunction, group)
 
 		self.localMap = {}
 
@@ -541,20 +540,22 @@ class FunctionCloner(object):
 	def visitDirectCall(self, node):
 		tempresult = self.default(node)
 
-		# Redirect the direct call to the new, cloned function.
-		# If the op is unreachable in this context, there may be no invocations.
-		invocations = self.adb.invocationsForOp(self.destfunction, tempresult)
-		if invocations:
-			# We do this computation after transfer, as it can reduce the number of invocations.
-			func = self.adb.singleCall(self.destfunction, tempresult)
-			if not func:
-				names = [inv.name for inv in invocations]
-				raise Exception, "Cannot clone the direct call in %r, as it has multiple targets. %r" % (self.destfunction, names)
-			result = ast.DirectCall(func, *tempresult.children()[1:])
+		assert tempresult.annotation.invokes, "All invocations must be resolved to clone."
 
-			self.transferAnalysisData(node, result)
+		if tempresult.annotation.invokes[0]:
+
+			# We do this computation after transfer, as it can reduce the number of invocations.
+			func = tools.singleCall(tempresult)
+			if not func:
+				names = [code.name for code, context in tempresult.annotation.invokes[0]]
+				raise Exception, "Cannot clone the direct call in %r, as it has multiple targets. %r" % (self.destfunction, names)
 		else:
-			result = tempresult
+			# HACK never actualy executed, so just choose an
+			# arbitrary target?
+			func = self.newfuncLUT[tempresult.func].values()[0]
+
+		result = ast.DirectCall(func, *tempresult.children()[1:])
+		self.transferAnalysisData(node, result)
 
 		return result
 
@@ -597,12 +598,12 @@ class FunctionCloner(object):
 		dstcode.ast            = self(srccode.ast)
 
 
-def clone(console, extractor, entryPoints, adb):
+def clone(console, extractor, entryPoints, db):
 	console.begin('analysis')
 
 	liveContexts = programculler.findLiveContexts(entryPoints)
 
-	cloner = ProgramCloner(console, adb, liveContexts)
+	cloner = ProgramCloner(console, db, liveContexts)
 
 	cloner.unifyContexts()
 	cloner.findInitialConflicts()
@@ -623,4 +624,4 @@ def clone(console, extractor, entryPoints, adb):
 		cloner.rewriteProgram(extractor, entryPoints)
 		console.end()
 
-		adb.db.liveCode = cloner.newLive
+		db.liveCode = cloner.newLive

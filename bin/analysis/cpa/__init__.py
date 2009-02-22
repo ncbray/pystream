@@ -232,7 +232,7 @@ class InterproceduralDataflow(object):
 		# Not found
 		return None
 
-	def extendedInstanceType(self, context, xtype):
+	def extendedInstanceType(self, context, xtype, op):
 		self.ensureLoaded(xtype.obj)
 		instObj = xtype.obj.abstractInstance()
 
@@ -245,16 +245,12 @@ class InterproceduralDataflow(object):
 				# sig.params[0] is the type object for __new__
 				func = sig.params[1]
 				inst = sig.params[2]
-				return self.canonical.methodType(func, inst, instObj)
+				return self.canonical.methodType(func, inst, instObj, op)
 		elif pyobj is types.TupleType or pyobj is types.ListType or pyobj is types.DictionaryType:
 			# Containers are named by the signature of the context they're allocated in.
-			return self.canonical.contextType(context, instObj)
+			return self.canonical.contextType(context, instObj, op)
 
-		# Note: this path does not include the final op, which is this
-		# allocate.  This is good as long as there is only one allocation
-		# in a given context. (It makes better use of the finite path length.)
-		return self.canonical.pathType(context.opPath, instObj)
-		#return self.canonical.contextType(context, instObj)
+		return self.canonical.pathType(context.opPath, instObj, op)
 
 	def process(self):
 		while self.dirty:

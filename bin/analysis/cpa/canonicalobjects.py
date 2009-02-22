@@ -111,26 +111,26 @@ class CanonicalObjects(object):
 
 
 	def externalType(self, obj):
-		new = extendedtypes.ExternalObjectType(obj)
+		new = extendedtypes.ExternalObjectType(obj, None)
 		new = self.cache.setdefault(new, new)
 		return new
 
 	def existingType(self, obj):
-		new = extendedtypes.ExistingObjectType(obj)
+		new = extendedtypes.ExistingObjectType(obj, None)
 		new = self.cache.setdefault(new, new)
 		return new
 
-	def pathType(self, path, obj):
-		new = extendedtypes.PathObjectType(path, obj)
+	def pathType(self, path, obj, op):
+		new = extendedtypes.PathObjectType(path, obj, op)
 		new = self.cache.setdefault(new, new)
 		return new
 
-	def methodType(self, func, inst, obj):
-		new = extendedtypes.MethodObjectType(func, inst, obj)
+	def methodType(self, func, inst, obj, op):
+		new = extendedtypes.MethodObjectType(func, inst, obj, op)
 		new = self.cache.setdefault(new, new)
 		return new
 
-	def contextType(self, sig, obj):
-		new = extendedtypes.ContextObjectType(sig, obj)
+	def contextType(self, sig, obj, op):
+		new = extendedtypes.ContextObjectType(sig, obj, op)
 		new = self.cache.setdefault(new, new)
 		return new

@@ -22,11 +22,12 @@ class ExtendedType(CanonicalObject):
 # All extended types may as well have an "obj" slot,
 # as the type of an object won't change.
 class ExtendedObjectType(ExtendedType):
-	__slots__ = 'obj'
-	def __init__(self, obj):
+	__slots__ = 'obj', 'op'
+	def __init__(self, obj, op):
 		assert isinstance(obj, program.AbstractObject), type(obj)
 		self.obj = obj
-		self.setCanonical(obj)
+		self.op  = op
+		self.setCanonical(obj, op)
 
 	def group(self):
 		return self.obj
@@ -59,11 +60,12 @@ class ExistingObjectType(ExtendedObjectType):
 class PathObjectType(ExtendedObjectType):
 	__slots__ = ('path',)
 
-	def __init__(self, path, obj):
+	def __init__(self, path, obj, op):
 		assert isinstance(obj, program.AbstractObject)
 		self.path = path
 		self.obj  = obj
-		self.setCanonical(path, obj)
+		self.op   = op
+		self.setCanonical(path, obj, op)
 
 	def __repr__(self):
 		if self.path is None:
@@ -76,14 +78,15 @@ class PathObjectType(ExtendedObjectType):
 class MethodObjectType(ExtendedObjectType):
 	__slots__ = 'func', 'inst'
 
-	def __init__(self, func, inst, obj):
+	def __init__(self, func, inst, obj, op):
 		assert isinstance(func, ExtendedType)
 		assert isinstance(inst, ExtendedType)
 		assert isinstance(obj, program.AbstractObject)
 		self.func = func
 		self.inst = inst
 		self.obj  = obj
-		self.setCanonical(func, inst, obj)
+		self.op   = op
+		self.setCanonical(func, inst, obj, op)
 
 	def __repr__(self):
 		return "<method %s %d %r>" % (id(self.func), id(self.inst), self.obj)
@@ -94,11 +97,12 @@ class MethodObjectType(ExtendedObjectType):
 class ContextObjectType(ExtendedObjectType):
 	__slots__ = 'context'
 
-	def __init__(self, context, obj):
+	def __init__(self, context, obj, op):
 		assert isinstance(obj, program.AbstractObject)
 		self.context = context
 		self.obj = obj
-		self.setCanonical(context, obj)
+		self.op  = op
+		self.setCanonical(context, obj, op)
 
 	def __repr__(self):
 		return "<context %d %r>" % (id(self.context), self.obj)

@@ -58,7 +58,7 @@ class AnalysisContext(CanonicalObject):
 
 	def _extendedParamType(self, sys, inst):
 		# Extended param objects are named by the context they appear in.
-		return sys.canonical.contextType(self, inst)
+		return sys.canonical.contextType(self, inst, None)
 
 
 	def _vparamSlot(self, sys, vparamObj, index):

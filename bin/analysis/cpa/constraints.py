@@ -152,7 +152,7 @@ class AllocateConstraint(CachedConstraint):
 
 	def concreteUpdate(self, sys, type_):
 		if type_.obj.isType():
-			xtype = sys.extendedInstanceType(self.op.context, type_)
+			xtype = sys.extendedInstanceType(self.op.context, type_, id(self.op.op))
 			obj = self.target.initializeType(sys, xtype)
 			sys.logAllocation(self.op, obj)
 

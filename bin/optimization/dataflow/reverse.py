@@ -1,4 +1,5 @@
 from base import *
+from programIR.python import fold
 
 # Restore
 # Pre
@@ -79,6 +80,10 @@ class ReverseFlowTraverse(object):
 
 	@dispatch(ast.Switch)
 	def visitSwitch(self, node):
+		newNode = fold.foldSwitch(node)
+		if newNode is not node: return self(newNode)
+
+
 		# Split
 		tf, ff = self.flow.popSplit()
 
@@ -323,18 +328,3 @@ class ReverseFlowTraverse(object):
 	def visitRaise(self, node):
 		self.flow.restoreDup('raise')
 		return self.strategy(node)
-
-#	@dispatch(ast.Code)
-#	def visitCode(self, node):
-#		node = ast.Code(
-#			node.name,
-#			node.selfparam,
-#			node.parameters,
-#			node.parameternames,
-#			node.vparam,
-#			node.kparam,
-#			node.returnparam,
-#			self(node.ast)
-#			)
-
-#		return node

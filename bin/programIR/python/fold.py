@@ -5,6 +5,23 @@ from util import fold
 def existingConstant(node):
 	return isinstance(node, ast.Existing) and node.object.isConstant()
 
+def foldSwitch(node):
+	# Note: condtion.conditional may be killed, as
+	# it is assumed to be a reference.
+
+	# Constant value
+	cond = node.condition.conditional
+	if existingConstant(cond):
+		value = cond.object.pyobj
+		taken = node.t if value else node.f
+		return ast.Suite([node.condition.preamble, taken])
+
+	# Switch does nothing.
+	if not node.t.blocks and not node.f.blocks:
+		return node.condition.preamble
+
+	return node
+
 
 def foldBinaryOpAST(extractor, bop):
 	l = bop.left

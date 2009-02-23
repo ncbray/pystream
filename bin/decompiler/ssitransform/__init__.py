@@ -59,6 +59,16 @@ class SSITransformer(StandardVisitor):
 
 		self.hasExceptionHandling = hasExceptionHandling
 
+	# HACK to retain annotations
+	# TODO rewrite using new framework?
+	def visit(self, node, *args):
+		result = StandardVisitor.visit(self, node, *args)
+
+		if hasattr(node, 'annotation') and result:
+			result.annotation = node.annotation
+
+		return result
+
 	def process(self, node):
 		assert self.locals
 

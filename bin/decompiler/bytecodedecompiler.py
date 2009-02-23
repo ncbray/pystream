@@ -77,7 +77,7 @@ class Decompiler(object):
 			print code.co_varnames
 			self.dump(inst,targets)
 
-		root = BlockBuilder().process(inst)
+		root = BlockBuilder().process(code, inst)
 
 		pre = True
 		post = True
@@ -139,49 +139,52 @@ class BlockBuilder(object):
 		if not self.instOut[b]:
 			self.queue.append((b, region))
 
+
 	def linkInstruction(self, i, inst, region):
+		origin = Origin(self.code.co_name, self.code.co_filename, inst.line)
+
 		op = inst.opcode
 
 		if op == opmap['JUMP_IF_FALSE']:
-			block = Switch(region)
+			block = Switch(region, origin)
 			self.makeLink(i, i+1, region)
 			self.makeLink(i, inst.arg, region)
 		elif op == opmap['JUMP_IF_TRUE']:
-			block = Switch(region)
+			block = Switch(region, origin)
 			self.makeLink(i, inst.arg, region)
 			self.makeLink(i, i+1, region)
 		elif op == opmap['RETURN_VALUE']:
-			block = Return(region)
+			block = Return(region, origin)
 		elif op == opmap['BREAK_LOOP']:
-			block = Break(region)
+			block = Break(region, origin)
 		elif op == opmap['JUMP_FORWARD'] or op == opmap['JUMP_ABSOLUTE']:
 			block = None # Eliminate this block.
 			self.makeLink(i, inst.arg, region)
 		elif op == opmap['FOR_ITER']:
-			block = ForIter(region)
+			block = ForIter(region, origin)
 			self.makeLink(i, i+1, region)
 			self.makeLink(i, inst.arg, region)
 		elif op == opmap['SETUP_LOOP']:
-			block = LoopRegion(region)
+			block = LoopRegion(region, origin)
 			self.makeLink(i, i+1, block)
 			self.makeLink(i, inst.arg, region)
 			#region = block
 		elif op == opmap['SETUP_FINALLY']:
-			block = FinallyRegion(region)
+			block = FinallyRegion(region, origin)
 			self.makeLink(i, i+1, block)
 			self.makeLink(i, inst.arg, region)
 			#region = block
 		elif op == opmap['SETUP_EXCEPT']:
-			block = ExceptRegion(region)
+			block = ExceptRegion(region, origin)
 			self.makeLink(i, i+1, block)
 			self.makeLink(i, inst.arg, region)
 			#region = block
 		elif op == opmap['RAISE_VARARGS']:
-			block = Raise(region, inst.arg)
+			block = Raise(region, origin, inst.arg)
 		elif op == opmap['POP_BLOCK']:
 			assert not inst.isFlowControl()
 			#block = None
-			block = Linear(region)
+			block = Linear(region, origin)
 			block.instructions.append(inst)
 			self.makeLink(i, i+1, region.region)
 
@@ -189,11 +192,11 @@ class BlockBuilder(object):
 			self.regionExit[region] = (i, i+1)
 
 		elif op == opmap['END_FINALLY']:
-			block = EndFinally(region)
+			block = EndFinally(region, origin)
 			self.makeLink(i, i+1, region)
 		else:
 			assert not inst.isFlowControl()
-			block = Linear(region)
+			block = Linear(region, origin)
 			block.instructions.append(inst)
 			self.makeLink(i, i+1, region)
 
@@ -259,14 +262,17 @@ class BlockBuilder(object):
 
 		block.setNext(*outs)
 
-	def process(self, instructions):
+	def process(self, code, instructions):
+		self.code = code
+
 		self.instIn 	= collections.defaultdict(list)
 		self.instOut 	= collections.defaultdict(list)
 		self.blocks 	= {}
 		self.merges	= {}
 		self.regionExit = {}
 
-		func = CodeBlock(None)
+		origin = Origin(self.code.co_name, self.code.co_filename, self.code.co_firstlineno)
+		func = CodeBlock(None, origin)
 
 		self.queue = [(0, func)]
 

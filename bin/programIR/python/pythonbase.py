@@ -1,9 +1,9 @@
 from .. import annotations
 
 
-emptyCodeAnnotation  = annotations.CodeAnnotation()
-emptyOpAnnotation    = annotations.OpAnnotation()
-emptySlotAnnotation  = annotations.SlotAnnotation()
+emptyCodeAnnotation  = annotations.CodeAnnotation(None, False, None, None, None, None)
+emptyOpAnnotation    = annotations.OpAnnotation(None, None, None, None, None)
+emptySlotAnnotation  = annotations.SlotAnnotation(None)
 
 def isPythonAST(ast):
 	return isinstance(ast, ASTNode)

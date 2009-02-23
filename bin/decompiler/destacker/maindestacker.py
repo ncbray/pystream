@@ -168,9 +168,11 @@ class DestackVisitor(StandardVisitor):
 
 		return output, stack
 
-	def getTOS(self, stack):
+	def getTOS(self, block, stack):
+		assert block.origin, block
 		lcl = stack.peek()
 		conditional = ConvertToBool(lcl)
+		conditional.rewriteAnnotation(origin=block.origin)
 
 		defn = self.ssa.definition(lcl)
 
@@ -191,7 +193,7 @@ class DestackVisitor(StandardVisitor):
 
 		if isinstance(cond, flowblocks.Linear):
 			block, stack = self.visit(cond, stack)
-			conditional, framset, (maybeTrue, maybeFalse) = self.getTOS(stack)
+			conditional, framset, (maybeTrue, maybeFalse) = self.getTOS(cond, stack)
 
 			temp = Local()
 			assert isinstance(conditional, Expression), conditional
@@ -209,7 +211,7 @@ class DestackVisitor(StandardVisitor):
 		return condition, tstack, fstack, (maybeTrue, maybeFalse)
 
 	def visitCheckStack(self, block, stack):
-		conditional, framset, (maybeTrue, maybeFalse) = self.getTOS(stack)
+		conditional, framset, (maybeTrue, maybeFalse) = self.getTOS(block, stack)
 		assert isinstance(conditional, Expression), conditional
 
 		temp = Local()
@@ -264,7 +266,9 @@ class DestackVisitor(StandardVisitor):
 
 		preamble = Suite([])
 		preamble.append(Assign(condition, lcl))
-		preamble.append(Assign(ConvertToBool(lcl), temp))
+		conv = ConvertToBool(lcl)
+		conv.rewriteAnnotation(origin=block.origin)
+		preamble.append(Assign(conv, temp))
 		condition = Condition(preamble, temp)
 
 		return condition, tstack, fstack, (maybeTrue, maybeFalse)
@@ -309,7 +313,10 @@ class DestackVisitor(StandardVisitor):
 		lcl = Local()
 		asgn1 = Assign(condition, lcl)
 		temp = Local()
-		asgn2 = Assign(ConvertToBool(lcl), temp)
+
+		conv = ConvertToBool(lcl)
+		conv.rewriteAnnotation(origin=block.origin)
+		asgn2 = Assign(conv, temp)
 		condition = Condition(Suite([asgn1, asgn2]), temp)
 
 		return condition, tstack, fstack, (maybeTrue, maybeFalse)
@@ -586,6 +593,8 @@ class DestackVisitor(StandardVisitor):
 	def visitForLoop(self, block, stack):
 		assert isinstance(stack, PythonStack), stack
 
+		assert block.origin, block
+
 		iterator = stack.peek()
 		if isinstance(iterator, pythonstack.Iter):
 			iterlcl = iterator.expr
@@ -609,14 +618,20 @@ class DestackVisitor(StandardVisitor):
 		if not isinstance(bodyBlock, Suite):
 			bodyBlock = Suite([bodyBlock])
 
+		getNext = GetAttr(iterlcl, Existing(self.extractor.getObject('next')))
+		getNext.rewriteAnnotation(origin=block.origin)
+
 		temp = Local()
-		loopPreamble = Suite([Assign(GetAttr(iterlcl, Existing(self.extractor.getObject('next'))), temp)])
+		loopPreamble = Suite([Assign(getNext, temp)])
+
+		iterNext = Call(temp, [], [], None, None)
+		iterNext.rewriteAnnotation(origin=block.origin)
 
 		if isinstance(index, Local):
-			bodyPreamble = Suite([Assign(Call(temp, [], [], None, None), index)])
+			bodyPreamble = Suite([Assign(iterNext, index)])
 		elif isinstance(index, Cell):
 			lclTemp = Local()
-			bodyPreamble = Suite([Assign(Call(temp, [], [], None, None), lclTemp), SetCellDeref(lclTemp, index)])
+			bodyPreamble = Suite([Assign(iterNext, lclTemp), SetCellDeref(lclTemp, index)])
 		else:
 			assert False, type(index)
 

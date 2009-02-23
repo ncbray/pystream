@@ -712,6 +712,11 @@ class InstructionTranslator(object):
 	def newLocal(self):
 		return Local()
 
+	def setOpOrigin(self, op):
+		if not isinstance(op, (Local, Existing)):
+			op.rewriteAnnotation(origin=Origin(self.code.co_name, self.code.co_filename, self.lineno))
+			assert op.annotation.origin
+
 	def pushOp(self, op):
 		res = self.ssa.define(self.newLocal(), op)
 		self.pushAssign(res, op)
@@ -725,6 +730,14 @@ class InstructionTranslator(object):
 
 	def emit(self, op):
 		assert self.exit == None
+
+
+		if isinstance(op, (Assign, Discard)):
+			self.setOpOrigin(op.expr)
+		else:
+			self.setOpOrigin(op)
+
+
 		ssa.emitInstruction(op, self.ops)
 
 	def translate(self, instructions, stack):

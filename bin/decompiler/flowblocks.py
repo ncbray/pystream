@@ -1,5 +1,5 @@
 import collections
-
+from . destacker.instructiontranslator import Origin
 
 class CFGEdge(object):
 	def __init__(self, source, destination):
@@ -34,8 +34,9 @@ class CFGEdge(object):
 
 
 class FlowBlock(object):
-	def __init__(self, region):
+	def __init__(self, region, origin):
 		self.setRegion(region)
+		self.origin = origin
 		self.marked = False
 
 	def setPrevious(self, prev):
@@ -81,8 +82,8 @@ class FlowBlock(object):
 		self.marked = True
 
 class Linear(FlowBlock):
-	def __init__(self, region):
-		FlowBlock.__init__(self, region)
+	def __init__(self, region, origin):
+		FlowBlock.__init__(self, region, origin)
 
 		self.instructions = []
 		self.prev = None
@@ -111,7 +112,7 @@ class Linear(FlowBlock):
 
 class Merge(FlowBlock):
 	def __init__(self, region):
-		FlowBlock.__init__(self, region)
+		FlowBlock.__init__(self, region, None)
 
 		# HACK A cludge to keep track of the incoming edges.
 		self.incoming = set()
@@ -290,14 +291,14 @@ class Merge(FlowBlock):
 		self.replacePrev(prev, None)
 
 class AbstractSwitch(FlowBlock):
-	def __init__(self, region):
-		FlowBlock.__init__(self, region)
+	def __init__(self, region, origin):
+		FlowBlock.__init__(self, region, origin)
 
 		self.prev = None
 		self.t = None
 		self.f = None
 
-		self.cond = CheckStack(region)
+		self.cond = CheckStack(region, origin)
 
 	def replaceNext(self, current, next):
 		if self.t == current:
@@ -330,8 +331,8 @@ class Switch(AbstractSwitch):
 		return f(self.t) or f(self.f)
 
 class ForIter(FlowBlock):
-	def __init__(self, region):
-		FlowBlock.__init__(self, region)
+	def __init__(self, region, origin):
+		FlowBlock.__init__(self, region, origin)
 		self.prev = None
 		self.iter = None
 		self.done = None
@@ -363,7 +364,7 @@ class ForIter(FlowBlock):
 
 class NormalEntry(FlowBlock):
 	def __init__(self, region):
-		FlowBlock.__init__(self, region)
+		FlowBlock.__init__(self, region, None)
 		self.prev = None
 		self.next = None
 
@@ -389,7 +390,7 @@ class NormalEntry(FlowBlock):
 
 class NormalExit(FlowBlock):
 	def __init__(self, region):
-		FlowBlock.__init__(self, region)
+		FlowBlock.__init__(self, region, None)
 		self.prev = None
 		self.next = None
 
@@ -407,8 +408,8 @@ class NormalExit(FlowBlock):
 
 
 class ExceptionalFlowBlock(FlowBlock):
-	def __init__(self, region):
-		FlowBlock.__init__(self, region)
+	def __init__(self, region, origin):
+		FlowBlock.__init__(self, region, origin)
 		self.prev = None
 
 
@@ -435,15 +436,15 @@ class Continue(ExceptionalFlowBlock):
 	pass
 
 class Raise(ExceptionalFlowBlock):
-	def __init__(self, region, nargs):
-		super(Raise, self).__init__(region)
+	def __init__(self, region, origin, nargs):
+		super(Raise, self).__init__(region, origin)
 		assert nargs >= 0 and nargs <= 3
 		self.nargs = nargs
 
 
 class EndFinally(ExceptionalFlowBlock):
-	def __init__(self, region):
-		ExceptionalFlowBlock.__init__(self, region)
+	def __init__(self, region, origin):
+		ExceptionalFlowBlock.__init__(self, region, origin)
 
 		self.prev = None
 		self.next = None
@@ -469,8 +470,8 @@ class EndFinally(ExceptionalFlowBlock):
 
 
 class FlowRegion(FlowBlock):
-	def __init__(self, region):
-		FlowBlock.__init__(self, region)
+	def __init__(self, region, origin):
+		FlowBlock.__init__(self, region, origin)
 
 		self.prev = None
 		self.normal = None
@@ -550,8 +551,8 @@ class SwitchRegion(SESERegion):
 
 	name = 'switch region'
 
-	def __init__(self, region, cond, t, f):
-		super(SwitchRegion, self).__init__(region)
+	def __init__(self, region, origin, cond, t, f):
+		super(SwitchRegion, self).__init__(region, origin)
 		self.cond = cond
 		self.t = t
 		self.f = f
@@ -598,8 +599,9 @@ class AbstractShortCircut(object):
 		return "%s(%s)" % (type(self).__name__, ", ".join([repr(term) for term in self.terms]))
 
 class CheckStack(object):
-	def __init__(self, region):
+	def __init__(self, region, origin):
 		self.region = region
+		self.origin = origin
 
 	def complete(self):
 		return False
@@ -681,16 +683,16 @@ class ForLoop(SESERegion):
 
 	name = 'for loop'
 
-	def __init__(self, region, body):
-		super(ForLoop, self).__init__(region)
+	def __init__(self, region, origin, body):
+		super(ForLoop, self).__init__(region, origin)
 		self.body = body
 
 class WhileLoop(SESERegion):
 	__slots__ = 'cond', 'linearcond', 'body'
 	name = 'while loop'
 
-	def __init__(self, region, cond, linearcond, body):
-		super(WhileLoop, self).__init__(region)
+	def __init__(self, region, origin, cond, linearcond, body):
+		super(WhileLoop, self).__init__(region, origin)
 		self.cond = cond
 		self.linearcond = linearcond
 		self.body = body

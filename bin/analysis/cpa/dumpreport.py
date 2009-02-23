@@ -16,6 +16,8 @@ import util.graphalgorithim.dominator
 
 from . dumputil import *
 
+import urllib
+
 def outputCodeShortName(out, code, links=None, context=None):
 	link = links.codeRef(code, context) if links is not None else None
 
@@ -36,6 +38,13 @@ def outputObjectShortName(out, heap, links=None):
 	if link:
 		out.end('a')
 
+def outputOrigin(out, origin):
+	if origin:
+		out.begin('a', href="file:%s"%(urllib.pathname2url(origin.filename),))
+		out << "%s - %s:%d" % origin
+		out.end('a')
+	else:
+		out << '<unknown origin>'
 
 def makeReportDirectory(moduleName):
 	reportdir = os.path.join(config.outputDirectory, moduleName)
@@ -73,6 +82,7 @@ def printLabel(out, label):
 	out << label
 	out.end('b')
 	out.end('div')
+	out.endl()
 
 def tableRow(out, links, label, *args):
 	out.begin('tr')
@@ -110,7 +120,12 @@ def dumpFunctionInfo(func, data, links, out, scg):
 	if code.annotation.dynamicFold: printLabel(out, 'dynamic fold')
 
 	origin = code.annotation.origin
-	if origin: printLabel(out, "%s - %s:%d" % origin)
+	if origin:
+		out.begin('div')
+		outputOrigin(out, origin)
+		out.end('div')
+		out.endl()
+
 
 	# Psedo-python output
 	if func is not None:
@@ -181,20 +196,30 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.endl()
 		out.endl()
 
+		origin = -1
+
 		out.begin('pre')
 		for op in funcOps:
-			out << '\t'
+			currentOrigin = op.annotation.origin
+			if currentOrigin != origin:
+				origin = currentOrigin
+				out << '\t'
+				outputOrigin(out, origin)
+				out.endl()
+				out.endl()
+
+			out << '\t\t'
 			out << op
 			out.endl()
 
 			if op.annotation.invokes:
 				callees = op.annotation.invokes[1][cindex]
 				for dstF, dstC in callees:
-					out << '\t\t'
+					out << '\t\t\t'
 					outputCodeShortName(out, dstF, links, dstC)
 					out.endl()
 			else:
-				out << "\t\t?"
+				out << "\t\t\t?"
 				out.endl()
 
 
@@ -202,7 +227,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			modify = op.annotation.modifies
 
 			if read or modify:
-				out << '\t\t'
+				out << '\t\t\t'
 				out.begin('i')
 				if read[1][cindex]: out << "R"
 				if modify[1][cindex]: out << "M"

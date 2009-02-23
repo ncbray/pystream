@@ -1,6 +1,6 @@
 import util.canonical
 
-noMod = util.canonical. Sentinel('<no mod>')
+noMod = util.canonical.Sentinel('<no mod>')
 
 def ordered(data):
 	return tuple(sorted(data))
@@ -39,9 +39,7 @@ class Annotation(object):
 class CodeAnnotation(Annotation):
 	__slots__ = 'contexts', 'descriptive', 'staticFold', 'dynamicFold', 'original', 'origin'
 
-	def __init__(self, contexts=None, descriptive=False,
-			staticFold=None, dynamicFold=None,
-			original=None, origin=None):
+	def __init__(self, contexts, descriptive, staticFold, dynamicFold, original, origin):
 		self.contexts    = contexts
 		self.descriptive = descriptive
 		self.staticFold  = staticFold
@@ -66,29 +64,32 @@ class CodeAnnotation(Annotation):
 		return self.rewrite(contexts=contexts)
 
 class OpAnnotation(Annotation):
-	__slots__ = 'invokes', 'reads', 'modifies', 'allocates'
+	__slots__ = 'invokes', 'reads', 'modifies', 'allocates', 'origin'
 
-	def __init__(self, invokes=None, reads=None, modifies=None, allocates=None):
+	def __init__(self, invokes, reads, modifies, allocates, origin):
 		self.invokes   = invokes
 		self.reads     = reads
 		self.modifies  = modifies
 		self.allocates = allocates
+		self.origin    = origin
 
-	def rewrite(self, invokes=noMod, reads=noMod, modifies=noMod, allocates=noMod):
-		if invokes is noMod:   invokes   = self.invokes
-		if reads is noMod:     reads     = self.reads
-		if modifies is noMod:  modifies  = self.modifies
+	def rewrite(self, invokes=noMod, reads=noMod, modifies=noMod, allocates=noMod, origin=noMod):
+		if invokes   is noMod: invokes   = self.invokes
+		if reads     is noMod: reads     = self.reads
+		if modifies  is noMod: modifies  = self.modifies
 		if allocates is noMod: allocates = self.allocates
+		if origin    is noMod: origin    = self.origin
 
-		return OpAnnotation(invokes, reads, modifies, allocates)
+		return OpAnnotation(invokes, reads, modifies, allocates, origin)
 
 	def contextSubset(self, remap, invokeMapper=None):
 		invokes   = remapContextual(self.invokes,   remap, invokeMapper)
 		reads     = remapContextual(self.reads,     remap)
 		modifies  = remapContextual(self.modifies,  remap)
 		allocates = remapContextual(self.allocates, remap)
+		origin    = self.origin
 
-		return OpAnnotation(invokes, reads, modifies, allocates)
+		return OpAnnotation(invokes, reads, modifies, allocates, origin)
 
 	def compatable(self, codeAnnotation):
 		if self.invokes is not None:

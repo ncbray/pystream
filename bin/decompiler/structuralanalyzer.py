@@ -106,7 +106,7 @@ class StructuralAnalyzer(StandardVisitor):
 				entryEdge = CFGEdge(entry, block)
 				exitEdge = CFGEdge(block.next, block.next.done)
 
-				region = ForLoop(block.region, block.next.iter)
+				region = ForLoop(block.region, block.next.origin, block.next.iter)
 				self.moveIntoRegion(entryEdge, exitEdge, region)
 				return
 
@@ -120,7 +120,7 @@ class StructuralAnalyzer(StandardVisitor):
 						entry = block.findLoopEntry(body)
 
 						cond = switch.cond.replaceDefault(block.next)
-						region = WhileLoop(block.region, cond, block.next, switch.t)
+						region = WhileLoop(block.region, cond.origin, cond, block.next, switch.t)
 
 						entryEdge = CFGEdge(entry, block)
 						exitEdge = CFGEdge(switch, switch.f)
@@ -139,7 +139,8 @@ class StructuralAnalyzer(StandardVisitor):
 
 				self.contractSuite(block, block.next)
 
-				region = WhileLoop(block.region, None, None, block.next)
+				# TODO origin?
+				region = WhileLoop(block.region, None, None, None, block.next)
 
 				entryEdge = CFGEdge(entry, block)
 				self.moveIntoRegion(entryEdge, None, region)
@@ -158,7 +159,7 @@ class StructuralAnalyzer(StandardVisitor):
 			end 	= exitEdge.source
 
 			if start != end:
-				region = SuiteRegion(entryEdge.destination.region)
+				region = SuiteRegion(entryEdge.destination.region, start.origin)
 				self.moveIntoRegion(entryEdge, exitEdge, region)
 
 				# HACK
@@ -341,7 +342,7 @@ class StructuralAnalyzer(StandardVisitor):
 		t = None if isinstance(block.t, Merge) else block.t
 		f = None if isinstance(block.f, Merge) else block.f
 
-		region = SwitchRegion(block.region, block.cond, t, f)
+		region = SwitchRegion(block.region, block.origin, block.cond, t, f)
 
 		self.moveIntoRegion(entryEdge, exitEdge, region)
 
@@ -502,7 +503,7 @@ class StructuralAnalyzer(StandardVisitor):
 
 		assert block.exceptional
 
-		region = LoopElse(block.region)
+		region = LoopElse(block.region, block.origin)
 		entryEdge = CFGEdge(block.prev, block)
 		self.moveIntoRegion(entryEdge, exitEdge, region)
 

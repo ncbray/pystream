@@ -78,6 +78,8 @@ class LLTranslator(object):
 	@dispatch(ast.Call)
 	def visitCall(self, node):
 		node = allChildren(self, node)
+		original = node
+
 		if node.expr in self.defn:
 			defn = self.defn[node.expr]
 			if defn in self.specialGlobals:
@@ -128,6 +130,8 @@ class LLTranslator(object):
 				code = self.extractor.getCall(defn.object)
 				if code:
 					node = ast.DirectCall(code, node.expr, node.args, node.kwds, node.vargs, node.kargs)
+
+		node.annotation = original.annotation
 		return node
 
 	@dispatch(ast.Assign)

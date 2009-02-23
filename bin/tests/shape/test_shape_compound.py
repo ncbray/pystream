@@ -22,18 +22,12 @@ class TestSimpleCase(TestCompoundConstraintBase):
 		self.n2Ref = self.refs(self.nSlot, self.nSlot)
 		self.n3Ref = self.refs(self.nSlot, self.nSlot, self.nSlot)
 
-
 		# t = x
 		# x = t.n
 		# q = y.n
 		# t.n = q
 		# y.n = t
 		# y = t.n
-
-		# tn(y.n|)
-
-		# tn(|t.n)
-		# tny(t.n|)
 
 		# HACK should really be doing a convertToBool?
 		cond = ast.Condition(ast.Suite([]), x)
@@ -210,8 +204,8 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
 
 		self.funcInput,  self.funcOutput   = self.makeConstraints(self.code)
-		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
 
+		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
 		self.setInOut(self.callerInput, self.callerOutput)
 
 
@@ -250,3 +244,114 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 			(self.cnRef, (self.anExpr,), None),
 			]
 		self.checkTransfer(argument, results)
+
+
+
+class TestVArgCase(TestCompoundConstraintBase):
+	def shapeSetUp(self):
+		self.context = None
+		self.cs = True
+
+		# Locals
+		x, self.xSlot, self.xExpr  = self.makeLocalObjs('x')
+		y, self.ySlot, self.yExpr  = self.makeLocalObjs('y')
+		z, self.zSlot, self.zExpr  = self.makeLocalObjs('z')
+		ret, self.retSlot, self.retExpr  = self.makeLocalObjs('internal_return')
+
+		# Fields
+		self.lSlot = self.sys.canonical.fieldSlot(None, ('LowLevel', self.extractor.getObject('l')))
+		self.rSlot = self.sys.canonical.fieldSlot(None, ('LowLevel', self.extractor.getObject('r')))
+
+		# Expressions
+		self.retlExpr  = self.expr(self.retExpr, self.lSlot)
+		self.retrExpr  = self.expr(self.retExpr, self.rSlot)
+
+		# Reference Counts
+		self.xRef   = self.refs(self.xSlot)
+		self.yRef   = self.refs(self.ySlot)
+		self.zRef   = self.refs(self.zSlot)
+		self.retRef = self.refs(self.retSlot)
+		self.lRef   = self.refs(self.lSlot)
+		self.rRef   = self.refs(self.rSlot)
+
+		body = ast.Suite([
+			ast.Store(x, 'LowLevel', self.existing('l'), y),
+			ast.Store(x, 'LowLevel', self.existing('r'), z),
+			ast.Return(x)
+			])
+
+
+		self.code = ast.Code('buildTreeTest', None, [x, y, z], ['x', 'y', 'z'], None, None, ret, body)
+
+
+		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
+		b, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
+		c, self.cSlot, self.cExpr  = self.makeLocalObjs('c')
+
+		self.aRef = self.refs(self.aSlot)
+		self.bRef = self.refs(self.bSlot)
+		self.cRef = self.refs(self.cSlot)
+
+
+		dc = ast.DirectCall(self.code, None, [], [], a, None)
+		self.caller = ast.Suite([
+			ast.Assign(dc, c),
+			])
+
+
+		# Make a dummy invocation
+		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
+
+		self.funcInput,   self.funcOutput   = self.makeConstraints(self.code)
+
+#		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
+#		self.setInOut(self.callerInput, self.callerOutput)
+
+
+	def testLocal1(self):
+		self.setInOut(self.funcInput, self.funcOutput)
+
+		argument = (self.xRef, None, None)
+		results = [
+			(self.retRef, None, None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testLocal2(self):
+		self.setInOut(self.funcInput, self.funcOutput)
+
+		argument = (self.yRef, None, None)
+		results = [
+			(self.lRef, (self.retlExpr,), None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testLocal3(self):
+		self.setInOut(self.funcInput, self.funcOutput)
+
+		argument = (self.zRef, None, None)
+		results = [
+			(self.rRef, (self.retrExpr,), None),
+			]
+		self.checkTransfer(argument, results)
+
+##	def testCall1(self):
+##		argument = (self.aRef, None, None)
+##		results = [
+##			(self.aRef, None, None),
+##			]
+##		self.checkTransfer(argument, results)
+##
+##	def testCall2(self):
+##		argument = (self.cRef, None, None)
+##		results = [
+##			]
+##		self.checkTransfer(argument, results)
+##
+##	def testCall3(self):
+##		argument = (self.nRef, None, None)
+##		results = [
+##			(self.nRef, None, (self.anExpr,)),
+##			(self.cnRef, (self.anExpr,), None),
+##			]
+##		self.checkTransfer(argument, results)

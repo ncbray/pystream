@@ -236,19 +236,14 @@ class ShapeConstraintBuilder(object):
 			assert False, "Can't handle vparams?"
 			print argID, '->', paramID
 
-	def handleInvocation(self, callPoint, returnPoint, srcContext, callerargs, dstFunc, dstContext):
-		calleeparams = self.getCalleeParams(dstFunc)
-
-		info = self.computeTransfer(callerargs, calleeparams)
-
-		if info.willSucceed.mustBeFalse(): return
-
+	def makeSplitMergeInfo(self, dstFunc, calleeparams, callerargs):
 		# We may not know the program point for the function entry,
 		# so defer linking until after all the functions have been processed.
 
-
 		# HACK shouldn't be all locals pased to SplitMerge info, just the slots?
-		splitMergeInfo = constraints.SplitMergeInfo(self.functionLocalExprs[dstFunc], self.functionLocalSlots[dstFunc])
+		parameters = self.functionLocalExprs[dstFunc]
+		parameterSlots = self.functionLocalSlots[dstFunc]
+		splitMergeInfo = constraints.SplitMergeInfo(parameters, parameterSlots)
 		splitMergeInfo.srcLocals = self.functionLocalSlots[self.function]
 		splitMergeInfo.dstLocals = self.functionLocalSlots[dstFunc]
 
@@ -258,18 +253,16 @@ class ShapeConstraintBuilder(object):
 		splitMergeInfo.mapping[targetSlot] = None
 		splitMergeInfo.mapping[returnSlot] = targetSlot
 
+		return splitMergeInfo
 
-		# Call invoke: split the information
-		self.current = callPoint
-		self.mapArguments(callerargs, calleeparams, info)
-
-		# Make the constraint
+	def makeSplit(self, dstFunc, splitMergeInfo):
 		# TODO context sensitive copy?
 		pre = self.current
 		post = self.functionCallPoint[dstFunc]
 		constraint = constraints.SplitConstraint(self.sys, pre, post, splitMergeInfo)
 		self.constraints.append(constraint)
 
+	def makeMerge(self, dstFunc, splitMergeInfo, returnPoint):
 		# Call return: merge the information
 		pre  = self.functionReturnPoint[dstFunc]
 		post = returnPoint
@@ -277,6 +270,23 @@ class ShapeConstraintBuilder(object):
 		self.constraints.append(constraint)
 
 		self.current = returnPoint
+
+	def handleInvocation(self, callPoint, returnPoint, srcContext, callerargs, dstFunc, dstContext):
+		calleeparams = self.getCalleeParams(dstFunc)
+
+		info = self.computeTransfer(callerargs, calleeparams)
+		if info.willSucceed.mustBeFalse(): return
+
+		# Do arg -> param mapping
+		self.current = callPoint
+		self.mapArguments(callerargs, calleeparams, info)
+
+		# Make the constraints
+		splitMergeInfo = self.makeSplitMergeInfo(dstFunc, calleeparams, callerargs)
+		self.makeSplit(dstFunc, splitMergeInfo)
+		self.makeMerge(dstFunc, splitMergeInfo, returnPoint)
+
+
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, target):

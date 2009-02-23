@@ -1,4 +1,5 @@
 import types
+import sys
 
 from util.visitor import StandardVisitor
 from util.pythonoutput import PythonOutput
@@ -317,11 +318,12 @@ def protect(text, inner, outer, right=False):
 
 
 class SimpleCodeGen(StandardVisitor):
-	def __init__(self, out):
-		if not isinstance(out, PythonOutput):
+	def __init__(self, out=None):
+		if out is None:
+			out = PythonOutput(sys.stdout)
+		elif not isinstance(out, PythonOutput):
 			out = PythonOutput(out)
 		self.out = out
-
 
 		self.collapsable = set()
 

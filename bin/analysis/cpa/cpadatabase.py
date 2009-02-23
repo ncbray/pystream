@@ -4,13 +4,6 @@ from . import base
 
 from programIR.python import program, ast
 
-def decontextualizeObjects(objects):
-	return frozenset([obj.obj for obj in objects])
-
-class FunctionInfo(object):
-	def __init__(self, function):
-		self.function    = function
-		self.original    = function
 
 class HeapInfo(object):
 	def __init__(self, heap):

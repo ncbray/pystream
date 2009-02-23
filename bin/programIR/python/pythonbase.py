@@ -1,7 +1,7 @@
 from .. import annotations
 
 
-emptyCodeAnnotation  = annotations.CodeAnnotation(None, False, None, None, None, None)
+emptyCodeAnnotation  = annotations.CodeAnnotation(None, False, None, None, None)
 emptyOpAnnotation    = annotations.OpAnnotation(None, None, None, None, None)
 emptySlotAnnotation  = annotations.SlotAnnotation(None)
 

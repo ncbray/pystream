@@ -500,12 +500,6 @@ class FunctionCloner(object):
 
 		destfunction.annotation = sourcefunction.annotation.contextSubset(self.contextRemap)
 
-		# Maintain a reference to the original function.
-		# Ugly, as it can prevent quite a bit of GC.
-		# TODO "original" UID?
-		if sourcefunction.annotation.original is None:
-			destfunction.rewriteAnnotation(original=sourcefunction)
-
 		# Transfer information that is tied to the code.
 		db.trackContextTransfer(sourcefunction, destfunction, group)
 

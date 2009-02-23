@@ -54,20 +54,30 @@ class MethodPatternFinder(object):
 
 		self.mcall = exports['method__call__']
 
+		assert self.iget.annotation.origin
+		assert self.oget.annotation.origin
+		assert self.fget.annotation.origin
+		assert self.mdget.annotation.origin
+
+
 
 	def findExisting(self, db):
 		self.fgets = set()
 		self.ogets = set()
 		self.igets = set()
 
+		igetO  = self.iget.annotation.origin
+		ogetO  = self.oget.annotation.origin
+		fgetO  = self.fget.annotation.origin
+		mdgetO = self.mdget.annotation.origin
+
 		for func in db.liveFunctions():
-			original = func.annotation.original
-			if original is None:
-				original = func
-			if original is self.iget: self.igets.add(func)
-			if original is self.oget: self.ogets.add(func)
-			if original is self.fget: self.fgets.add(func)
-			if original is self.mdget: self.fgets.add(func)
+			origin = func.annotation.origin
+
+			if origin is igetO:  self.igets.add(func)
+			if origin is ogetO:  self.ogets.add(func)
+			if origin is fgetO:  self.fgets.add(func)
+			if origin is mdgetO: self.fgets.add(func)
 
 
 	def findContexts(self):
@@ -237,10 +247,10 @@ class MethodRewrite(object):
 	def isMethodCall(self, node, meth):
 		invokes = node.annotation.invokes
 		if invokes is not None:
-			# HACK should be considering funcinfo.original, not the function itself.
-			originalFuncs = frozenset([f for f, c in invokes[0]])
-			if originalFuncs == frozenset([self.pattern.mcall]):
-				key = self.flow.lookup(('meth', node.expr))
+			originalFuncs = frozenset([code.annotation.origin for code, c in invokes[0]])
+			if originalFuncs == frozenset([self.pattern.mcall.annotation.origin]):
+
+				key = self.flow.lookup(('meth', meth))
 				if isinstance(key, tuple):
 					expr, name, meth = key
 					return True, expr, name

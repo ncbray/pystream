@@ -22,6 +22,9 @@ class TestSimpleCase(TestCompoundConstraintBase):
 		self.n2Ref = self.refs(self.nSlot, self.nSlot)
 		self.n3Ref = self.refs(self.nSlot, self.nSlot, self.nSlot)
 
+		self.p    = [self.parameterSlot(i) for i in range(2)]
+		self.pRef = [self.refs(slot) for slot in self.p]
+
 		# t = x
 		# x = t.n
 		# q = y.n
@@ -88,7 +91,7 @@ class TestSimpleCase(TestCompoundConstraintBase):
 	def testLocal1(self):
 		self.setInOut(self.funcInput, self.funcOutput)
 
-		argument = (self.xRef, None, None)
+		argument = (self.pRef[0], None, None)
 		results = [
 			(self.nRef, None, None),
 			]
@@ -97,7 +100,7 @@ class TestSimpleCase(TestCompoundConstraintBase):
 	def testLocal2(self):
 		self.setInOut(self.funcInput, self.funcOutput)
 
-		argument = (self.yRef, None, None)
+		argument = (self.pRef[1], None, None)
 		results = [
 			(self.retRef, None, None),
 			]
@@ -214,13 +217,9 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 
 		argument = (self.nRef, None, None)
 		results = [
-			#(self.nRef, None, (self.xnExpr,)),
-			#(self.retnRef, (self.xnExpr,), None),
-
 			# No information about x/y/etc as there's no extended parameters...
-			(self.nRef, None, None),
+			(self.nRef,    None, None),
 			(self.retnRef, None, None),
-
 			]
 		self.checkTransfer(argument, results)
 
@@ -240,7 +239,7 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 	def testCall3(self):
 		argument = (self.nRef, None, None)
 		results = [
-			(self.nRef, None, (self.anExpr,)),
+			(self.nRef,  None, (self.anExpr,)),
 			(self.cnRef, (self.anExpr,), None),
 			]
 		self.checkTransfer(argument, results)
@@ -251,6 +250,10 @@ class TestVArgCase(TestCompoundConstraintBase):
 	def shapeSetUp(self):
 		self.context = None
 		self.cs = True
+
+		# Parameters
+		self.p    = [self.parameterSlot(i) for i in range(3)]
+		self.pRef = [self.refs(slot) for slot in self.p]
 
 		# Locals
 		x, self.xSlot, self.xExpr  = self.makeLocalObjs('x')
@@ -299,19 +302,40 @@ class TestVArgCase(TestCompoundConstraintBase):
 			])
 
 
+		self.v0Slot = self.sys.canonical.fieldSlot(None, ('Array', self.extractor.getObject(0)))
+		self.v1Slot = self.sys.canonical.fieldSlot(None, ('Array', self.extractor.getObject(1)))
+		self.v2Slot = self.sys.canonical.fieldSlot(None, ('Array', self.extractor.getObject(2)))
+
+		self.v0Ref = self.refs(self.v0Slot)
+		self.v1Ref = self.refs(self.v1Slot)
+		self.v2Ref = self.refs(self.v2Slot)
+
+		self.cv0Ref  = self.refs(self.cSlot, self.v0Slot)
+		self.lv1Ref  = self.refs(self.lSlot, self.v1Slot)
+		self.rv2Ref  = self.refs(self.rSlot, self.v2Slot)
+
+		self.av0Expr = self.expr(self.aExpr, self.v0Slot)
+		self.av1Expr = self.expr(self.aExpr, self.v1Slot)
+		self.av2Expr = self.expr(self.aExpr, self.v2Slot)
+
+
+		self.clExpr  = self.expr(self.cExpr, self.lSlot)
+		self.crExpr  = self.expr(self.cExpr, self.rSlot)
+
+
 		# Make a dummy invocation
 		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
 
 		self.funcInput,   self.funcOutput   = self.makeConstraints(self.code)
 
-#		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
-#		self.setInOut(self.callerInput, self.callerOutput)
+		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
+		self.setInOut(self.callerInput, self.callerOutput)
 
 
 	def testLocal1(self):
 		self.setInOut(self.funcInput, self.funcOutput)
 
-		argument = (self.xRef, None, None)
+		argument = (self.pRef[0], None, None)
 		results = [
 			(self.retRef, None, None),
 			]
@@ -320,7 +344,7 @@ class TestVArgCase(TestCompoundConstraintBase):
 	def testLocal2(self):
 		self.setInOut(self.funcInput, self.funcOutput)
 
-		argument = (self.yRef, None, None)
+		argument = (self.pRef[1], None, None)
 		results = [
 			(self.lRef, (self.retlExpr,), None),
 			]
@@ -329,29 +353,45 @@ class TestVArgCase(TestCompoundConstraintBase):
 	def testLocal3(self):
 		self.setInOut(self.funcInput, self.funcOutput)
 
-		argument = (self.zRef, None, None)
+		argument = (self.pRef[2], None, None)
 		results = [
 			(self.rRef, (self.retrExpr,), None),
 			]
 		self.checkTransfer(argument, results)
 
-##	def testCall1(self):
-##		argument = (self.aRef, None, None)
-##		results = [
-##			(self.aRef, None, None),
-##			]
-##		self.checkTransfer(argument, results)
-##
-##	def testCall2(self):
-##		argument = (self.cRef, None, None)
-##		results = [
-##			]
-##		self.checkTransfer(argument, results)
-##
-##	def testCall3(self):
-##		argument = (self.nRef, None, None)
-##		results = [
-##			(self.nRef, None, (self.anExpr,)),
-##			(self.cnRef, (self.anExpr,), None),
-##			]
-##		self.checkTransfer(argument, results)
+	def testCall1(self):
+		argument = (self.aRef, None, None)
+		results = [
+			(self.aRef, None, None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testCall2(self):
+		argument = (self.cRef, None, None)
+		results = [
+			]
+		self.checkTransfer(argument, results)
+
+	def testCall3(self):
+		argument = (self.v0Ref, None, None)
+		results = [
+			(self.v0Ref,  None, (self.av0Expr,)),
+			(self.cv0Ref, (self.av0Expr,), None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testCall4(self):
+		argument = (self.v1Ref, None, None)
+		results = [
+			(self.v1Ref,  None, (self.clExpr, self.av1Expr,)),
+			(self.lv1Ref, (self.clExpr, self.av1Expr,), None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testCall5(self):
+		argument = (self.v2Ref, None, None)
+		results = [
+			(self.v2Ref,  None, (self.crExpr, self.av2Expr,)),
+			(self.rv2Ref, (self.crExpr, self.av2Expr,), None),
+			]
+		self.checkTransfer(argument, results)

@@ -3,7 +3,7 @@ class Slot(object):
 
 	def isSlot(self):
 		return True
-	
+
 	def isExpression(self):
 		return False
 
@@ -24,9 +24,12 @@ class LocalSlot(Slot):
 	def isLocal(self):
 		return True
 
+	def isParameter(self):
+		return isinstance(self.lcl, int)
+
 	def __repr__(self):
 		return "lcl(%s)" % str(self.lcl)
-	
+
 class FieldSlot(Slot):
 	__slots__ = 'heap', 'field'
 

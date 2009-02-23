@@ -11,7 +11,7 @@ def isPoint(point):
 
 class Constraint(object):
 	__slots__ = 'parent', 'inputPoint', 'outputPoint',
-	
+
 	def __init__(self, sys, inputPoint, outputPoint):
 		assert isPoint(inputPoint),  inputPoint
 		assert isPoint(outputPoint), outputPoint
@@ -21,7 +21,7 @@ class Constraint(object):
 
 	def update(self, sys, key):
 		point, context, index = key
-		
+
 		secondary = sys.environment.secondary(*key)
 		self.evaluate(sys, point, context, index, secondary)
 
@@ -34,7 +34,7 @@ class AssignmentConstraint(Constraint):
 
 		assert sourceExpr.isExpression(), sourceExpr
 		self.sourceExpr      = sourceExpr
-		
+
 		assert destinationExpr.isExpression(), destinationExpr
 		self.destinationExpr = destinationExpr
 
@@ -67,11 +67,10 @@ class ForgetConstraint(Constraint):
 
 
 class SplitMergeInfo(object):
-	def __init__(self, parameters, parameterSlots):
-		#self.parameters = parameters
+	def __init__(self, parameterSlots):
 		self.parameterSlots = parameterSlots
 		self.extendedParameters = set()
-		
+
 		self.remoteLUT = {}
 		self.localLUT  = {}
 
@@ -81,7 +80,7 @@ class SplitMergeInfo(object):
 	def _mergeLUT(self, splitIndex, index, secondary, lut):
 		if splitIndex not in lut:
 			lut[splitIndex] = {}
-			
+
 		if not index in lut[splitIndex]:
 			lut[splitIndex][index] = secondary.copy()
 			changed = True
@@ -122,7 +121,7 @@ class SplitMergeInfo(object):
 			for p in newParam:
 				self.mapping[p] = None
 			self.extendedParameters.update(newParam)
-			
+
 class SplitConstraint(Constraint):
 	__slots__ = 'info'
 
@@ -180,7 +179,7 @@ class MergeConstraint(Constraint):
 		Constraint.__init__(self, sys, inputPoint, outputPoint)
 		self.info = info
 		info.merge = self # Cirular reference?
-	
+
 	def evaluate(self, sys, point, context, configuration, secondary):
 		self.info.registerRemote(sys, configuration.entrySet, configuration, secondary)
 

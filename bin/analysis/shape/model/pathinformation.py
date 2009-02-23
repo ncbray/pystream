@@ -67,7 +67,7 @@ class EquivalenceClass(object):
 		assert eq is not None, "Attribute not found."
 		del self.attrs[attr]
 		eq.decRef()
-		
+
 	def _prune(self):
 		kill = []
 		for attr, eq in self:
@@ -75,7 +75,7 @@ class EquivalenceClass(object):
 			if eq.isTrivial():
 				kill.append(attr)
 		for attr in kill:
-			self.delAttr(attr)		
+			self.delAttr(attr)
 
 	def prune(self):
 		self._prune()
@@ -147,7 +147,7 @@ class EquivalenceClass(object):
 				if next.isTrivial(): continue
 
 				other = next.copy(lut, kill, keepHits, keepMisses)
-				cls.setAttr(attr, other)		
+				cls.setAttr(attr, other)
 			return cls
 
 	def remap(self, lut, mapping):
@@ -164,7 +164,7 @@ class EquivalenceClass(object):
 				newslot = mapping.get(slot, slot)
 				if newslot and not next.isTrivial():
 					other = next.remap(lut, mapping)
-					cls.setAttr(newslot, other)		
+					cls.setAttr(newslot, other)
 			return cls
 
 	def dump(self, processed):
@@ -177,7 +177,7 @@ class EquivalenceClass(object):
 				hm = 'miss'
 			else:
 				hm = ''
-			
+
 			print "%d (%d) %s" % (id(self), self.weight, hm)
 			for k, v in self:
 				print '\t', k, id(v)
@@ -239,7 +239,7 @@ class EquivalenceClass(object):
 	def extendParameters(self, canonical, parameters):
 		for param in parameters:
 			assert param.isSlot(), param
-			
+
 		processed = set()
 		newParam  = {}
 
@@ -265,7 +265,7 @@ class EquivalenceClass(object):
 		else:
 			# Shared nodes are considered pure, as they will be re-merged.
 			initalPure = self in sharedEq
-			
+
 			eq = EquivalenceClass()
 			eq.hit  = self.hit
 			lut[self] = (eq, initalPure)
@@ -285,7 +285,7 @@ class EquivalenceClass(object):
 					newNext, newPure = next._splitHidden(extendedParameters, sharedEq, accessedCallback, lut, noKill)
 					pure &= newPure
 					eq.setAttr(slot, newNext)
-					
+
 					if newPure and slot not in extendedParameters:
 						kill.append(slot)
 
@@ -297,7 +297,7 @@ class EquivalenceClass(object):
 			# Are we pure, and didn't already know it?
 			if pure and not initalPure:
 				lut[self] = (eq, pure)
-			
+
 			return lut[self]
 
 	def splitHidden(self, extendedParameters, accessedCallback):
@@ -309,7 +309,7 @@ class EquivalenceClass(object):
 
 		lut = {}
 
-		hidden, pure = self._splitHidden(extendedParameters, sharedEq, accessedCallback, {}, False)		
+		hidden, pure = self._splitHidden(extendedParameters, sharedEq, accessedCallback, {}, False)
 		return hidden
 
 	def forgetRoots(self, kill):
@@ -336,7 +336,7 @@ class PathInformation(object):
 		else:
 			assert isinstance(root, EquivalenceClass), root
 			self.root  = root
-	
+
 
 	def copy(self, kill=None, keepHits=False, keepMisses=False):
 		if kill is None:
@@ -360,7 +360,7 @@ class PathInformation(object):
 		path = expr.path()
 
 		cls = self.root
-		
+
 		for attr in path:
 			cls = cls.getAttr(attr, create)
 			if cls is None:
@@ -388,7 +388,7 @@ class PathInformation(object):
 
 	def mustAlias(self, a, b):
 		if a is b: return True
-		
+
 		aCls, aPath = self.partialEquivalence(a)
 		bCls, bPath = self.partialEquivalence(b)
 
@@ -412,7 +412,7 @@ class PathInformation(object):
 		for path in paths:
 			eqs.add(self.equivalenceClass(path, True))
 
-		if len(eqs) > 1:			
+		if len(eqs) > 1:
 			# Choose the biggest equivalence class as the new class
 			# This minimizes forwarding (unless there's wierd cycles)
 			largest = None
@@ -473,7 +473,7 @@ class PathInformation(object):
 					else:
 						return False
 				cls = next
-			
+
 			elif attr is slot:
 				return False
 
@@ -483,11 +483,11 @@ class PathInformation(object):
 	def filterUnstable(self, slot, keepHits=False, keepMisses=False):
 		outp = self.copy(set([slot]), keepHits, keepMisses)
 		return outp
-		
+
 
 	# Intersects equivilence sets, therefore problematic
 	def inplaceMerge(self, other):
-		lut = {}		
+		lut = {}
 		newRoot, changed = self.root.inplaceIntersect(other.root, lut)
 
 		if changed:

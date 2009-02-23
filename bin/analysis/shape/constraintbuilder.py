@@ -87,7 +87,7 @@ class ShapeConstraintBuilder(object):
 
 	def localExpr(self, lcl):
 		if lcl is not None:
-			assert isinstance(lcl, ast.Local), lcl
+			assert isinstance(lcl, (ast.Local, int)), lcl
 			slot = self.sys.canonical.localSlot(lcl)
 			return self.sys.canonical.localExpr(slot)
 		else:
@@ -205,45 +205,68 @@ class ShapeConstraintBuilder(object):
 		self.post(node)
 
 	def computeTransfer(self, callerargs, calleeparams):
-		assert callerargs.vargs is None
+		selfArg  = callerargs.selfarg is not None
+
+		numVArgs = 0
+		vargsUncertain = bool(callerargs.vargs)
+
 		assert callerargs.kargs is None
 
-		selfArg  = callerargs.selfarg is not None
-		numVArgs = 0
 		numArgs  = len(callerargs.args)+numVArgs
-		info = util.calling.callStackToParamsInfo(calleeparams, selfArg, numArgs, False, callerargs.kwds.keys(), False)
+		info = util.calling.callStackToParamsInfo(calleeparams, selfArg, numArgs, vargsUncertain, callerargs.kwds.keys(), False)
 		return info
+
+	def indexExpr(self, expr, index):
+		field = self.sys.canonical.fieldSlot(None, ('Array', self.sys.extractor.getObject(index)))
+		return self.sys.canonical.fieldExpr(expr, field)
+
+	def maxVArgLength(self):
+		# HACK arbitrarily transfer args
+		# TODO figure out how many we should transfer.
+		return 3
 
 	def mapArguments(self, callerargs, calleeparams, info):
 		# HACK things not supported for this iteration
-		assert not info.uncertainParam
-		assert not info.uncertainVParam
+		#assert not info.uncertainParam
+		#assert not info.uncertainVParam
 		assert not info.certainKeywords
 		assert not info.defaults
 
+		paramSlots = set()
+
 		# Self arg transfer
-		if callerargs.selfarg and calleeparams.selfparam:
-			self.assign(callerargs.selfarg, calleeparams.selfparam)
+		# HACK
+		assert not calleeparams.selfparam
 
-		# Arg to param transfer
-		for argID, paramID in info.argParam:
-			arg = callerargs.args[argID]
-			param = calleeparams.params[paramID]
-			#print arg, '->', param
-			self.assign(arg, param)
+		for i, arg in enumerate(callerargs.args):
+			slot = self.sys.canonical.localSlot(i)
+			expr = self.sys.canonical.localExpr(slot)
 
-		for argID, paramID in info.argVParam:
-			assert False, "Can't handle vparams?"
-			print argID, '->', paramID
+			self.assign(arg, expr)
+			paramSlots.add(slot)
 
-	def makeSplitMergeInfo(self, dstFunc, calleeparams, callerargs):
+		base = len(callerargs.args)
+
+		if callerargs.vargs:
+			for i in range(self.maxVArgLength()):
+				src = self.indexExpr(callerargs.vargs, i)
+
+				slot = self.sys.canonical.localSlot(i+base)
+				expr = self.sys.canonical.localExpr(slot)
+
+				self.assign(src, expr)
+				paramSlots.add(slot)
+
+		assert not calleeparams.vparam
+		assert not calleeparams.kparam
+
+		return paramSlots
+
+	def makeSplitMergeInfo(self, dstFunc, calleeparams, callerargs, parameterSlots):
 		# We may not know the program point for the function entry,
 		# so defer linking until after all the functions have been processed.
 
-		# HACK shouldn't be all locals pased to SplitMerge info, just the slots?
-		parameters = self.functionLocalExprs[dstFunc]
-		parameterSlots = self.functionLocalSlots[dstFunc]
-		splitMergeInfo = constraints.SplitMergeInfo(parameters, parameterSlots)
+		splitMergeInfo = constraints.SplitMergeInfo(parameterSlots)
 		splitMergeInfo.srcLocals = self.functionLocalSlots[self.function]
 		splitMergeInfo.dstLocals = self.functionLocalSlots[dstFunc]
 
@@ -279,10 +302,10 @@ class ShapeConstraintBuilder(object):
 
 		# Do arg -> param mapping
 		self.current = callPoint
-		self.mapArguments(callerargs, calleeparams, info)
+		paramSlots = self.mapArguments(callerargs, calleeparams, info)
 
 		# Make the constraints
-		splitMergeInfo = self.makeSplitMergeInfo(dstFunc, calleeparams, callerargs)
+		splitMergeInfo = self.makeSplitMergeInfo(dstFunc, calleeparams, callerargs, paramSlots)
 		self.makeSplit(dstFunc, splitMergeInfo)
 		self.makeMerge(dstFunc, splitMergeInfo, returnPoint)
 
@@ -371,12 +394,32 @@ class ShapeConstraintBuilder(object):
 		self.post(node)
 
 
+	def transferParameters(self, node):
+		# TODO self?
+		assert not node.selfparam
+		assert not node.vparam
+		assert not node.kparam
+
+		forget = set()
+
+		# Assign positional params -> locals
+		for i, param in enumerate(node.parameters):
+			slot = self.sys.canonical.localSlot(i)
+			expr = self.sys.canonical.localExpr(slot)
+
+			self.assign(expr, self.localExpr(param))
+			forget.add(slot)
+
+		if forget: self.forgetAll(forget)
+
+
 	@dispatch(ast.Code)
 	def visitFunciton(self, node):
 		pre = self.pre(node)
 
-		self.returnValue = node.returnparam
+		self.transferParameters(node)
 
+		self.returnValue = node.returnparam
 		self.returnPoint = self.newID()
 
 		self(node.ast)

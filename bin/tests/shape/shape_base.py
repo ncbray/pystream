@@ -31,6 +31,7 @@ class TestConstraintBase(unittest.TestCase):
 		self.db  = MockDB()
 		self.sys = analysis.shape.RegionBasedShapeAnalysis(self.db)
 		self.extractor = decompiler.programextractor.Extractor()
+		self.sys.extractor = self.extractor # HACK?
 		self.setInOut((None, 0), (None, 1))
 
 		self.shapeSetUp()
@@ -53,6 +54,9 @@ class TestConstraintBase(unittest.TestCase):
 		expr = self.sys.canonical.localExpr(slot)
 		return lcl, slot, expr
 
+	def parameterSlot(self, index):
+		assert isinstance(index, int), index
+		return self.sys.canonical.localSlot(index)
 
 	def hitsFromRC(self, index):
 		hits = []

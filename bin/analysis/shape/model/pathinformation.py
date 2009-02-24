@@ -227,6 +227,23 @@ class EquivalenceClass(object):
 
 		return eq, changed
 
+	def ageExtended(self, canonical):
+		newAttr = {}
+		for slot, eq in self:
+			aged = slot.age(canonical)
+			newAttr[aged] = eq
+		self.attrs = newAttr
+
+
+	def unageExtended(self):
+		newAttr = {}
+		for slot, eq in self:
+			aged = slot.unage()
+			newAttr[aged] = eq
+		self.attrs = newAttr
+
+
+
 	def findExtended(self, canonical, path, newParam, processed):
 		if self not in processed:
 			processed.add(self)
@@ -251,6 +268,7 @@ class EquivalenceClass(object):
 		# Root them
 		# Done is a seperate stage to prevent wacking the previous iterator
 		for eparam, eq in newParam.iteritems():
+			assert not eparam in self.attrs, "Already have extended param: %r" % eparam
 			self.setAttr(eparam, eq)
 
 		# Report the new roots
@@ -494,6 +512,13 @@ class PathInformation(object):
 			self.root = newRoot
 
 		return self, changed
+
+	def ageExtended(self, canonical):
+		self.root.ageExtended(canonical)
+
+	def unageExtended(self):
+		self.root.unageExtended()
+
 
 	def extendParameters(self, canonical, parameterSlots):
 		return self.root.extendParameters(canonical, parameterSlots)

@@ -16,6 +16,13 @@ class Slot(object):
 	def isHeap(self):
 		return False
 
+	def age(self, canonical):
+		return self
+
+	def unage(self):
+		return self
+
+
 class LocalSlot(Slot):
 	__slots__ = 'lcl'
 	def __init__(self, lcl):

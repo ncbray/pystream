@@ -61,6 +61,8 @@ class ShapeConstraintBuilder(object):
 
 		self.returnPoint = None
 
+		self.debug = False
+
 	def setFunction(self, func):
 		self.function = func
 		self.current  = (func, self.current[1])
@@ -76,10 +78,22 @@ class ShapeConstraintBuilder(object):
 		return uid
 
 	def pre(self, node):
+		if self.debug:
+			print "PRE"
+			print node
+			print self.current
+			print
+
 		self.statementPre[node] = self.current
 		return self.current
 
 	def post(self, node):
+		if self.debug:
+			print "POST"
+			print node
+			print self.current
+			print
+
 		self.statementPost[node] = self.current
 		return self.current
 
@@ -103,16 +117,40 @@ class ShapeConstraintBuilder(object):
 		constraint = constraints.AssignmentConstraint(self.sys, pre, post, source, destination)
 		self.constraints.append(constraint)
 
+		if self.debug:
+			print "ASSIGN"
+			print pre
+			print post
+			print
+
+
 	def forget(self, lcl):
 		self.forgetAll((lcl.slot,))
 
-	def forgetAll(self, slots):
+	def forgetAll(self, slots, post=None):
 		pre = self.current
-		post = self.advance()
+
+		if not post:
+			post = self.advance()
+		else:
+			self.current = post
+
 		constraint = constraints.ForgetConstraint(self.sys, pre, post, frozenset(slots))
 		self.constraints.append(constraint)
 
+		if self.debug:
+			print "FORGET"
+			print pre
+			print post
+			print
+
 	def copy(self, src, dst):
+		if self.debug:
+			print "COPY"
+			print src
+			print dst
+			print
+
 		constraint = constraints.CopyConstraint(self.sys, src, dst)
 		self.constraints.append(constraint)
 
@@ -225,6 +263,11 @@ class ShapeConstraintBuilder(object):
 		# TODO figure out how many we should transfer.
 		return 3
 
+	def maxVParamLength(self):
+		# HACK arbitrarily transfer args
+		# TODO figure out how many we should transfer.
+		return 3
+
 	def mapArguments(self, callerargs, calleeparams, info):
 		# HACK things not supported for this iteration
 		#assert not info.uncertainParam
@@ -257,7 +300,6 @@ class ShapeConstraintBuilder(object):
 				self.assign(src, expr)
 				paramSlots.add(slot)
 
-		assert not calleeparams.vparam
 		assert not calleeparams.kparam
 
 		return paramSlots
@@ -352,6 +394,30 @@ class ShapeConstraintBuilder(object):
 		self.post(node)
 
 
+	@dispatch(ast.Switch)
+	def visitSwitch(self, node):
+		pre = self.pre(node)
+
+		self(node.condition)
+
+		condOut = self.current
+
+		self(node.t)
+		tOut = self.current
+
+		self.current = condOut
+
+		self(node.f)
+		fOut = self.current
+
+		if tOut or fOut:
+			self.advance()
+			if tOut: self.copy(tOut, self.current)
+			if fOut: self.copy(fOut, self.current)
+
+		self.post(node)
+
+
 	@dispatch(ast.While)
 	def visitWhile(self, node):
 		pre = self.pre(node)
@@ -396,11 +462,11 @@ class ShapeConstraintBuilder(object):
 
 	def transferParameters(self, node):
 		# TODO self?
-		assert not node.selfparam
-		assert not node.vparam
-		assert not node.kparam
 
 		forget = set()
+
+		assert not node.selfparam
+
 
 		# Assign positional params -> locals
 		for i, param in enumerate(node.parameters):
@@ -410,31 +476,61 @@ class ShapeConstraintBuilder(object):
 			self.assign(expr, self.localExpr(param))
 			forget.add(slot)
 
+		if node.vparam:
+			vparam = self.localExpr(node.vparam)
+			base = len(node.parameters)
+
+			for i in range(self.maxVParamLength()):
+				slot = self.sys.canonical.localSlot(i+base)
+				expr = self.sys.canonical.localExpr(slot)
+
+				dst = self.indexExpr(vparam, i)
+
+				self.assign(expr, dst)
+				forget.add(slot)
+
+		assert not node.kparam
+
+
 		if forget: self.forgetAll(forget)
 
 
 	@dispatch(ast.Code)
-	def visitFunciton(self, node):
+	def visitCode(self, node):
 		pre = self.pre(node)
+
+
 
 		self.transferParameters(node)
 
 		self.returnValue = node.returnparam
 		self.returnPoint = self.newID()
 
+		if self.debug:
+			print "RETURN"
+			print self.returnPoint
+			print
+
+		exitPoint = self.newID()
+
+		self.functionCallPoint[node]   = pre
+		self.functionReturnPoint[node] = exitPoint
+
+
+
 		self(node.ast)
 
 
 		self.current = self.returnPoint
 
-		if True:
-			# Generate a kill constraint for the locals.
-			returnSlot = self.sys.canonical.localSlot(node.returnparam)
-			lcls = self.functionLocalSlots[self.function] - set((returnSlot,))
-			self.forgetAll(lcls)
+		# Generate a kill constraint for the locals.
+		returnSlot = self.sys.canonical.localSlot(node.returnparam)
+		lcls = self.functionLocalSlots[self.function] - set((returnSlot,))
+		self.forgetAll(lcls, exitPoint)
 
 		post = self.post(node)
 
+		assert post is exitPoint
 
 
 	def process(self, node):

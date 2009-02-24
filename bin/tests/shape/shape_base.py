@@ -80,28 +80,29 @@ class TestConstraintBase(unittest.TestCase):
 
 		hits = util.compressedset.union(hits, self.hitsFromRC(current))
 
-
-		index = self.sys.canonical.configuration(type_, region, entry, current)
+		externalReferences = False
+		index = self.sys.canonical.configuration(type_, region, entry, current, externalReferences)
 		paths = self.sys.canonical.paths(hits, misses)
 		secondary = self.sys.canonical.secondary(paths, external)
 		return index,secondary
 
-	def countOutputs(self):
+	def match(self, entrySet, point, index):
+		return point == self.outputPoint and index.entrySet == entrySet and not index.externalReferences
+
+	def countOutputs(self, entrySet):
 		count = 0
 		for point, context, index in self.sys.environment._secondary.iterkeys():
-			if point == self.outputPoint:
+			if self.match(entrySet, point, index):
 				count += 1
 		return count
 
-	def dumpOutputs(self):
+	def dumpOutputs(self, entrySet):
 		print
 		print "DUMP"
 		for (point, context, index), secondary in self.sys.environment._secondary.iteritems():
-			if point == self.outputPoint:
+			if self.match(entrySet, point, index):
 				print ">"*40
-				print index
-				print
-				secondary.paths.dump()
+				self.dumpData(index, secondary)
 				print "<"*40
 				print
 
@@ -127,6 +128,9 @@ class TestConstraintBase(unittest.TestCase):
 		self.sys.environment.merge(self.sys, inputPoint, context, conf, secondary)
 		self.sys.process()
 		self.elapsed = time.clock()-start
+
+		# Don't check anything... used for debugging
+		if results is None: return
 
 		try:
 			for row in results:
@@ -163,32 +167,41 @@ class TestConstraintBase(unittest.TestCase):
 				secondary.paths.dump()
 				print
 			else:
-				self.dumpOutputs()
+				self.dumpOutputs(entry)
 			raise
 
 		try:
-			self.assertEqual(self.countOutputs(), len(results))
+			self.assertEqual(self.countOutputs(entry), len(results))
 		except AssertionError:
-			self.dumpOutputs()
+			self.dumpOutputs(entry)
 			raise
 
+	def dumpData(self, conf, secondary):
+		print conf.object, conf.region
+		print conf.entrySet
+		print conf.currentSet
+		print "external", conf.externalReferences
+		print
+		print "PATHS"
+		print
+		secondary.paths.dump()
+		print "externalReferences: %r" % secondary.externalReferences
 
 	def dumpPoint(self, givenPoint):
 		mapping = self.sys.environment._secondary
 
+		count = 0
+
 		for (point, context, conf), secondary in mapping.iteritems():
 			if point != givenPoint: continue
-
-			print conf.object, conf.region
-			print conf.entrySet
-			print conf.currentSet
-			print
-			print "PATHS"
-			print
-			secondary.paths.dump()
-			print "externalReferences: %r" % secondary.externalReferences
+			self.dumpData(conf, secondary)
 			print "|%s|" % ("="*80)
 			print
+
+			count += 1
+
+		print "%d configurations at point." % count
+		print
 
 	def dumpStatistics(self):
 		print "Entries:", len(self.sys.environment._secondary)
@@ -202,6 +215,8 @@ class TestConstraintBase(unittest.TestCase):
 			point = self.outputPoint
 		print
 		print "/%s\\" % ("*"*80)
+		print point
+		print
 		self.dumpPoint(point)
 		self.dumpStatistics()
 		if self.elapsed < 1.0:
@@ -219,6 +234,13 @@ class TestCompoundConstraintBase(TestConstraintBase):
 		builder = self.sys.constraintbuilder
 		builder.process(func)
 		return builder.statementPre[func], builder.statementPost[func]
+
+	def statementPre(self, op):
+		return self.sys.constraintbuilder.statementPre[op]
+
+	def statementPost(self, op):
+		return self.sys.constraintbuilder.statementPost[op]
+
 
 	def createInput(self, ref):
 		entry = ref if self.cs else None

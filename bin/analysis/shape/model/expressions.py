@@ -74,13 +74,13 @@ class NullExpr(Expression):
 
 	def hasParameterRoot(self, parameters):
 		return False
-	
+
 null = NullExpr()
 
 class LocalExpr(Expression):
 	__slots__ = ()
 	def __init__(self, slot):
-		assert slot.isSlot(), slot		
+		assert slot.isSlot(), slot
 		assert slot.isLocal(), slot
 		self.slot = slot
 
@@ -127,11 +127,11 @@ class FieldExpr(Expression):
 		assert parent.isExpression(), parent
 		assert slot.isSlot(), slot
 		assert slot.isHeap(), slot
-		
+
 		self.parent  = parent
 		self.slot    = slot
 		self._length = len(self.parent)+1
-		
+
 	def stableLocation(self, sys, slot, stableValues):
 		#assert slot.isSlot(), slot
 		return self.parent.stableValue(sys, slot, stableValues)
@@ -184,7 +184,7 @@ class FieldExpr(Expression):
 			return TVLFalse
 
 		return self._pathAlias(paths)
-		
+
 ##	def split(self):
 ##		return self.parent, self.slot
 
@@ -198,12 +198,13 @@ class FieldExpr(Expression):
 	def hasParameterRoot(self, parameters):
 		return self.parent.hasParameterRoot(parameters)
 
-class ExtendedParameter(Expression):
+class ImaginaryExpression(Expression):
 	__slots__ = '_path'
 	def __init__(self, path):
-		assert isinstance(path, tuple)
+		#assert isinstance(path, tuple)
 		self._path = path
 		self.slot = self # HACK?
+
 
 	def stableLocation(self, sys, slot, stableValues):
 		return True
@@ -227,9 +228,6 @@ class ExtendedParameter(Expression):
 			return eNew
 		else:
 			return None
-	
-	def __repr__(self):
-		return "ext(%s)" % ".".join([str(slot) for slot in self._path])
 
 	def hit(self, sys, index, paths):
 		return self._pathAlias(paths)
@@ -242,3 +240,23 @@ class ExtendedParameter(Expression):
 
 	def path(self):
 		return (self,)
+
+class ExtendedParameter(ImaginaryExpression):
+	__slots__ = ()
+	def __repr__(self):
+		return "ext(%s)" % ".".join([str(slot) for slot in self._path])
+
+	def age(self, canonical):
+		return canonical.aged(self)
+
+class AgedParameter(ImaginaryExpression):
+	__slots__ = ()
+	def __repr__(self):
+		return "old(%r)" % self._path
+
+
+	def age(self, canonical):
+		assert False
+
+	def unage(self):
+		return self._path

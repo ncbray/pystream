@@ -12,7 +12,8 @@ class CanonicalObjects(object):
 		self.localExprCache = {}
 		self.fieldExprCache = {}
 		self.extendedParameterCache = {}
-		
+		self.agedCache = {}
+
 		self.localSlotCache = {}
 		self.fieldSlotCache = {}
 
@@ -21,8 +22,8 @@ class CanonicalObjects(object):
 		self.rcm = referencecount.ReferenceCountManager()
 
 
-	def configuration(self, type_, region, entry, current):
-		key = (type_, region, entry, current)
+	def configuration(self, type_, region, entry, current, externalReferences):
+		key = (type_, region, entry, current, externalReferences)
 		cache = self.configurationCache
 
 		c = cache.get(key)
@@ -64,6 +65,16 @@ class CanonicalObjects(object):
 	def extendedParameter(self, expr):
 		assert isinstance(expr, expressions.Expression), expr
 		return self.extendedParameterFromPath(expr.path())
+
+
+	def aged(self, expr):
+		key = expr
+		cache = self.agedCache
+		e = cache.get(key)
+		if not e:
+			e = expressions.AgedParameter(expr)
+			cache[key] = e
+		return e
 
 	def extendedParameterFromPath(self, path):
 		assert isinstance(path, tuple), path
@@ -109,7 +120,7 @@ class CanonicalObjects(object):
 			e = slots.FieldSlot(expr, field)
 			cache[key] = e
 		return e
-			
+
 	def expr(self, root, *fields):
 		for field in fields:
 			root = self.fieldExpr(root, field)
@@ -122,7 +133,7 @@ class CanonicalObjects(object):
 		return self.rcm.decrement(refs, slot)
 
 	def refs(self, *slots):
-		refs = None
+		refs = self.rcm.null
 		for slot in slots:
 			refs = self.rcm.increment(refs, slot)[0]
 		return refs

@@ -3,6 +3,9 @@ from __future__ import absolute_import
 import util.calling
 from . import transferfunctions
 
+
+seperateExternal = True
+
 def isPoint(point):
 	if isinstance(point, tuple) and len(point) == 2:
 		if isinstance(point[1], int):
@@ -89,6 +92,13 @@ class SplitMergeInfo(object):
 
 		return changed
 
+
+	def makeKey(self, sys, configuration):
+		return sys.canonical.configuration(configuration.object,
+				configuration.region,
+				configuration.entrySet, None,
+				configuration.externalReferences)
+
 	def registerLocal(self, sys, splitIndex, index, secondary):
 		changed = self._mergeLUT(splitIndex, index, secondary, self.localLUT)
 
@@ -148,6 +158,7 @@ class SplitConstraint(Constraint):
 
 		# Add extended parameters to paths
 		epaths = secondary.paths.copy()
+		epaths.ageExtended(sys.canonical)
 		eparams = epaths.extendParameters(sys.canonical, self.info.parameterSlots)
 		self.info.addExtendedParameters(eparams)
 
@@ -156,20 +167,40 @@ class SplitConstraint(Constraint):
 
 
 		# Create the local data
-		localconfig    = sys.canonical.configuration(configuration.object, configuration.region, configuration.entrySet, localRC)
+		localconfig    = sys.canonical.configuration(configuration.object,
+				configuration.region,
+				configuration.entrySet, localRC,
+				configuration.externalReferences)
 		localsecondary = sys.canonical.secondary(localpaths, secondary.externalReferences)
 
-		# Output the local data
-		self.info.registerLocal(sys, remoteRC, localconfig, localsecondary)
-
-
 		# Create the remote data
-		remoteconfig    = sys.canonical.configuration(configuration.object, configuration.region, remoteRC, remoteRC)
-		remotesecondary = sys.canonical.secondary(remotepaths, secondary.externalReferences or bool(localRC))
+
+		if seperateExternal:
+			remoteExternalReferences = configuration.externalReferences or bool(localRC)
+		else:
+			remoteExternalReferences = configuration.externalReferences
+
+
+		remoteconfig    = sys.canonical.configuration(configuration.object,
+				configuration.region, remoteRC, remoteRC,
+				remoteExternalReferences)
+
+		remoteExternalReferences = secondary.externalReferences or bool(localRC)
+		remotesecondary = sys.canonical.secondary(remotepaths, remoteExternalReferences)
+
+
+		# Output the local data
+		key = self.info.makeKey(sys, remoteconfig)
+		self.info.registerLocal(sys, key, localconfig, localsecondary)
+
 
 		# Output the remote data
 		remotecontext   = context # HACK
 		transferfunctions.gcMerge(sys, self.outputPoint, remotecontext, remoteconfig, remotesecondary)
+
+#		print "???", localRC, remoteRC
+#		print secondary.externalReferences, remotesecondary.externalReferences
+
 
 
 class MergeConstraint(Constraint):
@@ -181,18 +212,68 @@ class MergeConstraint(Constraint):
 		info.merge = self # Cirular reference?
 
 	def evaluate(self, sys, point, context, configuration, secondary):
-		self.info.registerRemote(sys, configuration.entrySet, configuration, secondary)
+		key = self.info.makeKey(sys, configuration)
+		self.info.registerRemote(sys, key, configuration, secondary)
 
 	def combine(self, sys, context, localIndex, localSecondary, remoteIndex, remoteSecondary):
 		# Merge the index
 		mergedRC = sys.canonical.rcm.merge(localIndex.currentSet, remoteIndex.currentSet)
 		mergedRC = mergedRC.remap(sys, self.info.mapping)
-		mergedIndex = sys.canonical.configuration(localIndex.object, localIndex.region, localIndex.entrySet, mergedRC)
+		mergedIndex = sys.canonical.configuration(localIndex.object,
+					localIndex.region, localIndex.entrySet,
+					mergedRC, localIndex.externalReferences)
 
 		# Merge the secondary
-		paths = remoteSecondary.paths.join(localSecondary.paths)
+
+		try:
+			paths = remoteSecondary.paths.join(localSecondary.paths)
+		except:
+
+			return
+
+			print
+			print "-"*60
+			print 'local'
+			print
+			print localIndex
+			localSecondary.paths.dump()
+
+			print "-"*60
+			print 'remote'
+			print
+			print remoteIndex
+			remoteSecondary.paths.dump()
+
+			print "-"*60
+			print "Local"
+			print
+			for k, v in self.info.localLUT.iteritems():
+				print k
+				for o in v.iterkeys():
+					print '\t', o.currentSet
+				print
+			print "-"*60
+			print "Remote"
+			print
+			for k, v in self.info.remoteLUT.iteritems():
+				print k
+				for o in v.iterkeys():
+					print '\t', o.currentSet
+				print
+			print
+
+			raise
+
 		paths = paths.remap(self.info.mapping)
+		paths.unageExtended()
+
 		mergedSecondary = sys.canonical.secondary(paths, localSecondary.externalReferences)
 
-		# Output
-		transferfunctions.gcMerge(sys, self.outputPoint, context, mergedIndex, mergedSecondary)
+		if True:
+			# Output
+			transferfunctions.gcMerge(sys, self.outputPoint, context, mergedIndex, mergedSecondary)
+		else:
+			print "!"*10
+			print mergedRC
+			print mergedIndex
+			print

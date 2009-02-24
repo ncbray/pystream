@@ -9,10 +9,12 @@ class ReferenceCountManager(object):
 		self.k = 2
 		self.infinity = self.k+1
 
+		self.null = self.getCanonical({}, ())
+
 	def increment(self, rc, slot):
 		key = (rc, slot)
 		lut = self.incrementLUT
-		
+
 		if not key in lut:
 			newrc = self.makeIncrement(rc, slot)
 			lut[key] = newrc
@@ -24,7 +26,7 @@ class ReferenceCountManager(object):
 	def decrement(self, rc, slot):
 		key = (rc, slot)
 		lut = self.decrementLUT
-		
+
 		if not key in lut:
 			newrc = self.makeDecrement(rc, slot)
 			lut[key] = newrc
@@ -41,7 +43,7 @@ class ReferenceCountManager(object):
 		else:
 			counts = {}
 			radius = frozenset()
-		
+
 		if slot.isHeap():
 			newrc = dict(counts)
 			newRadius = radius
@@ -89,7 +91,7 @@ class ReferenceCountManager(object):
 				return (canonical, rc)
 			else:
 				# Even if canonical is empty.
-				return (canonical,)		
+				return (canonical,)
 		elif slot.isLocal():
 			assert slot in radius, radius
 			canonical = self.getCanonical(counts, radius-frozenset((slot,)))
@@ -106,9 +108,9 @@ class ReferenceCountManager(object):
 		for slot in radius:
 			assert slot.isLocal(), slot
 
-		radius = frozenset(radius) 
+		radius = frozenset(radius)
 		key = (frozenset(rc.iteritems()), radius)
-		
+
 		if key not in self.absoluteLUT:
 			obj = ReferenceCount(rc, radius)
 			self.absoluteLUT[key] = obj
@@ -120,7 +122,7 @@ class ReferenceCountManager(object):
 	def split(self, rc, valid):
 		validrc   = {}
 		invalidrc = {}
-		
+
 		for slot, count in rc.counts.iteritems():
 			if slot in valid:
 				validrc[slot] = count
@@ -202,4 +204,4 @@ class ReferenceCount(object):
 		newradius = frozenset(newradius)
 
 		return sys.canonical.rcm.getCanonical(newcounts, newradius)
-		
+

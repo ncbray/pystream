@@ -395,3 +395,274 @@ class TestVArgCase(TestCompoundConstraintBase):
 			(self.rv2Ref, (self.crExpr, self.av2Expr,), None),
 			]
 		self.checkTransfer(argument, results)
+
+
+
+class TestVParamCase(TestCompoundConstraintBase):
+	def shapeSetUp(self):
+		self.context = None
+		self.cs = True
+
+		# Parameters
+		self.p    = [self.parameterSlot(i) for i in range(3)]
+		self.pRef = [self.refs(slot) for slot in self.p]
+
+		# Locals
+		vargs, self.vargsSlot, self.vargsExpr  = self.makeLocalObjs('vargs')
+		ret,   self.retSlot,   self.retExpr  = self.makeLocalObjs('internal_return')
+
+
+		body = ast.Suite([
+			ast.Return(vargs)
+			])
+
+		self.code = ast.Code('buildTupleTest', None, [], [], vargs, None, ret, body)
+
+
+		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
+		b, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
+		c, self.cSlot, self.cExpr  = self.makeLocalObjs('c')
+		d, self.dSlot, self.dExpr  = self.makeLocalObjs('d')
+
+		dc = ast.DirectCall(self.code, None, [a, b, c], [], None, None)
+		self.caller = ast.Suite([
+			ast.Assign(dc, d),
+			])
+
+
+		self.v0Slot = self.sys.canonical.fieldSlot(None, ('Array', self.extractor.getObject(0)))
+		self.v1Slot = self.sys.canonical.fieldSlot(None, ('Array', self.extractor.getObject(1)))
+		self.v2Slot = self.sys.canonical.fieldSlot(None, ('Array', self.extractor.getObject(2)))
+		self.v0Ref = self.refs(self.v0Slot)
+		self.v1Ref = self.refs(self.v1Slot)
+		self.v2Ref = self.refs(self.v2Slot)
+
+		self.retv0Expr = self.expr(self.retExpr, self.v0Slot)
+		self.retv1Expr = self.expr(self.retExpr, self.v1Slot)
+		self.retv2Expr = self.expr(self.retExpr, self.v2Slot)
+
+		self.aRef   = self.refs(self.aSlot)
+		self.av0Ref = self.refs(self.aSlot, self.v0Slot)
+
+		self.bRef   = self.refs(self.bSlot)
+		self.bv1Ref = self.refs(self.bSlot, self.v1Slot)
+
+		self.cRef   = self.refs(self.cSlot)
+		self.cv2Ref = self.refs(self.cSlot, self.v2Slot)
+
+		self.dv0Expr = self.expr(self.dExpr, self.v0Slot)
+		self.dv1Expr = self.expr(self.dExpr, self.v1Slot)
+		self.dv2Expr = self.expr(self.dExpr, self.v2Slot)
+
+
+		# Make a dummy invocation
+		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
+
+		self.funcInput,   self.funcOutput   = self.makeConstraints(self.code)
+
+		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
+		self.setInOut(self.callerInput, self.callerOutput)
+
+
+	def testLocal1(self):
+		self.setInOut(self.funcInput, self.funcOutput)
+
+		argument = (self.pRef[0], None, None)
+		results = [
+			(self.v0Ref, (self.retv0Expr,), None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testLocal2(self):
+		self.setInOut(self.funcInput, self.funcOutput)
+
+		argument = (self.pRef[1], None, None)
+		results = [
+			(self.v1Ref, (self.retv1Expr,), None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testLocal3(self):
+		self.setInOut(self.funcInput, self.funcOutput)
+
+		argument = (self.pRef[2], None, None)
+		results = [
+			(self.v2Ref, (self.retv2Expr,), None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testCall1(self):
+		argument = (self.aRef, None, None)
+		results = [
+			(self.av0Ref, (self.dv0Expr,), None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testCall2(self):
+		argument = (self.bRef, None, None)
+		results = [
+			(self.bv1Ref, (self.dv1Expr,), None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testCall3(self):
+		argument = (self.cRef, None, None)
+		results = [
+			(self.cv2Ref, (self.dv2Expr,), None),
+			]
+		self.checkTransfer(argument, results)
+
+
+class TestRecursiveCase(TestCompoundConstraintBase):
+	def makeDummy(self):
+		# Locals
+		l, lSlot, lExpr  = self.makeLocalObjs('l')
+		n, nSlot, nExpr  = self.makeLocalObjs('n')
+		t,tSlot,tExpr  = self.makeLocalObjs('t')
+
+		ret,   retSlot,   retExpr  = self.makeLocalObjs('internal_return')
+
+		load  = ast.Assign(ast.Load(l, 'LowLevel', self.existing('tail')), t)
+		store = ast.Store(l, 'LowLevel', self.existing('tail'), n)
+
+		body = ast.Suite([
+			load,
+			store,
+			ast.Return(l),
+			])
+
+		code = ast.Code('reverseTestDummy', None, [l, n], ['l', 'n'], None, None, ret, body)
+
+		self.makeConstraints(code)
+
+		self.dummyLoadPre  = self.statementPre(load)
+		self.dummyLoadPost = self.statementPost(load)
+
+		self.dummyStorePre  = self.statementPre(store)
+		self.dummyStorePost = self.statementPost(store)
+
+		return code
+
+	def shapeSetUp(self):
+		self.context = None
+		self.cs = True
+
+		# Parameters
+		self.p    = [self.parameterSlot(i) for i in range(2)]
+		self.pRef = [self.refs(slot) for slot in self.p]
+
+		#dummy = self.makeDummy()
+
+		# Locals
+		l, self.lSlot, self.lExpr  = self.makeLocalObjs('l')
+		n, self.nSlot, self.nExpr  = self.makeLocalObjs('n')
+		t, self.tSlot, self.tExpr  = self.makeLocalObjs('t')
+
+		ret,   self.retSlot,   self.retExpr  = self.makeLocalObjs('internal_return')
+
+		self.headSlot  = self.sys.canonical.fieldSlot(None, ('LowLevel', self.extractor.getObject('head')))
+		self.tailSlot  = self.sys.canonical.fieldSlot(None, ('LowLevel', self.extractor.getObject('tail')))
+
+
+		self.retRef  = self.refs(self.retSlot)
+		self.headRef = self.refs(self.headSlot)
+		self.tailRef = self.refs(self.tailSlot)
+		self.nullRef = self.refs()
+
+
+		# Pre-declare
+		self.code = ast.Code('reverseTest', None, [l, n], ['l', 'n'], None, None, ret, ast.Suite([]))
+
+
+		cond = ast.Condition(ast.Suite([]), t)
+
+		#callCode = dummy
+		callCode = self.code
+
+		dc = ast.DirectCall(callCode, None, [t, l], [], None, None)
+
+		temp = ast.Local('temp')
+		tb = ast.Suite([
+			ast.Assign(dc, temp),
+			ast.Return(temp)
+			])
+
+		fb = ast.Suite([
+			ast.Return(l),
+			])
+
+		switch = ast.Switch(cond, tb, fb)
+
+		load  = ast.Assign(ast.Load(l, 'LowLevel', self.existing('tail')), t)
+		store = ast.Store(l, 'LowLevel', self.existing('tail'), n)
+
+		body = ast.Suite([
+			load,
+			store,
+			switch,
+			#tb,
+			])
+
+		self.code.ast = body
+
+		#from common import simplecodegen
+		#simplecodegen.SimpleCodeGen(None).walk(self.code)
+
+		# Make a dummy invocation
+		self.db.addInvocation(self.code, self.context, dc, callCode, self.context)
+
+		self.codeInput, self.codeOutput = self.makeConstraints(self.code)
+		self.setInOut(self.codeInput, self.codeOutput)
+
+		self.storePre  = self.statementPre(store)
+		self.storePost = self.statementPost(store)
+
+		self.loadPre  = self.statementPre(load)
+		self.loadPost = self.statementPost(load)
+
+		self.dcPre  = self.statementPre(dc)
+		self.dcPost = self.statementPost(dc)
+
+
+	def testLocal1(self):
+		argument = (self.pRef[0], None, None)
+		results = [
+			(self.retRef,  None, None),
+			(self.tailRef, None, None),
+			#(self.nullRef, None, None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testLocal2(self):
+		argument = (self.pRef[1], None, None)
+		results = [
+			(self.tailRef, None, None),
+
+			# TODO this is due to analysis imprecision.
+			# To fix this, we need disjointness information.
+			# n(.tail)+ != l(.tail)+
+			(self.retRef, None, None),
+
+			#(self.nullRef, None, None),
+			]
+		self.checkTransfer(argument, results)
+		#self.dump(self.loadPre)
+
+	def testLocal3(self):
+		argument = (self.tailRef, None, None)
+		results = [
+			(self.retRef, None, None),
+			(self.tailRef, None, None),
+			#(self.nullRef, None, None),
+			]
+		self.checkTransfer(argument, results)
+		#self.checkTransfer(argument, None)
+		#assert self.dcPost is not None
+		#self.dump(self.codeOutput)
+
+	def testLocal4(self):
+		argument = (self.headRef, None, None)
+		results = [
+			(self.headRef, None, None),
+			]
+		self.checkTransfer(argument, results)

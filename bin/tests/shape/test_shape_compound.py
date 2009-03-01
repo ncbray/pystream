@@ -666,3 +666,82 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 			(self.headRef, None, None),
 			]
 		self.checkTransfer(argument, results)
+
+
+class TestAllocateCase(TestCompoundConstraintBase):
+	def shapeSetUp(self):
+		self.context = None
+		self.cs = True
+
+		x, self.xSlot, self.xExpr  = self.makeLocalObjs('x')
+		y, self.ySlot, self.yExpr  = self.makeLocalObjs('y')
+
+
+		aobj = self.extractor.getObject('a')
+		self.aSlot  = self.sys.canonical.fieldSlot(None, ('LowLevel', aobj))
+
+		bobj = self.extractor.getObject('a')
+		self.bSlot  = self.sys.canonical.fieldSlot(None, ('LowLevel', bobj))
+
+		self.xRef   = self.refs(self.xSlot)
+		self.yRef   = self.refs(self.ySlot)
+
+		self.aRef   = self.refs(self.aSlot)
+		self.bRef   = self.refs(self.bSlot)
+
+
+		self.yaexpr = self.expr(self.yExpr, self.aSlot)
+		self.ybexpr = self.expr(self.yExpr, self.bSlot)
+
+		alloc = ast.Allocate(x)
+
+		self.code = ast.Suite([
+			ast.Assign(alloc, y),
+			])
+
+		lc = self.sys.cpacanonical.localName(None, x, self.context)
+		xinfo = self.root.root(self.sys, lc, self.root.regionHint)
+		btype = self.sys.cpacanonical.pathType(None, 'bogus', id(alloc))
+
+		bogusinfo = xinfo.initializeType(self.sys, btype)
+
+		self.aField = self.sys.cpacanonical.fieldName('LowLevel', aobj)
+		self.bField = self.sys.cpacanonical.fieldName('LowLevel', bobj)
+
+		bogusinfo.field(self.sys, self.aField, self.root.regionHint)
+		bogusinfo.field(self.sys, self.bField, self.root.regionHint)
+
+		alloc.rewriteAnnotation(allocates=((bogusinfo,),None))
+
+		self.funcInput,  self.funcOutput = self.makeConstraints(self.code)
+		self.setInOut(self.funcInput, self.funcOutput)
+
+
+	def testLocal1(self):
+		argument = (self.aRef, None, None)
+		results = [
+			(self.aRef,    None, (self.yaexpr,)),
+			]
+		self.checkTransfer(argument, results)
+
+
+	def testLocal2(self):
+		argument = (self.bRef, None, None)
+		results = [
+			(self.bRef,    None, (self.ybexpr,)),
+			]
+		self.checkTransfer(argument, results)
+
+
+	def testLocal3(self):
+		argument = (self.xRef, None, None)
+		results = [
+			(self.xRef,    None, None),
+			]
+		self.checkTransfer(argument, results)
+
+	def testLocal4(self):
+		argument = (self.yRef, None, None)
+		results = [
+			]
+		self.checkTransfer(argument, results)

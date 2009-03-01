@@ -59,6 +59,8 @@ class ShapeConstraintBuilder(object):
 		self.functionLocalSlots = {}
 		self.functionLocalExprs = {}
 
+		self.allocationPoint = {}
+
 		self.returnPoint = None
 
 		self.debug = False
@@ -351,7 +353,26 @@ class ShapeConstraintBuilder(object):
 		self.makeSplit(dstFunc, splitMergeInfo)
 		self.makeMerge(dstFunc, splitMergeInfo, returnPoint)
 
+	@dispatch(ast.Allocate)
+	def visitAllocate(self, node, target):
+		assert node.annotation.allocates is not None
 
+		targetExpr = self.localExpr(target)
+
+		fields = set()
+
+		# TODO contextual?
+		for obj in node.annotation.allocates[0]:
+			for field in obj:
+				fields.add(field.slotName)
+
+		self.forget(targetExpr)
+
+		self.allocationPoint[(self.function, node)]  = (self.current, target)
+
+		# Null out fields
+		for field in fields:
+			self.assign(expressions.null, self.fieldExpr(target,  (field.type, field.name)))
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, target):

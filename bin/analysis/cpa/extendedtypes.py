@@ -24,7 +24,7 @@ class ExtendedType(CanonicalObject):
 class ExtendedObjectType(ExtendedType):
 	__slots__ = 'obj', 'op'
 	def __init__(self, obj, op):
-		assert isinstance(obj, program.AbstractObject), type(obj)
+		#assert isinstance(obj, program.AbstractObject), type(obj)
 		self.obj = obj
 		self.op  = op
 		self.setCanonical(obj, op)
@@ -61,7 +61,7 @@ class PathObjectType(ExtendedObjectType):
 	__slots__ = ('path',)
 
 	def __init__(self, path, obj, op):
-		assert isinstance(obj, program.AbstractObject)
+		#assert isinstance(obj, program.AbstractObject)
 		self.path = path
 		self.obj  = obj
 		self.op   = op
@@ -81,7 +81,7 @@ class MethodObjectType(ExtendedObjectType):
 	def __init__(self, func, inst, obj, op):
 		assert isinstance(func, ExtendedType)
 		assert isinstance(inst, ExtendedType)
-		assert isinstance(obj, program.AbstractObject)
+		#assert isinstance(obj, program.AbstractObject)
 		self.func = func
 		self.inst = inst
 		self.obj  = obj
@@ -98,7 +98,7 @@ class ContextObjectType(ExtendedObjectType):
 	__slots__ = 'context'
 
 	def __init__(self, context, obj, op):
-		assert isinstance(obj, program.AbstractObject)
+		#assert isinstance(obj, program.AbstractObject)
 		self.context = context
 		self.obj = obj
 		self.op  = op

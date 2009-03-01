@@ -9,6 +9,7 @@ import collections
 import analysis.shape
 
 from programIR.python import ast
+from analysis.cpa import storegraph, canonicalobjects, setmanager
 
 import decompiler.programextractor
 
@@ -22,7 +23,6 @@ class MockDB(object):
 	def addInvocation(self, function, context, op, dstfunc, dstcontext):
 		self.invokeLUT[(function, context, op)].add((dstfunc, dstcontext))
 
-
 	def invocations(self, function, context, op):
 		return self.invokeLUT[(function, context, op)]
 
@@ -32,6 +32,11 @@ class TestConstraintBase(unittest.TestCase):
 		self.sys = analysis.shape.RegionBasedShapeAnalysis(self.db)
 		self.extractor = decompiler.programextractor.Extractor()
 		self.sys.extractor = self.extractor # HACK?
+
+		self.sys.cpacanonical = canonicalobjects.CanonicalObjects()
+		self.sys.setManager = setmanager.CachedSetManager()
+		self.root = storegraph.RegionGroup()
+
 		self.setInOut((None, 0), (None, 1))
 
 		self.shapeSetUp()

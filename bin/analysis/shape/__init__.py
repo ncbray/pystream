@@ -24,6 +24,10 @@ class RegionBasedShapeAnalysis(object):
 	def process(self):
 		self.worklist.process(self)
 
+	def setTypePointer(self, obj):
+		# HACK for test harnesses.
+		pass
+
 def evaluate(extractor, entryPoints, db):
 	print "Shape"
 

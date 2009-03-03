@@ -210,25 +210,6 @@ class Extractor(object):
 
 	def getCall(self, o):
 		self.ensureLoaded(o)
-
-		if o.type.pyobj in ((xtypes.FunctionType,)+xtypes.TypeNeedsStub):
-			return self.desc.callLUT.get(o)
-
-
-		if o not in self.desc.callLUT:
-			self.desc.callLUT[o] = None # Prevent recursion.
-
-			typedict = self.getTypeDict(o.type)
-			callstr = self.getObject('__call__')
-
-			# HACK, does not chain the lookup?
-			if callstr in typedict:
-				callobj = typedict[callstr]
-				assert callobj is not o, "Cycle when looking for call: %r" % o
-				func = self.getCall(callobj)
-				if func:
-					self.desc.callLUT[o] = func
-
 		return self.desc.callLUT.get(o)
 
 	def getObject(self, o, t=False):

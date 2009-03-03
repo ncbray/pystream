@@ -112,6 +112,15 @@ def makeInterpreterStubs(collector):
 		call = loadDict(load(load(self, 'type'), 'dictionary'), '__setattr__')
 		return call(self, key, value)
 
+	# Note: must have internal self parameter.
+	# TODO fallback paths that call this should shift the self param over,
+	# instead of using internal_self?
+	@export
+	@llfunc
+	def interpreter_call(*vargs):
+		call = loadDict(load(load(internal_self, 'type'), 'dictionary'), '__call__')
+		return call(internal_self, *vargs)
+
 
 	export(llast(simpleAttrCall('interpreter_getitem', '__getitem__', ['self', 'key'])))
 	export(llast(simpleAttrCall('interpreter_setitem', '__setitem__', ['self', 'key', 'value'])))

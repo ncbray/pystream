@@ -52,6 +52,7 @@ class MethodPatternFinder(object):
 
 		self.mdget = exports['methoddescriptor__get__']
 
+		self.icall = exports['interpreter_call']
 		self.mcall = exports['method__call__']
 
 		assert self.iget.annotation.origin
@@ -59,6 +60,8 @@ class MethodPatternFinder(object):
 		assert self.fget.annotation.origin
 		assert self.mdget.annotation.origin
 
+		assert self.icall.annotation.origin
+		assert self.mcall.annotation.origin
 
 
 	def findExisting(self, db):
@@ -66,10 +69,18 @@ class MethodPatternFinder(object):
 		self.ogets = set()
 		self.igets = set()
 
+		self.icalls = set()
+		self.mcalls = set()
+
+
 		igetO  = self.iget.annotation.origin
 		ogetO  = self.oget.annotation.origin
 		fgetO  = self.fget.annotation.origin
 		mdgetO = self.mdget.annotation.origin
+
+		icallO = self.icall.annotation.origin
+		mcallO = self.mcall.annotation.origin
+
 
 		for func in db.liveFunctions():
 			origin = func.annotation.origin
@@ -79,13 +90,13 @@ class MethodPatternFinder(object):
 			if origin is fgetO:  self.fgets.add(func)
 			if origin is mdgetO: self.fgets.add(func)
 
+			if origin is icallO: self.icalls.add(func)
+			if origin is mcallO: self.mcalls.add(func)
 
 	def findContexts(self):
+		### Get patterns ###
 		if not self.fgets: return False
-
 		self.fgetsC = set()
-		self.ogetsC = set()
-		self.igetsC = set()
 		for func in self.fgets:
 			for context in func.annotation.contexts:
 				self.fgetsC.add((func, context))
@@ -98,7 +109,39 @@ class MethodPatternFinder(object):
 		self.igetsC = contextsThatOnlyInvoke(self.igets, self.ogetsC)
 		if not self.igetsC: return False
 
+
+		### Call patterns ###
+		if not self.mcalls: return False
+		self.mcallsC = set()
+		for code in self.mcalls:
+			for context in code.annotation.contexts:
+				self.mcallsC.add((code, context))
+
+		self.icallsC = contextsThatOnlyInvoke(self.icalls, self.mcallsC)
+		if not self.icallsC: return False
+
+		self.buildInvokeLUT()
+
 		return True
+
+	def buildInvokeLUT(self):
+		self.invokeLUT = {}
+
+		for code, context in self.mcallsC:
+			cindex = code.annotation.contexts.index(context)
+			op = opThatInvokes(code)
+			targets = op.annotation.invokes[1][cindex]
+			self.invokeLUT[(code, context)] = targets
+
+		for code, context in self.icallsC:
+			cindex = code.annotation.contexts.index(context)
+			op = opThatInvokes(code)
+			targets = op.annotation.invokes[1][cindex]
+
+			reach = set()
+			for target in targets:
+				reach.update(self.invokeLUT[target])
+			self.invokeLUT[(code, context)] = tuple(sorted(reach))
 
 
 	def preprocess(self, extractor, db):
@@ -247,9 +290,7 @@ class MethodRewrite(object):
 	def isMethodCall(self, node, meth):
 		invokes = node.annotation.invokes
 		if invokes is not None:
-			originalFuncs = frozenset([code.annotation.origin for code, c in invokes[0]])
-			if originalFuncs == frozenset([self.pattern.mcall.annotation.origin]):
-
+			if self.pattern.icallsC.issuperset(invokes[0]):
 				key = self.flow.lookup(('meth', meth))
 				if isinstance(key, tuple):
 					expr, name, meth = key
@@ -265,9 +306,10 @@ class MethodRewrite(object):
 			for cinvokes in invokes[1]:
 				cinvokesM = set()
 				for f, c in cinvokes:
-					cindex = f.annotation.contexts.index(c)
-					op = opThatInvokes(f)
-					newinv = op.annotation.invokes[1][cindex]
+					newinv = self.pattern.invokeLUT[(f, c)]
+#					cindex = f.annotation.contexts.index(c)
+#					op = opThatInvokes(f)
+#					newinv = op.annotation.invokes[1][cindex]
 
 					cinvokesM.update(newinv)
 				cinvokesNew.append(tuple(sorted(cinvokesM)))

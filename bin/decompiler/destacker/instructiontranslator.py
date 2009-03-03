@@ -17,9 +17,8 @@ from programIR.python.fold import foldBinaryOpAST, foldUnaryPrefixOpAST, foldCal
 
 import operator
 
-import collections
 
-Origin = collections.namedtuple('Origin', 'name filename lineno')
+from programIR.annotations import Origin
 
 from common.simplecodegen import SimpleCodeGen
 import sys

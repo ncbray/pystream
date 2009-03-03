@@ -69,7 +69,10 @@ class LLTranslator(object):
 		assert isinstance(namedefn, ast.Existing)
 		name = namedefn.object.pyobj
 
-		if name in self.specialGlobals:
+		if name is 'internal_self':
+			assert self.code.selfparam
+			return self.code.selfparam
+		elif name in self.specialGlobals:
 			return name
 		else:
 			return self.resolveGlobal(name)
@@ -193,8 +196,12 @@ class LLTranslator(object):
 		return allChildren(self, node)
 
 	def process(self, node):
+		self.code = node
 		node.ast = self(node.ast)
+		self.code = None
+
 		optimization.simplify.simplify(self.extractor, None, node)
+
 		#astpprint.pprint(node)
 		return node
 

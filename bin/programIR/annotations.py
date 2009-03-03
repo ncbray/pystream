@@ -1,4 +1,5 @@
 import util.canonical
+import collections
 
 noMod = util.canonical.Sentinel('<no mod>')
 
@@ -30,6 +31,8 @@ def remapContextual(cdata, remap, translator=None):
 				cout.append(())
 
 	return (ordered(mdata), tuple(cout))
+
+Origin = collections.namedtuple('Origin', 'name filename lineno')
 
 
 class Annotation(object):

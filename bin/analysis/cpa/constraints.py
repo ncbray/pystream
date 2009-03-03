@@ -296,7 +296,11 @@ class AbstractCallConstraint(CachedConstraint):
 class CallConstraint(AbstractCallConstraint):
 	__slots__ = ()
 	def getCode(self, sys, selfType):
-		return sys.getCall(selfType.obj)
+		code = sys.getCall(selfType.obj)
+		if code is None:
+			return sys.extractor.stubs.exports['interpreter_call']
+		else:
+			return code
 
 #TODO If there's no selfv, vargs, or kargs, turn into a simple call?
 class DirectCallConstraint(AbstractCallConstraint):

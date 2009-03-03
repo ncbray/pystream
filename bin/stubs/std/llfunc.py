@@ -10,6 +10,9 @@ function = xtypes.FunctionType
 
 from .. stubcollector import stubgenerator
 
+from programIR.annotations import Origin
+
+
 @stubgenerator
 def makeLLFunc(collector):
 	descriptive   = collector.descriptive
@@ -115,38 +118,18 @@ def makeLLFunc(collector):
 	def object__new__(cls, *vargs):
 		return allocate(cls)
 
-	# Ugly: directly uses internal_self parameter
 	@attachPtr(type, '__call__')
-	@llast
-	def type__call__():
-		# Parameters
-		self = Local('self')
-		vargs = Local('vargs')
+	@llfunc
+	def type__call__(self, *vargs):
+		td = load(self, 'dictionary')
 
-		# Temporaries
-		new_method = Local('new_method')
-		inst = Local('inst')
-		init = Local('init')
+		new_method = loadDict(td, '__new__')
+		inst = new_method(self, *vargs)
 
-		retp = Local('internal_return')
+		init_method = loadDict(td, '__init__')
+		init_method(inst, *vargs)
 
-		b = Suite()
-
-		# Call __new__
-		b.append(collector.typeLookup(self, '__new__', new_method))
-		b.append(Assign(Call(new_method, [self], [], vargs, None), inst))
-
-		# TODO Do the isinstance check?
-		# Call __init__
-		b.append(collector.operation('__init__', inst, [], vargs, None))
-
-		# Return the allocated object
-		b.append(Return(inst))
-
-		# Function definition
-		name ='type__call__'
-		code = Code(name, self, [], [], vargs, None, retp, b)
-		return code
+		return inst
 
 
 	################
@@ -181,6 +164,7 @@ def makeLLFunc(collector):
 	@attachPtr(xtypes.MethodType, '__call__')
 	@llast
 	def method__call__():
+		internal_self = Local('internal_self')
 		self = Local('self')
 
 		im_self = Local('im_self')
@@ -191,16 +175,31 @@ def makeLLFunc(collector):
 		vargs = Local('vargs')
 
 		b = Suite()
+
+		# TODO analysis does not terminate if  generic "GetAttr" is used?
 		b.append(collector.loadAttribute(self, xtypes.MethodType, 'im_self', im_self))
 		b.append(collector.loadAttribute(self, xtypes.MethodType, 'im_func', im_func))
+#		b.append(Assign(GetAttr(self, collector.existing('im_self')), im_self))
+#		b.append(Assign(GetAttr(self, collector.existing('im_func')), im_func))
+
 
 		b.append(Assign(Call(im_func, [im_self], [], vargs, None), temp))
 		b.append(Return(temp))
 
 		name = 'method__call__'
-		code = Code(name, self, [], [], vargs, None, retp, b)
+		code = Code(name, internal_self, [self], ['self'], vargs, None, retp, b)
+
+		code.rewriteAnnotation(origin=Origin(name, __file__, 0))
 		return code
 
+
+#	@export
+#	@attachPtr(xtypes.MethodType, '__call__')
+#	@llfunc
+#	def method__call__(self, *vargs):
+#		im_func = self.im_func
+#		im_self = self.im_self
+#		return im_func(im_self, *vargs)
 
 	# Getter for function, returns method.
 	@export

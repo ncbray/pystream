@@ -94,10 +94,7 @@ class SplitMergeInfo(object):
 
 
 	def makeKey(self, sys, configuration):
-		return sys.canonical.configuration(configuration.object,
-				configuration.region,
-				configuration.entrySet, None,
-				configuration.externalReferences)
+		return configuration.rewrite(sys, currentSet=None)
 
 	def registerLocal(self, sys, splitIndex, index, secondary):
 		changed = self._mergeLUT(splitIndex, index, secondary, self.localLUT)
@@ -167,23 +164,16 @@ class SplitConstraint(Constraint):
 
 
 		# Create the local data
-		localconfig    = sys.canonical.configuration(configuration.object,
-				configuration.region,
-				configuration.entrySet, localRC,
-				configuration.externalReferences)
+		localconfig = configuration.rewrite(sys, currentSet=localRC)
 		localsecondary = sys.canonical.secondary(localpaths, secondary.externalReferences)
 
 		# Create the remote data
 
-		if seperateExternal:
-			remoteExternalReferences = configuration.externalReferences or bool(localRC)
-		else:
-			remoteExternalReferences = configuration.externalReferences
+		remoteExternalReferences = configuration.externalReferences or bool(localRC) and seperateExternal
 
-
-		remoteconfig    = sys.canonical.configuration(configuration.object,
-				configuration.region, remoteRC, remoteRC,
-				remoteExternalReferences)
+		remoteconfig = configuration.rewrite(sys, entrySet=remoteRC,
+				currentSet=remoteRC,
+				externalReferences=remoteExternalReferences)
 
 		remoteExternalReferences = secondary.externalReferences or bool(localRC)
 		remotesecondary = sys.canonical.secondary(remotepaths, remoteExternalReferences)
@@ -219,12 +209,10 @@ class MergeConstraint(Constraint):
 		# Merge the index
 		mergedRC = sys.canonical.rcm.merge(localIndex.currentSet, remoteIndex.currentSet)
 		mergedRC = mergedRC.remap(sys, self.info.mapping)
-		mergedIndex = sys.canonical.configuration(localIndex.object,
-					localIndex.region, localIndex.entrySet,
-					mergedRC, localIndex.externalReferences)
+
+		mergedIndex = localIndex.rewrite(sys, currentSet=mergedRC)
 
 		# Merge the secondary
-
 		try:
 			paths = remoteSecondary.paths.join(localSecondary.paths)
 		except:

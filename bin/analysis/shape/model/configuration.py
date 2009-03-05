@@ -1,4 +1,5 @@
-# TODO special object == null pointer?
+noChange = 'nochange'
+
 class Configuration(object):
 	__slots__ = 'object', 'region', 'entrySet', 'currentSet', 'externalReferences'
 	def __init__(self, object_, region, entrySet, currentSet, externalReferences):
@@ -19,12 +20,27 @@ class Configuration(object):
 
 	def incrementRef(self, sys, slot):
 		newrefs = sys.canonical.incrementRef(self.currentSet, slot)
-		return [sys.canonical.configuration(self.object, self.region, self.entrySet, current, self.externalReferences) for current in newrefs]
+		return [self.rewrite(sys, currentSet=current) for current in newrefs]
 
 	def decrementRef(self, sys, slot):
 		newrefs = sys.canonical.decrementRef(self.currentSet, slot)
-		return [sys.canonical.configuration(self.object, self.region, self.entrySet, current, self.externalReferences) for current in newrefs]
+		return [self.rewrite(sys, currentSet=current) for current in newrefs]
 
 	def forget(self, sys, kill):
 		currentSet = self.currentSet.forget(sys, kill)
-		return sys.canonical.configuration(self.object, self.region, self.entrySet, currentSet, self.externalReferences)
+		return self.rewrite(sys, currentSet=currentSet)
+
+	def rewrite(self, sys,
+			object_    = noChange,
+			region     = noChange,
+			entrySet   = noChange,
+			currentSet = noChange,
+			externalReferences=noChange):
+
+		if object_ is noChange:            object_    = self.object
+		if region is noChange:             region     = self.region
+		if entrySet is noChange:           entrySet   = self.entrySet
+		if currentSet is noChange:         currentSet = self.currentSet
+		if externalReferences is noChange: externalReferences = self.externalReferences
+
+		return sys.canonical.configuration(object_, region, entrySet, currentSet, externalReferences)

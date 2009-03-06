@@ -52,17 +52,8 @@ invokedBySchema = wrapCodeContext(tupleset.TupleSetSchema(invokedByStruct))
 
 def forgetOp(dictset):
 	output = {}
-	for oldkey, values in dictset.iteritems():
-		newkey = oldkey.context
-		if newkey not in output:
-			output[newkey] = set()
-		output[newkey].update(values)
-	return output
-
-def splitKey(dictset):
-	output = {}
-	for oldkey, values in dictset.iteritems():
-		newkey = (oldkey.code, oldkey.op, oldkey.context)
+	for (code, op, context), values in dictset.iteritems():
+		newkey = context
 		if newkey not in output:
 			output[newkey] = set()
 		output[newkey].update(values)
@@ -125,18 +116,30 @@ class ReadModifyAnalysis(object):
 
 
 		# Copy modifies
-		for cop, slots in sys.opModifies.iteritems():
-			self.opModifyDB[cop.code][cop.op].merge(cop.context, slots)
-			self.contextModifies[cop.context].update(slots)
+		for (code, op, context), slots in sys.opModifies.iteritems():
+			self.opModifyDB[code][op].merge(context, slots)
+			self.contextModifies[context].update(slots)
 			allModifies.update(slots)
 
 
+#		for code in sys.db.liveCode:
+#			ops, lcls = getOps(code)
+#			for op in ops:
+#				for cindex, context in enumerate(code.annotation.contexts):
+#					if not op.annotation.invokes[0]:
+#						slots    = op.annotation.reads[1][cindex]
+#						filtered = set([slot for slot in slots if slot in allModifies])
+
+#						self.opReadDB[code][op].merge(context, filtered)
+#						self.contextReads[context].update(filtered)
+#						allReads.update(slots)
+
 		# Copy Reads
-		for cop, slots in sys.opReads.iteritems():
+		for (code, op, context), slots in sys.opReads.iteritems():
 			# Only track reads that may change
 			filtered = set([slot for slot in slots if slot in allModifies])
-			self.opReadDB[cop.code][cop.op].merge(cop.context, filtered)
-			self.contextReads[cop.context].update(filtered)
+			self.opReadDB[code][op].merge(context, filtered)
+			self.contextReads[context].update(filtered)
 			allReads.update(slots)
 
 		self.processReads()
@@ -500,7 +503,7 @@ class LifetimeAnalysis(object):
 		self.readDB   = self.rm.opReadDB
 		self.modifyDB = self.rm.opModifyDB
 
-		allocDB = splitKey(self.opAllocates)
+		allocDB = self.opAllocates
 
 		for code in sys.db.liveFunctions():
 			ops, lcls = getOps(code)

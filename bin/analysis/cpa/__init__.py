@@ -149,15 +149,18 @@ class InterproceduralDataflow(object):
 
 	def logAllocation(self, cop, cobj):
 		assert isinstance(cobj, storegraph.ObjectNode), type(cobj)
-		self.opAllocates[cop].add(cobj)
+		self.opAllocates[(cop.code, cop.op, cop.context)].add(cobj)
+
 
 	def logRead(self, cop, slot):
 		assert isinstance(slot, storegraph.SlotNode), type(slot)
-		self.opReads[cop].add(slot)
+		self.opReads[(cop.code, cop.op, cop.context)].add(slot)
+
 
 	def logModify(self, cop, slot):
 		assert isinstance(slot, storegraph.SlotNode), type(slot)
-		self.opModifies[cop].add(slot)
+		self.opModifies[(cop.code, cop.op, cop.context)].add(slot)
+
 
 	def constraint(self, constraint):
 		self.constraints.add(constraint)
@@ -392,6 +395,11 @@ class InterproceduralDataflow(object):
 
 		self.solveTime = end-start-self.decompileTime
 
+	def mergeC(self, contextual):
+		merged = set()
+		for data in contextual: merged.update(data)
+		return (tuple(sorted(merged)), contextual)
+
 	def annotate(self):
 		# Re-index the invocations
 		opLut = collections.defaultdict(lambda: collections.defaultdict(set))
@@ -415,15 +423,26 @@ class InterproceduralDataflow(object):
 			ops, lcls = getOps(code)
 
 			for op in ops:
-				if op is not externalOp:
-					contextLUT = opLut[(code, op)]
+				if op is externalOp: continue
 
-					cinvokes = tuple([sorted(contextLUT[context]) for context in code.annotation.contexts])
+				contextLUT = opLut[(code, op)]
+				cinvokes  = tuple([tuple(sorted(contextLUT[context])) for context in code.annotation.contexts])
+				invokes   = self.mergeC(cinvokes)
 
-					merged = set()
-					for inv in cinvokes: merged.update(inv)
+				if not invokes[0]:
+					creads    = tuple([tuple(sorted(self.opReads[(code, op, context)])) for context in code.annotation.contexts])
+					cmodifies = tuple([tuple(sorted(self.opModifies[(code, op, context)])) for context in code.annotation.contexts])
+					callocates = tuple([tuple(sorted(self.opAllocates[(code, op, context)])) for context in code.annotation.contexts])
 
-					op.rewriteAnnotation(invokes=(tuple(sorted(merged)), cinvokes))
+
+					op.rewriteAnnotation(invokes=invokes,
+						reads=self.mergeC(creads),
+						modifies=self.mergeC(cmodifies),
+						allocates = self.mergeC(callocates)
+						)
+				else:
+					op.rewriteAnnotation(invokes=invokes)
+
 
 			# TODO existing nodes?
 

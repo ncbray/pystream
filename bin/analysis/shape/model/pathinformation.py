@@ -161,7 +161,12 @@ class EquivalenceClass(object):
 			cls.forward = None
 
 			for slot, next in self:
+				# Eliminate all extended parameters on remap
+				if slot.isExtendedParameter(): continue
+
 				newslot = mapping.get(slot, slot)
+
+				assert not newslot or not newslot.isExtendedParameter(), (newslot, slot in mapping)
 				if newslot and not next.isTrivial():
 					other = next.remap(lut, mapping)
 					cls.setAttr(newslot, other)
@@ -230,6 +235,7 @@ class EquivalenceClass(object):
 	def ageExtended(self, canonical):
 		newAttr = {}
 		for slot, eq in self:
+			assert not slot.isAgedParameter(), slot
 			aged = slot.age(canonical)
 			newAttr[aged] = eq
 		self.attrs = newAttr
@@ -238,6 +244,7 @@ class EquivalenceClass(object):
 	def unageExtended(self):
 		newAttr = {}
 		for slot, eq in self:
+			#	assert hasattr(slot, 'unage'), slot
 			aged = slot.unage()
 			newAttr[aged] = eq
 		self.attrs = newAttr
@@ -250,6 +257,7 @@ class EquivalenceClass(object):
 			eparam = canonical.extendedParameterFromPath(path)
 			newParam[eparam] = self
 			for slot, eq in self:
+				assert not slot.isExtendedParameter(), slot
 				eq.findExtended(canonical, path+(slot,), newParam, processed)
 			processed.remove(self)
 
@@ -296,7 +304,10 @@ class EquivalenceClass(object):
 			pure = True
 			kill = []
 			for slot, next in self:
-				if slot not in extendedParameters and accessedCallback(slot):
+				accessed = accessedCallback(slot)
+				extended = slot.isExtendedParameter()
+
+				if accessed and not extended:
 					# Node is impure
 					pure = False
 				else:
@@ -304,7 +315,7 @@ class EquivalenceClass(object):
 					pure &= newPure
 					eq.setAttr(slot, newNext)
 
-					if newPure and slot not in extendedParameters:
+					if newPure and not extended:
 						kill.append(slot)
 
 			# Kill all of the pure paths.
@@ -317,6 +328,18 @@ class EquivalenceClass(object):
 				lut[self] = (eq, pure)
 
 			return lut[self]
+
+	def killHiddenRoots(self):
+		killed = []
+		for slot, next in self:
+			if slot.isAgedParameter():
+				killed.append(slot)
+#			elif slot.isLocal():
+#				if not slot.isParameter() and not slot.isExtendedParameter():
+#					killed.append(slot)
+		for kill in killed:
+			self.delAttr(kill)
+
 
 	def splitHidden(self, extendedParameters, accessedCallback):
 		sharedEq = set()
@@ -355,6 +378,17 @@ class PathInformation(object):
 			assert isinstance(root, EquivalenceClass), root
 			self.root  = root
 
+	def containsExtended(self):
+		for slot, value in self.root:
+			if slot.isExtendedParameter():
+				return True
+		return False
+
+	def containsAged(self):
+		for slot, value in self.root:
+			if slot.isAgedParameter():
+				return True
+		return False
 
 	def copy(self, kill=None, keepHits=False, keepMisses=False):
 		if kill is None:
@@ -534,6 +568,8 @@ class PathInformation(object):
 		# be mutated.
 		# Example {s.n, t.m} will be lost if only n is accessed.
 		hidden = PathInformation(self.root.splitHidden(extendedParameters, accessedCallback))
+		self.root.killHiddenRoots()
+		assert not self.containsAged()
 		return self, hidden
 
 	def join(self, other):

@@ -39,7 +39,7 @@ def getLocals(node):
 class ShapeConstraintBuilder(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, sys):
+	def __init__(self, sys, invokeCallback = (lambda code: code)):
 		self.sys = sys
 
 		self.function = None
@@ -64,6 +64,11 @@ class ShapeConstraintBuilder(object):
 		self.returnPoint = None
 
 		self.debug = False
+
+		self.invokeCallback = invokeCallback
+
+		self.breaks    = []
+		self.continues = []
 
 	def setFunction(self, func):
 		self.function = func
@@ -102,7 +107,11 @@ class ShapeConstraintBuilder(object):
 
 
 	def localExpr(self, lcl):
-		if lcl is not None:
+		if isinstance(lcl, ast.Existing):
+			lcl = lcl.object
+			slot = self.sys.canonical.localSlot(lcl)
+			return self.sys.canonical.localExpr(slot)
+		elif lcl is not None:
 			assert isinstance(lcl, (ast.Local, int)), lcl
 			slot = self.sys.canonical.localSlot(lcl)
 			return self.sys.canonical.localExpr(slot)
@@ -158,7 +167,12 @@ class ShapeConstraintBuilder(object):
 
 
 	def makeCallerArgs(self, node, target):
-		selfarg = self.localExpr(node.selfarg)
+		if isinstance(node, ast.DirectCall):
+			selfarg = self.localExpr(node.selfarg)
+		else:
+			selfarg = self.localExpr(node.expr)
+
+
 		args = [self.localExpr(arg) for arg in node.args]
 
 		kwds = {}
@@ -198,7 +212,7 @@ class ShapeConstraintBuilder(object):
 			self.functionParams[node] = params
 			return params
 		else:
-			return self.functionParams
+			return self.functionParams[node]
 
 	@defaultdispatch
 	def default(self, node, *args):
@@ -227,12 +241,18 @@ class ShapeConstraintBuilder(object):
 	def visitLocal(self, node, target):
 		self.assign(self.localExpr(node), self.localExpr(target))
 
+
+	# TODO treat as a mini-allocation?
+	@dispatch(ast.Existing)
+	def visitExisting(self, node, target):
+		pass #self.assign(self.localExpr(node), self.localExpr(target))
+
+
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node, target):
-		# TODO context sensitivity?
-		invocations = self.sys.db.invocations(self.function, self.context, node)
-		invocationMap = {self.context:invocations}
+		assert node.annotation.invokes is not None
 
+		invocations = node.annotation.invokes[0]
 		callerargs = self.makeCallerArgs(node, target)
 
 		pre = self.pre(node)
@@ -243,6 +263,23 @@ class ShapeConstraintBuilder(object):
 
 		self.current = post
 		self.post(node)
+
+	@dispatch(ast.Call)
+	def visitCall(self, node, target):
+		assert node.annotation.invokes is not None
+
+		invocations = node.annotation.invokes[0]
+		callerargs = self.makeCallerArgs(node, target)
+
+		pre = self.pre(node)
+		post = self.advance()
+
+		for dstFunc, dstContext in invocations:
+			self.handleInvocation(pre, post, self.context, callerargs, dstFunc, dstContext)
+
+		self.current = post
+		self.post(node)
+
 
 	def computeTransfer(self, callerargs, calleeparams):
 		selfArg  = callerargs.selfarg is not None
@@ -270,25 +307,32 @@ class ShapeConstraintBuilder(object):
 		# TODO figure out how many we should transfer.
 		return 3
 
-	def mapArguments(self, callerargs, calleeparams, info):
+	def mapArguments(self, callerargs, calleeparams):
 		# HACK things not supported for this iteration
 		#assert not info.uncertainParam
 		#assert not info.uncertainVParam
-		assert not info.certainKeywords
-		assert not info.defaults
+		#assert not info.certainKeywords
+		#assert not info.defaults
 
 		paramSlots = set()
 
-		# Self arg transfer
-		# HACK
-		assert not calleeparams.selfparam
-
-		for i, arg in enumerate(callerargs.args):
-			slot = self.sys.canonical.localSlot(i)
+		def makeParam(arg, p):
+			slot = self.sys.canonical.localSlot(p)
 			expr = self.sys.canonical.localExpr(slot)
 
-			self.assign(arg, expr)
-			paramSlots.add(slot)
+			# HACK Existing nodes are troublesome...
+			if arg and expr:
+				self.assign(arg, expr)
+				paramSlots.add(slot)
+
+
+		# Self arg transfer
+		if calleeparams.selfparam:
+			makeParam(calleeparams.selfparam, 'self')
+
+		# Arg transfer
+		for i, arg in enumerate(callerargs.args):
+			makeParam(arg, i)
 
 		base = len(callerargs.args)
 
@@ -312,11 +356,16 @@ class ShapeConstraintBuilder(object):
 
 		splitMergeInfo = constraints.SplitMergeInfo(parameterSlots)
 		splitMergeInfo.srcLocals = self.functionLocalSlots[self.function]
-		splitMergeInfo.dstLocals = self.functionLocalSlots[dstFunc]
+		#splitMergeInfo.dstLocals = self.functionLocalSlots[dstFunc]
 
 		# Create a mapping to transfer the return value.
 		returnSlot = calleeparams.returnparam.slot
-		targetSlot = callerargs.returnarg.slot
+
+		if callerargs.returnarg:
+			targetSlot = callerargs.returnarg.slot
+		else:
+			targetSlot = None
+
 		splitMergeInfo.mapping[targetSlot] = None
 		splitMergeInfo.mapping[returnSlot] = targetSlot
 
@@ -325,13 +374,13 @@ class ShapeConstraintBuilder(object):
 	def makeSplit(self, dstFunc, splitMergeInfo):
 		# TODO context sensitive copy?
 		pre = self.current
-		post = self.functionCallPoint[dstFunc]
+		post = self.codeCallPoint(dstFunc)
 		constraint = constraints.SplitConstraint(self.sys, pre, post, splitMergeInfo)
 		self.constraints.append(constraint)
 
 	def makeMerge(self, dstFunc, splitMergeInfo, returnPoint):
 		# Call return: merge the information
-		pre  = self.functionReturnPoint[dstFunc]
+		pre  = self.codeReturnPoint(dstFunc)
 		post = returnPoint
 		constraint = constraints.MergeConstraint(self.sys, pre, post, splitMergeInfo)
 		self.constraints.append(constraint)
@@ -341,12 +390,17 @@ class ShapeConstraintBuilder(object):
 	def handleInvocation(self, callPoint, returnPoint, srcContext, callerargs, dstFunc, dstContext):
 		calleeparams = self.getCalleeParams(dstFunc)
 
-		info = self.computeTransfer(callerargs, calleeparams)
-		if info.willSucceed.mustBeFalse(): return
+		# HACK existing nodes return "None" which causes transfer to fail...
+#		info = self.computeTransfer(callerargs, calleeparams)
+#		if info.willSucceed.mustBeFalse():
+#			print "BOMB", callPoint
+#			return
+
+		self.invokeCallback(dstFunc)
 
 		# Do arg -> param mapping
 		self.current = callPoint
-		paramSlots = self.mapArguments(callerargs, calleeparams, info)
+		paramSlots = self.mapArguments(callerargs, calleeparams)
 
 		# Make the constraints
 		splitMergeInfo = self.makeSplitMergeInfo(dstFunc, calleeparams, callerargs, paramSlots)
@@ -381,10 +435,19 @@ class ShapeConstraintBuilder(object):
 
 	@dispatch(ast.Store)
 	def visitStore(self, node):
-		self.pre(node)
-		field        = (node.fieldtype, node.name.object)
-		self.assign(self.localExpr(node.value), self.fieldExpr(node.expr, field))
-		self.post(node)
+		try:
+			self.pre(node)
+			field        = (node.fieldtype, node.name.object)
+			self.assign(self.localExpr(node.value), self.fieldExpr(node.expr, field))
+			self.post(node)
+		except:
+			print node
+			raise
+
+	# HACK horrible hack...
+	@dispatch(ast.Check)
+	def visitCheck(self, node, target):
+		self.assign(expressions.null, self.localExpr(target))
 
 	@dispatch(ast.Delete)
 	def visitDelete(self, node):
@@ -401,8 +464,12 @@ class ShapeConstraintBuilder(object):
 	def visitReturn(self, node):
 		pre = self.pre(node)
 
-		constraint = constraints.AssignmentConstraint(self.sys, pre, self.returnPoint, self.localExpr(node.expr), self.localExpr(self.returnValue))
-		self.constraints.append(constraint)
+		src = self.localExpr(node.expr)
+
+		# HACK for dealing with Return(Existing(...))
+		if src:
+			constraint = constraints.AssignmentConstraint(self.sys, pre, self.returnPoint, src, self.localExpr(self.returnValue))
+			self.constraints.append(constraint)
 
 		self.current = None
 		self.post(node)
@@ -439,6 +506,22 @@ class ShapeConstraintBuilder(object):
 		self.post(node)
 
 
+	def pushLoop(self, breakPoint, continuePoint):
+		self.breaks.append(breakPoint)
+		self.continues.append(continuePoint)
+
+	def popLoop(self):
+		return self.breaks.pop(), self.continues.pop()
+
+	@property
+	def breakPoint(self):
+		return self.breaks[-1]
+
+	@property
+	def continuePoint(self):
+		return self.continues[-1]
+
+
 	@dispatch(ast.While)
 	def visitWhile(self, node):
 		pre = self.pre(node)
@@ -447,55 +530,92 @@ class ShapeConstraintBuilder(object):
 		self(node.condition)
 		condOut = self.current
 
-		# HACK should use stack
-		self.breakPoint = self.newID()
-		self.continuePoint = condIn
-
+		self.pushLoop(self.newID(), condIn)
 
 		bodyIn = self.advance()
 		self(node.body)
 		bodyOut = self.current
 
+		breakPoint, continuePoint = self.popLoop()
+
+		# break/continue is else must scope to the next loop
 		elseIn = self.advance()
 		self(node.else_)
 		elseOut = self.current
 
 
-		self.current = self.breakPoint
-
-		# Merge into the condition
+		# entry -> condition
 		self.copy(pre, condIn)
+
+		# body -> condition
 		self.copy(bodyOut, condIn)
 
-		# Split out of the condition
+		# condtion -> body
 		self.copy(condOut, bodyIn)
+
+		# condition -> else
 		self.copy(condOut, elseIn)
 
-		# Merge the breaks and the else
-		self.copy(elseOut, self.breakPoint)
+		# else -> exit
+		self.copy(elseOut, breakPoint)
 
-		# HACK should use stack
-		self.breakPoint    = None
-		self.continuePoint = None
-
+		self.current = breakPoint
 		self.post(node)
 
 
-	def transferParameters(self, node):
-		# TODO self?
+	@dispatch(ast.For)
+	def visitFor(self, node):
+		pre = self.pre(node)
 
+		self(node.loopPreamble)
+		loopEntry = self.current
+
+		bodyIn = self.advance()
+		self.pushLoop(self.newID(), bodyIn)
+
+		self(node.bodyPreamble)
+		self(node.body)
+		bodyOut = self.current
+
+		breakPoint, continuePoint = self.popLoop()
+
+		# break/continue is else must scope to the next loop
+		elseIn = self.advance()
+		self(node.else_)
+		elseOut = self.current
+
+
+		# entry -> body
+		self.copy(loopEntry, bodyIn)
+
+		# body -> body
+		self.copy(bodyOut, bodyIn)
+
+		# body -> else
+		self.copy(bodyIn, elseIn)
+
+		# else -> exit
+		self.copy(elseOut, breakPoint)
+
+		self.current = breakPoint
+		self.post(node)
+
+	def transferParameters(self, node):
 		forget = set()
 
-		assert not node.selfparam
+		def makeParam(p, dst):
+			slot = self.sys.canonical.localSlot(p)
+			expr = self.sys.canonical.localExpr(slot)
+			self.assign(expr, self.localExpr(dst))
+			forget.add(slot)
 
+
+		if node.selfparam:
+			makeParam('self', node.selfparam)
 
 		# Assign positional params -> locals
 		for i, param in enumerate(node.parameters):
-			slot = self.sys.canonical.localSlot(i)
-			expr = self.sys.canonical.localExpr(slot)
-
-			self.assign(expr, self.localExpr(param))
-			forget.add(slot)
+			makeParam(i, param)
 
 		if node.vparam:
 			vparam = self.localExpr(node.vparam)
@@ -518,6 +638,8 @@ class ShapeConstraintBuilder(object):
 
 	@dispatch(ast.Code)
 	def visitCode(self, node):
+		self.current = self.codeCallPoint(node)
+
 		pre = self.pre(node)
 
 
@@ -532,12 +654,7 @@ class ShapeConstraintBuilder(object):
 			print self.returnPoint
 			print
 
-		exitPoint = self.newID()
-
-		self.functionCallPoint[node]   = pre
-		self.functionReturnPoint[node] = exitPoint
-
-
+		exitPoint = self.codeReturnPoint(node)
 
 		self(node.ast)
 
@@ -553,6 +670,20 @@ class ShapeConstraintBuilder(object):
 
 		assert post is exitPoint
 
+	def codeCallPoint(self, code):
+		if code not in self.functionCallPoint:
+			self.functionCallPoint[code] = (code, self.uid)
+			self.uid += 1
+
+		return self.functionCallPoint[code]
+
+
+	def codeReturnPoint(self, code):
+		if code not in self.functionReturnPoint:
+			self.functionReturnPoint[code] = (code, self.uid)
+			self.uid += 1
+
+		return self.functionReturnPoint[code]
 
 	def process(self, node):
 		self.context  = None # HACK
@@ -567,8 +698,8 @@ class ShapeConstraintBuilder(object):
 
 		self.advance()
 
-		self.functionCallPoint[node] = self.current
+		#self.functionCallPoint[node] = self.current
 		self(node)
-		self.functionReturnPoint[node] = self.current
+		#self.functionReturnPoint[node] = self.current
 
 		return self.statementPre[node], self.statementPost[node]

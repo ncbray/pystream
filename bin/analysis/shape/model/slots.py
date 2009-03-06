@@ -16,6 +16,15 @@ class Slot(object):
 	def isHeap(self):
 		return False
 
+	def isParameter(self):
+		return False
+
+	def isExtendedParameter(self):
+		return False
+
+	def isAgedParameter(self):
+		return False
+
 	def age(self, canonical):
 		return self
 
@@ -32,7 +41,7 @@ class LocalSlot(Slot):
 		return True
 
 	def isParameter(self):
-		return isinstance(self.lcl, int)
+		return isinstance(self.lcl, (int, str))
 
 	def __repr__(self):
 		return "lcl(%s)" % str(self.lcl)

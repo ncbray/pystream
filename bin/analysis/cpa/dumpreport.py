@@ -225,12 +225,18 @@ def dumpFunctionInfo(func, data, links, out, scg):
 
 			read   = op.annotation.reads
 			modify = op.annotation.modifies
+			allocate = op.annotation.allocates
 
-			if read or modify:
+			s = ''
+			if read and read[1][cindex]: s += "R"
+			if modify and modify[1][cindex]: s += "M"
+			if allocate and allocate[1][cindex]: s += "A"
+
+
+			if s:
 				out << '\t\t\t'
 				out.begin('i')
-				if read[1][cindex]: out << "R"
-				if modify[1][cindex]: out << "M"
+				out << s
 				out.end('i')
 				out.endl()
 

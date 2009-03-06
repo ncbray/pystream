@@ -1,13 +1,16 @@
 noChange = 'nochange'
 
 class Configuration(object):
-	__slots__ = 'object', 'region', 'entrySet', 'currentSet', 'externalReferences'
-	def __init__(self, object_, region, entrySet, currentSet, externalReferences):
+	__slots__ = 'object', 'region', 'entrySet', 'currentSet', 'externalReferences', 'allocated'
+	def __init__(self, object_, region, entrySet, currentSet, externalReferences, allocated):
+		assert not (externalReferences and allocated), "Invariant violated."
+
 		self.object     = object_
 		self.region     = region
 		self.entrySet   = entrySet
 		self.currentSet = currentSet
 		self.externalReferences = externalReferences
+		self.allocated  = allocated
 
 	def slotHit(self, slot):
 		return self.currentSet.slotHit(slot)
@@ -35,12 +38,14 @@ class Configuration(object):
 			region     = noChange,
 			entrySet   = noChange,
 			currentSet = noChange,
-			externalReferences=noChange):
+			externalReferences=noChange,
+			allocated  = noChange):
 
 		if object_ is noChange:            object_    = self.object
 		if region is noChange:             region     = self.region
 		if entrySet is noChange:           entrySet   = self.entrySet
 		if currentSet is noChange:         currentSet = self.currentSet
 		if externalReferences is noChange: externalReferences = self.externalReferences
+		if allocated is noChange:          allocated  = self.allocated
 
-		return sys.canonical.configuration(object_, region, entrySet, currentSet, externalReferences)
+		return sys.canonical.configuration(object_, region, entrySet, currentSet, externalReferences, allocated)

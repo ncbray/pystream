@@ -28,10 +28,9 @@ class MockDB(object):
 
 class TestConstraintBase(unittest.TestCase):
 	def setUp(self):
-		self.db  = MockDB()
-		self.sys = analysis.shape.RegionBasedShapeAnalysis(self.db)
 		self.extractor = decompiler.programextractor.Extractor()
-		self.sys.extractor = self.extractor # HACK?
+		self.db  = MockDB()
+		self.sys = analysis.shape.RegionBasedShapeAnalysis(self.extractor, self.db)
 
 		self.sys.cpacanonical = canonicalobjects.CanonicalObjects()
 		self.sys.setManager = setmanager.CachedSetManager()
@@ -86,7 +85,8 @@ class TestConstraintBase(unittest.TestCase):
 		hits = util.compressedset.union(hits, self.hitsFromRC(current))
 
 		externalReferences = False
-		index = self.sys.canonical.configuration(type_, region, entry, current, externalReferences)
+		allocated = False
+		index = self.sys.canonical.configuration(type_, region, entry, current, externalReferences, allocated)
 		paths = self.sys.canonical.paths(hits, misses)
 		secondary = self.sys.canonical.secondary(paths, external)
 		return index,secondary
@@ -209,10 +209,11 @@ class TestConstraintBase(unittest.TestCase):
 		print
 
 	def dumpStatistics(self):
-		print "Entries:", len(self.sys.environment._secondary)
-		print "Unique Config:", len(self.sys.canonical.configurationCache)
-		print "Max Worklist:", self.sys.worklist.maxLength
-		print "Steps:", "%d/%d" % (self.sys.worklist.usefulSteps, self.sys.worklist.steps)
+		self.sys.dumpStatistics()
+#		print "Entries:", len(self.sys.environment._secondary)
+#		print "Unique Config:", len(self.sys.canonical.configurationCache)
+#		print "Max Worklist:", self.sys.worklist.maxLength
+#		print "Steps:", "%d/%d" % (self.sys.worklist.usefulSteps, self.sys.worklist.steps)
 
 
 	def dump(self, point=None):

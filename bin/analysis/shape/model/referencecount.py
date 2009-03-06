@@ -155,6 +155,7 @@ class ReferenceCount(object):
 	__slots__ = 'counts', 'radius'
 
 	def __init__(self, counts, radius):
+		#assert not counts, "DEBUG"
 		assert isinstance(counts, dict), type(counts)
 		self.counts = counts
 		self.radius = radius
@@ -163,6 +164,12 @@ class ReferenceCount(object):
 		rc = ["%s=%s" % p for p in self.counts.iteritems()]
 		rc.extend([str(r) for r in self.radius])
 		return "rc(%s)" % ", ".join(rc)
+
+	def containsParameter(self):
+		for slot in self.radius:
+			if slot.isParameter():
+				return True
+		return False
 
 	def slotHit(self, slot):
 		if slot.isHeap():

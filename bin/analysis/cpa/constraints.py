@@ -208,7 +208,10 @@ class SimpleCheckConstraint(Constraint):
 
 		# HACK initalize type implies then reference is never null...
 		# Make sound?
-		self.target.initializeType(sys, xtype)
+		cobj = self.target.initializeType(sys, xtype)
+		assert cobj is not None
+		sys.logAllocation(self.op, cobj)
+
 
 	def update(self, sys):
 		if not self.refs and self.slot.refs:

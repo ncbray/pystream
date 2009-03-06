@@ -21,6 +21,9 @@ class Expression(object):
 	def isExtendedParameter(self):
 		return False
 
+	def isAgedParameter(self):
+		return False
+
 	def isTrivial(self):
 		return len(self) <= 1
 
@@ -206,6 +209,9 @@ class ImaginaryExpression(Expression):
 		self.slot = self # HACK?
 
 
+	def isLocal(self):
+		return False
+
 	def stableLocation(self, sys, slot, stableValues):
 		return True
 
@@ -249,6 +255,9 @@ class ExtendedParameter(ImaginaryExpression):
 	def age(self, canonical):
 		return canonical.aged(self)
 
+	def isExtendedParameter(self):
+		return True
+
 class AgedParameter(ImaginaryExpression):
 	__slots__ = ()
 	def __repr__(self):
@@ -256,7 +265,10 @@ class AgedParameter(ImaginaryExpression):
 
 
 	def age(self, canonical):
-		assert False
+		assert False, self
 
 	def unage(self):
 		return self._path
+
+	def isAgedParameter(self):
+		return True

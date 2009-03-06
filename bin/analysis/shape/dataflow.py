@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 class DataflowEnvironment(object):
 	__slots__ = '_secondary', 'observers'
-	
+
 	def __init__(self):
 		self._secondary   = {}
 		self.observers = {}
@@ -29,6 +29,8 @@ class DataflowEnvironment(object):
 			self.observers[index].add(constraint)
 
 	def merge(self, sys, point, context, index, secondary):
+		assert not secondary.paths.containsAged()
+
 		# Do the merge
 		key = (point, context, index)
 		if not key in self._secondary:
@@ -64,24 +66,35 @@ class Worklist(object):
 			self.dirty.add(key)
 			self.worklist.append(key)
 
-	def step(self, sys):
+	def step(self, sys, trace=False):
 		# Track statistics
 		self.maxLength = max(len(self.worklist), self.maxLength)
+
+		if trace:
+			if self.steps%100==0: print ".",
+			if self.steps%10000==0:
+				print
+				sys.dumpStatistics()
 		self.steps += 1
 
 		# Process a constraint/index pair
 		key = self.worklist.pop()
 		self.dirty.remove(key)
-		
+
 		constraint, index = key
 
 		self.useful = False
-		constraint.update(sys, index)
+
+		try:
+			constraint.update(sys, index)
+		except:
+			print "ERROR processing:", constraint, constraint.inputPoint, constraint.outputPoint
+			raise
 
 		if self.useful: self.usefulSteps += 1
 
-	def process(self, sys):
+	def process(self, sys, trace=False):
 		while self.worklist:
-			self.step(sys)
+			self.step(sys, trace)
 
 

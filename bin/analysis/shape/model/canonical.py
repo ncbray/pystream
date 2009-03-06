@@ -22,10 +22,8 @@ class CanonicalObjects(object):
 		self.rcm = referencecount.ReferenceCountManager()
 
 
-	def configuration(self, type_, region, entry, current, externalReferences):
-		key = (type_, region, entry, current, externalReferences)
+	def configuration(self, *key):
 		cache = self.configurationCache
-
 		c = cache.get(key)
 		if not c:
 			c = configuration.Configuration(*key)

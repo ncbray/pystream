@@ -4,6 +4,9 @@ from tests.shape.shape_base import *
 
 class TestSimpleCase(TestCompoundConstraintBase):
 	def shapeSetUp(self):
+		self.context = None
+		self.cs = True
+
 		# Splice example from paper
 		x, self.xSlot, self.xExpr  = self.makeLocalObjs('x')
 		y, self.ySlot, self.yExpr  = self.makeLocalObjs('y')
@@ -74,11 +77,7 @@ class TestSimpleCase(TestCompoundConstraintBase):
 			ast.Assign(dc, c),
 			])
 
-		invocation = (self.caller, dc, self.code)
-
-
-		self.context = None
-		self.cs = True
+		dc.rewriteAnnotation(invokes=(((self.code, self.context),), None))
 
 		# Make a dummy invocation
 		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
@@ -157,6 +156,9 @@ class TestSimpleCase(TestCompoundConstraintBase):
 
 class TestCallLoadCase(TestCompoundConstraintBase):
 	def shapeSetUp(self):
+		self.context = None
+		self.cs = True
+
 		x, self.xSlot, self.xExpr  = self.makeLocalObjs('x')
 		y, self.ySlot, self.yExpr  = self.makeLocalObjs('y')
 		ret, self.retSlot, self.retExpr  = self.makeLocalObjs('internal_return')
@@ -197,11 +199,7 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 			ast.Assign(dc, c),
 			])
 
-		invocation = (self.caller, dc, self.code)
-
-
-		self.context = None
-		self.cs = True
+		dc.rewriteAnnotation(invokes=(((self.code, self.context),), None))
 
 		# Make a dummy invocation
 		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
@@ -322,6 +320,8 @@ class TestVArgCase(TestCompoundConstraintBase):
 		self.clExpr  = self.expr(self.cExpr, self.lSlot)
 		self.crExpr  = self.expr(self.cExpr, self.rSlot)
 
+
+		dc.rewriteAnnotation(invokes=(((self.code, self.context),), None))
 
 		# Make a dummy invocation
 		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
@@ -454,6 +454,7 @@ class TestVParamCase(TestCompoundConstraintBase):
 		self.dv1Expr = self.expr(self.dExpr, self.v1Slot)
 		self.dv2Expr = self.expr(self.dExpr, self.v2Slot)
 
+		dc.rewriteAnnotation(invokes=(((self.code, self.context),), None))
 
 		# Make a dummy invocation
 		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
@@ -607,6 +608,9 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 
 		#from common import simplecodegen
 		#simplecodegen.SimpleCodeGen(None).walk(self.code)
+
+
+		dc.rewriteAnnotation(invokes=(((callCode, self.context),), None))
 
 		# Make a dummy invocation
 		self.db.addInvocation(self.code, self.context, dc, callCode, self.context)

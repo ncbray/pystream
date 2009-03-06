@@ -59,6 +59,15 @@ def forgetOp(dictset):
 		output[newkey].update(values)
 	return output
 
+def splitKey(dictset):
+	output = {}
+	for oldkey, values in dictset.iteritems():
+		newkey = (oldkey.code, oldkey.op, oldkey.context)
+		if newkey not in output:
+			output[newkey] = set()
+		output[newkey].update(values)
+	return output
+
 def invertInvokes(invokes):
 	invokedBy = invokedBySchema.instance()
 
@@ -476,6 +485,7 @@ class LifetimeAnalysis(object):
 		self.gatherSlots(sys)
 		self.gatherInvokes(sys)
 
+		self.opAllocates = sys.opAllocates
 		self.allocations = forgetOp(sys.opAllocates)
 
 		self.propagateVisibility()
@@ -490,6 +500,7 @@ class LifetimeAnalysis(object):
 		self.readDB   = self.rm.opReadDB
 		self.modifyDB = self.rm.opModifyDB
 
+		allocDB = splitKey(self.opAllocates)
 
 		for code in sys.db.liveFunctions():
 			ops, lcls = getOps(code)
@@ -502,6 +513,9 @@ class LifetimeAnalysis(object):
 
 				mm = set()
 				mout = []
+
+				ma = set()
+				aout = []
 
 				for cindex, context in enumerate(code.annotation.contexts):
 					creads = reads[context]
@@ -521,7 +535,20 @@ class LifetimeAnalysis(object):
 						cmod = ()
 					mout.append(cmod)
 
+					if isinstance(op, (ast.Allocate, ast.Check)):
+						key = (code, op, context)
+						callocs = allocDB.get(key, ())
+						ma.update(callocs)
+						aout.append(tuple(sorted(callocs)))
+
+
 				opReads    = (tuple(sorted(mr)), tuple(rout))
 				opModifies = (tuple(sorted(mm)), tuple(mout))
 
-				op.rewriteAnnotation(reads=opReads, modifies=opModifies)
+				if isinstance(op, (ast.Allocate, ast.Check)):
+					opAllocates = (tuple(sorted(ma)), tuple(aout))
+				else:
+					opAllocates = None
+
+
+				op.rewriteAnnotation(reads=opReads, modifies=opModifies, allocates=opAllocates)

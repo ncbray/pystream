@@ -1,11 +1,11 @@
 import time
+import util
 
 import analysis.cpa
 import analysis.cpa.lifetimeanalysis
 import analysis.cpa.dumpreport
-import analysis.shape
 
-import util
+import analysis.shape
 
 import optimization.methodcall
 from optimization.cullprogram import cullProgram
@@ -92,6 +92,10 @@ def cpaPass(console, e, entryPoints):
 	console.end()
 	return result
 
+
+def shapePass(console, e, result, entryPoints):
+	analysis.shape.evaluate(console, e, result, entryPoints)
+
 def cpaDump(console, name, e, result, entryPoints):
 	console.begin('dump')
 	analysis.cpa.dumpreport.dump(name, e, result, entryPoints)
@@ -114,5 +118,10 @@ def evaluate(console, name, e, entryPoints):
 	# Get rid of dead functions/contexts
 	cull(console, entryPoints, result.db)
 
-	cpaDump(console, name, e, result, entryPoints)
+	try:
+		shapePass(console, e, result, entryPoints)
+
+	finally:
+		cpaDump(console, name, e, result, entryPoints)
+
 	console.end()

@@ -59,6 +59,15 @@ class FoldRewrite(object):
 			assert False, type(ref)
 
 
+	def storeGraphForExistingObject(self, obj):
+		sys = self.db.system
+
+		slotName = sys.canonical.existingName(self.code, obj, None)
+		slot = sys.roots.root(sys, slotName, sys.roots.regionHint)
+
+		xtype = sys.canonical.existingType(obj)
+		return slot.initializeType(sys, xtype)
+
 
 	def getExistingNames(self, ref):
 		if isinstance(ref, ast.Local):
@@ -99,7 +108,7 @@ class FoldRewrite(object):
 						funcs.update(funcObjs)
 
 		if len(funcs) == 1:
-			return ast.Existing(funcs.pop().xtype.obj)
+			return self.existingFromNode(funcs.pop())
 		else:
 			return None
 
@@ -120,13 +129,30 @@ class FoldRewrite(object):
 			return self(result)
 		return node
 
+	def localToExisting(self, lcl, obj):
+		node = ast.Existing(obj)
+		node.annotation = lcl.annotation
+		return node
+
+	def existingFromNode(self, cobj):
+		node = ast.Existing(cobj.xtype.obj)
+		node.rewriteAnnotation(references=((cobj,), tuple([(cobj,) for context in self.code.annotation.contexts])))
+		return node
+
+	def existingFromObj(self, obj):
+		if self.db:
+			cobj = self.storeGraphForExistingObject(obj)
+			return self.existingFromNode(cobj)
+		else:
+			return ast.Existing(obj)
+
+
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
 		# Replace with query
 		obj = tools.singleObject(node)
 		if obj is not None:
-			replace = ast.Existing(obj)
-			return replace
+			return self.localToExisting(node, obj)
 
 		# Replace with dataflow
 		const = self.flow.lookup(node)
@@ -136,31 +162,39 @@ class FoldRewrite(object):
 				return const
 			elif const is not top:
 				# Reach for the constant definition
-				return ast.Existing(const)
+				return self.existingFromObj(const)
 
 		return node
 
 	@dispatch(ast.BinaryOp)
 	def visitBinaryOp(self, node):
 		result = fold.foldBinaryOpAST(self.extractor, node)
+		if isinstance(node, ast.Existing):
+			result = self.existingFromObj(result.obj) # Create annotations
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.UnaryPrefixOp)
 	def visitUnaryPrefixOp(self, node):
 		result = fold.foldUnaryPrefixOpAST(self.extractor, node)
+		if isinstance(node, ast.Existing):
+			result = self.existingFromObj(result.obj) # Create annotations
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
 		result = fold.foldBoolAST(self.extractor, node)
+		if isinstance(node, ast.Existing):
+			result = self.existingFromObj(result.obj) # Create annotations
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.Not)
 	def visitNot(self, node):
 		result = fold.foldNotAST(self.extractor, node)
+		if isinstance(node, ast.Existing):
+			result = self.existingFromObj(result.obj) # Create annotations
 		self.logCreated(result)
 		return result
 
@@ -169,12 +203,8 @@ class FoldRewrite(object):
 		foldFunc = node.func.annotation.staticFold
 		if foldFunc and not node.kwds and not node.vargs and not node.kargs:
 			result = fold.foldCallAST(self.extractor, node, foldFunc, node.args)
-
-#			print "?", node
-#			print foldFunc
-#			print result
-#			print
-
+			if isinstance(node, ast.Existing):
+				result = self.existingFromObj(result.obj) # Create annotations
 			self.logCreated(result)
 			return result
 		return node

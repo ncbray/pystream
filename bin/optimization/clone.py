@@ -528,7 +528,9 @@ class FunctionCloner(object):
 	# Has internal slots, so as a hack it is "shared", so we must manually rewrite
 	@dispatch(ast.Existing)
 	def visitExisting(self, node):
-		return ast.Existing(node.object)
+		result = ast.Existing(node.object)
+		self.transferLocal(node, result)
+		return result
 
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node):

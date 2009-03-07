@@ -14,7 +14,7 @@ class GetOps(object):
 	def default(self, node):
 		assert False, repr(node)
 
-	@dispatch(str, type(None), ast.Existing, ast.Return, ast.Break, ast.Continue)
+	@dispatch(str, type(None), ast.Return, ast.Break, ast.Continue)
 	def visitJunk(self, node):
 		pass
 
@@ -23,7 +23,7 @@ class GetOps(object):
 		for child in ast.children(node):
 			self(child)
 
-	@dispatch(ast.Local)
+	@dispatch(ast.Local, ast.Existing)
 	def visitLocal(self, node):
 		self.locals.add(node)
 

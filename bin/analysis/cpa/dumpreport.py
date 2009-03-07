@@ -18,6 +18,8 @@ from . dumputil import *
 
 import urllib
 
+from programIR.python import ast
+
 def outputCodeShortName(out, code, links=None, context=None):
 	link = links.codeRef(code, context) if links is not None else None
 
@@ -265,7 +267,12 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			else:
 				print "No refs for local?", code, lcl
 				refs = ('?',)
-			lclName = str(lcl) + ' / ' + scg.getLocalName(lcl)
+
+			if isinstance(lcl, ast.Local):
+				lclName = str(lcl) + ' / ' + scg.getLocalName(lcl)
+			else:
+				lclName = str(lcl)
+
 			printTabbed(lclName, refs)
 		out.end('pre')
 		out.endl()
@@ -577,7 +584,7 @@ class DerivedData(object):
 		self.funcModifies      = collections.defaultdict(lambda: collections.defaultdict(set))
 
 		for func in db.liveFunctions():
-			ops, lcls = tools.codeOpsLocals(func)
+			ops = tools.codeOps(func)
 			for op in ops:
 				self.handleOpInvokes(func, op)
 				self.handleOpReads(func, op)

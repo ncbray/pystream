@@ -414,9 +414,8 @@ class InterproceduralDataflow(object):
 			name = slot.slotName
 			if name.isLocal():
 				lclLUT[(name.code, name.local)][name.context] = slot
-
-			# TODO existing?
-
+			elif name.isExisting():
+				lclLUT[(name.code, name.object)][name.context] = slot
 
 		for code, contexts in self.codeContexts.iteritems():
 			code.rewriteAnnotation(contexts=tuple(contexts))
@@ -443,16 +442,16 @@ class InterproceduralDataflow(object):
 				else:
 					op.rewriteAnnotation(invokes=invokes)
 
-
-			# TODO existing nodes?
-
 			for lcl in lcls:
-				contextLUT = lclLUT[(code, lcl)]
+				if isinstance(lcl, ast.Existing):
+					contextLUT = lclLUT[(code, lcl.object)]
+				else:
+					contextLUT = lclLUT[(code, lcl)]
+
 				crefs = tuple([sorted(contextLUT[context]) for context in code.annotation.contexts])
 
 				merged = set()
 				for refs in crefs: merged.update(refs)
-
 
 				lcl.rewriteAnnotation(references=(tuple(sorted(merged)), crefs))
 

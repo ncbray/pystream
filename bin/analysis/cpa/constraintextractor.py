@@ -201,16 +201,6 @@ class ExtractDataflow(object):
 			None, self(node.args),
 			None, None, target)
 
-	@dispatch(ast.UnpackSequence)
-	def visitUnpackSequence(self, node):
-		# HACK oh so ugly... does not resemble what actually happens.
-		for i, arg in enumerate(node.targets):
-			obj = self.system.extractor.getObject(i)
-			target = self.localSlot(arg)
-			self.directCall(node, self.exports['interpreter_getitem'],
-				None, [self(node.expr), self(ast.Existing(obj))],
-				None, None, target)
-
 	@dispatch(ast.GetAttr)
 	def visitGetAttr(self, node, target):
 		return self.directCall(node, self.exports['interpreter_getattribute'],

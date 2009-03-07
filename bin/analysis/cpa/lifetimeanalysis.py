@@ -50,14 +50,6 @@ invokedByStruct = structure.StructureSchema(
 	)
 invokedBySchema = wrapCodeContext(tupleset.TupleSetSchema(invokedByStruct))
 
-def forgetOp(dictset):
-	output = {}
-	for (code, op, context), values in dictset.iteritems():
-		newkey = context
-		if newkey not in output:
-			output[newkey] = set()
-		output[newkey].update(values)
-	return output
 
 def invertInvokes(invokes):
 	invokedBy = invokedBySchema.instance()
@@ -98,50 +90,55 @@ class ObjectInfo(object):
 		return bool(self.heldByClosure.intersection(refs))
 
 class ReadModifyAnalysis(object):
-	def __init__(self, killed, invokedBy):
+	def __init__(self, sys, invokedBy):
 		self.invokedBy       = invokedBy
-		self.killed          = killed
 
 		self.contextReads    = collections.defaultdict(set)
 		self.contextModifies = collections.defaultdict(set)
 
-	def process(self, sys):
-		self.system = sys
+		self.collectDB(sys)
 
+	def collectDB(self, sys):
 		allReads        = set()
 		allModifies     = set()
 
 		self.opReadDB   = opDataflowSchema.instance()
 		self.opModifyDB = opDataflowSchema.instance()
 
+		self.allocations = collections.defaultdict(set)
 
 		# Copy modifies
-		for (code, op, context), slots in sys.opModifies.iteritems():
-			self.opModifyDB[code][op].merge(context, slots)
-			self.contextModifies[context].update(slots)
-			allModifies.update(slots)
+		for code in sys.db.liveCode:
+			ops, lcls = getOps(code)
+			for op in ops:
+				for cindex, context in enumerate(code.annotation.contexts):
+					if not op.annotation.invokes[0]:
+						slots    = op.annotation.modifies[1][cindex]
+
+						self.opModifyDB[code][op].merge(context, slots)
+						self.contextModifies[context].update(slots)
+						allModifies.update(slots)
+
+		# Copy reads
+		for code in sys.db.liveCode:
+			ops, lcls = getOps(code)
+			for op in ops:
+				for cindex, context in enumerate(code.annotation.contexts):
+					if not op.annotation.invokes[0]:
+						slots    = op.annotation.reads[1][cindex]
+						filtered = set([slot for slot in slots if slot in allModifies])
+
+						self.opReadDB[code][op].merge(context, filtered)
+						self.contextReads[context].update(filtered)
+						allReads.update(slots)
+
+						# Copy allocations.
+						if op.annotation.allocates:
+							self.allocations[context].update(op.annotation.allocates[1][cindex])
 
 
-#		for code in sys.db.liveCode:
-#			ops, lcls = getOps(code)
-#			for op in ops:
-#				for cindex, context in enumerate(code.annotation.contexts):
-#					if not op.annotation.invokes[0]:
-#						slots    = op.annotation.reads[1][cindex]
-#						filtered = set([slot for slot in slots if slot in allModifies])
-
-#						self.opReadDB[code][op].merge(context, filtered)
-#						self.contextReads[context].update(filtered)
-#						allReads.update(slots)
-
-		# Copy Reads
-		for (code, op, context), slots in sys.opReads.iteritems():
-			# Only track reads that may change
-			filtered = set([slot for slot in slots if slot in allModifies])
-			self.opReadDB[code][op].merge(context, filtered)
-			self.contextReads[context].update(filtered)
-			allReads.update(slots)
-
+	def process(self, killed):
+		self.killed = killed
 		self.processReads()
 		self.processModifies()
 
@@ -351,7 +348,7 @@ class LifetimeAnalysis(object):
 
 		# Seed the inital dirty set
 		self.dirty = set()
-		for context, objs in self.allocations.iteritems():
+		for context, objs in self.rm.allocations.iteritems():
 			code = context.signature.code # HACK
 			self.live[(code, context)].update(objs-self.escapes)
 			self.dirty.update(self.invokedBy[code][context])
@@ -423,7 +420,7 @@ class LifetimeAnalysis(object):
 	def gatherInvokes(self, sys):
 		invokes = invokesSchema.instance()
 
-		for code in sys.db.liveFunctions():
+		for code in sys.db.liveCode:
 			assert isinstance(code, ast.Code), type(code)
 			ops, lcls = getOps(code)
 			for op in ops:
@@ -487,27 +484,26 @@ class LifetimeAnalysis(object):
 	def process(self, sys):
 		self.gatherSlots(sys)
 		self.gatherInvokes(sys)
+		self.rm = ReadModifyAnalysis(sys, self.invokedBy)
 
-		self.opAllocates = sys.opAllocates
-		self.allocations = forgetOp(sys.opAllocates)
 
 		self.propagateVisibility()
 		self.propagateHeld()
 		self.inferScope()
 
-		self.rm = ReadModifyAnalysis(self.killed, self.invokedBy)
-		self.rm.process(sys)
+		self.rm.process(self.killed)
 		self.createDB(sys)
 
 	def createDB(self, sys):
 		self.readDB   = self.rm.opReadDB
 		self.modifyDB = self.rm.opModifyDB
+		self.allocations = self.rm.allocations
 
-		allocDB = self.opAllocates
-
-		for code in sys.db.liveFunctions():
+		for code in sys.db.liveCode:
 			ops, lcls = getOps(code)
 			for op in ops:
+				if not op.annotation.invokes[0]: continue
+
 				reads    = self.readDB[code][op]
 				modifies = self.modifyDB[code][op]
 
@@ -538,20 +534,7 @@ class LifetimeAnalysis(object):
 						cmod = ()
 					mout.append(cmod)
 
-					if isinstance(op, (ast.Allocate, ast.Check)):
-						key = (code, op, context)
-						callocs = allocDB.get(key, ())
-						ma.update(callocs)
-						aout.append(tuple(sorted(callocs)))
-
-
 				opReads    = (tuple(sorted(mr)), tuple(rout))
 				opModifies = (tuple(sorted(mm)), tuple(mout))
 
-				if isinstance(op, (ast.Allocate, ast.Check)):
-					opAllocates = (tuple(sorted(ma)), tuple(aout))
-				else:
-					opAllocates = None
-
-
-				op.rewriteAnnotation(reads=opReads, modifies=opModifies, allocates=opAllocates)
+				op.rewriteAnnotation(reads=opReads, modifies=opModifies)

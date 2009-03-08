@@ -323,7 +323,7 @@ class LifetimeAnalysis(object):
 				for dst in current.refersTo:
 					if not dst in self.escapes: dirty.add(dst)
 
-		#self.displayHistogram()
+		self.displayHistogram()
 
 
 	def displayHistogram(self):
@@ -332,6 +332,11 @@ class LifetimeAnalysis(object):
 		hist = collections.defaultdict(lambda:0)
 		for obj, info in self.objects.iteritems():
 			if not obj in self.escapes:
+				if len(info.heldByClosure) >= 4:
+					print obj
+					for other in info.heldByClosure:
+						print '\t', other.obj
+					print
 				hist[len(info.heldByClosure)] += 1
 			else:
 				hist[-1] += 1
@@ -455,28 +460,37 @@ class LifetimeAnalysis(object):
 		self.invokes   = invokes
 		self.invokedBy = invokedBy
 
+	def markVisible(self, lcl, cindex):
+		if lcl is not None:
+			refs = lcl.annotation.references[1][cindex]
+			for ref in refs:
+				obj = self.getObjectInfo(ref)
+				obj.externallyVisible = True
+
+
 	def gatherSlots(self, sys):
 
 		searcher = ObjectSearcher(self)
 
-		for slot in sys.roots:
-			for next in slot:
-				searcher.enqueue(next)
+		for code in sys.db.liveCode:
+			ops, lcls = getOps(code)
+			for lcl in lcls:
+				for ref in lcl.annotation.references[0]:
+					searcher.enqueue(ref)
 
+			for cindex, context in enumerate(code.annotation.contexts):
+				if context.entryPoint:
+					self.markVisible(code.selfparam, cindex)
+					for param in code.parameters:
+						self.markVisible(param, cindex)
 
-			if slot.slotName.isLocal():
-				# HACK search for the "external" function, as it tends to get filted out of the DB.
-				context = slot.slotName.context
-				if context is base.externalFunctionContext:
-					for next in slot:
-						obj = self.getObjectInfo(next)
-						obj.localReference.add(context)
+					# HACK marks the tuple and the dicitonary visible, which they may not be.
+					# NOTE marking the types from the CPA context is insufficient, as there may be
+					# "any" slots.
+					self.markVisible(code.vparam, cindex)
+					self.markVisible(code.kparam, cindex)
 
-						# HACK
-						self.codeRefersToHeap[(base.externalFunction, context)].add(next)
-
-						if context is base.externalFunctionContext:
-							obj.externallyVisible = True
+					self.markVisible(code.returnparam, cindex)
 
 		searcher.process()
 

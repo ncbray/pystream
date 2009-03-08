@@ -37,13 +37,13 @@ def calleeSlotsFromContext(sys, context):
 class AnalysisContext(CanonicalObject):
 	__slots__ = 'signature', 'opPath', 'group', 'entryPoint'
 
-	def __init__(self, signature, opPath, group):
+	def __init__(self, signature, opPath, group, entryPoint):
 		self.signature  = signature
 		self.opPath     = opPath
 		self.group      = group
-		self.entryPoint = False
+		self.entryPoint = entryPoint
 
-		self.setCanonical(self.signature, self.opPath)
+		self.setCanonical(self.signature, self.opPath, self.entryPoint)
 
 	def _bindObjToSlot(self, sys, obj, slot):
 		assert not ((obj is None) ^ (slot is None)), (obj, slot)
@@ -159,7 +159,7 @@ class AnalysisContext(CanonicalObject):
 # Objects for external calls.
 externalFunction = ast.Code('external', None, [], [], None, None, ast.Local('internal_return'), ast.Suite([]))
 externalSignature = util.cpa.CPASignature(externalFunction, None, ())
-externalFunctionContext = AnalysisContext(externalSignature, None, None)
+externalFunctionContext = AnalysisContext(externalSignature, None, None, False)
 
 
 class OpContext(CanonicalObject):

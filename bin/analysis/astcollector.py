@@ -14,14 +14,13 @@ class GetOps(object):
 	def default(self, node):
 		assert False, repr(node)
 
-	@dispatch(str, type(None), ast.Return, ast.Break, ast.Continue)
+	@dispatch(str, type(None), ast.Break, ast.Continue, ast.Code)
 	def visitJunk(self, node):
 		pass
 
 	@dispatch(ast.Suite, ast.Condition, ast.Assign, ast.Switch, ast.Discard, ast.For, ast.While)
 	def visitOK(self, node):
-		for child in ast.children(node):
-			self(child)
+		visitAllChildren(self, node)
 
 	@dispatch(ast.Local, ast.Existing)
 	def visitLocal(self, node):
@@ -36,15 +35,12 @@ class GetOps(object):
 		  ast.ConvertToBool, ast.Not,
 		  ast.BuildTuple, ast.BuildList, ast.GetIter)
 	def visitOp(self, node):
+		visitAllChildren(self, node)
 		self.ops.append(node)
 
-	@dispatch(list)
-	def visitList(self, node):
-		return [self(child) for child in node]
-
-	@dispatch(tuple)
-	def visitTuple(self, node):
-		return tuple([self(child) for child in node])
+	@dispatch(list, tuple, ast.Return)
+	def visitContainer(self, node):
+		visitAllChildren(self, node)
 
 	def process(self, node):
 		for child in node.children():

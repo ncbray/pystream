@@ -30,13 +30,6 @@ class Existing(Reference):
 	def constantValue(self):
 		return self.object.pyobj
 
-	def __eq__(self, other):
-		return type(self) is type(other) and self.object is other.object
-
-	def __hash__(self):
-		return hash(self.object)
-
-
 class Local(Reference):
 	__metaclass__ = astnode
 	__slots__     = 'name'

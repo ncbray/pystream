@@ -8,6 +8,7 @@ import programIR.python.fold as fold
 
 from analysis import tools
 
+
 class FoldRewrite(object):
 	__metaclass__ = typedispatcher
 
@@ -23,6 +24,10 @@ class FoldRewrite(object):
 	def logCreated(self, node):
 		if isinstance(node, ast.Existing):
 			self.created.add(node.object)
+
+	@dispatch(ast.Existing)
+	def visitExisting(self, node):
+		return node
 
 	@dispatch(ast.Call)
 	def visitCall(self, node):
@@ -108,7 +113,9 @@ class FoldRewrite(object):
 						funcs.update(funcObjs)
 
 		if len(funcs) == 1:
-			return self.existingFromNode(funcs.pop())
+			cobj = funcs.pop()
+			result = self.existingFromNode(cobj)
+			return result
 		else:
 			return None
 
@@ -119,8 +126,7 @@ class FoldRewrite(object):
 			funcobj = self.getMethodFunction(node.expr, node.name)
 
 			# TODO deal with single call / multiple function object case?
-			if not funcobj:
-				return node
+			if not funcobj: return node
 
 			newargs = [node.expr]
 			newargs.extend(node.args)
@@ -142,7 +148,8 @@ class FoldRewrite(object):
 	def existingFromObj(self, obj):
 		if self.db:
 			cobj = self.storeGraphForExistingObject(obj)
-			return self.existingFromNode(cobj)
+			node = self.existingFromNode(cobj)
+			return node
 		else:
 			return ast.Existing(obj)
 
@@ -166,35 +173,33 @@ class FoldRewrite(object):
 
 		return node
 
+	def annotateFolded(self, node):
+		if isinstance(node, ast.Existing):
+			node = self.existingFromObj(node.object)
+		return node
+
+
 	@dispatch(ast.BinaryOp)
 	def visitBinaryOp(self, node):
-		result = fold.foldBinaryOpAST(self.extractor, node)
-		if isinstance(node, ast.Existing):
-			result = self.existingFromObj(result.obj) # Create annotations
+		result = self.annotateFolded(fold.foldBinaryOpAST(self.extractor, node))
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.UnaryPrefixOp)
 	def visitUnaryPrefixOp(self, node):
-		result = fold.foldUnaryPrefixOpAST(self.extractor, node)
-		if isinstance(node, ast.Existing):
-			result = self.existingFromObj(result.obj) # Create annotations
+		result = self.annotateFolded(fold.foldUnaryPrefixOpAST(self.extractor, node))
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
-		result = fold.foldBoolAST(self.extractor, node)
-		if isinstance(node, ast.Existing):
-			result = self.existingFromObj(result.obj) # Create annotations
+		result = self.annotateFolded(fold.foldBoolAST(self.extractor, node))
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.Not)
 	def visitNot(self, node):
-		result = fold.foldNotAST(self.extractor, node)
-		if isinstance(node, ast.Existing):
-			result = self.existingFromObj(result.obj) # Create annotations
+		result = self.annotateFolded(fold.foldNotAST(self.extractor, node))
 		self.logCreated(result)
 		return result
 
@@ -202,9 +207,7 @@ class FoldRewrite(object):
 	def visitDirectCall(self, node):
 		foldFunc = node.func.annotation.staticFold
 		if foldFunc and not node.kwds and not node.vargs and not node.kargs:
-			result = fold.foldCallAST(self.extractor, node, foldFunc, node.args)
-			if isinstance(node, ast.Existing):
-				result = self.existingFromObj(result.obj) # Create annotations
+			result = self.annotateFolded(fold.foldCallAST(self.extractor, node, foldFunc, node.args))
 			self.logCreated(result)
 			return result
 		return node

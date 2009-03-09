@@ -3,7 +3,7 @@ import util
 
 import analysis.cpa
 import analysis.lifetimeanalysis
-import analysis.cpa.dumpreport
+import analysis.dump.dumpreport
 
 import analysis.shape
 
@@ -89,7 +89,7 @@ def shapePass(console, e, result, entryPoints):
 
 def cpaDump(console, name, e, result, entryPoints):
 	console.begin('dump')
-	analysis.cpa.dumpreport.dump(name, e, result, entryPoints)
+	analysis.dump.dumpreport.dump(name, e, result, entryPoints)
 	console.end()
 
 def cull(console, entryPoints, db):

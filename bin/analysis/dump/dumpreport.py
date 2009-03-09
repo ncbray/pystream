@@ -7,14 +7,14 @@ import os.path
 from util import assureDirectoryExists, itergroupings
 
 from analysis import programculler
+
 from . import dumpgraphs
+from . dumputil import *
 
 import collections
 from analysis import tools
 
 import util.graphalgorithim.dominator
-
-from . dumputil import *
 
 import urllib
 

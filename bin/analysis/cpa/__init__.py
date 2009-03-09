@@ -8,8 +8,6 @@ from . import canonicalobjects
 from . import extendedtypes
 from . import setmanager
 
-import dumpreport
-
 from constraintextractor import ExtractDataflow
 
 from constraints import AssignmentConstraint

@@ -1,4 +1,4 @@
-from . import storegraph
+from .. cpa import storegraph
 
 class LinkManager(object):
 	def __init__(self):

@@ -15,6 +15,7 @@ from constraints import AssignmentConstraint
 # Only used for creating return variables
 from programIR.python import ast
 from programIR.python import program
+from programIR import annotations
 
 from optimization.callconverter import callConverter
 
@@ -391,11 +392,6 @@ class InterproceduralDataflow(object):
 
 		self.solveTime = end-start-self.decompileTime
 
-	def mergeC(self, contextual):
-		merged = set()
-		for data in contextual: merged.update(data)
-		return (tuple(sorted(merged)), contextual)
-
 	def annotate(self):
 		# Re-index the invocations
 		opLut = collections.defaultdict(lambda: collections.defaultdict(set))
@@ -415,9 +411,10 @@ class InterproceduralDataflow(object):
 
 		for code, contexts in self.codeContexts.iteritems():
 			code.rewriteAnnotation(contexts=tuple(contexts))
+			contexts = code.annotation.contexts
 
-			argobjs = tuple([tuple(sorted(self.opAllocates[(code, None, context)])) for context in code.annotation.contexts])
-			code.rewriteAnnotation(argobjs=self.mergeC(argobjs))
+			argobjs = [annotations.annotationSet(self.opAllocates[(code, None, context)]) for context in contexts]
+			code.rewriteAnnotation(argobjs=annotations.makeContextualAnnotation(argobjs))
 
 			ops, lcls = getOps(code)
 
@@ -425,19 +422,18 @@ class InterproceduralDataflow(object):
 				if op is externalOp: continue
 
 				contextLUT = opLut[(code, op)]
-				cinvokes  = tuple([tuple(sorted(contextLUT[context])) for context in code.annotation.contexts])
-				invokes   = self.mergeC(cinvokes)
+				cinvokes  = [annotations.annotationSet(contextLUT[context]) for context in contexts]
+				invokes   = annotations.makeContextualAnnotation(cinvokes)
 
 				if not invokes[0]:
-					creads    = tuple([tuple(sorted(self.opReads[(code, op, context)])) for context in code.annotation.contexts])
-					cmodifies = tuple([tuple(sorted(self.opModifies[(code, op, context)])) for context in code.annotation.contexts])
-					callocates = tuple([tuple(sorted(self.opAllocates[(code, op, context)])) for context in code.annotation.contexts])
-
+					creads     = [annotations.annotationSet(self.opReads[(code, op, context)]) for context in contexts]
+					cmodifies  = [annotations.annotationSet(self.opModifies[(code, op, context)]) for context in contexts]
+					callocates = [annotations.annotationSet(self.opAllocates[(code, op, context)]) for context in contexts]
 
 					op.rewriteAnnotation(invokes=invokes,
-						reads=self.mergeC(creads),
-						modifies=self.mergeC(cmodifies),
-						allocates = self.mergeC(callocates)
+						reads=annotations.makeContextualAnnotation(creads),
+						modifies=annotations.makeContextualAnnotation(cmodifies),
+						allocates = annotations.makeContextualAnnotation(callocates)
 						)
 				else:
 					op.rewriteAnnotation(invokes=invokes)
@@ -448,12 +444,9 @@ class InterproceduralDataflow(object):
 				else:
 					contextLUT = lclLUT[(code, lcl)]
 
-				crefs = tuple([sorted(contextLUT[context]) for context in code.annotation.contexts])
-
-				merged = set()
-				for refs in crefs: merged.update(refs)
-
-				lcl.rewriteAnnotation(references=(tuple(sorted(merged)), crefs))
+				crefs = [annotations.annotationSet(contextLUT[context]) for context in code.annotation.contexts]
+				references = annotations.makeContextualAnnotation(crefs)
+				lcl.rewriteAnnotation(references=references)
 
 
 

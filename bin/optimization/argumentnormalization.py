@@ -1,5 +1,6 @@
 from util.typedispatch import *
 from programIR.python import ast
+from programIR import annotations
 
 class ArgumentNormalizationAnalysis(object):
 	__metaclass__ = typedispatcher
@@ -130,15 +131,12 @@ class ArgumentNormalizationTransform(object):
 	def transferReferences(self, src, field, dst):
 		refs = src.annotation.references
 		cout = []
-		mout = set()
 		for cindex, context in enumerate(self.code.annotation.contexts):
-			crefs = refs[1][cindex]
-			for ref in crefs:
-				values = tuple(sorted(ref.knownField(field)))
-				cout.append(values)
-				mout.update(values)
+			values = set()
+			for ref in refs[1][cindex]: values.update(ref.knownField(field))
+			cout.append(annotations.annotationSet(values))
 
-		refs = (tuple(sorted(mout)), tuple(cout))
+		refs = annotations.makeContextualAnnotation(cout)
 		dst.rewriteAnnotation(references=refs)
 
 

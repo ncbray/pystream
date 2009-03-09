@@ -1,6 +1,8 @@
 from util.typedispatch import *
 from programIR.python import ast
 
+from programIR import annotations
+
 import util.xtypes
 from analysis import tools
 import dataflow.forward
@@ -141,7 +143,7 @@ class MethodPatternFinder(object):
 			reach = set()
 			for target in targets:
 				reach.update(self.invokeLUT[target])
-			self.invokeLUT[(code, context)] = tuple(sorted(reach))
+			self.invokeLUT[(code, context)] = annotations.annotationSet(reach)
 
 
 	def preprocess(self, extractor, db):
@@ -301,20 +303,15 @@ class MethodRewrite(object):
 	def transferOpInfo(self, node, rewrite):
 		invokes = node.annotation.invokes
 		if invokes is not None:
-			invokesM = set()
 			cinvokesNew = []
 			for cinvokes in invokes[1]:
 				cinvokesM = set()
 				for f, c in cinvokes:
 					newinv = self.pattern.invokeLUT[(f, c)]
-#					cindex = f.annotation.contexts.index(c)
-#					op = opThatInvokes(f)
-#					newinv = op.annotation.invokes[1][cindex]
-
 					cinvokesM.update(newinv)
-				cinvokesNew.append(tuple(sorted(cinvokesM)))
-				invokesM.update(cinvokesM)
-			invokes = (tuple(sorted(invokesM)), tuple(cinvokesNew))
+				cinvokesNew.append(annotations.annotationSet(cinvokesM))
+
+			invokes = annotations.makeContextualAnnotation(cinvokesNew)
 			rewrite.annotation = node.annotation.rewrite(invokes=invokes)
 		else:
 			rewrite.annotation = node.annotation

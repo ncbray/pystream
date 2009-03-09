@@ -52,6 +52,8 @@ class MethodPatternFinder(object):
 		fgetobj = extractor.getObject(fgetpyobj)
 		self.fget = extractor.getCall(fgetobj)
 
+		if self.fget is None: return False
+
 		self.mdget = exports['methoddescriptor__get__']
 
 		self.icall = exports['interpreter_call']
@@ -64,6 +66,8 @@ class MethodPatternFinder(object):
 
 		assert self.icall.annotation.origin
 		assert self.mcall.annotation.origin
+
+		return True
 
 
 	def findExisting(self, db):
@@ -147,7 +151,8 @@ class MethodPatternFinder(object):
 
 
 	def preprocess(self, extractor, db):
-		self.findOriginals(extractor)
+		if not self.findOriginals(extractor):
+			return False
 		self.findExisting(db)
 		return self.findContexts()
 

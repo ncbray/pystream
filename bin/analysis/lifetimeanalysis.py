@@ -1,8 +1,8 @@
 import collections
 import time
 
-from . import base
-
+from cpa import base, storegraph
+import programIR.python.ast as ast
 
 from PADS.StrongConnectivity import StronglyConnectedComponents
 
@@ -12,11 +12,6 @@ from analysis.database import mapping
 from analysis.database import lattice
 
 from analysis.astcollector import getOps
-
-import programIR.python.ast as ast
-
-
-from . import storegraph
 
 contextSchema   = structure.WildcardSchema()
 operationSchema = structure.TypeSchema((ast.Expression, ast.Statement))
@@ -121,6 +116,11 @@ class ReadModifyAnalysis(object):
 
 		# Copy reads
 		for code in sys.db.liveCode:
+			# vargs and karg allocations.
+			for cindex, context in enumerate(code.annotation.contexts):
+				self.allocations[context].update(code.annotation.argobjs[1][cindex])
+
+
 			ops, lcls = getOps(code)
 			for op in ops:
 				for cindex, context in enumerate(code.annotation.contexts):

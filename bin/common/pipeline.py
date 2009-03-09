@@ -2,7 +2,7 @@ import time
 import util
 
 import analysis.cpa
-import analysis.cpa.lifetimeanalysis
+import analysis.lifetimeanalysis
 import analysis.cpa.dumpreport
 
 import analysis.shape
@@ -22,22 +22,13 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 	console.begin('conditioning')
 
 	if True:
-		console.begin('lower')
-		# Flatten the interpreter calls.
-		# Must be done before cloning, as cloning can only
-		# redirect direct calls.
-		for func in db.liveFunctions():
-			callConverter(extractor, func)
-		console.end()
-
-	if True:
 		# Try to identify and optimize method calls
 		console.begin('method call')
 		optimization.methodcall.methodCall(console, extractor, db)
 		console.end()
 
 	console.begin('lifetime analysis')
-	la =  analysis.cpa.lifetimeanalysis.LifetimeAnalysis()
+	la =  analysis.lifetimeanalysis.LifetimeAnalysis()
 	la.process(dataflow)
 	dataflow.db.lifetime = la # HACK
 	console.end()
@@ -119,7 +110,7 @@ def evaluate(console, name, e, entryPoints):
 	cull(console, entryPoints, result.db)
 
 	try:
-		shapePass(console, e, result, entryPoints)
+		pass#shapePass(console, e, result, entryPoints)
 
 	finally:
 		cpaDump(console, name, e, result, entryPoints)

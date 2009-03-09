@@ -1,9 +1,7 @@
 from .. import annotations
 
 
-emptyCodeAnnotation  = annotations.CodeAnnotation(None, False, None, None, None)
-emptyOpAnnotation    = annotations.OpAnnotation(None, None, None, None, None)
-emptySlotAnnotation  = annotations.SlotAnnotation(None)
+
 
 def isPythonAST(ast):
 	return isinstance(ast, ASTNode)
@@ -34,7 +32,7 @@ class ASTNode(object):
 class Expression(ASTNode):
 	__slots__ = ()
 
-	emptyAnnotation = emptyOpAnnotation
+	emptyAnnotation = annotations.emptyOpAnnotation
 
 	def returnsValue(self):
 		return True
@@ -48,7 +46,7 @@ class LLExpression(Expression):
 class Reference(Expression):
 	__slots__ = ()
 
-	emptyAnnotation = emptySlotAnnotation
+	emptyAnnotation = annotations.emptySlotAnnotation
 
 	def isReference(self):
 		return True
@@ -56,7 +54,7 @@ class Reference(Expression):
 class Statement(ASTNode):
 	__slots__ = ()
 
-	emptyAnnotation = emptyOpAnnotation
+	emptyAnnotation = annotations.emptyOpAnnotation
 
 class SimpleStatement(Statement):
 	__slots__ = ()

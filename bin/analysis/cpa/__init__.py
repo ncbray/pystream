@@ -413,9 +413,6 @@ class InterproceduralDataflow(object):
 			code.rewriteAnnotation(contexts=tuple(contexts))
 			contexts = code.annotation.contexts
 
-			argobjs = [annotations.annotationSet(self.opAllocates[(code, None, context)]) for context in contexts]
-			code.rewriteAnnotation(argobjs=annotations.makeContextualAnnotation(argobjs))
-
 			ops, lcls = getOps(code)
 
 			for op in ops:

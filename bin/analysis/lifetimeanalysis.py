@@ -119,8 +119,13 @@ class ReadModifyAnalysis(object):
 		# Copy reads
 		for code in sys.db.liveCode:
 			# vargs and karg allocations.
+			# Assumes code is in SSA form, so vparam and kparam can
+			# only point to freshly allocated arg objects.
 			for cindex, context in enumerate(code.annotation.contexts):
-				self.allocations[context].update(code.annotation.argobjs[1][cindex])
+				if code.vparam:
+					self.allocations[context].update(code.vparam.annotation.references[1][cindex])
+				if code.kparam:
+					self.allocations[context].update(code.kparam.annotation.references[1][cindex])
 
 
 			ops, lcls = getOps(code)
@@ -451,11 +456,6 @@ class LifetimeAnalysis(object):
 						obj.localReference.add(code)
 
 						self.codeRefersToHeap[(code, context)].add(ref)
-
-						if context is base.externalFunctionContext:
-							# Doesn't appear in the database?
-							assert False
-							obj.externallyVisible = True
 
 		invokedBy = invertInvokes(invokes)
 

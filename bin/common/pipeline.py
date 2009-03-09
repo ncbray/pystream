@@ -106,14 +106,14 @@ def evaluate(console, name, e, entryPoints):
 
 	#analysis.shape.evaluate(e, entryPoints, result)
 
-	if False:
-		result = cpaPass(console, e, entryPoints)
-
 	# Get rid of dead functions/contexts
 	cull(console, entryPoints, result.db)
 
+	if False:
+		result = cpaPass(console, e, entryPoints)
+
 	# HACK rerun lifetime analysis, as inlining causes problems.
-	#lifetimeAnalysis(console, result)
+	lifetimeAnalysis(console, result)
 
 	try:
 		pass#shapePass(console, e, result, entryPoints)

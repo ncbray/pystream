@@ -109,7 +109,7 @@ class ReadModifyAnalysis(object):
 						slots    = op.annotation.modifies[1][cindex]
 
 						self.opModifyDB[code][op].merge(context, slots)
-						self.contextModifies[context].update(slots)
+						self.contextModifies[(code, context)].update(slots)
 						allModifies.update(slots)
 
 		# Copy reads
@@ -119,9 +119,9 @@ class ReadModifyAnalysis(object):
 			# only point to freshly allocated arg objects.
 			for cindex, context in enumerate(code.annotation.contexts):
 				if code.vparam:
-					self.allocations[context].update(code.vparam.annotation.references[1][cindex])
+					self.allocations[(code, context)].update(code.vparam.annotation.references[1][cindex])
 				if code.kparam:
-					self.allocations[context].update(code.kparam.annotation.references[1][cindex])
+					self.allocations[(code, context)].update(code.kparam.annotation.references[1][cindex])
 
 
 			ops, lcls = getOps(code)
@@ -132,12 +132,12 @@ class ReadModifyAnalysis(object):
 						filtered = set([slot for slot in slots if slot in allModifies])
 
 						self.opReadDB[code][op].merge(context, filtered)
-						self.contextReads[context].update(filtered)
+						self.contextReads[(code, context)].update(filtered)
 						allReads.update(slots)
 
 						# Copy allocations.
 						if op.annotation.allocates:
-							self.allocations[context].update(op.annotation.allocates[1][cindex])
+							self.allocations[(code, context)].update(op.annotation.allocates[1][cindex])
 
 
 	def process(self, killed):
@@ -149,8 +149,8 @@ class ReadModifyAnalysis(object):
 	def processReads(self):
 		self.dirty = set()
 
-		for context, values in self.contextReads.iteritems():
-			if values: self.dirty.add((context.signature.code, context))
+		for (code, context), values in self.contextReads.iteritems():
+			if values: self.dirty.add((code, context))
 
 
 		while self.dirty:
@@ -168,12 +168,12 @@ class ReadModifyAnalysis(object):
 			killed = self.killed[(prevC, currentC)]
 
 			# Propigate reads
-			filtered = set([value for value in self.contextReads[currentC] if value.object not in killed])
+			filtered = set([value for value in self.contextReads[(currentF, currentC)] if value.object not in killed])
 			current = prevRead[prevC]
 			diff = filtered-current if current else filtered
 
 			if diff:
-				self.contextReads[prevC].update(diff)
+				self.contextReads[(prevF, prevC)].update(diff)
 				prevRead.merge(prevC, diff)
 				self.dirty.add((prevF, prevC))
 
@@ -182,8 +182,8 @@ class ReadModifyAnalysis(object):
 	def processModifies(self):
 		self.dirty = set()
 
-		for context, values in self.contextModifies.iteritems():
-			if values: self.dirty.add((context.signature.code, context))
+		for (code, context), values in self.contextModifies.iteritems():
+			if values: self.dirty.add((code, context))
 
 		while self.dirty:
 			current = self.dirty.pop()
@@ -200,12 +200,12 @@ class ReadModifyAnalysis(object):
 			killed = self.killed[(prevC, currentC)]
 
 			# Propigate modifies
-			filtered = set([value for value in self.contextModifies[currentC] if value.object not in killed])
+			filtered = set([value for value in self.contextModifies[(currentF, currentC)] if value.object not in killed])
 			#diff = filtered-self.opModifies[prev]
 			current = prevMod[prevC]
 			diff = filtered-current if current else filtered
 			if diff:
-				self.contextModifies[prevC].update(diff)
+				self.contextModifies[(prevF, prevC)].update(diff)
 				prevMod.merge(prevC, diff)
 				self.dirty.add((prevF, prevC))
 
@@ -326,7 +326,7 @@ class LifetimeAnalysis(object):
 				for dst in current.refersTo:
 					if not dst in self.escapes: dirty.add(dst)
 
-		self.displayHistogram()
+		#self.displayHistogram()
 
 
 	def displayHistogram(self):
@@ -353,11 +353,9 @@ class LifetimeAnalysis(object):
 		self.live = collections.defaultdict(set)
 		self.killed = collections.defaultdict(set)
 
-
 		# Seed the inital dirty set
 		self.dirty = set()
-		for context, objs in self.rm.allocations.iteritems():
-			code = context.signature.code # HACK
+		for (code, context), objs in self.rm.allocations.iteritems():
 			self.live[(code, context)].update(objs-self.escapes)
 			self.dirty.update(self.invokedBy[code][context])
 

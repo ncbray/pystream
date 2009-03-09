@@ -385,6 +385,8 @@ class LifetimeAnalysis(object):
 
 				if killedAll: self.contextKilled[(dstF, dstC)].update(killedAll)
 
+		for code, context in self.entries:
+			self.contextKilled[(code, context)].update(self.live[(code, context)])
 
 	def processScope(self, current):
 		currentF, currentO, currentC = current
@@ -426,7 +428,14 @@ class LifetimeAnalysis(object):
 	def gatherInvokes(self, liveCode):
 		invokes = invokesSchema.instance()
 
+		self.entries = set()
+
 		for code in liveCode:
+			for context in code.annotation.contexts:
+				if context.entryPoint:
+					self.entries.add((code, context))
+
+
 			assert isinstance(code, ast.Code), type(code)
 			ops, lcls = getOps(code)
 			for op in ops:

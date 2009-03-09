@@ -27,11 +27,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 		optimization.methodcall.methodCall(console, extractor, db)
 		console.end()
 
-	console.begin('lifetime analysis')
-	la =  analysis.lifetimeanalysis.LifetimeAnalysis()
-	la.process(dataflow)
-	dataflow.db.lifetime = la # HACK
-	console.end()
+	lifetimeAnalysis(console, dataflow)
 
 	if True:
 		# Fold, DCE, etc.
@@ -59,6 +55,13 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 		inlineCode(dataflow, entryPoints, db)
 		console.end()
 
+	console.end()
+
+def lifetimeAnalysis(console, dataflow):
+	console.begin('lifetime analysis')
+	la =  analysis.lifetimeanalysis.LifetimeAnalysis()
+	la.process(dataflow.db.liveCode)
+	dataflow.db.lifetime = la # HACK
 	console.end()
 
 def cpaAnalyze(console, e, entryPoints):
@@ -108,6 +111,9 @@ def evaluate(console, name, e, entryPoints):
 
 	# Get rid of dead functions/contexts
 	cull(console, entryPoints, result.db)
+
+	# HACK rerun lifetime analysis, as inlining causes problems.
+	#lifetimeAnalysis(console, result)
 
 	try:
 		pass#shapePass(console, e, result, entryPoints)

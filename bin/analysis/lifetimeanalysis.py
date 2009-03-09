@@ -67,10 +67,6 @@ def filteredSCC(G):
 	return o
 
 
-def objectOfInterest(obj):
-	return True
-	#return obj.context is not base.external and obj.context is not base.existing
-
 class ObjectInfo(object):
 	def __init__(self, obj):
 		self.obj            = obj
@@ -87,15 +83,15 @@ class ObjectInfo(object):
 		return bool(self.heldByClosure.intersection(refs))
 
 class ReadModifyAnalysis(object):
-	def __init__(self, sys, invokedBy):
+	def __init__(self, liveCode, invokedBy):
 		self.invokedBy       = invokedBy
 
 		self.contextReads    = collections.defaultdict(set)
 		self.contextModifies = collections.defaultdict(set)
 
-		self.collectDB(sys)
+		self.collectDB(liveCode)
 
-	def collectDB(self, sys):
+	def collectDB(self, liveCode):
 		allReads        = set()
 		allModifies     = set()
 
@@ -105,7 +101,7 @@ class ReadModifyAnalysis(object):
 		self.allocations = collections.defaultdict(set)
 
 		# Copy modifies
-		for code in sys.db.liveCode:
+		for code in liveCode:
 			ops, lcls = getOps(code)
 			for op in ops:
 				for cindex, context in enumerate(code.annotation.contexts):
@@ -117,7 +113,7 @@ class ReadModifyAnalysis(object):
 						allModifies.update(slots)
 
 		# Copy reads
-		for code in sys.db.liveCode:
+		for code in liveCode:
 			# vargs and karg allocations.
 			# Assumes code is in SSA form, so vparam and kparam can
 			# only point to freshly allocated arg objects.
@@ -429,10 +425,10 @@ class LifetimeAnalysis(object):
 			self.dirty.update(self.invokedBy[currentF][currentC])
 
 
-	def gatherInvokes(self, sys):
+	def gatherInvokes(self, liveCode):
 		invokes = invokesSchema.instance()
 
-		for code in sys.db.liveCode:
+		for code in liveCode:
 			assert isinstance(code, ast.Code), type(code)
 			ops, lcls = getOps(code)
 			for op in ops:
@@ -470,11 +466,11 @@ class LifetimeAnalysis(object):
 				obj.externallyVisible = True
 
 
-	def gatherSlots(self, sys):
+	def gatherSlots(self, liveCode):
 
 		searcher = ObjectSearcher(self)
 
-		for code in sys.db.liveCode:
+		for code in liveCode:
 			ops, lcls = getOps(code)
 			for lcl in lcls:
 				for ref in lcl.annotation.references[0]:
@@ -497,10 +493,10 @@ class LifetimeAnalysis(object):
 		searcher.process()
 
 
-	def process(self, sys):
-		self.gatherSlots(sys)
-		self.gatherInvokes(sys)
-		self.rm = ReadModifyAnalysis(sys, self.invokedBy)
+	def process(self, liveCode):
+		self.gatherSlots(liveCode)
+		self.gatherInvokes(liveCode)
+		self.rm = ReadModifyAnalysis(liveCode, self.invokedBy)
 
 
 		self.propagateVisibility()
@@ -508,14 +504,14 @@ class LifetimeAnalysis(object):
 		self.inferScope()
 
 		self.rm.process(self.killed)
-		self.createDB(sys)
+		self.createDB(liveCode)
 
-	def createDB(self, sys):
+	def createDB(self, liveCode):
 		self.readDB   = self.rm.opReadDB
 		self.modifyDB = self.rm.opModifyDB
 		self.allocations = self.rm.allocations
 
-		for code in sys.db.liveCode:
+		for code in liveCode:
 			ops, lcls = getOps(code)
 			for op in ops:
 				if not op.annotation.invokes[0]: continue

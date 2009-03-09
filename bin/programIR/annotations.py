@@ -3,34 +3,31 @@ import collections
 
 noMod = util.canonical.Sentinel('<no mod>')
 
-def ordered(data):
+ContextualAnnotation = collections.namedtuple('ContextualAnnotation', 'merged context')
+
+def annotationSet(data):
 	return tuple(sorted(data))
+
+def makeContextualAnnotation(cdata):
+	merged = set()
+	for data in cdata: merged.update(data)
+	return ContextualAnnotation(annotationSet(merged), tuple(cdata))
 
 def remapContextual(cdata, remap, translator=None):
 	if cdata is None: return None
 
-	mdata = set()
 	cout  = []
 
-	if translator:
-		for i in remap:
-			if i >= 0:
-				data = ordered([translator(item) for item in cdata[1][i]])
-				mdata.update(data)
-				cout.append(data)
-			else:
-				cout.append(())
+	for i in remap:
+		if i >= 0:
+			data = cdata[1][i]
+			if translator:
+				data = annotationSet([translator(item) for item in data])
+		else:
+			data = ()
+		cout.append(data)
 
-	else:
-		for i in remap:
-			if i >= 0:
-				data = cdata[1][i]
-				mdata.update(data)
-				cout.append(data)
-			else:
-				cout.append(())
-
-	return (ordered(mdata), tuple(cout))
+	return makeContextualAnnotation(cout)
 
 Origin = collections.namedtuple('Origin', 'name filename lineno')
 

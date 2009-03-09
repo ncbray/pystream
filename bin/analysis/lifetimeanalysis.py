@@ -13,6 +13,8 @@ from analysis.database import lattice
 
 from analysis.astcollector import getOps
 
+from programIR import annotations
+
 contextSchema   = structure.WildcardSchema()
 operationSchema = structure.TypeSchema((ast.Expression, ast.Statement))
 codeSchema  = structure.TypeSchema(ast.Code)
@@ -521,34 +523,19 @@ class LifetimeAnalysis(object):
 				reads    = self.readDB[code][op]
 				modifies = self.modifyDB[code][op]
 
-				mr = set()
 				rout = []
-
-				mm = set()
 				mout = []
-
-				ma = set()
-				aout = []
 
 				for cindex, context in enumerate(code.annotation.contexts):
 					creads = reads[context]
-					if creads:
-						mr.update(creads)
-						creads = tuple(sorted(creads))
-					else:
-						creads = ()
-
+					creads = annotations.annotationSet(creads) if creads else ()
 					rout.append(creads)
 
 					cmod = modifies[context]
-					if cmod:
-						mm.update(cmod)
-						cmod = tuple(sorted(cmod))
-					else:
-						cmod = ()
+					cmod = annotations.annotationSet(cmod) if cmod else ()
 					mout.append(cmod)
 
-				opReads    = (tuple(sorted(mr)), tuple(rout))
-				opModifies = (tuple(sorted(mm)), tuple(mout))
+				opReads    = annotations.makeContextualAnnotation(rout)
+				opModifies = annotations.makeContextualAnnotation(mout)
 
 				op.rewriteAnnotation(reads=opReads, modifies=opModifies)

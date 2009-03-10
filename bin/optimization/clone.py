@@ -444,7 +444,7 @@ class ProgramCloner(object):
 			for group in groups:
 				newcode = newfunc[code][id(group)]
 
-				fc = FunctionCloner(self.db, newfunc, self.groupLUT, code, newcode, group)
+				fc = FunctionCloner(newfunc, self.groupLUT, code, newcode, group)
 				fc.process()
 				simplify(extractor, self.db, newcode)
 
@@ -485,7 +485,7 @@ class ProgramCloner(object):
 class FunctionCloner(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, db, newfuncLUT, groupLUT, sourcefunction, destfunction, group):
+	def __init__(self, newfuncLUT, groupLUT, sourcefunction, destfunction, group):
 		self.newfuncLUT     = newfuncLUT
 		self.groupLUT       = groupLUT
 		self.sourcefunction = sourcefunction
@@ -499,9 +499,6 @@ class FunctionCloner(object):
 				self.contextRemap.append(i)
 
 		destfunction.annotation = sourcefunction.annotation.contextSubset(self.contextRemap)
-
-		# Transfer information that is tied to the code.
-		db.trackContextTransfer(sourcefunction, destfunction, group)
 
 		self.localMap = {}
 

@@ -306,24 +306,26 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.end('p')
 
 
-		if hasattr(data.db, 'lifetime'):
-			live = data.db.lifetime.live[(func, context)]
-			killed = data.db.lifetime.contextKilled[(func, context)]
+		live   = code.annotation.live
+		killed = code.annotation.killed
 
-			if live:
-				out.begin('h3')
-				out << "Live"
-				out.end('h3')
-				out.begin('p')
-				out.begin('ul')
-				for obj in live:
-					out.begin('li')
-					outputObjectShortName(out, obj, links)
-					if obj in killed:
-						out << " (killed)"
-					out.end('li')
-				out.end('ul')
-				out.end('p')
+		if live is not None:
+			live   = live[1][cindex]
+			killed = killed[1][cindex]
+
+			out.begin('h3')
+			out << "Live"
+			out.end('h3')
+			out.begin('p')
+			out.begin('ul')
+			for obj in live:
+				out.begin('li')
+				outputObjectShortName(out, obj, links)
+				if obj in killed:
+					out << " (killed)"
+				out.end('li')
+			out.end('ul')
+			out.end('p')
 
 
 		reads = data.funcReads[func][context]

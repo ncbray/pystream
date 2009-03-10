@@ -125,16 +125,3 @@ class CPADatabase(object):
 
 	def liveObjects(self):
 		return self.liveObjectGroups
-
-
-	def trackContextTransfer(self, srcFunc, dstFunc, contexts):
-		if hasattr(self, 'lifetime'):
-			live = self.lifetime.live
-			killed = self.lifetime.contextKilled
-
-			for context in contexts:
-				data = live.get((srcFunc, context))
-				if data: live[(dstFunc, context)] = data
-
-				data = killed.get((srcFunc, context))
-				if data: killed[(dstFunc, context)] = data

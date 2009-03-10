@@ -59,9 +59,8 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 
 def lifetimeAnalysis(console, dataflow):
 	console.begin('lifetime analysis')
-	la =  analysis.lifetimeanalysis.LifetimeAnalysis()
+	la = analysis.lifetimeanalysis.LifetimeAnalysis()
 	la.process(dataflow.db.liveCode)
-	dataflow.db.lifetime = la # HACK
 	console.end()
 
 def cpaAnalyze(console, e, entryPoints):
@@ -103,8 +102,6 @@ def cull(console, entryPoints, db):
 def evaluate(console, name, e, entryPoints):
 	console.begin('compile')
 	result = cpaPass(console, e, entryPoints)
-
-	#analysis.shape.evaluate(e, entryPoints, result)
 
 	# Get rid of dead functions/contexts
 	cull(console, entryPoints, result.db)

@@ -37,29 +37,39 @@ class Annotation(object):
 
 
 class CodeAnnotation(Annotation):
-	__slots__ = 'contexts', 'descriptive', 'staticFold', 'dynamicFold', 'origin'
+	__slots__ = ['contexts', 'descriptive',
+		'staticFold', 'dynamicFold',
+		'origin',
+		'live', 'killed']
 
-	def __init__(self, contexts, descriptive, staticFold, dynamicFold, origin):
+	def __init__(self, contexts, descriptive, staticFold, dynamicFold, origin, live, killed):
 		self.contexts    = contexts
 		self.descriptive = descriptive
 		self.staticFold  = staticFold
 		self.dynamicFold = dynamicFold
 		self.origin      = origin
+		self.live        = live
+		self.killed      = killed
 
 	def rewrite(self, contexts=noMod, descriptive=noMod,
 			staticFold=noMod, dynamicFold=noMod,
-			origin=noMod):
+			origin=noMod,
+			live=noMod, killed=noMod):
 		if contexts    is noMod: contexts    = self.contexts
 		if descriptive is noMod: descriptive = self.descriptive
 		if staticFold  is noMod: staticFold  = self.staticFold
 		if dynamicFold is noMod: dynamicFold = self.dynamicFold
 		if origin      is noMod: origin      = self.origin
+		if live        is noMod: live        = self.live
+		if killed      is noMod: killed      = self.killed
 
-		return CodeAnnotation(contexts, descriptive, staticFold, dynamicFold, origin)
+		return CodeAnnotation(contexts, descriptive, staticFold, dynamicFold, origin, live, killed)
 
 	def contextSubset(self, remap):
 		contexts = [self.contexts[i] for i in remap]
-		return self.rewrite(contexts=contexts)
+		live     = remapContextual(self.live, remap)
+		killed   = remapContextual(self.killed, remap)
+		return self.rewrite(contexts=contexts, live=live, killed=killed)
 
 class OpAnnotation(Annotation):
 	__slots__ = 'invokes', 'reads', 'modifies', 'allocates', 'origin'
@@ -110,6 +120,6 @@ class SlotAnnotation(Annotation):
 		return self.rewrite(references=references)
 
 
-emptyCodeAnnotation  = CodeAnnotation(None, False, None, None, None)
+emptyCodeAnnotation  = CodeAnnotation(None, False, None, None, None, None, None)
 emptyOpAnnotation    = OpAnnotation(None, None, None, None, None)
 emptySlotAnnotation  = SlotAnnotation(None)

@@ -519,6 +519,18 @@ class LifetimeAnalysis(object):
 		self.allocations = self.rm.allocations
 
 		for code in liveCode:
+			# Annotate the code
+			live   = []
+			killed = []
+			for cindex, context in enumerate(code.annotation.contexts):
+				key = (code, context)
+				live.append(annotations.annotationSet(self.live[key]))
+				killed.append(annotations.annotationSet(self.contextKilled[key]))
+
+			code.rewriteAnnotation(live=annotations.makeContextualAnnotation(live),
+				killed=annotations.makeContextualAnnotation(killed))
+
+			# Annotate the ops
 			ops, lcls = getOps(code)
 			for op in ops:
 				if not op.annotation.invokes[0]: continue

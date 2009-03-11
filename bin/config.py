@@ -7,9 +7,10 @@ base, junk = os.path.split(__file__)
 outputDirectory = os.path.normpath(os.path.join(base, '..', 'summaries'))
 
 
-if False:
+if True:
 	testOnly = [
-		#('tests', 'test_full'),
+		('tests', 'test_full'),
+		('tests', 'shape', 'test_shape'),
 		('tests', 'shape', 'test_shape_compound'),
 	]
 

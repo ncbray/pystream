@@ -13,8 +13,8 @@ confusion = False
 loops = False
 tuples = False
 
-physics   = True
-recursive = True
+physics   = False
+recursive = False
 pystone   = True
 
 class FullTestBase(unittest.TestCase):

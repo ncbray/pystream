@@ -26,11 +26,24 @@ class MockDB(object):
 	def invocations(self, function, context, op):
 		return self.invokeLUT[(function, context, op)]
 
+class MockInformationProvider(object):
+	def __init__(self, sys):
+		self.sys = sys
+
+	def loadSlotName(self, node):
+		return (node.fieldtype, node.name.object)
+
+	def storeSlotName(self, node):
+		return (node.fieldtype, node.name.object)
+
+	def indexSlotName(self, lcl, i):
+		return ('Array', self.sys.extractor.getObject(i))
+
 class TestConstraintBase(unittest.TestCase):
 	def setUp(self):
 		self.extractor = decompiler.programextractor.Extractor()
 		self.db  = MockDB()
-		self.sys = analysis.shape.RegionBasedShapeAnalysis(self.extractor, self.db)
+		self.sys = analysis.shape.RegionBasedShapeAnalysis(self.extractor, self.db, MockInformationProvider(self))
 
 		self.sys.cpacanonical = canonicalobjects.CanonicalObjects()
 		self.sys.setManager = setmanager.CachedSetManager()

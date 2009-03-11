@@ -294,7 +294,8 @@ class ShapeConstraintBuilder(object):
 		return info
 
 	def indexExpr(self, expr, index):
-		field = self.sys.canonical.fieldSlot(None, ('Array', self.sys.extractor.getObject(index)))
+		slot = self.sys.info.indexSlotName(expr.slot.lcl, index)
+		field = self.sys.canonical.fieldSlot(None, slot)
 		return self.sys.canonical.fieldExpr(expr, field)
 
 	def maxVArgLength(self):
@@ -379,8 +380,25 @@ class ShapeConstraintBuilder(object):
 		self.constraints.append(constraint)
 
 	def makeMerge(self, dstFunc, splitMergeInfo, returnPoint):
+		self.current = self.codeReturnPoint(dstFunc)
+
+		if hasattr(self.sys.info, 'regions'):
+			srcObjs = self.sys.info.regions.liveObjs[self.function]
+			dstObjs = self.sys.info.regions.liveObjs[dstFunc]
+			killObjs = dstObjs-srcObjs
+
+			killSlots = set()
+			for obj in killObjs:
+				for field in obj:
+					print "x", field
+					slot = self.sys.canonical.fieldSlot(None, field)
+					killSlots.add(slot)
+
+			if killSlots:
+				self.forgetAll(killSlots)
+
 		# Call return: merge the information
-		pre  = self.codeReturnPoint(dstFunc)
+		pre  = self.current
 		post = returnPoint
 		constraint = constraints.MergeConstraint(self.sys, pre, post, splitMergeInfo)
 		self.constraints.append(constraint)
@@ -430,14 +448,14 @@ class ShapeConstraintBuilder(object):
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, target):
-		field = (node.fieldtype, node.name.object)
+		field = self.sys.info.loadSlotName(node)
 		self.assign(self.fieldExpr(node.expr, field), self.localExpr(target))
 
 	@dispatch(ast.Store)
 	def visitStore(self, node):
 		try:
 			self.pre(node)
-			field        = (node.fieldtype, node.name.object)
+			field = self.sys.info.storeSlotName(node)
 			self.assign(self.localExpr(node.value), self.fieldExpr(node.expr, field))
 			self.post(node)
 		except:
@@ -466,10 +484,8 @@ class ShapeConstraintBuilder(object):
 
 		src = self.localExpr(node.expr)
 
-		# HACK for dealing with Return(Existing(...))
-		if src:
-			constraint = constraints.AssignmentConstraint(self.sys, pre, self.returnPoint, src, self.localExpr(self.returnValue))
-			self.constraints.append(constraint)
+		constraint = constraints.AssignmentConstraint(self.sys, pre, self.returnPoint, src, self.localExpr(self.returnValue))
+		self.constraints.append(constraint)
 
 		self.current = None
 		self.post(node)

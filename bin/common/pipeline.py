@@ -113,7 +113,7 @@ def evaluate(console, name, e, entryPoints):
 	lifetimeAnalysis(console, result)
 
 	try:
-		pass#shapePass(console, e, result, entryPoints)
+		shapePass(console, e, result, entryPoints)
 
 	finally:
 		cpaDump(console, name, e, result, entryPoints)

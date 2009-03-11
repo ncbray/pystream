@@ -11,6 +11,10 @@ import PADS.UnionFind
 
 import collections
 
+from analysis.astcollector import getOps
+
+from programIR.python import ast
+
 class Region(object):
 	def __init__(self, objects):
 		self.objects = frozenset(objects)
@@ -25,60 +29,66 @@ class RegionAnalysis(object):
 		self.db = db
 		self.uf = PADS.UnionFind.UnionFind()
 
+		self.liveObjs = {}
+		self.liveFields = {}
+
 	def merge(self, references):
 		if references:
 			self.uf.union(*references)
 
 	def process(self):
-		db = self.db
+		db = self.db.db
 
-		functionSensitive = True
-		heapSensitive = True
+		# TODO get all fields from heap?
 
 		# Local references
-		for func in db.liveFunctions():
-			info = db.functionInfo(func)
-			for local, localInfo in info.localInfos.iteritems():
-				if functionSensitive:
-					for context, clInfo in localInfo.contexts.iteritems():
-						self.merge(clInfo.references)
-				else:
-					self.merge(localInfo.merged.references)
+		for code in db.liveCode:
+			self.liveObjs[code]   = set()
+			self.liveFields[code] = set()
 
-		# Heap references
-		for heap, heapInfo in db.heapInfos.iteritems():
-			for (slottype, key), slotInfo in heapInfo.slotInfos.iteritems():
-				if heapSensitive:
-					for context, cInfo in slotInfo.contexts.iteritems():
-						self.merge(cInfo.references)
-				else:
-					self.merge(slotInfo.merged.references)
+			ops, lcls = getOps(code)
+			for op in ops:
+
+				self.liveFields[code].update(op.annotation.reads[0])
+				self.liveFields[code].update(op.annotation.modifies[0])
+
+				if not op.annotation.invokes[0]:
+					# If the op does not invoke, it does real work.
+					self.merge(op.annotation.reads[0])
+					self.merge(op.annotation.modifies[0])
+
+					# TODO seperate by concrete field type before merge
+
+				for cobj in op.annotation.allocates[0]:
+					if not cobj.leaks:
+						self.liveObjs[code].add(cobj)
+
+			for lcl in lcls:
+				for ref in lcl.annotation.references[0]:
+					if not ref.leaks:
+						self.liveObjs[code].add(ref)
+
+			#print code, len(self.liveFields[code])
 
 
-		return self.makeRegions()
+	def printGroups(self):
+
+		lut = collections.defaultdict(set)
+
+		for slot in self.uf:
+			lut[self.uf[slot]].add(slot)
 
 
-	def makeRegions(self):
-		reverseLUT = collections.defaultdict(set)
-
-		# HACK
-		for obj, parent in self.uf.parents.iteritems():
-			reverseLUT[parent].add(obj)
-
-		lut = {}
-		for parent, children in reverseLUT.iteritems():
-			region = Region(children)
-			for child in children:
-				lut[child] = region
-
-			if len(children) > 1:
-				for child in children:
-					print child
-				print
-
-		return lut
-
+		print
+		print "Groups"
+		for key, values in lut.iteritems():
+			print key
+			for slot in values:
+				if slot is not key:
+					print '\t', slot
+			print
 
 def evaluate(extractor, entryPoints, db):
 	ra = RegionAnalysis(extractor, entryPoints, db)
-	return ra.process()
+	ra.process()
+	return ra

@@ -93,8 +93,12 @@ class Worklist(object):
 
 		if self.useful: self.usefulSteps += 1
 
-	def process(self, sys, trace=False):
+	def process(self, sys, trace=False, limit=0):
+		stop = self.steps+limit
 		while self.worklist:
 			self.step(sys, trace)
 
+			if limit and self.steps >= stop:
+				return False
 
+		return True

@@ -57,4 +57,5 @@ class FieldSlot(Slot):
 		return True
 
 	def __repr__(self):
-		return "field(%s, %s)" % (str(self.heap), str(self.field))
+		return repr(self.field)
+		#return "field(%s, %s)" % (str(self.heap), str(self.field))

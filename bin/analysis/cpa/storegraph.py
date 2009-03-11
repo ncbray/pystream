@@ -111,14 +111,15 @@ class RegionNode(MergableNode):
 
 
 class ObjectNode(MergableNode):
-	__slots__ = 'region', 'xtype', 'slots'
+	__slots__ = 'region', 'xtype', 'slots', 'leaks'
 	def __init__(self, region, xtype):
 		MergableNode.__init__(self)
 
 		assert isinstance(xtype, extendedtypes.ExtendedType), type(xtype)
 		self.region = region
 		self.xtype  = xtype
-		self.slots = {}
+		self.slots  = {}
+		self.leaks  = True
 
 	def merge(self, sys, other):
 		self  = self.getForward()

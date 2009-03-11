@@ -40,24 +40,24 @@ invokesStruct = structure.StructureSchema(
 	)
 invokesSchema = wrapOpContext(tupleset.TupleSetSchema(invokesStruct))
 
-invokedByStruct = structure.StructureSchema(
+invokeSourcesStruct = structure.StructureSchema(
 	('code',      codeSchema),
 	('operation', operationSchema),
 	('context',   contextSchema)
 	)
-invokedBySchema = wrapCodeContext(tupleset.TupleSetSchema(invokedByStruct))
+invokeSourcesSchema = wrapCodeContext(tupleset.TupleSetSchema(invokeSourcesStruct))
 
 
 def invertInvokes(invokes):
-	invokedBy = invokedBySchema.instance()
+	invokeSources = invokeSourcesSchema.instance()
 
 	for code, ops in invokes:
 		assert isinstance(code, ast.Code), type(code)
 		for op, contexts in ops:
 			for context, invs in contexts:
 				for dstCode, dstContext in invs:
-					invokedBy[dstCode][dstContext].add(code, op, context)
-	return invokedBy
+					invokeSources[dstCode][dstContext].add(code, op, context)
+	return invokeSources
 
 def filteredSCC(G):
 	o = []
@@ -82,9 +82,12 @@ class ObjectInfo(object):
 	def isReachableFrom(self, refs):
 		return bool(self.heldByClosure.intersection(refs))
 
+	def leaks(self):
+		return self.globallyVisible or self.externallyVisible
+
 class ReadModifyAnalysis(object):
-	def __init__(self, liveCode, invokedBy):
-		self.invokedBy       = invokedBy
+	def __init__(self, liveCode, invokeSources):
+		self.invokeSources       = invokeSources
 
 		self.contextReads    = collections.defaultdict(set)
 		self.contextModifies = collections.defaultdict(set)
@@ -160,12 +163,12 @@ class ReadModifyAnalysis(object):
 	def processContextReads(self, current):
 		currentF, currentC = current
 
-		for prev in self.invokedBy[currentF][currentC]:
+		for prev in self.invokeSources[currentF][currentC]:
 			prevF, prevO, prevC = prev
 
 			prevRead = self.opReadDB[prevF][prevO]
 
-			killed = self.killed[(prevC, currentC)]
+			killed = self.killed[(prevF, prevO, prevC)][(currentF, currentC)]
 
 			# Propigate reads
 			filtered = set([value for value in self.contextReads[(currentF, currentC)] if value.object not in killed])
@@ -192,12 +195,12 @@ class ReadModifyAnalysis(object):
 	def processContextModifies(self, current):
 		currentF, currentC = current
 
-		for prev in self.invokedBy[currentF][currentC]:
+		for prev in self.invokeSources[currentF][currentC]:
 			prevF, prevO, prevC = prev
 
 			prevMod = self.opModifyDB[prevF][prevO]
 
-			killed = self.killed[(prevC, currentC)]
+			killed = self.killed[(prevF, prevO, prevC)][(currentF, currentC)]
 
 			# Propigate modifies
 			filtered = set([value for value in self.contextModifies[(currentF, currentC)] if value.object not in killed])
@@ -251,8 +254,6 @@ class LifetimeAnalysis(object):
 		self.globallyVisible = set()
 		self.externallyVisible = set()
 
-
-
 	def getObjectInfo(self, obj):
 		assert isinstance(obj, storegraph.ObjectNode), type(obj)
 		if obj not in self.objects:
@@ -300,6 +301,10 @@ class LifetimeAnalysis(object):
 		self.findGloballyVisible()
 		self.findExternallyVisible()
 		self.escapes = self.globallyVisible.union(self.externallyVisible)
+
+		# Annotate the objects
+		for info in self.objects.itervalues():
+			info.obj.leaks = info.leaks()
 
 
 	def propagateHeld(self):
@@ -351,13 +356,13 @@ class LifetimeAnalysis(object):
 	def inferScope(self):
 		# Figure out how far back on the stack the object may propagate
 		self.live = collections.defaultdict(set)
-		self.killed = collections.defaultdict(set)
+		self.killed = collections.defaultdict(lambda: collections.defaultdict(set))
 
 		# Seed the inital dirty set
 		self.dirty = set()
 		for (code, context), objs in self.rm.allocations.iteritems():
 			self.live[(code, context)].update(objs-self.escapes)
-			self.dirty.update(self.invokedBy[code][context])
+			self.dirty.update(self.invokeSources[code][context])
 
 		while self.dirty:
 			current = self.dirty.pop()
@@ -369,21 +374,20 @@ class LifetimeAnalysis(object):
 	def convertKills(self):
 		# Convert kills on edges to kills on nodes.
 		self.contextKilled = collections.defaultdict(set)
-		for dstF, contexts in self.invokedBy:
+		for dstF, contexts in self.invokeSources:
 			for dstC, srcs in contexts:
+				if not srcs: continue
 
-				if srcs:
-					killedAll = None
-					for srcF, srcO, srcC in srcs:
-						newKilled = self.killed[(srcC, dstC)]
-						if killedAll is None:
-							killedAll = newKilled
-						else:
-							killedAll = killedAll.intersection(newKilled)
-				else:
-					killedAll = set()
+				killedAll = None
+				for srcF, srcO, srcC in srcs:
+					newKilled = self.killed[(srcF, srcO, srcC)][(dstF, dstC)]
+					if killedAll is None:
+						killedAll = newKilled
+					else:
+						killedAll = killedAll.intersection(newKilled)
 
-				if killedAll: self.contextKilled[(dstF, dstC)].update(killedAll)
+				if killedAll:
+					self.contextKilled[(dstF, dstC)].update(killedAll)
 
 		for code, context in self.entries:
 			self.contextKilled[(code, context)].update(self.live[(code, context)])
@@ -417,12 +421,12 @@ class LifetimeAnalysis(object):
 					newLive.add(dstLive)
 				else:
 					# The object will never propagate along this invocation
-					self.killed[(currentC, dstC)].add(dstLive)
+					self.killed[(currentF, currentO, currentC)][(dstF, dstC)].add(dstLive)
 
 		if newLive:
 			# Propigate dirty
 			live[(currentF, currentC)].update(newLive)
-			self.dirty.update(self.invokedBy[currentF][currentC])
+			self.dirty.update(self.invokeSources[currentF][currentC])
 
 
 	def gatherInvokes(self, liveCode):
@@ -460,10 +464,10 @@ class LifetimeAnalysis(object):
 
 						self.codeRefersToHeap[(code, context)].add(ref)
 
-		invokedBy = invertInvokes(invokes)
+		invokeSources = invertInvokes(invokes)
 
 		self.invokes   = invokes
-		self.invokedBy = invokedBy
+		self.invokeSources = invokeSources
 
 	def markVisible(self, lcl, cindex):
 		if lcl is not None:
@@ -503,19 +507,21 @@ class LifetimeAnalysis(object):
 	def process(self, liveCode):
 		self.gatherSlots(liveCode)
 		self.gatherInvokes(liveCode)
-		self.rm = ReadModifyAnalysis(liveCode, self.invokedBy)
 
 
 		self.propagateVisibility()
 		self.propagateHeld()
-		self.inferScope()
 
+		self.rm = ReadModifyAnalysis(liveCode, self.invokeSources)
+		self.inferScope()
 		self.rm.process(self.killed)
 		self.createDB(liveCode)
 
+		del self.rm
+
 	def createDB(self, liveCode):
-		self.readDB   = self.rm.opReadDB
-		self.modifyDB = self.rm.opModifyDB
+		readDB   = self.rm.opReadDB
+		modifyDB = self.rm.opModifyDB
 		self.allocations = self.rm.allocations
 
 		for code in liveCode:
@@ -535,11 +541,12 @@ class LifetimeAnalysis(object):
 			for op in ops:
 				if not op.annotation.invokes[0]: continue
 
-				reads    = self.readDB[code][op]
-				modifies = self.modifyDB[code][op]
+				reads    = readDB[code][op]
+				modifies = modifyDB[code][op]
 
 				rout = []
 				mout = []
+				aout = []
 
 				for cindex, context in enumerate(code.annotation.contexts):
 					creads = reads[context]
@@ -550,7 +557,19 @@ class LifetimeAnalysis(object):
 					cmod = annotations.annotationSet(cmod) if cmod else ()
 					mout.append(cmod)
 
-				opReads    = annotations.makeContextualAnnotation(rout)
-				opModifies = annotations.makeContextualAnnotation(mout)
 
-				op.rewriteAnnotation(reads=opReads, modifies=opModifies)
+					kills = self.killed[(code, op, context)]
+
+					calloc = set()
+					for dstCode, dstContext in op.annotation.invokes[1][cindex]:
+						live = self.live[(dstCode, dstContext)]
+						killed = kills[(dstCode, dstContext)]
+						calloc.update(live-killed)
+					aout.append(annotations.annotationSet(calloc))
+
+
+				opReads     = annotations.makeContextualAnnotation(rout)
+				opModifies  = annotations.makeContextualAnnotation(mout)
+				opAllocates = annotations.makeContextualAnnotation(aout)
+
+				op.rewriteAnnotation(reads=opReads, modifies=opModifies, allocates=opAllocates)

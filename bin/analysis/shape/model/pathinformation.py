@@ -10,11 +10,6 @@ class EquivalenceClass(object):
 		self.forward = None
 		self.weight  = 0
 
-	def __iter__(self):
-		if self.attrs:
-			for k in self.attrs.iterkeys():
-				yield k, self.getAttr(k)
-
 	def isTrivial(self, ignoreMiss=False):
 		return not (self.attrs or self.hit.certain() or self.weight > 1)
 
@@ -94,11 +89,14 @@ class EquivalenceClass(object):
 
 			# Recursively absorb attributes...
 			# NOTE other is forwarded, so the attributes of other won't change...
-			for k, v in other:
-				self.absorbAttr(k, v)
+			if other.attrs is not None:
+				for k, v in other.attrs.iteritems():
+					while v.forward is not None: v = v.forward
 
-				# We might have gotten absorbed?
-				self = self.getForward()
+					self.absorbAttr(k, v)
+
+					# We might have gotten absorbed?
+					self = self.getForward()
 
 			other.attrs = None
 
@@ -242,7 +240,7 @@ class EquivalenceClass(object):
 		return eq, changed
 
 	def ageExtended(self, canonical):
-		if self.attrs:
+		if self.attrs is not None:
 			newAttr = {}
 			for slot, eq in self.attrs.iteritems():
 				while eq.forward is not None: eq = eq.forward
@@ -254,12 +252,13 @@ class EquivalenceClass(object):
 
 
 	def unageExtended(self):
-		newAttr = {}
-		for slot, eq in self:
-			#	assert hasattr(slot, 'unage'), slot
-			aged = slot.unage()
-			newAttr[aged] = eq
-		self.attrs = newAttr
+		if self.attrs is not None:
+			newAttr = {}
+			for slot, eq in self.attrs.iteritems():
+				while eq.forward is not None: eq = eq.forward
+				aged = slot.unage()
+				newAttr[aged] = eq
+			self.attrs = newAttr
 
 
 
@@ -268,9 +267,12 @@ class EquivalenceClass(object):
 			processed.add(self)
 			eparam = canonical.extendedParameterFromPath(path)
 			newParam[eparam] = self
-			for slot, eq in self:
-				assert not slot.isExtendedParameter(), slot
-				eq.findExtended(canonical, path+(slot,), newParam, processed)
+
+			if self.attrs is not None:
+				for slot, eq in self.attrs.iteritems():
+					while eq.forward is not None: eq = eq.forward
+					assert not slot.isExtendedParameter(), slot
+					eq.findExtended(canonical, path+(slot,), newParam, processed)
 			processed.remove(self)
 
 	def extendParameters(self, canonical, parameters):
@@ -281,9 +283,11 @@ class EquivalenceClass(object):
 		newParam  = {}
 
 		# Find the extended parameters
-		for slot, eq in self:
-			if slot in parameters:
-				eq.findExtended(canonical, (slot,), newParam, processed)
+		if self.attrs is not None:
+			for slot, eq in self.attrs.iteritems():
+				while eq.forward is not None: eq = eq.forward
+				if slot in parameters:
+					eq.findExtended(canonical, (slot,), newParam, processed)
 
 		# Root them
 		# Done is a seperate stage to prevent wacking the previous iterator
@@ -315,20 +319,24 @@ class EquivalenceClass(object):
 			# Copy unaccessable paths
 			pure = True
 			kill = []
-			for slot, next in self:
-				accessed = accessedCallback(slot)
-				extended = slot.isExtendedParameter()
 
-				if accessed and not extended:
-					# Node is impure
-					pure = False
-				else:
-					newNext, newPure = next._splitHidden(extendedParameters, sharedEq, accessedCallback, lut, noKill)
-					pure &= newPure
-					eq.setAttr(slot, newNext)
+			if self.attrs is not None:
+				for slot, next in self.attrs.iteritems():
+					while next.forward is not None: next = next.forward
 
-					if newPure and not extended:
-						kill.append(slot)
+					accessed = accessedCallback(slot)
+					extended = slot.isExtendedParameter()
+
+					if accessed and not extended:
+						# Node is impure
+						pure = False
+					else:
+						newNext, newPure = next._splitHidden(extendedParameters, sharedEq, accessedCallback, lut, noKill)
+						pure &= newPure
+						eq.setAttr(slot, newNext)
+
+						if newPure and not extended:
+							kill.append(slot)
 
 			# Kill all of the pure paths.
 			if not noKill:
@@ -342,15 +350,14 @@ class EquivalenceClass(object):
 			return lut[self]
 
 	def killHiddenRoots(self):
-		killed = []
-		for slot, next in self:
-			if slot.isAgedParameter():
-				killed.append(slot)
-#			elif slot.isLocal():
-#				if not slot.isParameter() and not slot.isExtendedParameter():
-#					killed.append(slot)
-		for kill in killed:
-			self.delAttr(kill)
+		if self.attrs is not None:
+			killed = []
+			for slot in self.attrs.iterkeys():
+				if slot.isAgedParameter():
+					killed.append(slot)
+
+			for kill in killed:
+				self.delAttr(kill)
 
 
 	def splitHidden(self, extendedParameters, accessedCallback):
@@ -391,15 +398,17 @@ class PathInformation(object):
 			self.root  = root
 
 	def containsExtended(self):
-		for slot, value in self.root:
-			if slot.isExtendedParameter():
-				return True
+		if self.root.attrs is not None:
+			for slot in self.root.attrs.iterkeys():
+				if slot.isExtendedParameter():
+					return True
 		return False
 
 	def containsAged(self):
-		for slot, value in self.root:
-			if slot.isAgedParameter():
-				return True
+		if self.root.attrs is not None:
+			for slot in self.root.attrs.iterkeys():
+				if slot.isAgedParameter():
+					return True
 		return False
 
 	def copy(self, kill=None, keepHits=False, keepMisses=False):

@@ -247,7 +247,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.endl()
 
 
-		def printTabbed(name, values):
+		def printTabbed(out, name, values, links):
 			out << '\t'
 			out << name
 			out.endl()
@@ -273,7 +273,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			else:
 				lclName = str(lcl)
 
-			printTabbed(lclName, refs)
+			printTabbed(out, lclName, refs, links)
 		out.end('pre')
 		out.endl()
 

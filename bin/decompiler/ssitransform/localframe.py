@@ -35,7 +35,7 @@ class Merge(object):
 		for suite, frame in self.pairs:
 			assert isinstance(suite, Inserter)
 			frame.setChild(self)
-			
+
 		self.lut 	= {}
 
 	def setChild(self, child):
@@ -56,17 +56,17 @@ class Merge(object):
 	def doMerge(self, oldlcl, newlcl=None):
 		assert isinstance(oldlcl, Local), oldlcl
 
-		
+
 		# Read the original values.
 		originals = []
 
 		for suite, frame in self.pairs:
-			frame.collectConcrete(oldlcl, originals) 
-		
+			frame.collectConcrete(oldlcl, originals)
+
 		if not originals: return None
 
 		example = originals[0]
-		same = all(map(lambda e: e==example, originals))
+		same = all([e==example for e in originals])
 
 		if same:
 			return originals[0]
@@ -79,11 +79,11 @@ class Merge(object):
 
 	def readLocal(self, lcl, merge=None):
 		assert isinstance(lcl, Local), lcl
-		
+
 		if not lcl in self.lut:
 			self.lut[lcl] = self.doMerge(lcl, merge)
 		return self.lut[lcl]
-			
+
 
 	def collectConcrete(self, lcl, outp):
 		if lcl in self.lut:
@@ -122,7 +122,7 @@ class LoopMerge(object):
 	def setChild(self, child):
 		assert self.child == None and child != None
 		self.child = child
-		
+
 
 	def readLocal(self, lcl, merge=None):
 ##		print "Loop read local:", lcl, merge, id(self)
@@ -209,7 +209,7 @@ class ExceptionMerge(object):
 
 	def setChild(self, child):
 		pass
-		
+
 	def collectConcrete(self, lcl, outp):
 		outp.append(self.__get(lcl))
 
@@ -222,9 +222,9 @@ class LocalFrame(object):
 	def __init__(self, parent=None):
 		self.child 	= None
 		self.parent 	= parent
-		
+
 		if parent: parent.setChild(self)
-		
+
 		self.lut = {}
 
 	def setChild(self, child):
@@ -233,7 +233,7 @@ class LocalFrame(object):
 
 	def readLocal(self, lcl, merge=None):
 		assert isinstance(lcl, Local)
-		
+
 		if not lcl in self.lut:
 			outp = self.parent.readLocal(lcl, merge) if self.parent else None
 			self.lut[lcl] = outp
@@ -249,7 +249,7 @@ class LocalFrame(object):
 		# Rename the local.
 		newlcl = Local(lcl.name)
 		self.lut[lcl] = newlcl
-		
+
 		return newlcl
 
 	def redefineLocal(self, oldlcl, newlcl):

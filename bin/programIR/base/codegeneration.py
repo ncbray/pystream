@@ -55,8 +55,8 @@ def makeRepr(name, fields):
 
 
 def makeAccept(name):
-	code = """def accept(self, visitor, *args, **kargs):
-	return visitor.visit%s(self, *args, **kargs)
+	code = """def accept(self, visitor, *args):
+	return visitor.visit%s(self, *args)
 """ % (name)
 
 	return code

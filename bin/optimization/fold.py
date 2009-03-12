@@ -85,6 +85,11 @@ class FoldRewrite(object):
 		elif isinstance(ref, ast.Existing):
 			return (ref.object,)
 
+	def _cobjSlotRefs(self, cobj, slotType, key):
+			fieldName = self.db.canonical.fieldName(slotType, key)
+			slot = cobj.knownField(fieldName)
+			return tuple(iter(slot))
+
 	def getMethodFunction(self, expr, name):
 		# Static setup
 		canonical = self.db.canonical
@@ -92,10 +97,6 @@ class FoldRewrite(object):
 		typeStrObj = self.extractor.getObject('type')
 		dictStrObj = self.extractor.getObject('dictionary')
 
-		def cobjSlotRefs(cobj, slotType, key):
-			fieldName = canonical.fieldName(slotType, key)
-			slot = cobj.knownField(fieldName)
-			return tuple(iter(slot))
 
 		# Dynamic setup
 		funcs = set()
@@ -104,12 +105,12 @@ class FoldRewrite(object):
 
 		for exprObj in exprObjs:
 			assert not isinstance(exprObj, tuple), exprObj
-			typeObjs = cobjSlotRefs(exprObj, 'LowLevel', typeStrObj)
+			typeObjs = self._cobjSlotRefs(exprObj, 'LowLevel', typeStrObj)
 			for t in typeObjs:
-				dictObjs = cobjSlotRefs(t, 'LowLevel', dictStrObj)
+				dictObjs = self._cobjSlotRefs(t, 'LowLevel', dictStrObj)
 				for d in dictObjs:
 					for nameObj in nameObjs:
-						funcObjs = cobjSlotRefs(d, 'Dictionary', nameObj)
+						funcObjs = self._cobjSlotRefs(d, 'Dictionary', nameObj)
 						funcs.update(funcObjs)
 
 		if len(funcs) == 1:

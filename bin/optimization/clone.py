@@ -45,10 +45,6 @@ class GroupUnifier(object):
 
 		return result
 
-	def iterdirty(self):
-		while self.dirty:
-			yield self.dirty.pop()
-
 	def iterGroups(self):
 		return self.unifyGroups.iterkeys()
 
@@ -122,7 +118,9 @@ class ProgramCloner(object):
 				if context.entryPoint:
 					self.doUnify(code, set((context,)), True)
 
-		for current in self.unifier.iterdirty():
+		while self.unifier.dirty:
+			current = self.unifier.dirty.pop()
+
 			code    = current.signature.code
 			group   = self.unifier.group(current)
 
@@ -436,6 +434,10 @@ class ProgramCloner(object):
 		return newfunc
 
 
+	def getIndirect(self, code, newfunc):
+		oldContext = self.indirectGroup[code]
+		return newfunc[code][self.groupLUT[oldContext]]
+
 	def rewriteProgram(self, extractor, entryPoints):
 		newfunc = self.createNewCodeNodes()
 
@@ -448,16 +450,11 @@ class ProgramCloner(object):
 				fc.process()
 				simplify(extractor, self.db, newcode)
 
-
-		def getIndirect(code):
-			oldContext = self.indirectGroup[code]
-			return newfunc[code][self.groupLUT[oldContext]]
-
 		# Entry points are considered to be "indirect"
 		# As there is only one indirect function, we know it is the entry point.
 		newEP = []
 		for func, funcobj, args in entryPoints:
-			func = getIndirect(func)
+			func = self.getIndirect(func, newfunc)
 			newEP.append((func, funcobj, args))
 
 		# HACK Mutate the list.
@@ -469,7 +466,7 @@ class ProgramCloner(object):
 		newCallLUT = {}
 		for obj, code in extractor.desc.callLUT.iteritems():
 			if code in self.indirectGroup:
-				newCallLUT[obj] = getIndirect(code)
+				newCallLUT[obj] = self.getIndirect(code, newfunc)
 
 		extractor.desc.callLUT = newCallLUT
 
@@ -560,19 +557,19 @@ class FunctionCloner(object):
 		newfunc = self.newfuncLUT[func][self.groupLUT[context]]
 		return context, newfunc
 
+	def annotationMapper(self, target):
+		code, context = target
+		group = self.groupLUT[context]
+		newcode = self.newfuncLUT[code][group]
+		return newcode, context
+
 	def transferAnalysisData(self, original, replacement):
 		if not isinstance(original, (ast.Expression, ast.Statement)):    return
 		if not isinstance(replacement, (ast.Expression, ast.Statement)): return
 
 		assert original is not replacement, original
 
-		def annotationMapper(target):
-			code, context = target
-			group = self.groupLUT[context]
-			newcode = self.newfuncLUT[code][group]
-			return newcode, context
-
-		replacement.annotation = original.annotation.contextSubset(self.contextRemap, annotationMapper)
+		replacement.annotation = original.annotation.contextSubset(self.contextRemap, self.annotationMapper)
 
 
 	def transferLocal(self, original, replacement):

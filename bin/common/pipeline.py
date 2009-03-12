@@ -87,13 +87,12 @@ def cpaPass(console, e, entryPoints):
 
 
 def shapePass(console, e, result, entryPoints):
-	if False:
-		import scriptsetup
-		def f():
-			analysis.shape.evaluate(console, e, result, entryPoints)
-		scriptsetup.profile(f)
-	else:
-		analysis.shape.evaluate(console, e, result, entryPoints)
+#	import scriptsetup
+#	def f():
+#		analysis.shape.evaluate(console, e, result, entryPoints)
+#	scriptsetup.profile(f)
+
+	analysis.shape.evaluate(console, e, result, entryPoints)
 
 
 def cpaDump(console, name, e, result, entryPoints):

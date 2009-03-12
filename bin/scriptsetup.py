@@ -28,9 +28,9 @@ def initPsyco(psycoProfile=False):
 	try:
 		import psyco
 		if psycoProfile:
-		    psyco.log()
-		    psyco.profile()
+			psyco.log()
+			psyco.profile()
 		else:
-		    psyco.full()
+			psyco.full()
 	except ImportError:
 		pass

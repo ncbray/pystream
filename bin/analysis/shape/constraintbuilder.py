@@ -317,35 +317,23 @@ class ShapeConstraintBuilder(object):
 
 		paramSlots = set()
 
-		def makeParam(arg, p):
-			slot = self.sys.canonical.localSlot(p)
-			expr = self.sys.canonical.localExpr(slot)
-
-			# HACK Existing nodes are troublesome...
-			if arg and expr:
-				self.assign(arg, expr)
-				paramSlots.add(slot)
-
-
 		# Self arg transfer
 		if calleeparams.selfparam:
-			makeParam(calleeparams.selfparam, 'self')
+			expr = self._makeParam('self', paramSlots)
+			self.assign(calleeparams.selfparam, expr)
 
 		# Arg transfer
 		for i, arg in enumerate(callerargs.args):
-			makeParam(arg, i)
+			expr = self._makeParam(i, paramSlots)
+			self.assign(arg, expr)
 
 		base = len(callerargs.args)
 
 		if callerargs.vargs:
 			for i in range(self.maxVArgLength()):
 				src = self.indexExpr(callerargs.vargs, i)
-
-				slot = self.sys.canonical.localSlot(i+base)
-				expr = self.sys.canonical.localExpr(slot)
-
+				expr = self._makeParam(i+base, paramSlots)
 				self.assign(src, expr)
-				paramSlots.add(slot)
 
 		assert not calleeparams.kparam
 
@@ -618,35 +606,30 @@ class ShapeConstraintBuilder(object):
 		self.current = breakPoint
 		self.post(node)
 
+	def _makeParam(self, p, slots):
+		slot = self.sys.canonical.localSlot(p)
+		slots.add(slot)
+		return self.sys.canonical.localExpr(slot)
+
 	def transferParameters(self, node):
 		forget = set()
 
-		def makeParam(p, dst):
-			slot = self.sys.canonical.localSlot(p)
-			expr = self.sys.canonical.localExpr(slot)
-			self.assign(expr, self.localExpr(dst))
-			forget.add(slot)
-
-
 		if node.selfparam:
-			makeParam('self', node.selfparam)
+			expr = self._makeParam('self', forget)
+			self.assign(expr, self.localExpr(node.selfparam))
 
 		# Assign positional params -> locals
 		for i, param in enumerate(node.parameters):
-			makeParam(i, param)
+			expr = self._makeParam(i, forget)
+			self.assign(expr, self.localExpr(param))
 
 		if node.vparam:
 			vparam = self.localExpr(node.vparam)
 			base = len(node.parameters)
 
 			for i in range(self.maxVParamLength()):
-				slot = self.sys.canonical.localSlot(i+base)
-				expr = self.sys.canonical.localExpr(slot)
-
-				dst = self.indexExpr(vparam, i)
-
-				self.assign(expr, dst)
-				forget.add(slot)
+				expr = self._makeParam(i+base, forget)
+				self.assign(expr, self.indexExpr(vparam, i))
 
 		assert not node.kparam
 

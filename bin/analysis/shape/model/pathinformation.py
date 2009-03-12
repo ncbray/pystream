@@ -140,14 +140,19 @@ class EquivalenceClass(object):
 			cls.hit     = self.hit
 			cls.forward = None
 
-			for attr, next in self:
-				if attr in kill:
-					if not (keepHits and next.hit.mustBeTrue() or keepMisses and next.hit.mustBeFalse()):
-						continue
-				if next.isTrivial(): continue
+			if self.attrs:
+				for attr, next in self.attrs.iteritems():
+					while next.forward is not None:
+						next = next.forward
 
-				other = next.copy(lut, kill, keepHits, keepMisses)
-				cls.setAttr(attr, other)
+					if attr in kill:
+						if not (keepHits and next.hit.mustBeTrue() or keepMisses and next.hit.mustBeFalse()):
+							continue
+
+					if next.isTrivial(): continue
+
+					other = next.copy(lut, kill, keepHits, keepMisses)
+					cls.setAttr(attr, other)
 			return cls
 
 	def remap(self, lut, mapping):
@@ -160,16 +165,19 @@ class EquivalenceClass(object):
 			cls.hit     = self.hit
 			cls.forward = None
 
-			for slot, next in self:
-				# Eliminate all extended parameters on remap
-				if slot.isExtendedParameter(): continue
+			if self.attrs:
+				for slot, next in self.attrs.iteritems():
+					while next.forward is not None: next = next.forward
 
-				newslot = mapping.get(slot, slot)
+					# Eliminate all extended parameters on remap
+					if slot.isExtendedParameter(): continue
 
-				assert not newslot or not newslot.isExtendedParameter(), (newslot, slot in mapping)
-				if newslot and not next.isTrivial():
-					other = next.remap(lut, mapping)
-					cls.setAttr(newslot, other)
+					newslot = mapping.get(slot, slot)
+
+					assert not newslot or not newslot.isExtendedParameter(), (newslot, slot in mapping)
+					if newslot and not next.isTrivial():
+						other = next.remap(lut, mapping)
+						cls.setAttr(newslot, other)
 			return cls
 
 	def dump(self, processed):

@@ -19,8 +19,8 @@ def profile(f):
 	prof.close()
 	stats = hotshot.stats.load("tests.prof")
 	stats.strip_dirs()
-	stats.sort_stats('cumulative')
-	#stats.sort_stats('time')
+	#stats.sort_stats('cumulative')
+	stats.sort_stats('time')
 	stats.print_stats(40)
 	return result
 

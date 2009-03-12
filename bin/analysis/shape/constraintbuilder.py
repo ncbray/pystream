@@ -393,7 +393,6 @@ class ShapeConstraintBuilder(object):
 			killSlots = set()
 			for obj in killObjs:
 				for field in obj:
-					print "x", field
 					slot = self.sys.canonical.fieldSlot(None, field)
 					killSlots.add(slot)
 

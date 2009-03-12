@@ -119,30 +119,29 @@ class ReferenceCountManager(object):
 		return obj
 
 
-	def split(self, rc, valid):
-		validrc   = {}
-		invalidrc = {}
+	def split(self, rc, accessedCallback):
+		accessedrc   = {}
+		unaccessedrc = {}
 
 		for slot, count in rc.counts.iteritems():
-			if slot in valid:
-				validrc[slot] = count
+			if accessedCallback(slot):
+				accessedrc[slot] = count
 			else:
-				invalidrc[slot] = count
+				unaccessedrc[slot] = count
 
-		validradius = []
-		invalidradius = []
+		accessedradius   = []
+		unaccessedradius = []
 
 		for slot in rc.radius:
-			if slot in valid:
-				validradius.append(slot)
+			if accessedCallback(slot):
+				accessedradius.append(slot)
 			else:
-				invalidradius.append(slot)
+				unaccessedradius.append(slot)
 
-		a = self.getCanonical(validrc, validradius)
-		b = self.getCanonical(invalidrc, invalidradius)
+		accessed   = self.getCanonical(accessedrc,   accessedradius)
+		unaccessed = self.getCanonical(unaccessedrc, unaccessedradius)
 
-		#assert self.merge(a, b) is rc
-		return a, b
+		return unaccessed, accessed
 
 	def merge(self, a, b):
 		# Assumes the reference counts are disjoint.

@@ -16,6 +16,9 @@ class Slot(object):
 	def isHeap(self):
 		return False
 
+	def isField(self):
+		return False
+
 	def isParameter(self):
 		return False
 
@@ -54,6 +57,9 @@ class FieldSlot(Slot):
 		self.field  = field
 
 	def isHeap(self):
+		return True
+
+	def isField(self):
 		return True
 
 	def __repr__(self):

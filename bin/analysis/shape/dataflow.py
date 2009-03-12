@@ -24,9 +24,10 @@ class DataflowEnvironment(object):
 
 	def addObserver(self, index, constraint):
 		if not index in self.observers:
-			self.observers[index] = set((constraint,))
+			self.observers[index] = [constraint]
 		else:
-			self.observers[index].add(constraint)
+			assert constraint not in self.observers[index]
+			self.observers[index].append(constraint)
 
 	def merge(self, sys, point, context, index, secondary):
 		assert not secondary.paths.containsAged()
@@ -50,6 +51,9 @@ class DataflowEnvironment(object):
 		return self._secondary.get(key)
 
 
+	def clear(self):
+		self._secondary.clear()
+
 # Processes the queue depth first.
 class Worklist(object):
 	def __init__(self):
@@ -66,6 +70,11 @@ class Worklist(object):
 			self.dirty.add(key)
 			self.worklist.append(key)
 
+	def pop(self):
+		key = self.worklist.pop()
+		self.dirty.remove(key)
+		return key
+
 	def step(self, sys, trace=False):
 		# Track statistics
 		self.maxLength = max(len(self.worklist), self.maxLength)
@@ -78,10 +87,7 @@ class Worklist(object):
 		self.steps += 1
 
 		# Process a constraint/index pair
-		key = self.worklist.pop()
-		self.dirty.remove(key)
-
-		constraint, index = key
+		constraint, index = self.pop()
 
 		self.useful = False
 

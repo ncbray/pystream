@@ -13,9 +13,9 @@ confusion = False
 loops = False
 tuples = False
 
-physics   = False
+physics   = True
 recursive = False
-pystone   = True
+pystone   = False
 
 class FullTestBase(unittest.TestCase):
 	def setUp(self):

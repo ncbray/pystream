@@ -370,6 +370,9 @@ class ShapeConstraintBuilder(object):
 		splitMergeInfo.mapping[targetSlot] = None
 		splitMergeInfo.mapping[returnSlot] = targetSlot
 
+		if hasattr(self.sys.info, 'regions'):
+			splitMergeInfo.dstLiveFields = self.sys.info.regions.liveFields[dstFunc]
+
 		return splitMergeInfo
 
 	def makeSplit(self, dstFunc, splitMergeInfo):

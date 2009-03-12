@@ -13,7 +13,7 @@ def isPoint(point):
 	return False
 
 class Constraint(object):
-	__slots__ = 'parent', 'inputPoint', 'outputPoint',
+	__slots__ = 'parent', 'inputPoint', 'outputPoint', 'priority'
 
 	def __init__(self, sys, inputPoint, outputPoint):
 		assert isPoint(inputPoint),  inputPoint
@@ -22,11 +22,20 @@ class Constraint(object):
 		self.outputPoint = outputPoint
 		sys.environment.addObserver(inputPoint, self)
 
+		self.priority = 0
+
 	def update(self, sys, key):
 		point, context, index = key
 
 		secondary = sys.environment.secondary(*key)
 		self.evaluate(sys, point, context, index, secondary)
+
+	# Intentionally reversed for heapq
+	def __lt__(self, other):
+		return self.priority > other.priority
+
+	def __gt__(self, other):
+		return self.priority < other.priority
 
 
 class AssignmentConstraint(Constraint):
@@ -141,26 +150,25 @@ class SplitConstraint(Constraint):
 		self.info = info
 
 	def _accessedCallback(self, slot):
-		if slot.isAgedParameter():
-			return False
+		if slot.isAgedParameter():return False
 
-		if slot.isExpression():
-			# Extended parameter
-			return False
+		# Extended parameter
+		if slot.isExpression(): return False
 
 		if slot.isLocal():
 			return slot.isParameter()
 
-		if slot.isSlot() and slot.isLocal():
-			return slot in self.info.parameterSlots
-		else:
-			return True
+		if slot.isField() and hasattr(self.info, 'dstLiveFields'):
+			return slot.field in self.info.dstLiveFields
+
+		# Unhandled, assumed accessed.
+		return True
 
 	def evaluate(self, sys, point, context, configuration, secondary):
 		# All the parameters assignments should have been performed.
 
 		# Split the reference count into accessed and non-accessed portions
-		localRC, remoteRC = sys.canonical.rcm.split(configuration.currentSet, self.info.srcLocals)
+		localRC, remoteRC = sys.canonical.rcm.split(configuration.currentSet, self._accessedCallback)
 
 		# TODO filter out bad extended parameters (from self-recursive calls?)
 

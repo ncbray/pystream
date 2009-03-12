@@ -27,7 +27,42 @@ class HeapInformationProvider(object):
 		fieldName = self.sys.canonical.fieldName('Array', iobj)
 		for ref in lcl.annotation.references[0]:
 			return ref.field(self.sys, fieldName, ref.region.group.regionHint)
-		#return fieldName
+
+class OrderConstraints(object):
+	def __init__(self, sys, entryCode):
+		self.sys = sys
+		self.entryCode = entryCode
+
+	def processConstraint(self, c):
+		if c in self.processed: return
+		self.processed.add(c)
+
+		point = c.outputPoint
+		for next in self.sys.environment.observers.get(point, ()):
+			self.processConstraint(next)
+
+
+		c.priority = self.uid
+
+		self.uid += 1
+
+
+	def process(self):
+		self.uid = 1
+		self.processed = set()
+
+		for code in self.entryCode:
+			callPoint = self.sys.constraintbuilder.codeCallPoint(code)
+			for c in self.sys.environment.observers.get(callPoint, ()):
+				self.processConstraint(c)
+		self.sort()
+
+	def sort(self):
+		priority = lambda c: c.priority
+		for observers in self.sys.environment.observers.itervalues():
+			observers.sort(reverse=False, key=priority)
+
+
 
 
 class RegionBasedShapeAnalysis(object):
@@ -74,13 +109,21 @@ class RegionBasedShapeAnalysis(object):
 			print "BUILD", current
 			self.constraintbuilder.process(current)
 
+	def buildStructures(self, entryCode):
+		for code in entryCode:
+			self.processCode(code)
+		self.build()
+
+		order = OrderConstraints(self, entryCode)
+		order.process()
+
+
 
 	def addEntryPoint(self, code, selfobj, args):
 		self.processCode(code)
+		self.build()
 
 		callPoint = self.constraintbuilder.codeCallPoint(code)
-
-		self.build()
 
 		# TODO generate all possible aliasing configuraions?
 		self.bindExisting(selfobj, 'self', callPoint)
@@ -171,6 +214,10 @@ def evaluate(console, extractor, result, entryPoints):
 	regions = regionanalysis.evaluate(extractor, entryPoints, result)
 
 	rbsa = RegionBasedShapeAnalysis(extractor, result, HeapInformationProvider(result, regions))
+
+	entryCode = set([code for code, selfobj, args in entryPoints])
+	rbsa.buildStructures(entryCode)
+
 
 	for code, selfobj, args in entryPoints:
 		rbsa.addEntryPoint(code, selfobj, args)

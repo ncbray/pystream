@@ -1,6 +1,8 @@
 # Python
 *.pyc
 *.pyo
+*.log-psyco
+*.prof
 
 # vi
 *.swp

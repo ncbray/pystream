@@ -78,7 +78,7 @@ class ForgetConstraint(Constraint):
 	def evaluate(self, sys, point, context, configuration, secondary):
 		newSecondary = secondary.forget(sys, self.forget)
 		newConfig    = configuration.forget(sys, self.forget)
-		transferfunctions.gcMerge(sys, self.outputPoint, context, newConfig, newSecondary)
+		transferfunctions.gcMerge(sys, self.outputPoint, context, newConfig, newSecondary, canSteal=True)
 
 
 class SplitMergeInfo(object):
@@ -92,12 +92,12 @@ class SplitMergeInfo(object):
 		# Return value transfer and extended parameter killing
 		self.mapping   = {}
 
-	def _mergeLUT(self, splitIndex, index, secondary, lut):
+	def _mergeLUT(self, splitIndex, index, secondary, lut, canSteal=False):
 		if splitIndex not in lut:
 			lut[splitIndex] = {}
 
 		if not index in lut[splitIndex]:
-			lut[splitIndex][index] = secondary.copy()
+			lut[splitIndex][index] = secondary if canSteal else secondary.copy()
 			changed = True
 		else:
 			changed = lut[splitIndex][index].merge(secondary)
@@ -109,7 +109,8 @@ class SplitMergeInfo(object):
 		return configuration.rewrite(sys, currentSet=None)
 
 	def registerLocal(self, sys, splitIndex, index, secondary):
-		changed = self._mergeLUT(splitIndex, index, secondary, self.localLUT)
+		# The local secondary can always be stolen.
+		changed = self._mergeLUT(splitIndex, index, secondary, self.localLUT, canSteal=True)
 
 		if changed:
 			remote = self.remoteLUT.get(splitIndex)
@@ -206,11 +207,7 @@ class SplitConstraint(Constraint):
 
 		# Output the remote data
 		remotecontext   = context # HACK
-		transferfunctions.gcMerge(sys, self.outputPoint, remotecontext, remoteconfig, remotesecondary)
-
-#		print "???", localRC, remoteRC
-#		print secondary.externalReferences, remotesecondary.externalReferences
-
+		transferfunctions.gcMerge(sys, self.outputPoint, remotecontext, remoteconfig, remotesecondary, canSteal=True)
 
 
 class MergeConstraint(Constraint):
@@ -286,7 +283,7 @@ class MergeConstraint(Constraint):
 
 		if True:
 			# Output
-			transferfunctions.gcMerge(sys, self.outputPoint, context, mergedIndex, mergedSecondary)
+			transferfunctions.gcMerge(sys, self.outputPoint, context, mergedIndex, mergedSecondary, canSteal=True)
 		else:
 			print "!"*10
 			print mergedRC

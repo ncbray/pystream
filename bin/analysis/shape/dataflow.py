@@ -1,20 +1,5 @@
 from __future__ import absolute_import
 
-# Points of variation
-# 	Store Arangement
-#		Single
-#		Per function
-#		Per program point
-#	Observers
-#		Per store
-#		Per index
-
-# Shape analysis
-# Full index:
-#	('shape', function, fsid, context, configuration) -> secondary
-# Observer index:
-#	('shape', function, fsid, context) -> observer set
-
 class DataflowEnvironment(object):
 	__slots__ = '_secondary', 'observers'
 
@@ -29,13 +14,13 @@ class DataflowEnvironment(object):
 			assert constraint not in self.observers[index]
 			self.observers[index].append(constraint)
 
-	def merge(self, sys, point, context, index, secondary):
+	def merge(self, sys, point, context, index, secondary, canSteal=False):
 		assert not secondary.paths.containsAged()
 
 		# Do the merge
 		key = (point, context, index)
 		if not key in self._secondary:
-			self._secondary[key] = secondary.copy()
+			self._secondary[key] = secondary if canSteal else secondary.copy()
 			changed = True
 		else:
 			changed = self._secondary[key].merge(secondary)
@@ -49,7 +34,6 @@ class DataflowEnvironment(object):
 	def secondary(self, point, context, index):
 		key = (point, context, index)
 		return self._secondary.get(key)
-
 
 	def clear(self):
 		self._secondary.clear()

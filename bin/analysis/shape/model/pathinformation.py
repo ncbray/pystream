@@ -57,7 +57,7 @@ class EquivalenceClass(object):
 
 	def setAttr(self, attr, eq, steal=False):
 		if self.attrs is None: self.attrs = {}
-		assert not attr in self.attrs
+		#assert not attr in self.attrs
 		self.attrs[attr] = eq
 		if not steal: eq.incRef()
 		return eq
@@ -135,10 +135,9 @@ class EquivalenceClass(object):
 			return lut[self]
 		else:
 			cls = EquivalenceClass()
-			lut[self] = cls
-
 			cls.hit     = self.hit
-			cls.forward = None
+
+			lut[self] = cls
 
 			if self.attrs:
 				for attr, next in self.attrs.iteritems():
@@ -229,24 +228,29 @@ class EquivalenceClass(object):
 			else:
 				changed = True
 
-		for k, v in self:
-			ov = other.getAttr(k)
-			if ov:
-				newV, newChanged = v.inplaceIntersect(ov, lut)
-				eq.setAttr(k, newV)
-				changed |= newChanged
-			else:
-				changed = True
+		if self.attrs:
+			for k in self.attrs.iterkeys():
+				ov = other.getAttr(k)
+				if ov:
+					v = self.getAttr(k)
+					newV, newChanged = v.inplaceIntersect(ov, lut)
+					eq.setAttr(k, newV)
+					changed |= newChanged
+				else:
+					changed = True
 
 		return eq, changed
 
 	def ageExtended(self, canonical):
-		newAttr = {}
-		for slot, eq in self:
-			assert not slot.isAgedParameter(), slot
-			aged = slot.age(canonical)
-			newAttr[aged] = eq
-		self.attrs = newAttr
+		if self.attrs:
+			newAttr = {}
+			for slot, eq in self.attrs.iteritems():
+				while eq.forward is not None: eq = eq.forward
+
+				assert not slot.isAgedParameter(), slot
+				aged = slot.age(canonical)
+				newAttr[aged] = eq
+			self.attrs = newAttr
 
 
 	def unageExtended(self):

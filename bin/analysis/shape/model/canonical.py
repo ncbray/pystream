@@ -46,8 +46,7 @@ class CanonicalObjects(object):
 
 	def secondary(self, paths, external):
 		assert isinstance(external, bool)
-		# TODO a non-copy create?
-		return secondary.SecondaryInformation(paths.copy(), external)
+		return secondary.SecondaryInformation(paths, external)
 
 	def localExpr(self, lcl):
 		assert isinstance(lcl, slots.Slot), lcl

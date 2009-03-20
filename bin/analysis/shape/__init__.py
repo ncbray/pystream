@@ -197,9 +197,32 @@ class RegionBasedShapeAnalysis(object):
 				self.environment.merge(self, point, None, index, secondary)
 				sucess = self.process(trace=True, limit=self.limit)
 				if not sucess: self.aborted.add(obj)
-
-
 			print
+
+	def summarize(self):
+		maxObjRefs = {}
+		maxFieldRefs = {}
+		fieldShares = {}
+
+
+		for point, context, index in self.environment._secondary.iterkeys():
+			for field, count in index.currentSet.counts.iteritems():
+				maxObjRefs[index.object] = max(maxObjRefs.get(index.object, 0), count)
+
+				maxFieldRefs[field] = max(maxFieldRefs.get(field, 0), count)
+				fieldShares[field] = fieldShares.get(field, False) or count > 1 or len(index.currentSet.counts) > 1
+
+
+		print
+		print "Obj Refs"
+
+		for obj, count in maxObjRefs.iteritems():
+			print obj, count
+
+		print
+		for obj, count in maxFieldRefs.iteritems():
+			print obj, count, fieldShares[obj]
+
 
 	def dumpStatistics(self):
 		print "Entries:", len(self.environment._secondary)
@@ -227,7 +250,7 @@ def evaluate(console, extractor, result, entryPoints):
 	rbsa.dumpStatistics()
 
 	lut = collections.defaultdict(set)
-	for point, context, index in sorted(rbsa.environment._secondary.keys()):
+	for point, context, index in sorted(rbsa.environment._secondary.iterkeys()):
 		#if index.currentSet.containsParameter(): continue
 		if index.object in rbsa.aborted: continue
 		lut[index.object].add((point[0], index.currentSet))
@@ -248,6 +271,8 @@ def evaluate(console, extractor, result, entryPoints):
 	print "ABORTED"
 	for obj in rbsa.aborted:
 		print '\t', obj
+
+	rbsa.summarize()
 
 	print
 	rbsa.dumpStatistics()

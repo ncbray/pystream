@@ -6,7 +6,7 @@
 import collections
 from PADS.UnionFind import UnionFind
 from util.typedispatch import *
-from programIR.python import ast
+from language.python import ast
 from simplify import simplify
 from analysis import programculler
 from analysis import tools

@@ -198,7 +198,7 @@ class TestCallingUtility(unittest.TestCase):
 ##from cStringIO import StringIO
 ##from common.simplecodegen import SimpleCodeGen
 ##from optimization.simplify import simplify
-##from programIR.python import ast
+##from language.python import ast
 
 ##class TestConstantFolding(unittest.TestCase):
 ##	def processFunc(self, func):

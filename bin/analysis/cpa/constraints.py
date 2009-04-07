@@ -4,7 +4,7 @@ from . import storegraph
 from . import extendedtypes
 
 # HACK to testing if a object is a bool True/False...
-from programIR.python import ast, program
+from language.python import ast, program
 
 import util.tvl
 

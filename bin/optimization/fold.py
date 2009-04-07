@@ -1,10 +1,10 @@
 from util.typedispatch import *
-from programIR.python import ast
+from language.python import ast
 from util import xform
 
 from dataflow.forward import *
 
-import programIR.python.fold as fold
+import language.python.fold as fold
 
 from analysis import tools
 

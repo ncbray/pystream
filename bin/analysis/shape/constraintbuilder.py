@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from util.typedispatch import *
-from programIR.python import ast
+from language.python import ast
 from util import xform
 
 from . model import expressions

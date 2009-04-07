@@ -1,6 +1,6 @@
 from util.typedispatch import *
-from programIR.python import ast
-from programIR.python import program
+from language.python import ast
+from language.python import program
 
 # HACK
 from common import astpprint

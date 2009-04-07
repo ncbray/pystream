@@ -1,5 +1,5 @@
 import copy
-from programIR.python.ast import Local, Assign, Cell, Expression, Existing
+from language.python.ast import Local, Assign, Cell, Expression, Existing
 
 
 class OpaqueStackElement(Expression):

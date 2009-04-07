@@ -1,7 +1,7 @@
 from util.typedispatch import *
-from programIR.python import ast
+from language.python import ast
 
-from programIR.python.program import Object
+from language.python.program import Object
 from decompiler.constantfinder import findCodeReferencedObjects
 from analysis import programculler
 

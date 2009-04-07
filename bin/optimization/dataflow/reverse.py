@@ -1,5 +1,5 @@
 from base import *
-from programIR.python import fold
+from language.python import fold
 
 # Restore
 # Pre

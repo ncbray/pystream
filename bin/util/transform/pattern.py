@@ -1,5 +1,5 @@
 from base import *
-from programIR.base.metaast import Symbol, children, reconstruct, LeafTypes
+from language.base.metaast import Symbol, children, reconstruct, LeafTypes
 
 # TODO allow strategies inside patterns.
 # Note s => t

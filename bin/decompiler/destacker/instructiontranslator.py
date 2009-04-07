@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import types
 import inspect
 from opcode import opmap
-from programIR.python.ast import *
+from language.python.ast import *
 import common.ssa as ssa
 
 from common import opnames
@@ -13,12 +13,12 @@ from . import pythonstack
 from .. import errors
 
 
-from programIR.python.fold import foldBinaryOpAST, foldUnaryPrefixOpAST, foldCallAST
+from language.python.fold import foldBinaryOpAST, foldUnaryPrefixOpAST, foldCallAST
 
 import operator
 
 
-from programIR.python.annotations import Origin
+from language.python.annotations import Origin
 
 from common.simplecodegen import SimpleCodeGen
 import sys

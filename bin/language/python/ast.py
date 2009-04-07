@@ -2,7 +2,7 @@
 
 # Fields should be in order of evaluation.
 
-from programIR.base.metaast import *
+from language.base.metaast import *
 from pythonbase import *
 
 # Allows Existing.object to be typed.

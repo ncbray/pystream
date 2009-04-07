@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from  programIR.python.ast import *
+from  language.python.ast import *
 
 from .. stubcollector import stubgenerator
 

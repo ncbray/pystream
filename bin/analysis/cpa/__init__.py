@@ -13,9 +13,9 @@ from constraintextractor import ExtractDataflow
 from constraints import AssignmentConstraint
 
 # Only used for creating return variables
-from programIR.python import ast
-from programIR.python import program
-from programIR.python import annotations
+from language.python import ast
+from language.python import program
+from language.python import annotations
 
 from optimization.callconverter import callConverter
 

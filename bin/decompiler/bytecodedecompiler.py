@@ -10,7 +10,7 @@ import inspect
 from . disassembler import disassemble
 
 # HACK
-import programIR.python.ast as cfg
+import language.python.ast as cfg
 
 #from common.ssa import DeadCodeEliminator
 

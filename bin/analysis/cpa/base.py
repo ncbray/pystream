@@ -1,4 +1,4 @@
-from programIR.python import program, ast
+from language.python import program, ast
 
 import util
 import util.cpa

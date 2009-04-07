@@ -1,5 +1,5 @@
 import collections
-from programIR.base.annotation import *
+from language.base.annotation import *
 
 Origin = collections.namedtuple('Origin', 'name filename lineno')
 

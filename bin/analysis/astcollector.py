@@ -1,7 +1,7 @@
 from util.typedispatch import *
 
-from programIR.python import ast
-from programIR.python import program
+from language.python import ast
+from language.python import program
 
 class GetOps(object):
 	__metaclass__ = typedispatcher

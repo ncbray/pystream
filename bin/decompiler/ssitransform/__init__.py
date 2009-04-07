@@ -2,14 +2,14 @@ from __future__ import absolute_import
 
 from util.visitor import StandardVisitor
 
-from programIR.python.ast import *
+from language.python.ast import *
 
 from common.defuse import defuse
 
 from . localframe import Merge, LoopMerge, Split, LocalFrame, mergeFrames, Inserter, HeadInserter, TailInserter, ExceptionMerge
 
 import sys
-from programIR.base.dumpast import DumpAST
+from language.base.dumpast import DumpAST
 
 from . numbering import NumberAST, contains
 from . placeflow import PlaceFlowFunctions

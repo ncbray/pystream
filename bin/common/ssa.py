@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-import programIR.python.ast as code
+import language.python.ast as code
 from util.visitor import StandardVisitor
 
 from . import opnames

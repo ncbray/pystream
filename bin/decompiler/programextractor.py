@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import collections
 
-import programIR.python.program as program
+import language.python.program as program
 
 from . decompiler import decompile
 from . errors import IrreducibleGraphException

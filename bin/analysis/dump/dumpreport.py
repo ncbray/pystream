@@ -18,7 +18,7 @@ import util.graphalgorithim.dominator
 
 import urllib
 
-from programIR.python import ast
+from language.python import ast
 
 def outputCodeShortName(out, code, links=None, context=None):
 	link = links.codeRef(code, context) if links is not None else None

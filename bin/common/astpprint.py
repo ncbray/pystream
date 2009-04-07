@@ -1,7 +1,7 @@
 from util.typedispatch import *
 import sys
 
-from programIR.python import ast
+from language.python import ast
 
 class ASTPrettyPrinter(object):
 	__metaclass__ = typedispatcher

@@ -1,6 +1,6 @@
 from base import *
 
-from programIR.python.fold import existingConstant
+from language.python.fold import existingConstant
 
 class ForwardFlowTraverse(object):
 	__metaclass__ = typedispatcher

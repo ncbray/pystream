@@ -8,7 +8,7 @@ import collections
 
 import analysis.shape
 
-from programIR.python import ast
+from language.python import ast
 from analysis.cpa import storegraph, canonicalobjects, setmanager
 
 import decompiler.programextractor

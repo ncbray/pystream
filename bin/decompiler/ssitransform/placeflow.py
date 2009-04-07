@@ -1,6 +1,6 @@
 from util.visitor import StandardVisitor
 
-from programIR.python.ast import Local
+from language.python.ast import Local
 
 from . numbering import contains
 

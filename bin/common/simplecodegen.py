@@ -7,9 +7,9 @@ from util.pythonoutput import PythonOutput
 from common import opnames, defuse
 
 # HACK
-import programIR.python.ast as code
+import language.python.ast as code
 cfg = code
-from programIR.python import ast, program
+from language.python import ast, program
 
 
 import re

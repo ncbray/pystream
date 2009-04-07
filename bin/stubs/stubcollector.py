@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from _pystream import cfuncptr
 from util import xtypes
-from programIR.python import ast
+from language.python import ast
 
 import util
 

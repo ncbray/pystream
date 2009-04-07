@@ -1,6 +1,6 @@
 from util.visitor import StandardVisitor
-from programIR.python.ast import isPythonAST
-from programIR.python.program import AbstractObject, Object
+from language.python.ast import isPythonAST
+from language.python.program import AbstractObject, Object
 
 
 valueTypes = (str, int, float, long, type(None))

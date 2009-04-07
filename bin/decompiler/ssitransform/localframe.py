@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from programIR.python.ast import Local, Assign
+from language.python.ast import Local, Assign
 
 def insertBeforeExit(suite, asgn):
 	if suite.blocks and suite.blocks[-1].isControlFlow():

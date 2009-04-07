@@ -1,4 +1,4 @@
-from programIR.base.metaast import children, reconstruct
+from language.base.metaast import children, reconstruct
 
 class TransformFailiure(Exception):
 	pass

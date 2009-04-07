@@ -1,4 +1,4 @@
-from programIR.base.metaast import astnode, Symbol
+from language.base.metaast import astnode, Symbol
 
 class TransformationFailiure(Exception):
 	pass

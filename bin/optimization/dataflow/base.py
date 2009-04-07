@@ -2,9 +2,9 @@ import copy
 from util import xform
 from util.typedispatch import *
 
-from programIR.base.metaast import children, reconstruct
+from language.base.metaast import children, reconstruct
 # HACK?
-from programIR.python import ast
+from language.python import ast
 
 class InternalError(Exception):
 	pass

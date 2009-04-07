@@ -2,8 +2,8 @@ import collections
 import time
 
 from cpa import base, storegraph
-import programIR.python.ast as ast
-import programIR.python.annotations as annotations
+import language.python.ast as ast
+import language.python.annotations as annotations
 
 from PADS.StrongConnectivity import StronglyConnectedComponents
 

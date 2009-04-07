@@ -2,7 +2,7 @@ import weakref
 
 from . import base
 
-from programIR.python import program, ast
+from language.python import program, ast
 
 
 class HeapInfo(object):

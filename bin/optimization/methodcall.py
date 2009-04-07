@@ -1,6 +1,6 @@
 from util.typedispatch import *
-from programIR.python import ast
-from programIR.python import annotations
+from language.python import ast
+from language.python import annotations
 
 import util.xtypes
 from analysis import tools

@@ -1,7 +1,7 @@
 import util.canonical
 CanonicalObject = util.canonical.CanonicalObject
 
-from programIR.python import program
+from language.python import program
 
 # Extended types are names for objects that cannot be merged by the analysis.
 

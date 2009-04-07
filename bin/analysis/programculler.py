@@ -1,5 +1,5 @@
 from analysis.astcollector import getOps
-from programIR.python import ast
+from language.python import ast
 
 class Finder(object):
 	def __init__(self):

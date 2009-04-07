@@ -3,7 +3,7 @@ import util.canonical
 from . import extendedtypes
 from . import base
 
-from programIR.python import program, ast
+from language.python import program, ast
 
 class BaseSlotName(util.canonical.CanonicalObject):
 	__slots__ =()

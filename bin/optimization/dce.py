@@ -1,5 +1,5 @@
 from util.typedispatch import *
-from programIR.python import ast
+from language.python import ast
 
 from dataflow.reverse import *
 

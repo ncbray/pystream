@@ -2,7 +2,7 @@ import util.traversal as traversal
 from util.visitor import StandardVisitor
 
 import collections
-from programIR.python.ast import Local, Existing, Cell, ASTNode, Statement, Assign, Suite
+from language.python.ast import Local, Existing, Cell, ASTNode, Statement, Assign, Suite
 
 class CodeVisitor(traversal.ConcreteVisitor):
 	def visit(self, node, args):

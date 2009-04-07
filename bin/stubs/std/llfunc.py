@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 # TODO remove once type__call__ and method__call__ are made into a functions.
-from programIR.python.ast import *
+from language.python.ast import *
 
 # HACK for highlevel functions?
 from util import xtypes
@@ -11,7 +11,7 @@ function = xtypes.FunctionType
 from .. stubcollector import stubgenerator
 
 # HACK for manually created functions
-from programIR.python.annotations import Origin
+from language.python.annotations import Origin
 
 
 @stubgenerator

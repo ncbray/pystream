@@ -1,7 +1,4 @@
-from .. import annotations
-
-
-
+from . import annotations
 
 def isPythonAST(ast):
 	return isinstance(ast, ASTNode)

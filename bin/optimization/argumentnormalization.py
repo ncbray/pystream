@@ -1,6 +1,6 @@
 from util.typedispatch import *
 from programIR.python import ast
-from programIR import annotations
+from programIR.python import annotations
 
 class ArgumentNormalizationAnalysis(object):
 	__metaclass__ = typedispatcher

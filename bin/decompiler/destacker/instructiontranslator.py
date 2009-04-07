@@ -18,7 +18,7 @@ from programIR.python.fold import foldBinaryOpAST, foldUnaryPrefixOpAST, foldCal
 import operator
 
 
-from programIR.annotations import Origin
+from programIR.python.annotations import Origin
 
 from common.simplecodegen import SimpleCodeGen
 import sys

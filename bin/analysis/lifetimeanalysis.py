@@ -3,6 +3,7 @@ import time
 
 from cpa import base, storegraph
 import programIR.python.ast as ast
+import programIR.python.annotations as annotations
 
 from PADS.StrongConnectivity import StronglyConnectedComponents
 
@@ -13,7 +14,6 @@ from analysis.database import lattice
 
 from analysis.astcollector import getOps
 
-from programIR import annotations
 
 contextSchema   = structure.WildcardSchema()
 operationSchema = structure.TypeSchema((ast.Expression, ast.Statement))

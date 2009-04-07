@@ -15,7 +15,7 @@ from constraints import AssignmentConstraint
 # Only used for creating return variables
 from programIR.python import ast
 from programIR.python import program
-from programIR import annotations
+from programIR.python import annotations
 
 from optimization.callconverter import callConverter
 

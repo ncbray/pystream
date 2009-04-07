@@ -10,7 +10,8 @@ function = xtypes.FunctionType
 
 from .. stubcollector import stubgenerator
 
-from programIR.annotations import Origin
+# HACK for manually created functions
+from programIR.python.annotations import Origin
 
 
 @stubgenerator

@@ -1,5 +1,5 @@
 from util.xmloutput  import XMLOutput
-from common import simplecodegen
+from language.python import simplecodegen
 import common.astpprint
 
 import config

@@ -3,7 +3,7 @@ from dce import dce
 from dataflow.base import InternalError
 
 from cStringIO import StringIO
-from common.simplecodegen import SimpleCodeGen
+from language.python.simplecodegen import SimpleCodeGen
 
 from language.python import ast
 

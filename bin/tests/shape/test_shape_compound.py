@@ -606,7 +606,7 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 
 		self.code.ast = body
 
-		#from common import simplecodegen
+		#from language.python import simplecodegen
 		#simplecodegen.SimpleCodeGen(None).walk(self.code)
 
 

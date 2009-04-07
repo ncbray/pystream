@@ -6,7 +6,7 @@ import unittest
 from decompiler.programextractor import Extractor
 
 from cStringIO import StringIO
-from common.simplecodegen import SimpleCodeGen
+from language.python.simplecodegen import SimpleCodeGen
 
 def compileF(s, g=None):
 	l = {}

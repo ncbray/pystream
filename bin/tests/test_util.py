@@ -196,7 +196,7 @@ class TestCallingUtility(unittest.TestCase):
 
 
 ##from cStringIO import StringIO
-##from common.simplecodegen import SimpleCodeGen
+##from language.python.simplecodegen import SimpleCodeGen
 ##from optimization.simplify import simplify
 ##from language.python import ast
 

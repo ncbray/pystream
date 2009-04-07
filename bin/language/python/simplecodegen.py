@@ -6,11 +6,7 @@ from util.pythonoutput import PythonOutput
 
 from common import opnames, defuse
 
-# HACK
-import language.python.ast as code
-cfg = code
 from language.python import ast, program
-
 
 import re
 isIdentifier = re.compile(r'^([a-zA-Z_]\w*)?$')
@@ -25,13 +21,13 @@ class UncollapsableCodeError(Exception):
 	pass
 
 def getConstant(node, t=None):
-	assert isinstance(node, code.Existing) and node.object.isConstant(), node
+	assert isinstance(node, ast.Existing) and node.object.isConstant(), node
 	if t != None: assert isinstance(node.object.pyobj, t)
 	return node.object.pyobj
 
 
 def getExistingStr(node):
-	assert isinstance(node, code.Existing)
+	assert isinstance(node, ast.Existing)
 	if node.object.isConstant():
 		return repr(node.object.pyobj)
 	else:
@@ -122,7 +118,7 @@ class SimpleExprGen(StandardVisitor):
 
 	def visitAllocate(self, node):
 		# Synax for allocating containers.
-		if isinstance(node.expr, code.Existing):
+		if isinstance(node.expr, ast.Existing):
 			obj = node.expr.object
 			if isinstance(obj, program.Object):
 				pyobj = obj.pyobj
@@ -279,7 +275,7 @@ class SimpleExprGen(StandardVisitor):
 
 
 		for i, term in enumerate(node.terms):
-			assert isinstance(term, cfg.Condition), term
+			assert isinstance(term, ast.Condition), term
 			text, inner = self.parent.process(term)
 			partial.append(protect(text, inner, prec))
 
@@ -293,7 +289,7 @@ class SimpleExprGen(StandardVisitor):
 		prec = 21
 		partial = []
 		for i, term in enumerate(node.terms):
-			assert isinstance(term, cfg.Condition), term
+			assert isinstance(term, ast.Condition), term
 			text, inner = self.parent.process(term)
 			partial.append(protect(text, inner, prec))
 			if i == 0: self.parent.enterSupress()
@@ -486,7 +482,7 @@ class SimpleCodeGen(StandardVisitor):
 		self.emitStatement(stmt)
 
 	def visitAssign(self, node):
-		if isinstance(node.expr, code.BinaryOp) and node.expr.op in opnames.inplaceOps:
+		if isinstance(node.expr, ast.BinaryOp) and node.expr.op in opnames.inplaceOps:
 			#assert not node.lcl in self.collapsable
 			# Workarround for synthesizing inplace BinaryOps that don't put their result into the left argument.
 			# If the operation actually is inplace, don't hack it.
@@ -505,17 +501,17 @@ class SimpleCodeGen(StandardVisitor):
 
 			stmt = "%s %s %s" % (self.seg.process(node.lcl), node.expr.op, self.seg.process(temp))
 			self.emitStatement(stmt)
-		elif isinstance(node.expr, code.MakeFunction):
+		elif isinstance(node.expr, ast.MakeFunction):
 			# HACK to rename the function
 			self.process(node.expr)
-			name = node.expr.code.name
+			name = node.expr.ast.name
 			lcl = self.seg.process(node.lcl)
 			if name != lcl:
 				self.emitStatement("%s = %s" % (lcl, name))
-		elif isinstance(node.expr, code.Existing) and node.expr.object.isConstant() and isinstance(node.expr.object.pyobj, types.CodeType):
+		elif isinstance(node.expr, ast.Existing) and node.expr.object.isConstant() and isinstance(node.expr.object.pyobj, types.CodeType):
 			# HACK
 			pass
-##		elif isinstance(node.expr, (code.ShortCircutAnd, code.ShortCircutOr)):
+##		elif isinstance(node.expr, (ast.ShortCircutAnd, ast.ShortCircutOr)):
 ##			expr, p = self.visit(node.expr)
 ##
 ##			stmt = "%s = %s" % (self.seg.process(node.lcl), expr)
@@ -568,7 +564,7 @@ class SimpleCodeGen(StandardVisitor):
 
 		conditional = node.conditional
 
-		if isinstance(conditional, code.ConvertToBool):
+		if isinstance(conditional, ast.ConvertToBool):
 			conditional = conditional.expr
 
 		if conditional in self.seg.collapsed:

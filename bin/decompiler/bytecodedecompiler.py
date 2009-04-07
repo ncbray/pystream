@@ -27,7 +27,7 @@ from . structuralanalyzer import StructuralAnalyzer
 from . import ssitransform
 
 from decompiler.flowblockdump import FlowBlockDump
-from common.simplecodegen import SimpleCodeGen
+from language.python.simplecodegen import SimpleCodeGen
 
 import optimization.simplify
 

@@ -20,7 +20,7 @@ import operator
 
 from language.python.annotations import Origin
 
-from common.simplecodegen import SimpleCodeGen
+from language.python.simplecodegen import SimpleCodeGen
 import sys
 
 import re

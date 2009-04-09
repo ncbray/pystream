@@ -1,4 +1,4 @@
-__all__ = ['astnode', 'Symbol', 'children',
+__all__ = ['astnode', 'ASTNode', 'Symbol', 'children',
 	   'reconstruct', 'makeASTManifest',
 	   'astequal', 'asthash',]
 
@@ -11,7 +11,8 @@ from . import codegeneration
 doTypeChecks = False
 
 class ClassBuilder(object):
-	def __init__(self, name, bases, d):
+	def __init__(self, type, name, bases, d):
+		self.type  = type
 		self.name  = name
 		self.bases = bases
 		self.d     = d
@@ -103,7 +104,7 @@ class ClassBuilder(object):
 
 
 	def finalize(self):
-		return type(self.name, self.bases, self.d)
+		return type.__new__(self.type, self.name, self.bases, self.d)
 
 	def makeFunc(self, func, args):
 		return codegeneration.compileFunc(func(*args), self.g)
@@ -144,16 +145,17 @@ class ClassBuilder(object):
 		return self.mutate().finalize()
 
 # TODO grab fields from bases?
-def astnode(name, bases, d):
-	return ClassBuilder(name, bases, d).build()
+
+class astnode(type):
+	def __new__(mcls, name, bases, d):
+		return ClassBuilder(mcls, name, bases, d).build()
 
 
 def makeASTManifest(glbls):
 	manifest = {}
 	for name, obj in glbls.iteritems():
 		if isinstance(obj, type) and hasattr(obj, '__metaclass__'):
-			# Careful when accessing the type attribute, so it doesn't get bound.
-			if obj.__dict__['__metaclass__'] == astnode:
+			if obj.__metaclass__ == astnode:
 				manifest[name] = obj
 	return manifest
 
@@ -214,3 +216,15 @@ class Symbol(object):
 
 	def __repr__(self):
 		return "Symbol(%s)" % self.name
+
+class ASTNode(object):
+	__metaclass__ = astnode
+	__slots__ = 'annotation'
+
+	emptyAnnotation = None
+
+	def __init__(self):
+		self.annotation = self.emptyAnnotation
+
+	def rewriteAnnotation(self, **kwds):
+		self.annotation = self.annotation.rewrite(**kwds)

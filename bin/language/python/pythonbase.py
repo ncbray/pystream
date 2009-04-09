@@ -1,16 +1,10 @@
+from language.base.metaast import *
 from . import annotations
 
 def isPythonAST(ast):
-	return isinstance(ast, ASTNode)
+	return isinstance(ast, PythonASTNode)
 
-class ASTNode(object):
-	__slots__ = 'annotation'
-
-	emptyAnnotation = None
-
-	def __init__(self):
-		self.annotation = self.emptyAnnotation
-
+class PythonASTNode(ASTNode):
 	def returnsValue(self):
 		return False
 
@@ -23,10 +17,7 @@ class ASTNode(object):
 	def isReference(self):
 		return False
 
-	def rewriteAnnotation(self, **kwds):
-		self.annotation = self.annotation.rewrite(**kwds)
-
-class Expression(ASTNode):
+class Expression(PythonASTNode):
 	__slots__ = ()
 
 	emptyAnnotation = annotations.emptyOpAnnotation
@@ -48,7 +39,7 @@ class Reference(Expression):
 	def isReference(self):
 		return True
 
-class Statement(ASTNode):
+class Statement(PythonASTNode):
 	__slots__ = ()
 
 	emptyAnnotation = annotations.emptyOpAnnotation

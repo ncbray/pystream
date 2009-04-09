@@ -6,10 +6,12 @@ class OpaqueStackElement(Expression):
 	pass
 
 class Iter(OpaqueStackElement):
+	__slots__ = 'expr'
 	def __init__(self, expr):
 		self.expr = expr
 
 class Definition(OpaqueStackElement):
+	__slots__ = 'name'
 	def __init__(self, name):
 		self.name = name
 	def isConstant(self):
@@ -43,12 +45,12 @@ class DeferedMerge(OpaqueStackElement):
 			for e, onExit in zip(self.elements, self.onExits):
 				if isinstance(e, DeferedMerge):
 					e = e.evaluate(self.target)
-					
+
 				if self.target != e:
 					asgn = Assign(e, self.target)
 					asgn.markMerge()
 					onExit.append(asgn)
-				
+
 		return self.target
 
 class PythonStack(object):
@@ -63,7 +65,7 @@ class PythonStack(object):
 		self.stack.append(value)
 
 	def peek(self):
-		assert len(self.stack) >= 1		
+		assert len(self.stack) >= 1
 		top = self.stack[-1]
 		if isinstance(top, DeferedMerge):
 			top = top.evaluate()
@@ -81,7 +83,7 @@ class PythonStack(object):
 		self.stack.pop()
 
 	def dup(self):
-		assert len(self.stack) >= 1				
+		assert len(self.stack) >= 1
 		self.push(self.stack[-1])
 
 	def dupx(self, count):
@@ -126,7 +128,7 @@ class PythonStack(object):
 def same(l):
 	if not l:
 		return True
-	
+
 	for e in l:
 		if e != l[0]:
 			return False
@@ -142,7 +144,7 @@ def mergeStacks(stacks, onExits):
 
 	for stack in stacks:
 		assert len(stack) == len(stacks[0]), (stack.stack, stacks[0].stack)
-		
+
 	for elements in zip(*[stack.stack for stack in stacks]):
 		if not same(elements):
 			# Just because the stacks are different does not mean we need to merge.

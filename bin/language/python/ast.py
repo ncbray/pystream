@@ -9,7 +9,6 @@ from pythonbase import *
 from . import program
 
 class Existing(Reference):
-	__metaclass__ = astnode
 	__slots__     = 'object'
 	__shared__    = True
 
@@ -31,7 +30,6 @@ class Existing(Reference):
 		return self.object.pyobj
 
 class Local(Reference):
-	__metaclass__ = astnode
 	__slots__     = 'name'
 	__shared__    = True
 
@@ -53,7 +51,6 @@ class Local(Reference):
 
 
 class Cell(ASTNode):
-	__metaclass__ = astnode
 	__slots__     = 'name'
 	__shared__    = True
 
@@ -80,24 +77,20 @@ class Cell(ASTNode):
 
 
 class GetGlobal(Expression):
-	__metaclass__ = astnode
 	__fields__    = 'name'
 	__types__     = {'name':Existing}
 
 class SetGlobal(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'name', 'value'
 	__types__     = {'name':Existing, 'value':Expression}
 
 class DeleteGlobal(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'name'
 	__types__     = {'name':Existing}
 
 
 # Gets the actual cell.
 class GetCell(Expression):
-	__metaclass__ = astnode
 	__fields__    = 'cell'
 	__types__     = {'cell':Cell}
 
@@ -107,106 +100,88 @@ class GetCell(Expression):
 
 # Gets the contents of a cell.
 class GetCellDeref(Expression):
-	__metaclass__ = astnode
 	__fields__    = 'cell'
 	__types__     = {'cell':Cell}
 
 # Sets the contents of a cell.
 class SetCellDeref(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'value', 'cell'
 	__types__     = {'cell':Cell, 'value':Expression}
 
 
 class Yield(Expression):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'expr'
 	__types__ 	= {'expr':Expression}
 
 class GetIter(Expression):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'expr'
 	__types__ 	= {'expr':Expression}
 
 class ConvertToBool(Expression):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'expr'
 	__types__ 	= {'expr':Expression}
 
 class Import(Expression):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'name', 'fromlist', 'level'
 	__types__ 	= {'name':str, 'fromlist':(tuple, list), 'level':int}
 	__optional__ 	= 'fromlist'
 
 # TODO make UnaryPrefixOp? It is in a class of its own...
 class Not(Expression):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'expr'
 	__types__ 	= {'expr':Expression}
 
 class UnaryPrefixOp(Expression):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'op', 'expr'
 	__types__ 	= {'op':str, 'expr':Expression}
 
 class BinaryOp(Expression):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'left', 'op', 'right'
 	__types__ 	= {'left':Expression, 'op':str, 'right':Expression}
 
 class GetSubscript(Expression):
-	__metaclass__ = astnode
 	__fields__    = 'expr', 'subscript'
 	__types__     = {'expr':Expression, 'subscript':Expression}
 
 class SetSubscript(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'value', 'expr', 'subscript'
 	__types__     = {'value':Expression, 'expr':Expression, 'subscript':Expression}
 
 class DeleteSubscript(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'expr', 'subscript'
 	__types__     = {'expr':Expression, 'subscript':Expression}
 
 
 class GetSlice(Expression):
-	__metaclass__ = astnode
 	__fields__    = 'expr', 'start', 'stop', 'step'
 	__types__     = {'expr':Expression, 'start':Expression, 'step':Expression, 'step':Expression}
 	__optional__  = 'start', 'stop', 'step'
 
 
 class SetSlice(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'value', 'expr', 'start', 'stop', 'step',
 	__types__     = {'value':Expression, 'expr':Expression, 'start':Expression, 'step':Expression, 'step':Expression}
 	__optional__  = 'start', 'stop', 'step'
 
 class DeleteSlice(SimpleStatement):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'expr', 'start', 'stop', 'step'
 	__types__ 	= {'expr':Expression, 'start':Expression, 'step':Expression, 'step':Expression}
 	__optional__ 	= 'start', 'stop', 'step'
 
 
 class Call(Expression):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'expr', 'args', 'kwds', 'vargs', 'kargs'
 	__types__ 	= {'expr':Expression, 'args':(list, tuple), 'kwds':(list, tuple)}
 	__optional__ 	= 'vargs', 'kargs'
 
 
 class MethodCall(Expression):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'expr', 'name', 'args', 'kwds', 'vargs', 'kargs'
 	__types__ 	= {'expr':Expression, 'name':Expression, 'args':(list, tuple), 'kwds':(list, tuple)}
 	__optional__ 	= 'vargs', 'kargs'
 
 
 class DirectCall(Expression):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'func', 'selfarg', 'args', 'kwds', 'vargs', 'kargs'
 	__types__ 	= {'selfarg':Expression, 'args':(list, tuple), 'kwds':(list, tuple),
 			   'vargs':Expression, 'kargs':Expression,
@@ -220,7 +195,6 @@ class DirectCall(Expression):
 						       self.vargs, self.kargs)
 
 class BuildTuple(Expression):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'args'
 	__types__ 	= {'args':(tuple, list)}
 
@@ -228,7 +202,6 @@ class BuildTuple(Expression):
 		return True
 
 class BuildList(Expression):
-	__metaclass__ = astnode
 	__fields__    = 'args'
 	__types__     = {'args':(tuple, list)}
 
@@ -236,13 +209,11 @@ class BuildList(Expression):
 		return True
 
 class BuildMap(Expression):
-	__metaclass__ = astnode
 
 	def isPure(self):
 		return True
 
 class BuildSlice(Expression):
-	__metaclass__ = astnode
 	__fields__    = 'start', 'stop', 'step'
 	__types__     = {'start':Expression, 'step':Expression, 'step':Expression}
 	__optional__  = 'start', 'stop', 'step'
@@ -251,28 +222,23 @@ class BuildSlice(Expression):
 		return True
 
 class GetAttr(Expression):
-	__metaclass__ = astnode
 	__fields__    = 'expr', 'name'
 	__types__     = {'expr':Expression, 'name':Expression}
 
 class SetAttr(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'value', 'expr', 'name'
 	__types__     = {'value':Expression, 'expr':Expression, 'name':Expression}
 
 class DeleteAttr(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'expr', 'name'
 	__types__     = {'expr':Expression, 'name':Expression}
 
 class UnpackSequence(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'expr', 'targets'
 	__types__     = {'targets':(tuple, list), 'expr':Expression}
 
 # TODO should swap expr/lcl?
 class Assign(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'expr', 'lcl'
 	__slots__     = 'isSplit', 'isMerge'
 	__types__     = {'expr':Expression, 'lcl':Local}
@@ -295,24 +261,20 @@ class Assign(SimpleStatement):
 		self.isMerge = True
 
 class Discard(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'expr'
 	__types__     = {'expr':Expression}
 
 class Delete(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'lcl'
 	__types__     = {'lcl':Local}
 
 
 class Print(SimpleStatement):
-	__metaclass__ = astnode
 	__fields__    = 'target', 'expr'
 	__types__     = {'target':Expression, 'expr':Expression}
 	__optional__  = 'target', 'expr'
 
 class MakeFunction(Expression):
-	__metaclass__ = astnode
 	__fields__    = 'defaults', 'cells', 'code'
 	__types__     = {'defaults':(tuple, list), 'cells':(tuple, list)}
 
@@ -321,18 +283,15 @@ class MakeFunction(Expression):
 
 ### Short circut evaluation ###
 class ShortCircutAnd(Expression):
-	__metaclass__ = astnode
 	__fields__    = 'terms'
 	__types__     = {'terms':(list, tuple)}
 
 class ShortCircutOr(Expression):
-	__metaclass__ = astnode
 	__fields__    = 'terms'
 	__types__     = {'terms':(list, tuple)}
 
 ### Control flow ###
 class Return(ControlFlow):
-	__metaclass__ = astnode
 	__fields__    = 'expr'
 	__types__     = {'expr':Expression}
 #	__optional__  = 'expr'
@@ -341,23 +300,19 @@ class Return(ControlFlow):
 # Order of evaluation verified emperically.
 # Documentation contradicts.
 class Raise(ControlFlow):
-	__metaclass__ = astnode
 	__fields__    = 'exception', 'parameter', 'traceback'
 	__optional__  = 'exception', 'parameter', 'traceback'
 
 
 class Continue(ControlFlow):
-	__metaclass__ 	= astnode
+	pass
 
 class Break(ControlFlow):
-	__metaclass__ 	= astnode
+	pass
 
 # A temorary AST node used while decompiling.
 class EndFinally(ControlFlow):
-	__metaclass__ 	= astnode
-
-
-
+	pass
 
 
 ###########
@@ -365,7 +320,6 @@ class EndFinally(ControlFlow):
 ###########
 
 class Suite(ASTNode):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'blocks'
 	__types__ 	= {'blocks':list}
 
@@ -404,25 +358,21 @@ class Suite(ASTNode):
 
 
 class ExceptionHandler(ASTNode):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'preamble', 'type', 'value', 'body'
 	__type__ 	= {'preamble':Suite, 'type':Expression, 'value':Expression, 'body':Suite}
 	__optional__ 	= 'value'
 
 
 class Condition(CompoundStatement):
-	__metaclass__ 	= astnode
 	__fields__ = 'preamble', 'conditional'
 	__types__ = {'preamble':Suite, 'conditional':Expression}
 
 
 class Switch(CompoundStatement):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'condition', 't', 'f',
 	__types__ 	= {'condition':Condition, 't':Suite,'f':Suite}
 
 class TryExceptFinally(CompoundStatement):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'body', 'handlers', 'defaultHandler', 'else_', 'finally_'
 	__types__ 	= {'body':Suite, 'handlers':(list, tuple),
 			   'else_':Suite, 'finally_':Suite}
@@ -432,14 +382,12 @@ class Loop(CompoundStatement):
 	__slots__ = ()
 
 class While(Loop):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'condition', 'body', 'else_'
 	__types__ 	= {'condition':Condition, 'body':Suite, 'else_':Suite}
 	#__optional__ 	= 'else_'
 
 
 class For(Loop):
-	__metaclass__ 	= astnode
 	__fields__ 	= 'iterator', 'index', 'loopPreamble', 'bodyPreamble', 'body', 'else_'
 	__types__ 	= {'iterator':Expression, 'body':Suite, 'else_':Suite, 'bodyPreamble':Suite,}
 	# TODO type of index?
@@ -447,8 +395,6 @@ class For(Loop):
 #argnames -> list(str)
 #parameters -> list(Local)
 class Code(CompoundStatement):
-	__metaclass__ 	= astnode
-
 	__fields__ 	= ('name', 'selfparam', 'parameters', 'parameternames',
 			   'vparam', 'kparam', 'returnparam', 'ast',)
 
@@ -471,22 +417,18 @@ class Code(CompoundStatement):
 		return "Code(%s/%d)" % (self.name, id(self))
 
 class Allocate(LLExpression):
-	__metaclass__ = astnode
 	__fields__    = 'expr'
 	__types__     = {'expr':Reference}
 
 class Load(LLExpression):
-	__metaclass__ = astnode
 	__fields__    = 'expr', 'fieldtype', 'name'
 	__types__     = {'expr':Reference, 'fieldtype':str, 'name':Reference}
 
 class Store(LLStatement):
-	__metaclass__ = astnode
 	__fields__    = 'expr', 'fieldtype', 'name', 'value'
 	__types__     = {'expr':Reference, 'fieldtype':str, 'name':Reference, 'value':Reference}
 
 class Check(LLExpression):
-	__metaclass__ = astnode
 	__fields__    = 'expr', 'fieldtype', 'name'
 	__types__     = {'expr':Reference, 'fieldtype':str, 'name':Reference}
 

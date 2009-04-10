@@ -38,7 +38,7 @@ class ClassBuilder(object):
 			fields = self.d['__fields__']
 
 			if isinstance(fields, str):
-				fields = (fields,)
+				fields = tuple(fields.strip().split())
 				self.d['__fields__'] = fields
 		return fields
 
@@ -53,7 +53,7 @@ class ClassBuilder(object):
 		assert isinstance(types, dict), types
 
 		for k in types.iterkeys():
-			assert k in fields, "Typed field %s is does not exist." % k
+			assert k in fields, "Typed field %r is does not exist." % k
 
 		return types
 
@@ -61,7 +61,7 @@ class ClassBuilder(object):
 		optional = self.d.get('__optional__', ())
 
 		if isinstance(optional, str):
-			optional = (optional,)
+			optional =  tuple(optional.strip().split())
 
 		optional = frozenset(optional)
 

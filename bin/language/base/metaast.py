@@ -19,6 +19,7 @@ class ClassBuilder(object):
 
 		self.types    = {}
 		self.optional = set()
+		self.repeated = set()
 
 	def getShared(self):
 		shared = bool(self.d.get('__shared__', False))
@@ -46,12 +47,21 @@ class ClassBuilder(object):
 		parsedFields = []
 		for field in fields:
 			optional = False
+			repeated = False
 			type     = None
+
 			if field[-1] == '?':
 				optional = True
 				field = field[:-1]
 			else:
 				optional = False
+
+			if field[-1] == '*':
+				repeated = True
+				field = field[:-1]
+			else:
+				repeated = False
+
 
 			parts = field.split(':')
 
@@ -65,6 +75,10 @@ class ClassBuilder(object):
 			# Mark the field as optional?
 			if optional:
 				self.optional.add(name)
+
+			# Mark the field as repeated?
+			if repeated:
+				self.repeated.add(name)
 
 		return tuple(parsedFields)
 
@@ -105,7 +119,7 @@ class ClassBuilder(object):
 
 		for field in fields:
 			getter = self.makeFunc(codegeneration.makeGetter, (self.name, field))
-			setter = self.makeFunc(codegeneration.makeSetter, (self.name, field, types.get(field), field in optional))
+			setter = self.makeFunc(codegeneration.makeSetter, (self.name, field, types.get(field), field in optional, field in self.repeated))
 			self.d[field] = property(getter, setter)
 
 		return slots
@@ -143,7 +157,7 @@ class ClassBuilder(object):
 
 	def addDefaultMethods(self, fields, types, optional):
 		# Generate and attach methods.
-		self.defaultFunc('__init__', codegeneration.makeInit, (self.name, fields, types, optional))
+		self.defaultFunc('__init__', codegeneration.makeInit, (self.name, fields, types, optional, self.repeated))
 		self.defaultFunc('__repr__', codegeneration.makeRepr, (self.name, fields))
 		self.defaultFunc('accept',   codegeneration.makeAccept, (self.name,))
 		self.defaultFunc('children', codegeneration.makeGetChildren, (fields,))

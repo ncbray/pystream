@@ -21,18 +21,32 @@ def makeTypecheck(target, tn, optional):
 		t = "%s != None and %s" % (target, t)
 	return t
 
-def makeInit(name, fields, types, optional):
+def raiseTypeError(nodeName, typeName, fieldName, fieldSource):
+	return 'raise TypeError, "Expected %s for field %s.%s, but got %%s instead." %% (%s.__class__.__name__)' \
+			    % (str(typeName), nodeName, fieldName, fieldSource)
+
+def makeScalarTypecheckStatement(name, fieldName, fieldSource, tn, optional, tabs, output):
+	t  = makeTypecheck(fieldSource, tn, optional)
+	r  = raiseTypeError(name, tn, fieldName, fieldSource)
+	output.append('%sif %s: %s\n' % (tabs, t, r))
+
+def makeTypecheckStatement(name, field, tn, optional, repeated, tabs, output):
+	if repeated:
+		makeScalarTypecheckStatement(name, field, field, 'list', optional, tabs, output)
+		output.append('%sfor _i in %s:\n' % (tabs, field))
+		makeScalarTypecheckStatement(name, field+'[]', '_i', tn, False, tabs+'\t', output)
+	else:
+		makeScalarTypecheckStatement(name, field, field, tn, optional, tabs, output)
+
+
+def makeInit(name, fields, types, optional, repeated):
 	args = ", ".join(('self', ", ".join(fields)))
 
 	inits = []
 	for field in fields:
 		if field in types:
 			tn = typeName(types[field])
-			t = makeTypecheck(field, tn, field in optional)
-			# TODO simplify: interpolating constant strings
-			r = 'raise TypeError, "Expected %%s for field %s.%%s, got %%s" %% (%r, %r, %s.__class__.__name__)' \
-			    % (name, tn, field, field)
-			inits.append('\tif %s: %s\n' % (t, r))
+			makeTypecheckStatement(name, field, tn, field in optional, field in repeated, '\t', inits)
 		elif field not in optional:
 			inits.append('\tassert %s != None, "Field %s.%s is not optional."\n' % (field, name, field))
 
@@ -99,7 +113,7 @@ def makeEq(fields):
 """
 	return code
 
-def makeSetter(name, field, types, optional):
+def makeSetter(name, field, types, optional, repeated):
 	inits = []
 
 	if types:

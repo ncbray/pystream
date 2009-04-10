@@ -17,6 +17,8 @@ class ClassBuilder(object):
 		self.bases = bases
 		self.d     = d
 
+		self.types    = {}
+		self.optional = set()
 
 	def getShared(self):
 		shared = bool(self.d.get('__shared__', False))
@@ -40,7 +42,31 @@ class ClassBuilder(object):
 			if isinstance(fields, str):
 				fields = tuple(fields.strip().split())
 				self.d['__fields__'] = fields
-		return fields
+
+		parsedFields = []
+		for field in fields:
+			optional = False
+			type     = None
+			if field[-1] == '?':
+				optional = True
+				field = field[:-1]
+			else:
+				optional = False
+
+			parts = field.split(':')
+
+			name = parts[0]
+			parsedFields.append(name)
+
+			# Is the field typed?
+			if len(parts) > 1 and parts[1]:
+				self.types[name] = parts[1]
+
+			# Mark the field as optional?
+			if optional:
+				self.optional.add(name)
+
+		return tuple(parsedFields)
 
 	def getTypes(self, fields):
 		# Process the field types
@@ -49,6 +75,8 @@ class ClassBuilder(object):
 			self.d['__types__'] = types
 		else:
 			types = self.d['__types__']
+
+		types.update(self.types)
 
 		assert isinstance(types, dict), types
 
@@ -63,7 +91,7 @@ class ClassBuilder(object):
 		if isinstance(optional, str):
 			optional =  tuple(optional.strip().split())
 
-		optional = frozenset(optional)
+		optional = frozenset(self.optional.union(optional))
 
 		self.d['__optional__'] = optional
 

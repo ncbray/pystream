@@ -30,7 +30,7 @@ def makeInit(name, fields, types, optional):
 			tn = typeName(types[field])
 			t = makeTypecheck(field, tn, field in optional)
 			# TODO simplify: interpolating constant strings
-			r = 'raise TypeError, "Expected %%s for field %s.%%s, got %%s" %% (%r, %r, type(%s).__name__)' \
+			r = 'raise TypeError, "Expected %%s for field %s.%%s, got %%s" %% (%r, %r, %s.__class__.__name__)' \
 			    % (name, tn, field, field)
 			inits.append('\tif %s: %s\n' % (t, r))
 		elif field not in optional:

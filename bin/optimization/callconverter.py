@@ -92,16 +92,18 @@ class ConvertCalls(object):
 	@dispatch(ast.UnpackSequence)
 	def visitUnpackSequence(self, node):
 		# HACK oh so ugly... does not resemble what actually happens.
-		# HACK does not track rewriting, as it is single -> multi
-		# HACK create an existing object without annotating it.
-		calls = []
+		if True:
+			dc = self.directCall(node, self.exports['interpreter_unpack%d' % len(node.targets)], None, [self(node.expr)])
+			return ast.Assign(dc, node.targets)
+		else:
+			calls = []
 
-		for i, arg in enumerate(node.targets):
-			obj = self.extractor.getObject(i)
-			call = self.directCall(None, self.exports['interpreter_getitem'], None, [self(node.expr), self(ast.Existing(obj))])
-			calls.append(ast.Assign(call, [arg]))
+			for i, arg in enumerate(node.targets):
+				obj = self.extractor.getObject(i)
+				call = self.directCall(None, self.exports['interpreter_getitem'], None, [self(node.expr), self(ast.Existing(obj))])
+				calls.append(ast.Assign(call, [arg]))
 
-		return calls
+			return calls
 
 	@dispatch(ast.GetAttr)
 	def visitGetAttr(self, node):

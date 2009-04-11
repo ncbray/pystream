@@ -122,6 +122,30 @@ def makeInterpreterStubs(collector):
 		return call(internal_self, *vargs)
 
 
+	@interpfunc
+	def interpreter_unpack1(arg):
+		return arg[0]
+
+	@interpfunc
+	def interpreter_unpack2(arg):
+		return arg[0], arg[1]
+
+	@interpfunc
+	def interpreter_unpack3(arg):
+		return arg[0], arg[1], arg[2]
+
+	@interpfunc
+	def interpreter_unpack4(arg):
+		return arg[0], arg[1], arg[2], arg[3]
+
+	@interpfunc
+	def interpreter_unpack5(arg):
+		return arg[0], arg[1], arg[2], arg[3], arg[4]
+
+	@interpfunc
+	def interpreter_unpack6(arg):
+		return arg[0], arg[1], arg[2], arg[3], arg[4], arg[5]
+
 	export(llast(simpleAttrCall('interpreter_getitem', '__getitem__', ['self', 'key'])))
 	export(llast(simpleAttrCall('interpreter_setitem', '__setitem__', ['self', 'key', 'value'])))
 	export(llast(simpleAttrCall('interpreter_delitem', '__delitem__', ['self', 'key'])))

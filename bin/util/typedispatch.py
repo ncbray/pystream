@@ -36,6 +36,10 @@ def dispatch__call__(self, p, *args):
 class TypeDispatchError(Exception):
 	pass
 
+class TypeDispatchDeclarationError(Exception):
+	pass
+
+
 def exceptionDefault(self, node, *args):
 	raise TypeDispatchError, "%r cannot handle %r" % (type(self), type(node))
 
@@ -63,8 +67,10 @@ class typedispatcher(type):
 				original = v.__original__
 
 				for t in types:
-					assert not t in lut, (name, t)
-					lut[t] = original
+					if t in lut:
+						raise TypeDispatchDeclarationError, "%s has declared with multiple handlers for type %s" % (name, t.__name__)
+					else:
+						lut[t] = original
 
 				restore[k] = original
 

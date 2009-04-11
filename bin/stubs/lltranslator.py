@@ -173,7 +173,7 @@ class LLTranslator(object):
 		else:
 			return allChildren(self, node)
 
-	@dispatch(ast.BinaryOp, ast.GetAttr)
+	@dispatch(ast.BinaryOp, ast.GetAttr, ast.GetSubscript, ast.BuildTuple)
 	def visitExpr(self, node):
 		return allChildren(self, node)
 
@@ -193,11 +193,36 @@ class LLTranslator(object):
 		result.annotation = node.annotation
 		return result
 
-	@dispatch(ast.Suite, list, tuple, ast.Condition, ast.Return)
+	@dispatch(ast.Return)
+	def visitReturn(self, node):
+		if len(node.exprs) == 1:
+			defn = self.defn.get(node.exprs[0])
+			if isinstance(defn, ast.BuildTuple):
+				# HACK this transformation can be unsound if any of the arguments to the BuildTuple have been redefined.
+				# HACK this may create unwanted multi-returns.
+				# HACK no guarentee the number of return args is consistant.
+				newexprs = [self(arg) for arg in defn.args]
+				self.setNumReturns(len(newexprs))
+				return ast.Return(newexprs)
+
+		self.setNumReturns(len(node.exprs))
+		return allChildren(self, node)
+
+	def setNumReturns(self, num):
+		if self.numReturns is None:
+			self.numReturns = num
+			if num != len(self.code.returnparams):
+				self.code.returnparams = [ast.Local('internal_return_%d' % i) for i in range(num)]
+		else:
+			assert num == self.numReturns
+
+	@dispatch(ast.Suite, list, tuple, ast.Condition)
 	def visitOK(self, node):
 		return allChildren(self, node)
 
 	def process(self, node):
+		self.numReturns = None
+
 		self.code = node
 		node.ast = self(node.ast)
 		self.code = None

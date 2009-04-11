@@ -32,7 +32,12 @@ def makeScalarTypecheckStatement(name, fieldName, fieldSource, tn, optional, tab
 
 def makeTypecheckStatement(name, field, tn, optional, repeated, tabs, output):
 	if repeated:
-		makeScalarTypecheckStatement(name, field, field, 'list', optional, tabs, output)
+		makeScalarTypecheckStatement(name, field, field, '(list, tuple)', optional, tabs, output)
+
+		if optional:
+			output.append('%sif %s is not None:\n' % (tabs, field))
+			tabs += '\t'
+
 		output.append('%sfor _i in %s:\n' % (tabs, field))
 		makeScalarTypecheckStatement(name, field+'[]', '_i', tn, False, tabs+'\t', output)
 	else:

@@ -48,7 +48,7 @@ class Merge(object):
 			original = frame.readLocal(oldlcl, newlcl)
 
 			if original and newlcl != original:
-				asgn = Assign(original, newlcl)
+				asgn = Assign(original, [newlcl])
 				asgn.markMerge()
 				suite.insert(asgn)
 				#insertBeforeExit(suite, asgn)

@@ -142,7 +142,9 @@ class LLTranslator(object):
 		expr = self(node.expr)
 		assert not isinstance(expr, ast.Store), "Must discard stores."
 
-		self.defn[node.lcl] = expr
+		# A little strange, but it works because there will only be one target in the cases we care about.
+		for lcl in node.lcls:
+			self.defn[lcl] = expr
 
 		if expr not in self.specialGlobals:
 			node.expr = expr

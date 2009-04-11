@@ -197,7 +197,7 @@ class DestackVisitor(StandardVisitor):
 
 			temp = Local()
 			assert isinstance(conditional, Expression), conditional
-			assign = Assign(conditional, temp)
+			assign = Assign(conditional, [temp])
 			block.append(assign)
 			condition = Condition(block, temp)
 			#condition = Condition(block, conditional)
@@ -215,7 +215,7 @@ class DestackVisitor(StandardVisitor):
 		assert isinstance(conditional, Expression), conditional
 
 		temp = Local()
-		assign = Assign(conditional, temp)
+		assign = Assign(conditional, [temp])
 		block = Suite([assign])
 		condition = Condition(block, temp)
 
@@ -622,16 +622,16 @@ class DestackVisitor(StandardVisitor):
 		getNext.rewriteAnnotation(origin=block.origin)
 
 		temp = Local()
-		loopPreamble = Suite([Assign(getNext, temp)])
+		loopPreamble = Suite([Assign(getNext, [temp])])
 
 		iterNext = Call(temp, [], [], None, None)
 		iterNext.rewriteAnnotation(origin=block.origin)
 
 		if isinstance(index, Local):
-			bodyPreamble = Suite([Assign(iterNext, index)])
+			bodyPreamble = Suite([Assign(iterNext, [index])])
 		elif isinstance(index, Cell):
 			lclTemp = Local()
-			bodyPreamble = Suite([Assign(iterNext, lclTemp), SetCellDeref(lclTemp, index)])
+			bodyPreamble = Suite([Assign(iterNext, [lclTemp]), SetCellDeref(lclTemp, index)])
 		else:
 			assert False, type(index)
 

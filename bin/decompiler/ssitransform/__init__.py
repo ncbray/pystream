@@ -229,22 +229,21 @@ class SSITransformer(StandardVisitor):
 	def visitAssign(self, node):
 		assert self.locals
 
-		if len(self.localuses[node.lcl]) > 0:
-			assert isinstance(node.lcl, Local)
-
+		if any([len(self.localuses[lcl]) > 0 for lcl in node.lcls]):
 			expr = self.process(node.expr)
 
 			assert self.locals, node.expr
 
 			if isinstance(node.expr, Local):
 				# Assign local to local.  Nullop for SSA.
+				assert len(node.lcls) == 1
 
 				expr = self.reach(expr)
-				self.locals.redefineLocal(node.lcl, expr)
+				self.locals.redefineLocal(node.lcls[0], expr)
 
 				# Create a merge for exception handling.
 				if self.hasExceptionHandling:
-					el = self.exceptLocal(node.lcl)
+					el = self.exceptLocal(node.lcls[0])
 					easgn = Assign(expr, el)
 					easgn.markMerge()
 					return easgn
@@ -253,19 +252,21 @@ class SSITransformer(StandardVisitor):
 
 
 			else:
-				rename = self.locals.writeLocal(node.lcl)
-				assert not rename in self.defns
-				self.defns[rename] = expr
+				renames = [self.locals.writeLocal(lcl) for lcl in node.lcls]
+				for rename in renames:
+					self.defns[rename] = expr
 
-
-				asgn = Assign(expr, rename)
+				asgn = Assign(expr, renames)
 
 				if self.hasExceptionHandling:
 					# Create a merge for exception handling.
-					el = self.exceptLocal(node.lcl)
-					easgn = Assign(rename, el)
-					easgn.markMerge()
-					asgn = Suite([asgn, easgn])
+					output = [asgn]
+					for lcl, rename in zip(node.lcls, renames):
+						el = self.exceptLocal(lcl)
+						easgn = Assign(rename, el)
+						easgn.markMerge()
+						output.append(easgn)
+					asgn = Suite(output)
 
 				return asgn
 

@@ -46,8 +46,10 @@ class MarkLive(object):
 
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
-		if self.flow.lookup(node.lcl) is not undefined:
-			self.flow.undefine(node.lcl)
+		used = any([self.flow.lookup(lcl) is not undefined for lcl in node.lcls])
+		if used:
+			for lcl in node.lcls:
+				self.flow.undefine(lcl)
 			self.marker(node.expr)
 			return node
 

@@ -94,7 +94,7 @@ def makeInterpreterStubs(collector):
 			b = Suite()
 
 			b.append(collector.instLookup(args[0], attr, func))
-			b.append(Assign(Call(func, args, [], None, None), retval))
+			b.append(Assign(Call(func, args, [], None, None), [retval]))
 			b.append(Return([retval]))
 
 			code = Code(name, None, args, list(argnames), None, None, [retp], b)

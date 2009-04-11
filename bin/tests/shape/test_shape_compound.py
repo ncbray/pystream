@@ -39,13 +39,13 @@ class TestSimpleCase(TestCompoundConstraintBase):
 		cond = ast.Condition(ast.Suite([]), x)
 
 		body = ast.Suite([
-			ast.Assign(x, t),
-			ast.Assign(ast.Load(t, 'LowLevel', self.existing('n')), x),
-			ast.Assign(ast.Load(y, 'LowLevel', self.existing('n')), q),
+			ast.Assign(x, [t]),
+			ast.Assign(ast.Load(t, 'LowLevel', self.existing('n')), [x]),
+			ast.Assign(ast.Load(y, 'LowLevel', self.existing('n')), [q]),
 			ast.Store(t, 'LowLevel', self.existing('n'), q),
 			ast.Delete(q),
 			ast.Store(y, 'LowLevel', self.existing('n'), t),
-			ast.Assign(ast.Load(t, 'LowLevel', self.existing('n')), y),
+			ast.Assign(ast.Load(t, 'LowLevel', self.existing('n')), [y]),
 			])
 
 		else_ = ast.Suite([])
@@ -53,7 +53,7 @@ class TestSimpleCase(TestCompoundConstraintBase):
 		loop = ast.While(cond, body, else_)
 
 		self.body = ast.Suite([
-			ast.Assign(y, z),
+			ast.Assign(y, [z]),
 			loop,
 			ast.Return([z])
 			])
@@ -74,7 +74,7 @@ class TestSimpleCase(TestCompoundConstraintBase):
 
 		dc = ast.DirectCall(self.code, None, [a,b], [], None, None)
 		self.caller = ast.Suite([
-			ast.Assign(dc, c),
+			ast.Assign(dc, [c]),
 			])
 
 		dc.rewriteAnnotation(invokes=(((self.code, self.context),), None))
@@ -174,7 +174,7 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 
 
 		body = ast.Suite([
-			ast.Assign(ast.Load(x, 'LowLevel', self.existing('n')), y),
+			ast.Assign(ast.Load(x, 'LowLevel', self.existing('n')), [y]),
 			ast.Return([y])
 			])
 
@@ -196,7 +196,7 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 
 		dc = ast.DirectCall(self.code, None, [a], [], None, None)
 		self.caller = ast.Suite([
-			ast.Assign(dc, c),
+			ast.Assign(dc, [c]),
 			])
 
 		dc.rewriteAnnotation(invokes=(((self.code, self.context),), None))
@@ -296,7 +296,7 @@ class TestVArgCase(TestCompoundConstraintBase):
 
 		dc = ast.DirectCall(self.code, None, [], [], a, None)
 		self.caller = ast.Suite([
-			ast.Assign(dc, c),
+			ast.Assign(dc, [c]),
 			])
 
 
@@ -426,7 +426,7 @@ class TestVParamCase(TestCompoundConstraintBase):
 
 		dc = ast.DirectCall(self.code, None, [a, b, c], [], None, None)
 		self.caller = ast.Suite([
-			ast.Assign(dc, d),
+			ast.Assign(dc, [d]),
 			])
 
 
@@ -523,7 +523,7 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 
 		ret,   retSlot,   retExpr  = self.makeLocalObjs('internal_return')
 
-		load  = ast.Assign(ast.Load(l, 'LowLevel', self.existing('tail')), t)
+		load  = ast.Assign(ast.Load(l, 'LowLevel', self.existing('tail')), [t])
 		store = ast.Store(l, 'LowLevel', self.existing('tail'), n)
 
 		body = ast.Suite([
@@ -584,7 +584,7 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 
 		temp = ast.Local('temp')
 		tb = ast.Suite([
-			ast.Assign(dc, temp),
+			ast.Assign(dc, [temp]),
 			ast.Return([temp])
 			])
 
@@ -594,7 +594,7 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 
 		switch = ast.Switch(cond, tb, fb)
 
-		load  = ast.Assign(ast.Load(l, 'LowLevel', self.existing('tail')), t)
+		load  = ast.Assign(ast.Load(l, 'LowLevel', self.existing('tail')), [t])
 		store = ast.Store(l, 'LowLevel', self.existing('tail'), n)
 
 		body = ast.Suite([
@@ -700,7 +700,7 @@ class TestAllocateCase(TestCompoundConstraintBase):
 		alloc = ast.Allocate(x)
 
 		self.code = ast.Suite([
-			ast.Assign(alloc, y),
+			ast.Assign(alloc, [y]),
 			])
 
 		lc = self.sys.cpacanonical.localName(None, x, self.context)

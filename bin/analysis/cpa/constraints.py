@@ -229,13 +229,13 @@ class SimpleCheckConstraint(Constraint):
 
 # Resolves the type of the expression, varg, and karg
 class AbstractCallConstraint(CachedConstraint):
-	__slots__ = 'op', 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'target'
-	def __init__(self, op, selfarg, args, kwds, vargs, kargs, target):
+	__slots__ = 'op', 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'targets'
+	def __init__(self, op, selfarg, args, kwds, vargs, kargs, targets):
 		CachedConstraint.__init__(self, selfarg, vargs, kargs)
 
 		assert isinstance(args, (list, tuple)), args
 		assert not kwds, kwds
-		assert target is None or isinstance(target, storegraph.SlotNode), type(target)
+		assert targets is None or isinstance(targets, (list, tuple)), type(targets)
 
 		self.op      = op
 		self.selfarg = selfarg
@@ -244,7 +244,7 @@ class AbstractCallConstraint(CachedConstraint):
 		self.vargs   = vargs
 		self.kargs   = kargs
 
-		self.target  = target
+		self.targets  = targets
 
 	def getVArgLengths(self, sys, vargsType):
 		if vargsType is not None:
@@ -290,7 +290,7 @@ class AbstractCallConstraint(CachedConstraint):
 					allslots.append(field)
 
 			# HACK this is actually somewhere between caller and callee...
-			caller = util.calling.CallerArgs(self.selfarg, allslots, [], None, None, self.target)
+			caller = util.calling.CallerArgs(self.selfarg, allslots, [], None, None, self.targets)
 
 			con = SimpleCallConstraint(self.op, code, expr, allslots, caller)
 			con.attach(sys)

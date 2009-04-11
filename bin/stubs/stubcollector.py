@@ -25,15 +25,15 @@ class StubCollector(object):
 		return ast.Existing(self.extractor.getObject(obj))
 
 	def allocate(self, t, target):
-		return ast.Assign(ast.Allocate(t), target)
+		return ast.Assign(ast.Allocate(t), [target])
 
 	def getType(self, inst, result):
-		return ast.Assign(ast.Load(inst, 'LowLevel', self.existing('type')), result)
+		return ast.Assign(ast.Load(inst, 'LowLevel', self.existing('type')), [result])
 
 	def loadAttribute(self, expr, type, name, target):
 		descriptor  = type.__dict__[name]
 		mangledName = util.uniqueSlotName(descriptor)
-		return ast.Assign(ast.Load(expr, 'Attribute', self.existing(mangledName)), target)
+		return ast.Assign(ast.Load(expr, 'Attribute', self.existing(mangledName)), [target])
 
 	def returnNone(self):
 		return ast.Return(self.existing(None))
@@ -41,8 +41,8 @@ class StubCollector(object):
 	def typeLookup(self, cls, field, result):
 		clsDict = ast.Local('clsDict')
 		return [
-			ast.Assign(ast.Load(cls, 'LowLevel', self.existing('dictionary')), clsDict),
-			ast.Assign(ast.Load(clsDict, 'Dictionary', self.existing(field)), result),
+			ast.Assign(ast.Load(cls, 'LowLevel', self.existing('dictionary')), [clsDict]),
+			ast.Assign(ast.Load(clsDict, 'Dictionary', self.existing(field)), [result]),
 			]
 
 	def instLookup(self, expr, field, result):
@@ -59,7 +59,7 @@ class StubCollector(object):
 		if result:
 			return [
 				self.instLookup(expr, attr, func),
-				ast.Assign(ast.Call(func, newargs, [], vargs, kargs), result)
+				ast.Assign(ast.Call(func, newargs, [], vargs, kargs), [result])
 				]
 		else:
 			return [
@@ -72,7 +72,7 @@ class StubCollector(object):
 		getter = self.loadAttribute(expr, type, field, method)
 		call   = ast.Call(method, args, kwds, vargs, kargs)
 		if result:
-			callStmt = ast.Assign(call, result)
+			callStmt = ast.Assign(call, [result])
 		else:
 			callStmt = ast.Discard(call)
 		return [getter, callStmt]

@@ -99,7 +99,7 @@ class ConvertCalls(object):
 		for i, arg in enumerate(node.targets):
 			obj = self.extractor.getObject(i)
 			call = self.directCall(None, self.exports['interpreter_getitem'], None, [self(node.expr), self(ast.Existing(obj))])
-			calls.append(ast.Assign(call, arg))
+			calls.append(ast.Assign(call, [arg]))
 
 		return calls
 

@@ -218,18 +218,24 @@ class FoldAnalysis(object):
 
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
-		if fold.existingConstant(node.expr):
-			self.flow.define(node.lcl, node.expr.object)
-		elif isinstance(node.expr, ast.Local):
-			# Propagate names.
-			if node.lcl.name and not node.expr.name:
-				node.expr.name = node.lcl.name
-			elif not node.lcl.name and node.expr.name:
-				node.lcl.name = node.expr.name
+		if len(node.lcls) == 1:
+			lcl = node.lcls[0]
+			if fold.existingConstant(node.expr):
+				self.flow.define(lcl, node.expr.object)
+				return node
+			elif isinstance(node.expr, ast.Local):
+				# Propagate names.
+				if lcl.name and not node.expr.name:
+					node.expr.name = lcl.name
+				elif not lcl.name and node.expr.name:
+					lcl.name = node.expr.name
 
-			self.flow.define(node.lcl, node.expr)
-		else:
-			self.flow.define(node.lcl, top)
+				self.flow.define(lcl, node.expr)
+				return node
+
+		for lcl in node.lcls:
+			self.flow.define(lcl, top)
+
 		return node
 
 	@dispatch(ast.Delete)
@@ -256,7 +262,7 @@ class FoldTraverse(object):
 	def visitAssign(self, node):
 		# Modified bottom up
 		# Avoids folding assignment targets
-		node = ast.Assign(self(node.expr), node.lcl)
+		node = ast.Assign(self(node.expr), node.lcls)
 		node = self.strategy(node)
 		return node
 

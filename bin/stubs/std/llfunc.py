@@ -187,7 +187,7 @@ def makeLLFunc(collector):
 #		b.append(Assign(GetAttr(self, collector.existing('im_func')), im_func))
 
 
-		b.append(Assign(Call(im_func, [im_self], [], vargs, None), temp))
+		b.append(Assign(Call(im_func, [im_self], [], vargs, None), [temp]))
 		b.append(Return([temp]))
 
 		name = 'method__call__'

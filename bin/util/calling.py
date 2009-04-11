@@ -3,15 +3,18 @@ __all__ = ['CallerArgs', 'CalleeParams', 'CallInfo', 'Maybe', 'callStackToParams
 from util.tvl import *
 
 class CallerArgs(object):
-	__slots__ = 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'returnarg'
+	__slots__ = 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'returnargs'
 
-	def __init__(self, selfarg, args, kwds, vargs, kargs, returnarg):
+	def __init__(self, selfarg, args, kwds, vargs, kargs, returnargs):
+		assert isinstance(args, (list, tuple)), args
+		assert isinstance(returnargs, (list, tuple)) or returnargs is None, returnargs
+
 		self.selfarg   = selfarg
 		self.args      = args
 		self.kwds      = kwds
 		self.vargs     = vargs
 		self.kargs     = kargs
-		self.returnarg = returnarg
+		self.returnargs = returnargs
 
 	def __repr__(self):
 		return "args(self=%r, args=%r, kwds=%r, vargs=%r, kargs=%r)" % (self.selfarg, self.args, self.kwds, self.vargs, self.kargs)

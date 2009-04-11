@@ -166,7 +166,7 @@ class ShapeConstraintBuilder(object):
 		self.constraints.append(constraint)
 
 
-	def makeCallerArgs(self, node, target):
+	def makeCallerArgs(self, node, targets):
 		if isinstance(node, ast.DirectCall):
 			selfarg = self.localExpr(node.selfarg)
 		else:
@@ -182,12 +182,12 @@ class ShapeConstraintBuilder(object):
 		vargs = self.localExpr(node.vargs)
 		kargs = self.localExpr(node.kargs)
 
-		if target is not None:
-			returnarg = self.localExpr(target)
+		if targets is not None:
+			returnargs = [self.localExpr(target) for target in targets]
 		else:
-			returnarg = None
+			returnargs = None
 
-		callerargs = util.calling.CallerArgs(selfarg, args, kwds, vargs, kargs, returnarg)
+		callerargs = util.calling.CallerArgs(selfarg, args, kwds, vargs, kargs, returnargs)
 		return callerargs
 
 
@@ -228,7 +228,7 @@ class ShapeConstraintBuilder(object):
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		self.pre(node)
-		self(node.expr, node.lcl)
+		self(node.expr, node.lcls)
 		self.post(node)
 
 	@dispatch(ast.Discard)
@@ -238,22 +238,25 @@ class ShapeConstraintBuilder(object):
 		self.post(node)
 
 	@dispatch(ast.Local)
-	def visitLocal(self, node, target):
+	def visitLocal(self, node, targets):
+		assert len(targets) == 1
+		target = targets[0]
+
 		self.assign(self.localExpr(node), self.localExpr(target))
 
 
 	# TODO treat as a mini-allocation?
 	@dispatch(ast.Existing)
-	def visitExisting(self, node, target):
+	def visitExisting(self, node, targets):
 		pass #self.assign(self.localExpr(node), self.localExpr(target))
 
 
 	@dispatch(ast.DirectCall)
-	def visitDirectCall(self, node, target):
+	def visitDirectCall(self, node, targets):
 		assert node.annotation.invokes is not None
 
 		invocations = node.annotation.invokes[0]
-		callerargs = self.makeCallerArgs(node, target)
+		callerargs = self.makeCallerArgs(node, targets)
 
 		pre = self.pre(node)
 		post = self.advance()
@@ -265,11 +268,11 @@ class ShapeConstraintBuilder(object):
 		self.post(node)
 
 	@dispatch(ast.Call)
-	def visitCall(self, node, target):
+	def visitCall(self, node, targets):
 		assert node.annotation.invokes is not None
 
 		invocations = node.annotation.invokes[0]
-		callerargs = self.makeCallerArgs(node, target)
+		callerargs = self.makeCallerArgs(node, targets)
 
 		pre = self.pre(node)
 		post = self.advance()
@@ -351,7 +354,10 @@ class ShapeConstraintBuilder(object):
 
 
 		params = calleeparams.returnparams
-		args   = (callerargs.returnarg,)
+		args   = callerargs.returnargs
+
+		if args is None:
+			args = [None for p in params]
 
 		assert len(params) == len(args)
 
@@ -423,9 +429,11 @@ class ShapeConstraintBuilder(object):
 		self.makeMerge(dstFunc, splitMergeInfo, returnPoint)
 
 	@dispatch(ast.Allocate)
-	def visitAllocate(self, node, target):
+	def visitAllocate(self, node, targets):
 		assert node.annotation.allocates is not None
 
+		assert len(targets) == 1
+		target = targets[0]
 		targetExpr = self.localExpr(target)
 
 		fields = set()
@@ -444,7 +452,10 @@ class ShapeConstraintBuilder(object):
 			self.assign(expressions.null, self.fieldExpr(target,  (field.type, field.name)))
 
 	@dispatch(ast.Load)
-	def visitLoad(self, node, target):
+	def visitLoad(self, node, targets):
+		assert len(targets) == 1
+		target = targets[0]
+
 		field = self.sys.info.loadSlotName(node)
 		self.assign(self.fieldExpr(node.expr, field), self.localExpr(target))
 

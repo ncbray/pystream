@@ -375,7 +375,7 @@ class InterproceduralDataflow(object):
 
 		dummyReturnSlot = self.makeExternalSlot('dummy_return')
 
-		caller = util.calling.CallerArgs(selfSlot, argSlots, [], None, None, dummyReturnSlot)
+		caller = util.calling.CallerArgs(selfSlot, argSlots, [], None, None, [dummyReturnSlot])
 
 
 		# Generate the calling context

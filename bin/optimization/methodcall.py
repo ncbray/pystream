@@ -202,6 +202,9 @@ class MethodAnalysis(object):
 		if isinstance(key, tuple):
 			self.kill(key)
 
+	def targets(self, nodes):
+		for node in nodes:
+			self.target(node)
 
 	def arg(self, node):
 		assert isinstance(node, ast.Local), type(node)
@@ -255,18 +258,19 @@ class MethodAnalysis(object):
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		self(node.expr)
-		self.target(node.lcl)
+		self.targets(node.lcls)
 
 		if not isinstance(node.expr, (ast.Local, ast.Existing)):
 			invokes = node.expr.annotation.invokes
 			if invokes is not None:
 				flag, expr, name = self.pattern(node.expr, invokes[0])
 
-				if flag:
-					key = (expr, name, node.lcl)
+				if flag and len(node.lcls) == 1:
+					lcl = node.lcls[0]
+					key = (expr, name, lcl)
 					self.flow.define(('expr', expr), key)
 					self.flow.define(('name', name), key)
-					self.flow.define(('meth', node.lcl), key)
+					self.flow.define(('meth', lcl), key)
 
 		return node
 

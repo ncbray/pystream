@@ -74,7 +74,7 @@ class InstructionTranslator(object):
 			lcl = self.readLocal(name)
 
 			if lcl != value:
-				self.emit(Assign(value, lcl))
+				self.emit(Assign(value, [lcl]))
 
 	def readLocal(self, name):
 		if not name in self.locals:
@@ -724,7 +724,7 @@ class InstructionTranslator(object):
 		self.push(target)
 
 		if target != op:
-			self.emit(Assign(op, target))
+			self.emit(Assign(op, [target]))
 
 
 	def emit(self, op):

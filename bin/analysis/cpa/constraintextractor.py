@@ -51,14 +51,14 @@ class ExtractDataflow(object):
 	def contextOp(self, node):
 		return self.system.canonical.opContext(self.code, node, self.context)
 
-	def directCall(self, node, code, selfarg, args, vargs, kargs, target):
+	def directCall(self, node, code, selfarg, args, vargs, kargs, targets):
 		if self.doOnce(node):
 			assert isinstance(code, ast.Code), type(code)
 			op   = self.contextOp(node)
 			kwds = [] # HACK
-			con = DirectCallConstraint(op, code, selfarg, args, kwds, vargs, kargs, target)
+			con = DirectCallConstraint(op, code, selfarg, args, kwds, vargs, kargs, targets)
 			con.attach(self.system) # TODO move inside constructor?
-		return target
+		return targets
 
 	def assign(self, src, dst):
 		return self.system.createAssign(src, dst)
@@ -70,38 +70,41 @@ class ExtractDataflow(object):
 			result.initializeType(sys, sys.canonical.existingType(obj))
 		return result
 
-	def call(self, node, expr, args, kwds, vargs, kargs, target):
+	def call(self, node, expr, args, kwds, vargs, kargs, targets):
 		if self.doOnce(node):
 			op   = self.contextOp(node)
-			con = CallConstraint(op, expr, args, kwds, vargs, kargs, target)
+			con = CallConstraint(op, expr, args, kwds, vargs, kargs, targets)
 			con.attach(self.system) # TODO move inside constructor?
-		return target
+		return targets
 
-	def load(self, node, expr, fieldtype, name, target):
+	def load(self, node, expr, fieldtype, name, targets):
 		if self.doOnce(node):
+			assert len(targets) == 1
 			op   = self.contextOp(node)
-			con = LoadConstraint(op, expr, fieldtype, name, target)
+			con = LoadConstraint(op, expr, fieldtype, name, targets[0])
 			con.attach(self.system) # TODO move inside constructor?
-		return target
+		return targets
 
 	def store(self, node, expr, fieldtype, name, value):
 		op   = self.contextOp(node)
 		con = StoreConstraint(op, expr, fieldtype, name, value)
 		con.attach(self.system) # TODO move inside constructor?
 
-	def allocate(self, node, expr, target):
+	def allocate(self, node, expr, targets):
 		if self.doOnce(node):
+			assert len(targets) == 1
 			op   = self.contextOp(node)
-			con = AllocateConstraint(op, expr, target)
+			con = AllocateConstraint(op, expr, targets[0])
 			con.attach(self.system) # TODO move inside constructor?
-		return target
+		return targets
 
-	def check(self, node, expr, fieldtype, name, target):
+	def check(self, node, expr, fieldtype, name, targets):
 		if self.doOnce(node):
+			assert len(targets) == 1
 			op   = self.contextOp(node)
-			con = CheckConstraint(op, expr, fieldtype, name, target)
+			con = CheckConstraint(op, expr, fieldtype, name, targets[0])
 			con.attach(self.system) # TODO move inside constructor?
-		return target
+		return targets
 
 	##################################
 	### Generic feature extraction ###
@@ -130,19 +133,19 @@ class ExtractDataflow(object):
 		return tuple([self(child) for child in node])
 
 	@dispatch(ast.ConvertToBool)
-	def visitConvertToBool(self, node, target):
+	def visitConvertToBool(self, node, targets):
 		return self.directCall(node, self.exports['convertToBool'],
 			None, [self(node.expr)],
-			None, None, target)
+			None, None, targets)
 
 	@dispatch(ast.Not)
-	def visitNot(self, node, target):
+	def visitNot(self, node, targets):
 		return self.directCall(node, self.exports['invertedConvertToBool'],
 			None, [self(node.expr)],
-			None, None, target)
+			None, None, targets)
 
 	@dispatch(ast.BinaryOp)
-	def visitBinaryOp(self, node, target):
+	def visitBinaryOp(self, node, targets):
 		if node.op in opnames.inplaceOps:
 			opname = opnames.inplace[node.op[:-1]]
 		else:
@@ -150,7 +153,7 @@ class ExtractDataflow(object):
 
 		return self.directCall(node, self.exports['interpreter%s' % opname],
 			None, [self(node.left), self(node.right)],
-			None, None, target)
+			None, None, targets)
 
 	@dispatch(ast.UnaryPrefixOp)
 	def visitUnaryPrefixOp(self, node, target):
@@ -160,10 +163,10 @@ class ExtractDataflow(object):
 			None, None, target)
 
 	@dispatch(ast.GetGlobal)
-	def visitGetGlobal(self, node, target):
+	def visitGetGlobal(self, node, targets):
 		return self.directCall(node, self.exports['interpreterLoadGlobal'],
 			None, [self(self.code.selfparam), self(node.name)],
-			None, None, target)
+			None, None, targets)
 
 	@dispatch(ast.SetGlobal)
 	def visitSetGlobal(self, node):
@@ -172,40 +175,40 @@ class ExtractDataflow(object):
 			None, None, None)
 
 	@dispatch(ast.GetIter)
-	def visitGetIter(self, node, target):
+	def visitGetIter(self, node, targets):
 		return self.directCall(node, self.exports['interpreter_iter'],
 			None, [self(node.expr)],
-			None, None, target)
+			None, None, targets)
 
 	@dispatch(ast.Call)
-	def visitCall(self, node, target):
+	def visitCall(self, node, targets):
 		return self.call(node, self(node.expr),
 			self(node.args), self(node.kwds),
-			self(node.vargs), self(node.kargs), target)
+			self(node.vargs), self(node.kargs), targets)
 
 	@dispatch(ast.DirectCall)
-	def visitDirectCall(self, node, target):
+	def visitDirectCall(self, node, targets):
 		return self.directCall(node, node.func,
 			self(node.selfarg), self(node.args),
-			self(node.vargs), self(node.kargs), target)
+			self(node.vargs), self(node.kargs), targets)
 
 	@dispatch(ast.BuildList)
-	def visitBuildList(self, node, target):
+	def visitBuildList(self, node, targets):
 		return self.directCall(node, self.exports['buildList'],
 			None, self(node.args),
-			None, None, target)
+			None, None, targets)
 
 	@dispatch(ast.BuildTuple)
-	def visitBuildTuple(self, node, target):
+	def visitBuildTuple(self, node, targets):
 		return self.directCall(node, self.exports['buildTuple'],
 			None, self(node.args),
-			None, None, target)
+			None, None, targets)
 
 	@dispatch(ast.GetAttr)
-	def visitGetAttr(self, node, target):
+	def visitGetAttr(self, node, targets):
 		return self.directCall(node, self.exports['interpreter_getattribute'],
 			None, [self(node.expr), self(node.name)],
-			None, None, target)
+			None, None, targets)
 
 	@dispatch(ast.SetAttr)
 	def visitSetAttr(self, node):
@@ -214,10 +217,10 @@ class ExtractDataflow(object):
 			None, None, None)
 
 	@dispatch(ast.GetSubscript)
-	def visitGetSubscript(self, node, target):
+	def visitGetSubscript(self, node, targets):
 		return self.directCall(node, self.exports['interpreter_getitem'],
 			None, [self(node.expr), self(node.subscript)],
-			None, None, target)
+			None, None, targets)
 
 	@dispatch(ast.SetSubscript)
 	def visitSetSubscript(self, node):
@@ -228,7 +231,7 @@ class ExtractDataflow(object):
 
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
-		self(node.expr, self(node.lcl))
+		self(node.expr, self(node.lcls))
 
 	@dispatch(ast.Discard)
 	def visitDiscard(self, node):
@@ -242,38 +245,40 @@ class ExtractDataflow(object):
 				self.assign(self(expr), self(param))
 
 	@dispatch(ast.Local)
-	def visitLocal(self, node, target=None):
+	def visitLocal(self, node, targets=None):
 		value = self.localSlot(node)
 
-		if target is not None:
-			self.assign(value, target)
+		if targets is not None:
+			assert len(targets) == 1
+			self.assign(value, targets[0])
 		else:
 			return value
 
 	@dispatch(ast.Existing)
-	def visitExisting(self, node, target=None):
+	def visitExisting(self, node, targets=None):
 		value = self.init(node.object, node.object)
 
-		if target is not None:
-			target.initializeType(self.system, self.system.canonical.existingType(node.object))
+		if targets is not None:
+			assert len(targets) == 1
+			targets[0].initializeType(self.system, self.system.canonical.existingType(node.object))
 		else:
 			return value
 
 	@dispatch(ast.Load)
-	def visitLoad(self, node, target):
-		return self.load(node, self(node.expr), node.fieldtype, self(node.name), target)
+	def visitLoad(self, node, targets):
+		return self.load(node, self(node.expr), node.fieldtype, self(node.name), targets)
 
 	@dispatch(ast.Store)
 	def visitStore(self, node):
 		return self.store(node, self(node.expr), node.fieldtype, self(node.name), self(node.value))
 
 	@dispatch(ast.Allocate)
-	def visitAllocate(self, node, target):
-		return self.allocate(node, self(node.expr), target)
+	def visitAllocate(self, node, targets):
+		return self.allocate(node, self(node.expr), targets)
 
 	@dispatch(ast.Check)
-	def visitCheck(self, node, target):
-		return self.check(node, self(node.expr), node.fieldtype, self(node.name), target)
+	def visitCheck(self, node, targets):
+		return self.check(node, self(node.expr), node.fieldtype, self(node.name), targets)
 
 	@dispatch(ast.Switch)
 	def visitSwitch(self, node):

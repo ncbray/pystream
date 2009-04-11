@@ -201,16 +201,16 @@ class UnpackSequence(SimpleStatement):
 
 # TODO should swap expr/lcl?
 class Assign(SimpleStatement):
-	__fields__ = 'expr:Expression lcl:Local'
+	__fields__ = 'expr:Expression lcls:Local*'
 	__slots__  = 'isSplit', 'isMerge'
 
-	def __init__(self, expr, lcl):
+	def __init__(self, expr, lcls):
 		super(Assign, self).__init__()
 		assert expr.returnsValue(), expr
-		assert isinstance(lcl, Local), lcl
+		assert isinstance(lcls, (list, tuple)), lcls
 
 		self.expr = expr
-		self.lcl = lcl
+		self.lcls = lcls
 
 		self.isSplit = False
 		self.isMerge = False

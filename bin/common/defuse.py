@@ -273,7 +273,9 @@ class DefUseVisitor(CodeVisitor):
 		if node.traceback: self.use(node, node.traceback)
 
 	def visitAssign(self, node):
-		self.define(node, node.lcl)
+		for lcl in node.lcls:
+			self.define(node, lcl)
+
 		if isinstance(node.expr, Local):
 			self.use(node, node.expr)
 
@@ -523,13 +525,18 @@ class Collapser(StandardVisitor):
 		if isinstance(node.expr, Existing):
 			# Can reorder and duplicate without penalty
 			# Should have already optimized out, however?
-			self.markCollapsable(node.lcl)
+			assert len(node.lcls) == 1
+			self.markCollapsable(node.lcls[0])
 		elif isinstance(node.expr, Local):
 			# TODO is this sound?
-			self.searchForTargetNondestructive(node.lcl)
+			assert len(node.lcls) == 1
+			self.searchForTargetNondestructive(node.lcls[0])
 			self.markPossible(node.expr)
 		else:
-			self.searchForTarget(node.lcl)
+			if len(node.lcls) == 1:
+				self.searchForTarget(node.lcls[0])
+			else:
+				self.resetStack()
 			self.process(node.expr)
 
 	def visitDelete(self, node):

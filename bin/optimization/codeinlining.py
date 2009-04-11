@@ -148,30 +148,27 @@ class OpInliningTransform(object):
 		if self.returnargs is not None:
 			# Inlined into assignment
 			assert len(self.returnargs) == len(node.exprs)
-			return [ast.Assign(self(src), dst) for src, dst in zip(node.exprs, self.returnargs)]
+			return [ast.Assign(self(src), [dst]) for src, dst in zip(node.exprs, self.returnargs)]
 		else:
 			# Inlined into discard
 			return []
 
-	def process(self, dst, code, map, selfarg, args, returnarg):
+	def process(self, dst, code, map, selfarg, args, returnargs):
 		self.localMap = {}
 
 		self.dst = dst
 		self.contextRemap = map
 
-		if returnarg is not None:
-			self.returnargs = (returnarg,)
-		else:
-			self.returnargs = None
+		self.returnargs = returnargs
 		outp = []
 
 		# Do argument transfer
 		if selfarg:
-			outp.append(ast.Assign(selfarg, self(code.selfparam)))
+			outp.append(ast.Assign(selfarg, [self(code.selfparam)]))
 
 		assert len(args) == len(code.parameters), "TODO: default arguments."
 		for arg, param in zip(args, code.parameters):
-			outp.append(ast.Assign(arg, self(param)))
+			outp.append(ast.Assign(arg, [self(param)]))
 
 		outp.append(self(code.ast))
 
@@ -205,12 +202,12 @@ class CodeInliningTransform(object):
 		ast.Local, ast.Existing, ast.Code,
 		ast.Return,
 		type(None), str, int)
-	def visitInlineLeaf(self, node, returnarg=None):
+	def visitInlineLeaf(self, node, returnargs=None):
 		return node
 
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
-		result = self(node.expr, node.lcl)
+		result = self(node.expr, node.lcls)
 		return result if isinstance(result, list) else node
 
 	@dispatch(ast.Discard)
@@ -219,24 +216,24 @@ class CodeInliningTransform(object):
 		return result if isinstance(result, list) else node
 
 	@dispatch(ast.DirectCall)
-	def visitDirectCall(self, node, returnarg):
+	def visitDirectCall(self, node, returnargs):
 		self.processInvocations(node)
 
 		if not node.kargs and not node.vargs and not node.kwds:
-			return self.tryInline(node, node.selfarg, node.args, returnarg)
+			return self.tryInline(node, node.selfarg, node.args, returnargs)
 		else:
 			return None
 
 	@dispatch(ast.Call)
-	def visitCall(self, node, returnarg):
+	def visitCall(self, node, returnargs):
 		self.processInvocations(node)
 
 		if not node.kargs and not node.vargs and not node.kwds:
-			return self.tryInline(node, node.expr, node.args, returnarg)
+			return self.tryInline(node, node.expr, node.args, returnargs)
 		else:
 			return None
 
-	def tryInline(self, node, selfarg, args, returnarg):
+	def tryInline(self, node, selfarg, args, returnargs):
 		# Don't inline anything into descriptive stubs
 		if self.code.annotation.descriptive: return None
 
@@ -288,7 +285,7 @@ class CodeInliningTransform(object):
 
 		self.modified = True
 
-		return self.opinline.process(self.code, allCode, map, selfarg, args, returnarg)
+		return self.opinline.process(self.code, allCode, map, selfarg, args, returnargs)
 
 	def processInvocations(self, node):
 		invokes = node.annotation.invokes

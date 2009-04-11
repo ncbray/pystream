@@ -151,13 +151,13 @@ class AnalysisContext(CanonicalObject):
 
 
 		# Copy the return value
-		if caller.returnarg is not None:
+		if caller.returnargs is not None:
 			code = self.signature.code
 
-			# HACK, callers can't handle multiple returns, yet.
-			assert len(code.returnparams) == 1
-			returnSlot = localSlot(sys, code, code.returnparams[0], self)
-			sys.createAssign(returnSlot, caller.returnarg)
+			assert len(code.returnparams) == len(caller.returnargs)
+			for param, arg in zip(code.returnparams, caller.returnargs):
+				returnSlot = localSlot(sys, code, param, self)
+				sys.createAssign(returnSlot, arg)
 
 # Objects for external calls.
 externalFunction = ast.Code('external', None, [], [], None, None, [ast.Local('internal_return')], ast.Suite([]))

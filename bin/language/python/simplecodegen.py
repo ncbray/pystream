@@ -513,11 +513,11 @@ class SimpleCodeGen(StandardVisitor):
 ##			stmt = "%s = %s" % (self.seg.process(node.lcl), expr)
 ##			self.emitStatement(stmt)
 		else:
-			if node.lcl in self.collapsable and self.supressStatements:
+			if len(node.lcls) == 1 and node.lcls[0] in self.collapsable and self.supressStatements:
 			#if node.lcl in self.collapsable:
-				self.seg.processCollapsed(node.lcl, node.expr)
+				self.seg.processCollapsed(node.lcls[0], node.expr)
 			else:
-				stmt = "%s = %s" % (self.seg.process(node.lcl), self.seg.process(node.expr))
+				stmt = "%s = %s" % (', '.join([self.seg.process(lcl) for lcl in node.lcls]), self.seg.process(node.expr))
 				if node.isMerge:
 					stmt += " # Merge"
 				if node.isSplit:

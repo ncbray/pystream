@@ -145,11 +145,10 @@ class OpInliningTransform(object):
 
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
-		if self.returnarg:
+		if self.returnargs is not None:
 			# Inlined into assignment
-			expr = self(node.expr)
-			assert expr
-			return ast.Assign(expr, self.returnarg)
+			assert len(self.returnargs) == len(node.exprs)
+			return [ast.Assign(self(src), dst) for src, dst in zip(node.exprs, self.returnargs)]
 		else:
 			# Inlined into discard
 			return []
@@ -159,7 +158,11 @@ class OpInliningTransform(object):
 
 		self.dst = dst
 		self.contextRemap = map
-		self.returnarg = returnarg
+
+		if returnarg is not None:
+			self.returnargs = (returnarg,)
+		else:
+			self.returnargs = None
 		outp = []
 
 		# Do argument transfer

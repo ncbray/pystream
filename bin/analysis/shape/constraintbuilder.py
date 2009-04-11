@@ -200,9 +200,9 @@ class ShapeConstraintBuilder(object):
 
 		vparam = self.localExpr(code.vparam)
 		kparam = self.localExpr(code.kparam)
-		returnparam = self.localExpr(code.returnparam)
+		returnparams = [self.localExpr(param) for param in code.returnparams]
 
-		calleeparams = util.calling.CalleeParams(selfparam, params, paramnames, defaults, vparam, kparam, returnparam)
+		calleeparams = util.calling.CalleeParams(selfparam, params, paramnames, defaults, vparam, kparam, returnparams)
 		return calleeparams
 
 
@@ -348,15 +348,22 @@ class ShapeConstraintBuilder(object):
 		#splitMergeInfo.dstLocals = self.functionLocalSlots[dstFunc]
 
 		# Create a mapping to transfer the return value.
-		returnSlot = calleeparams.returnparam.slot
 
-		if callerargs.returnarg:
-			targetSlot = callerargs.returnarg.slot
-		else:
-			targetSlot = None
 
-		splitMergeInfo.mapping[targetSlot] = None
-		splitMergeInfo.mapping[returnSlot] = targetSlot
+		params = calleeparams.returnparams
+		args   = (callerargs.returnarg,)
+
+		assert len(params) == len(args)
+
+		for param, arg in zip(params, args):
+			returnSlot = param.slot
+			if arg:
+				targetSlot = arg.slot
+			else:
+				targetSlot = None
+
+			splitMergeInfo.mapping[targetSlot] = None
+			splitMergeInfo.mapping[returnSlot] = targetSlot
 
 		if hasattr(self.sys.info, 'regions'):
 			splitMergeInfo.dstLiveFields = self.sys.info.regions.liveFields[dstFunc]
@@ -472,10 +479,24 @@ class ShapeConstraintBuilder(object):
 	def visitReturn(self, node):
 		pre = self.pre(node)
 
-		src = self.localExpr(node.expr)
+		srcs = [self.localExpr(expr) for expr in node.exprs]
+		dsts = [self.localExpr(expr) for expr in self.returnValues]
 
-		constraint = constraints.AssignmentConstraint(self.sys, pre, self.returnPoint, src, self.localExpr(self.returnValue))
-		self.constraints.append(constraint)
+
+		assert len(srcs) == len(dsts)
+
+		self.current = pre
+
+		for i, src, dst in zip(range(len(srcs)), srcs, dsts):
+			if i >= len(srcs)-1:
+				next = self.returnPoint
+			else:
+				next = self.newID()
+
+			constraint = constraints.AssignmentConstraint(self.sys, self.current, next, src, dst)
+			self.constraints.append(constraint)
+
+			self.current = next
 
 		self.current = None
 		self.post(node)
@@ -647,7 +668,7 @@ class ShapeConstraintBuilder(object):
 
 		self.transferParameters(node)
 
-		self.returnValue = node.returnparam
+		self.returnValues = node.returnparams
 		self.returnPoint = self.newID()
 
 		if self.debug:
@@ -663,8 +684,8 @@ class ShapeConstraintBuilder(object):
 		self.current = self.returnPoint
 
 		# Generate a kill constraint for the locals.
-		returnSlot = self.sys.canonical.localSlot(node.returnparam)
-		lcls = self.functionLocalSlots[self.function] - set((returnSlot,))
+		returnSlots = [self.sys.canonical.localSlot(param) for param in node.returnparams]
+		lcls = self.functionLocalSlots[self.function] - set(returnSlots)
 		self.forgetAll(lcls, exitPoint)
 
 		post = self.post(node)

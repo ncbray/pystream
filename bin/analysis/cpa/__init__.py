@@ -287,7 +287,8 @@ class InterproceduralDataflow(object):
 			resultxtype = self.canonical.existingType(result)
 
 			# Set the return value
-			name = self.canonical.localName(code, code.returnparam, targetcontext)
+			assert len(code.returnparams) == 1
+			name = self.canonical.localName(code, code.returnparams[0], targetcontext)
 			returnSource = self.roots.root(self, name, self.roots.regionHint)
 			returnSource.initializeType(self, resultxtype)
 

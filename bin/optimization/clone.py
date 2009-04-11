@@ -584,7 +584,7 @@ class FunctionCloner(object):
 		dstcode.parameternames = self(srccode.parameternames)
 		dstcode.vparam         = self(srccode.vparam)
 		dstcode.kparam         = self(srccode.kparam)
-		dstcode.returnparam    = self(srccode.returnparam)
+		dstcode.returnparams   = self(srccode.returnparams)
 		dstcode.ast            = self(srccode.ast)
 
 

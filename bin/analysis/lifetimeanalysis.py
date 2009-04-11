@@ -499,7 +499,8 @@ class LifetimeAnalysis(object):
 					self.markVisible(code.vparam, cindex)
 					self.markVisible(code.kparam, cindex)
 
-					self.markVisible(code.returnparam, cindex)
+					for param in code.returnparams:
+						self.markVisible(param, cindex)
 
 		searcher.process()
 

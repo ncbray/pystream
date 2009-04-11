@@ -368,13 +368,9 @@ class SimpleCodeGen(StandardVisitor):
 		return ret
 
 	def visitReturn(self, node):
-		if node.expr:
-			expr = self.seg.process(node.expr)
-			if expr == 'None': expr = '' # If we're just returning None, eliminate the text.
-		else:
-			expr = ''
+		expr = ", ".join([self.seg.process(expr) for expr in node.exprs])
 
-		if expr:
+		if expr != 'None':
 			self.emitStatement("return %s" % expr)
 		else:
 			self.emitStatement("return")

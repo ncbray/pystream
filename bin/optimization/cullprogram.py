@@ -45,7 +45,7 @@ class CodeContextCuller(object):
 		self(code.parameternames)
 		self(code.vparam)
 		self(code.kparam)
-		self(code.returnparam)
+		self(code.returnparams)
 		self(code.ast)
 
 

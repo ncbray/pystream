@@ -95,9 +95,9 @@ def makeInterpreterStubs(collector):
 
 			b.append(collector.instLookup(args[0], attr, func))
 			b.append(Assign(Call(func, args, [], None, None), retval))
-			b.append(Return(retval))
+			b.append(Return([retval]))
 
-			code = Code(name, None, args, list(argnames), None, None, retp, b)
+			code = Code(name, None, args, list(argnames), None, None, [retp], b)
 			return code
 
 		return simpleAttrCallBuilder

@@ -237,7 +237,9 @@ class ExtractDataflow(object):
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
 		if not self.folded:
-			self.assign(self(node.expr), self(self.code.returnparam))
+			assert len(node.exprs) == len(self.code.returnparams)
+			for expr, param in zip(node.exprs, self.code.returnparams):
+				self.assign(self(expr), self(param))
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node, target=None):

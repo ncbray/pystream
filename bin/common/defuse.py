@@ -263,8 +263,9 @@ class DefUseVisitor(CodeVisitor):
 		self.use(node, node.subscript)
 
 	def visitReturn(self, node):
-		if not isinstance(node.expr, Existing):
-			self.use(node, node.expr)
+		for expr in node.exprs:
+			if not isinstance(expr, Existing):
+				self.use(node, expr)
 
 	def visitRaise(self, node):
 		if node.exception: self.use(node, node.exception)
@@ -367,10 +368,12 @@ class Collapser(StandardVisitor):
 			self.process(block)
 
 	def visitReturn(self, node):
-		self.process(node.expr)
+		for expr in reversed(node.exprs):
+			self.process(expr)
 
-		if not isinstance(node.expr, Existing):
-			self.markPossible(node.expr)
+		for expr in node.exprs:
+			if not isinstance(expr, Existing):
+				self.markPossible(expr)
 
 	def visitRaise(self, node):
 		if node.exception:

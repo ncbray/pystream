@@ -55,11 +55,11 @@ class TestSimpleCase(TestCompoundConstraintBase):
 		self.body = ast.Suite([
 			ast.Assign(y, z),
 			loop,
-			ast.Return(z)
+			ast.Return([z])
 			])
 
 
-		self.code = ast.Code('test', None, [x, y], ['x', 'y'], None, None, ret, self.body)
+		self.code = ast.Code('test', None, [x, y], ['x', 'y'], None, None, [ret], self.body)
 
 		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
 		b, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
@@ -175,11 +175,11 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 
 		body = ast.Suite([
 			ast.Assign(ast.Load(x, 'LowLevel', self.existing('n')), y),
-			ast.Return(y)
+			ast.Return([y])
 			])
 
 
-		self.code = ast.Code('loadTest', None, [x], ['x'], None, None, ret, body)
+		self.code = ast.Code('loadTest', None, [x], ['x'], None, None, [ret], body)
 
 
 		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
@@ -278,11 +278,11 @@ class TestVArgCase(TestCompoundConstraintBase):
 		body = ast.Suite([
 			ast.Store(x, 'LowLevel', self.existing('l'), y),
 			ast.Store(x, 'LowLevel', self.existing('r'), z),
-			ast.Return(x)
+			ast.Return([x])
 			])
 
 
-		self.code = ast.Code('buildTreeTest', None, [x, y, z], ['x', 'y', 'z'], None, None, ret, body)
+		self.code = ast.Code('buildTreeTest', None, [x, y, z], ['x', 'y', 'z'], None, None, [ret], body)
 
 
 		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
@@ -413,10 +413,10 @@ class TestVParamCase(TestCompoundConstraintBase):
 
 
 		body = ast.Suite([
-			ast.Return(vargs)
+			ast.Return([vargs])
 			])
 
-		self.code = ast.Code('buildTupleTest', None, [], [], vargs, None, ret, body)
+		self.code = ast.Code('buildTupleTest', None, [], [], vargs, None, [ret], body)
 
 
 		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
@@ -529,10 +529,10 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 		body = ast.Suite([
 			load,
 			store,
-			ast.Return(l),
+			ast.Return([l]),
 			])
 
-		code = ast.Code('reverseTestDummy', None, [l, n], ['l', 'n'], None, None, ret, body)
+		code = ast.Code('reverseTestDummy', None, [l, n], ['l', 'n'], None, None, [ret], body)
 
 		self.makeConstraints(code)
 
@@ -572,7 +572,7 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 
 
 		# Pre-declare
-		self.code = ast.Code('reverseTest', None, [l, n], ['l', 'n'], None, None, ret, ast.Suite([]))
+		self.code = ast.Code('reverseTest', None, [l, n], ['l', 'n'], None, None, [ret], ast.Suite([]))
 
 
 		cond = ast.Condition(ast.Suite([]), t)
@@ -585,11 +585,11 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 		temp = ast.Local('temp')
 		tb = ast.Suite([
 			ast.Assign(dc, temp),
-			ast.Return(temp)
+			ast.Return([temp])
 			])
 
 		fb = ast.Suite([
-			ast.Return(l),
+			ast.Return([l]),
 			])
 
 		switch = ast.Switch(cond, tb, fb)

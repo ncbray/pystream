@@ -188,10 +188,10 @@ def makeLLFunc(collector):
 
 
 		b.append(Assign(Call(im_func, [im_self], [], vargs, None), temp))
-		b.append(Return(temp))
+		b.append(Return([temp]))
 
 		name = 'method__call__'
-		code = Code(name, internal_self, [self], ['self'], vargs, None, retp, b)
+		code = Code(name, internal_self, [self], ['self'], vargs, None, [retp], b)
 
 		code.rewriteAnnotation(origin=Origin(name, __file__, 0))
 		return code

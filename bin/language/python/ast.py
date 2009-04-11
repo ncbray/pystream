@@ -248,7 +248,7 @@ class ShortCircutOr(Expression):
 
 ### Control flow ###
 class Return(ControlFlow):
-	__fields__ = 'expr:Expression'
+	__fields__ = 'exprs:Expression*'
 
 # Order of evaluation verified emperically.
 # Documentation contradicts.
@@ -335,7 +335,7 @@ class Code(CompoundStatement):
 	__fields__ = """name:str selfparam:Local?
 			parameters:Local*? parameternames:str*?
 			vparam:Local? kparam:Local?
-			returnparam:Local? ast:Suite?"""
+			returnparams:Local*? ast:Suite?"""
 	__shared__      = True
 
 	emptyAnnotation = annotations.emptyCodeAnnotation

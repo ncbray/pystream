@@ -190,8 +190,9 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			objs = code.kparam.annotation.references[1][cindex]
 			tableRow(out, links, 'kparamObj', *objs)
 
-		objs = code.returnparam.annotation.references[1][cindex]
-		tableRow(out, links, 'return', *objs)
+		for i, param in enumerate(code.returnparams):
+			objs = param.annotation.references[1][cindex]
+			tableRow(out, links, 'return %d' % i, *objs)
 
 		out.end('table')
 		out.end('p')

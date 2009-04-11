@@ -28,10 +28,10 @@ def calleeSlotsFromContext(sys, context):
 	defaults    = []
 	vparam      = localSlot(sys, code, code.vparam, context)
 	kparam      = localSlot(sys, code, code.kparam, context)
-	returnparam = localSlot(sys, code, code.returnparam, context)
+	returnparams = [localSlot(sys, code, param, context) for param in code.returnparams]
 
 	return util.calling.CalleeParams(selfparam, parameters,
-		code.parameternames, defaults, vparam, kparam, returnparam)
+		code.parameternames, defaults, vparam, kparam, returnparams)
 
 
 class AnalysisContext(CanonicalObject):
@@ -153,11 +153,14 @@ class AnalysisContext(CanonicalObject):
 		# Copy the return value
 		if caller.returnarg is not None:
 			code = self.signature.code
-			returnSlot = localSlot(sys, code, code.returnparam, self)
+
+			# HACK, callers can't handle multiple returns, yet.
+			assert len(code.returnparams) == 1
+			returnSlot = localSlot(sys, code, code.returnparams[0], self)
 			sys.createAssign(returnSlot, caller.returnarg)
 
 # Objects for external calls.
-externalFunction = ast.Code('external', None, [], [], None, None, ast.Local('internal_return'), ast.Suite([]))
+externalFunction = ast.Code('external', None, [], [], None, None, [ast.Local('internal_return')], ast.Suite([]))
 externalSignature = util.cpa.CPASignature(externalFunction, None, ())
 externalFunctionContext = AnalysisContext(externalSignature, None, None, False)
 

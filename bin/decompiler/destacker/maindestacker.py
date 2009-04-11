@@ -65,7 +65,7 @@ class DestackVisitor(StandardVisitor):
 		if isinstance(defn, Existing) and defn.object.isConstant() and defn.object.pyobj == None:
 			arg = defn
 
-		outblock = Return(arg)
+		outblock = Return([arg])
 		return outblock, None
 
 	def visitRaise(self, block, stack):
@@ -668,7 +668,7 @@ class DestackVisitor(StandardVisitor):
 	def visitCodeBlock(self, block, stack):
 		assert isinstance(stack, PythonStack), stack
 		outblock, stack = self.handleLinearRegion(block, stack)
-		code = Code('unknown', Local('internal_self'), (), (), None, None, Local('internal_return'), outblock)
+		code = Code('unknown', Local('internal_self'), (), (), None, None, [Local('internal_return')], outblock)
 		return code, stack
 
 

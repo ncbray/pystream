@@ -17,16 +17,20 @@ class CallerArgs(object):
 		return "args(self=%r, args=%r, kwds=%r, vargs=%r, kargs=%r)" % (self.selfarg, self.args, self.kwds, self.vargs, self.kargs)
 
 class CalleeParams(object):
-	__slots__ = 'selfparam', 'params', 'paramnames', 'defaults', 'vparam', 'kparam', 'returnparam'
+	__slots__ = 'selfparam', 'params', 'paramnames', 'defaults', 'vparam', 'kparam', 'returnparams'
 
-	def __init__(self, selfparam, params, paramnames, defaults, vparam, kparam, returnparam):
+	def __init__(self, selfparam, params, paramnames, defaults, vparam, kparam, returnparams):
+		assert isinstance(params, (list, tuple))
+		assert isinstance(paramnames, (list, tuple))
+		assert isinstance(returnparams, (list, tuple))
+
 		self.selfparam   = selfparam
 		self.params      = params
 		self.paramnames  = paramnames
 		self.defaults    = defaults
 		self.vparam      = vparam
 		self.kparam      = kparam
-		self.returnparam = returnparam
+		self.returnparams = returnparams
 
 	def __repr__(self):
 		return "params(self=%r, params=%r, names=%r, vparam=%r, kparam=%r)" % (self.selfparam, self.params, self.paramnames, self.vparam, self.kparam)
@@ -35,11 +39,11 @@ class CalleeParams(object):
 	def fromFunction(cls, func):
 		code = func.code
 		assert not hasattr(func, 'defaults'), "Temporary limitation"
-		return cls(code.selfparam, code.parameters, code.parameternames, [], code.vparam, code.kparam, code.returnparam)
+		return cls(code.selfparam, code.parameters, code.parameternames, [], code.vparam, code.kparam, code.returnparams)
 
 	@classmethod
 	def fromCode(cls, code):
-		return cls(code.selfparam, code.parameters, code.parameternames, [], code.vparam, code.kparam, code.returnparam)
+		return cls(code.selfparam, code.parameters, code.parameternames, [], code.vparam, code.kparam, code.returnparams)
 
 
 # arg  -> param / vparam

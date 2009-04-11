@@ -9,8 +9,8 @@ from pythonbase import *
 from . import program
 
 class Existing(Reference):
-	__slots__     = 'object'
-	__shared__    = True
+	__slots__  = 'object'
+	__shared__ = True
 
 	def __init__(self, o):
 		super(Existing, self).__init__()
@@ -30,8 +30,8 @@ class Existing(Reference):
 		return self.object.pyobj
 
 class Local(Reference):
-	__slots__     = 'name'
-	__shared__    = True
+	__slots__  = 'name'
+	__shared__ = True
 
 	def __init__(self, name=None):
 		super(Local, self).__init__()
@@ -51,8 +51,8 @@ class Local(Reference):
 
 
 class Cell(ASTNode):
-	__slots__     = 'name'
-	__shared__    = True
+	__slots__  = 'name'
+	__shared__ = True
 
 	def __init__(self, name):
 		super(Cell, self).__init__()
@@ -77,22 +77,18 @@ class Cell(ASTNode):
 
 
 class GetGlobal(Expression):
-	__fields__    = 'name'
-	__types__     = {'name':Existing}
+	__fields__ = 'name:Existing'
 
 class SetGlobal(SimpleStatement):
-	__fields__    = 'name', 'value'
-	__types__     = {'name':Existing, 'value':Expression}
+	__fields__ = 'name:Existing value:Expression'
 
 class DeleteGlobal(SimpleStatement):
-	__fields__    = 'name'
-	__types__     = {'name':Existing}
+	__fields__ = 'name:Existing'
 
 
 # Gets the actual cell.
 class GetCell(Expression):
-	__fields__    = 'cell'
-	__types__     = {'cell':Cell}
+	__fields__ = 'cell:Cell'
 
 	def isPure(self):
 		return True
@@ -100,93 +96,67 @@ class GetCell(Expression):
 
 # Gets the contents of a cell.
 class GetCellDeref(Expression):
-	__fields__    = 'cell'
-	__types__     = {'cell':Cell}
+	__fields__ = 'cell:Cell'
 
 # Sets the contents of a cell.
 class SetCellDeref(SimpleStatement):
-	__fields__    = 'value', 'cell'
-	__types__     = {'cell':Cell, 'value':Expression}
+	__fields__    = 'value:Expression cell:Cell'
 
 
 class Yield(Expression):
-	__fields__ 	= 'expr'
-	__types__ 	= {'expr':Expression}
+	__fields__ = 'expr:Expression'
 
 class GetIter(Expression):
-	__fields__ 	= 'expr'
-	__types__ 	= {'expr':Expression}
+	__fields__ = 'expr:Expression'
 
 class ConvertToBool(Expression):
-	__fields__ 	= 'expr'
-	__types__ 	= {'expr':Expression}
+	__fields__ = 'expr:Expression'
 
 class Import(Expression):
-	__fields__ 	= 'name', 'fromlist', 'level'
-	__types__ 	= {'name':str, 'fromlist':(tuple, list), 'level':int}
-	__optional__ 	= 'fromlist'
+	# TODO fromlist type?
+	__fields__ = 'name:str fromlist*? level:int'
 
 # TODO make UnaryPrefixOp? It is in a class of its own...
 class Not(Expression):
-	__fields__ 	= 'expr'
-	__types__ 	= {'expr':Expression}
+	__fields__ = 'expr:Expression'
 
 class UnaryPrefixOp(Expression):
-	__fields__ 	= 'op', 'expr'
-	__types__ 	= {'op':str, 'expr':Expression}
+	__fields__ = 'op:str expr:Expression'
 
 class BinaryOp(Expression):
-	__fields__ 	= 'left', 'op', 'right'
-	__types__ 	= {'left':Expression, 'op':str, 'right':Expression}
+	__fields__ = 'left:Expression op:str right:Expression'
 
 class GetSubscript(Expression):
-	__fields__    = 'expr', 'subscript'
-	__types__     = {'expr':Expression, 'subscript':Expression}
+	__fields__ = 'expr:Expression subscript:Expression'
 
 class SetSubscript(SimpleStatement):
-	__fields__    = 'value', 'expr', 'subscript'
-	__types__     = {'value':Expression, 'expr':Expression, 'subscript':Expression}
+	__fields__ = 'value:Expression expr:Expression subscript:Expression'
 
 class DeleteSubscript(SimpleStatement):
-	__fields__    = 'expr', 'subscript'
-	__types__     = {'expr':Expression, 'subscript':Expression}
+	__fields__ = 'expr:Expression subscript:Expression'
 
 
 class GetSlice(Expression):
-	__fields__    = 'expr', 'start', 'stop', 'step'
-	__types__     = {'expr':Expression, 'start':Expression, 'step':Expression, 'step':Expression}
-	__optional__  = 'start', 'stop', 'step'
-
+	__fields__ = 'expr:Expression start:Expression? stop:Expression? step:Expression?'
 
 class SetSlice(SimpleStatement):
-	__fields__    = 'value', 'expr', 'start', 'stop', 'step',
-	__types__     = {'value':Expression, 'expr':Expression, 'start':Expression, 'step':Expression, 'step':Expression}
-	__optional__  = 'start', 'stop', 'step'
+	__fields__ = 'value:Expression expr:Expression start:Expression? stop:Expression? step:Expression?'
 
 class DeleteSlice(SimpleStatement):
-	__fields__ 	= 'expr', 'start', 'stop', 'step'
-	__types__ 	= {'expr':Expression, 'start':Expression, 'step':Expression, 'step':Expression}
-	__optional__ 	= 'start', 'stop', 'step'
+	__fields__ = 'expr:Expression start:Expression? stop:Expression? step:Expression?'
 
 
 class Call(Expression):
-	__fields__ 	= 'expr', 'args', 'kwds', 'vargs', 'kargs'
-	__types__ 	= {'expr':Expression, 'args':(list, tuple), 'kwds':(list, tuple)}
-	__optional__ 	= 'vargs', 'kargs'
-
+	__fields__ = 'expr:Expression args:Expression* kwds* vargs:Expression? kargs:Expression?'
 
 class MethodCall(Expression):
-	__fields__ 	= 'expr', 'name', 'args', 'kwds', 'vargs', 'kargs'
-	__types__ 	= {'expr':Expression, 'name':Expression, 'args':(list, tuple), 'kwds':(list, tuple)}
-	__optional__ 	= 'vargs', 'kargs'
-
+	# TODO kwds type?
+	__fields__ = 'expr:Expression name:Expression args:Expression* kwds* vargs:Expression? kargs:Expression?'
 
 class DirectCall(Expression):
-	__fields__ 	= 'func', 'selfarg', 'args', 'kwds', 'vargs', 'kargs'
-	__types__ 	= {'selfarg':Expression, 'args':(list, tuple), 'kwds':(list, tuple),
-			   'vargs':Expression, 'kargs':Expression,
-			   'func':'Code'}
-	__optional__ 	= 'selfarg', 'vargs', 'kargs'
+	# TODO func -> code?
+	# TODO kwds type?
+	__fields__ = 'func:Code selfarg:Expression? args:Expression* kwds* vargs:Expression? kargs:Expression?'
 
 	def __repr__(self):
 		return "%s(<%s>, %r, %r, %r, %r, %r)" % (type(self).__name__, self.func.name,
@@ -195,15 +165,13 @@ class DirectCall(Expression):
 						       self.vargs, self.kargs)
 
 class BuildTuple(Expression):
-	__fields__ 	= 'args'
-	__types__ 	= {'args':(tuple, list)}
+	__fields__ = 'args:Expression*'
 
 	def isPure(self):
 		return True
 
 class BuildList(Expression):
-	__fields__    = 'args'
-	__types__     = {'args':(tuple, list)}
+	__fields__ = 'args:Expression*'
 
 	def isPure(self):
 		return True
@@ -214,34 +182,27 @@ class BuildMap(Expression):
 		return True
 
 class BuildSlice(Expression):
-	__fields__    = 'start', 'stop', 'step'
-	__types__     = {'start':Expression, 'step':Expression, 'step':Expression}
-	__optional__  = 'start', 'stop', 'step'
+	__fields__ = 'start:Expression? stop:Expression? step:Expression?'
 
 	def isPure(self):
 		return True
 
 class GetAttr(Expression):
-	__fields__    = 'expr', 'name'
-	__types__     = {'expr':Expression, 'name':Expression}
+	__fields__ = 'expr:Expression name:Expression'
 
 class SetAttr(SimpleStatement):
-	__fields__    = 'value', 'expr', 'name'
-	__types__     = {'value':Expression, 'expr':Expression, 'name':Expression}
+	__fields__ = 'value:Expression expr:Expression name:Expression'
 
 class DeleteAttr(SimpleStatement):
-	__fields__    = 'expr', 'name'
-	__types__     = {'expr':Expression, 'name':Expression}
+	__fields__ = 'expr:Expression name:Expression'
 
 class UnpackSequence(SimpleStatement):
-	__fields__    = 'expr', 'targets'
-	__types__     = {'targets':(tuple, list), 'expr':Expression}
+	__fields__ = 'expr:Expression targets:Local*'
 
 # TODO should swap expr/lcl?
 class Assign(SimpleStatement):
-	__fields__    = 'expr', 'lcl'
-	__slots__     = 'isSplit', 'isMerge'
-	__types__     = {'expr':Expression, 'lcl':Local}
+	__fields__ = 'expr:Expression lcl:Local'
+	__slots__  = 'isSplit', 'isMerge'
 
 	def __init__(self, expr, lcl):
 		super(Assign, self).__init__()
@@ -261,48 +222,39 @@ class Assign(SimpleStatement):
 		self.isMerge = True
 
 class Discard(SimpleStatement):
-	__fields__    = 'expr'
-	__types__     = {'expr':Expression}
+	__fields__ = 'expr:Expression'
 
 class Delete(SimpleStatement):
-	__fields__    = 'lcl'
-	__types__     = {'lcl':Local}
-
+	__fields__ = 'lcl:Local'
 
 class Print(SimpleStatement):
-	__fields__    = 'target', 'expr'
-	__types__     = {'target':Expression, 'expr':Expression}
-	__optional__  = 'target', 'expr'
+	__fields__ = 'target:Expression? expr:Expression?'
 
 class MakeFunction(Expression):
-	__fields__    = 'defaults', 'cells', 'code'
-	__types__     = {'defaults':(tuple, list), 'cells':(tuple, list)}
+	# TODO type?
+	__fields__ = 'defaults* cells* code'
 
 	def isPure(self):
 		return True
 
 ### Short circut evaluation ###
 class ShortCircutAnd(Expression):
-	__fields__    = 'terms'
-	__types__     = {'terms':(list, tuple)}
+	# TODO type?
+	__fields__ = 'terms*'
 
 class ShortCircutOr(Expression):
-	__fields__    = 'terms'
-	__types__     = {'terms':(list, tuple)}
+	# TODO type?
+	__fields__ = 'terms*'
 
 ### Control flow ###
 class Return(ControlFlow):
-	__fields__    = 'expr'
-	__types__     = {'expr':Expression}
-#	__optional__  = 'expr'
-
+	__fields__ = 'expr:Expression'
 
 # Order of evaluation verified emperically.
 # Documentation contradicts.
 class Raise(ControlFlow):
-	__fields__    = 'exception', 'parameter', 'traceback'
-	__optional__  = 'exception', 'parameter', 'traceback'
-
+	# TODO types?
+	__fields__ = 'exception? parameter? traceback?'
 
 class Continue(ControlFlow):
 	pass
@@ -320,8 +272,7 @@ class EndFinally(ControlFlow):
 ###########
 
 class Suite(ASTNode):
-	__fields__ 	= 'blocks'
-	__types__ 	= {'blocks':list}
+	__fields__ = 'blocks:Statement*'
 
 	def __init__(self, blocks=None):
 		super(Suite, self).__init__()
@@ -358,57 +309,33 @@ class Suite(ASTNode):
 
 
 class ExceptionHandler(ASTNode):
-	__fields__ 	= 'preamble', 'type', 'value', 'body'
-	__type__ 	= {'preamble':Suite, 'type':Expression, 'value':Expression, 'body':Suite}
-	__optional__ 	= 'value'
-
+	__fields__ = 'preamble:Suite type:Expression value:Expression? body:Suite'
 
 class Condition(CompoundStatement):
-	__fields__ = 'preamble', 'conditional'
-	__types__ = {'preamble':Suite, 'conditional':Expression}
-
+	__fields__ = 'preamble:Suite conditional:Expression'
 
 class Switch(CompoundStatement):
-	__fields__ 	= 'condition', 't', 'f',
-	__types__ 	= {'condition':Condition, 't':Suite,'f':Suite}
+	__fields__ = 'condition:Condition t:Suite f:Suite'
 
 class TryExceptFinally(CompoundStatement):
-	__fields__ 	= 'body', 'handlers', 'defaultHandler', 'else_', 'finally_'
-	__types__ 	= {'body':Suite, 'handlers':(list, tuple),
-			   'else_':Suite, 'finally_':Suite}
-	__optional__ = 'defaultHandler', 'else_', 'finally_'
+	__fields__ = 'body:Suite', 'handlers:ExceptionHandler*', 'defaultHandler?', 'else_:Suite?', 'finally_:Suite?'
 
 class Loop(CompoundStatement):
 	__slots__ = ()
 
 class While(Loop):
-	__fields__ 	= 'condition', 'body', 'else_'
-	__types__ 	= {'condition':Condition, 'body':Suite, 'else_':Suite}
-	#__optional__ 	= 'else_'
-
+	__fields__ = 'condition:Condition body:Suite else_:Suite'
 
 class For(Loop):
-	__fields__ 	= 'iterator', 'index', 'loopPreamble', 'bodyPreamble', 'body', 'else_'
-	__types__ 	= {'iterator':Expression, 'body':Suite, 'else_':Suite, 'bodyPreamble':Suite,}
+	__fields__ = 'iterator:Expression index loopPreamble:Suite bodyPreamble:Suite body:Suite else_:Suite'
 	# TODO type of index?
 
-#argnames -> list(str)
-#parameters -> list(Local)
 class Code(CompoundStatement):
-	__fields__ 	= ('name', 'selfparam', 'parameters', 'parameternames',
-			   'vparam', 'kparam', 'returnparam', 'ast',)
-
-	__types__ 	= {'name':str,
-			   'selfparam':Local,
-			   'parameternames':(tuple, list),
-			   'parameters':(tuple, list),
-			   'vparam':Local, 'kparam':Local,
-			   'returnparam':Local,
-			   'ast':Suite}
-
-	#__optional__ 	= 'selfparam', 'vparam', 'kparam'
-	# HACK for function cloning.
-	__optional__ 	= 'selfparam', 'parameters', 'parameternames', 'vparam', 'kparam', 'returnparam', 'ast'
+	# HACK many fields marked optional for function cloning, so their creation can be defered.
+	__fields__ = """name:str selfparam:Local?
+			parameters:Local*? parameternames:str*?
+			vparam:Local? kparam:Local?
+			returnparam:Local? ast:Suite?"""
 	__shared__      = True
 
 	emptyAnnotation = annotations.emptyCodeAnnotation
@@ -417,20 +344,16 @@ class Code(CompoundStatement):
 		return "Code(%s/%d)" % (self.name, id(self))
 
 class Allocate(LLExpression):
-	__fields__    = 'expr'
-	__types__     = {'expr':Reference}
+	__fields__ = 'expr:Reference'
 
 class Load(LLExpression):
-	__fields__    = 'expr', 'fieldtype', 'name'
-	__types__     = {'expr':Reference, 'fieldtype':str, 'name':Reference}
+	__fields__ = 'expr:Reference fieldtype:str name:Reference'
 
 class Store(LLStatement):
-	__fields__    = 'expr', 'fieldtype', 'name', 'value'
-	__types__     = {'expr':Reference, 'fieldtype':str, 'name':Reference, 'value':Reference}
+	__fields__ = 'expr:Reference fieldtype:str name:Reference value:Reference'
 
 class Check(LLExpression):
-	__fields__    = 'expr', 'fieldtype', 'name'
-	__types__     = {'expr':Reference, 'fieldtype':str, 'name':Reference}
+	__fields__ = 'expr:Reference fieldtype:str name:Reference'
 
 manifest = makeASTManifest(globals())
 

@@ -651,7 +651,7 @@ class DestackVisitor(StandardVisitor):
 		else:
 			# Sometimes the condition is const-folded out.
 			lcl = Local()
-			condition = Condition(Suite([Assign(Existing(self.extractor.getObject(True)), lcl)]), lcl)
+			condition = Condition(Suite([Assign(Existing(self.extractor.getObject(True)), [lcl])]), lcl)
 			tstack = stack.duplicate()
 			fstack = stack.duplicate()
 

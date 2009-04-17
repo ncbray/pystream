@@ -3,6 +3,7 @@ import util
 
 import analysis.cpa
 import analysis.lifetimeanalysis
+import analysis.numbering
 import analysis.dump.dumpreport
 
 import analysis.shape
@@ -118,9 +119,11 @@ def evaluate(console, name, e, entryPoints):
 	# HACK rerun lifetime analysis, as inlining causes problems.
 	lifetimeAnalysis(console, result)
 
-	try:
-		shapePass(console, e, result, entryPoints)
+	analysis.numbering.evaluate(console, result, entryPoints)
 
+	try:
+		if False:
+			shapePass(console, e, result, entryPoints)
 	finally:
 		cpaDump(console, name, e, result, entryPoints)
 

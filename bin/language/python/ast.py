@@ -327,7 +327,7 @@ class While(Loop):
 	__fields__ = 'condition:Condition body:Suite else_:Suite'
 
 class For(Loop):
-	__fields__ = 'iterator:Expression index loopPreamble:Suite bodyPreamble:Suite body:Suite else_:Suite'
+	__fields__ = 'iterator:Expression index:Local loopPreamble:Suite bodyPreamble:Suite body:Suite else_:Suite'
 	# TODO type of index?
 
 class Code(CompoundStatement):

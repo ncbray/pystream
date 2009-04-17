@@ -10,7 +10,7 @@ class Particle(object):
 
 	def update(self, a, dt):
 		self.position = self.position+self.velocity*dt+a*dt*dt*0.5
-		self.velocity = a*dt
+		self.velocity = self.velocity+a*dt
 
 	def setPosition(self, x, y, z):
 		self.position.x = x
@@ -66,13 +66,13 @@ def makeSwarm(count):
 def simulate(swarm, spring, gravity, dt):
 	for p in swarm:
 		force = spring.calculateForce(p)+gravity.calculateForce(p)
-		p.update(force, dt)	
+		p.update(force, dt)
 
 # Create 100 random particles, then simulate them
 # under the force of a dampened spring and constant gravity.
-def simpleUpdate(dt, iterations):	
+def simpleUpdate(dt, iterations):
 	swarm = makeSwarm(100)
-	
+
 	spring 	= SpringForce(0.5, 0.01)
 	gravity = GravitationalForce(vec3(0.0, -1.0, 0.0))
 
@@ -127,7 +127,7 @@ def shadeFragment(self, pos, normal, color):
 
 def randVec3():
 	return vec3(random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0))
-	
+
 
 def randVec4():
 	return vec4(random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0), 1.0)

@@ -472,7 +472,9 @@ class ShapeConstraintBuilder(object):
 
 	# HACK horrible hack...
 	@dispatch(ast.Check)
-	def visitCheck(self, node, target):
+	def visitCheck(self, node, targets):
+		assert len(targets) == 1
+		target = targets[0]
 		self.assign(expressions.null, self.localExpr(target))
 
 	@dispatch(ast.Delete)

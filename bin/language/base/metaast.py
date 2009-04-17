@@ -163,6 +163,8 @@ class ClassBuilder(object):
 		self.defaultFunc('children', codegeneration.makeGetChildren, (fields,))
 		self.defaultFunc('fields',   codegeneration.makeGetFields, (fields,))
 
+		self.defaultFunc('replaceChildren', codegeneration.makeReplaceChildren, (self.name, fields, types, optional, self.repeated))
+
 		self.defaultFunc('asteq', codegeneration.makeEq, (fields,))
 		self.defaultFunc('asthash', codegeneration.makeHash, (fields,))
 

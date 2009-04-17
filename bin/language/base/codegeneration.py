@@ -44,9 +44,7 @@ def makeTypecheckStatement(name, field, tn, optional, repeated, tabs, output):
 		makeScalarTypecheckStatement(name, field, field, tn, optional, tabs, output)
 
 
-def makeInit(name, fields, types, optional, repeated):
-	args = ", ".join(('self', ", ".join(fields)))
-
+def makeInitStatements(name, fields, types, optional, repeated):
 	inits = []
 	for field in fields:
 		if field in types:
@@ -56,10 +54,37 @@ def makeInit(name, fields, types, optional, repeated):
 			inits.append('\tassert %s != None, "Field %s.%s is not optional."\n' % (field, name, field))
 
 		inits.append('\tself.%s = %s\n' % (field, field))
+	return inits
 
+def makeInit(name, fields, types, optional, repeated):
+	inits = makeInitStatements(name, fields, types, optional, repeated)
 	inits.append('\tself.annotation = self.emptyAnnotation')
 
+	if fields:
+		fieldstr = ", ".join(fields)
+		args = ", ".join(('self', fieldstr))
+	else:
+		args = 'self'
+
 	code = "def __init__(%s):\n\tsuper(%s, self).__init__()\n%s" % (args, name, ''.join(inits))
+	return code
+
+
+def makeReplaceChildren(name, fields, types, optional, repeated):
+	inits = makeInitStatements(name, fields, types, optional, repeated)
+
+	if fields:
+		fieldstr = ", ".join(fields)
+		args = ", ".join(('self', fieldstr))
+	else:
+		args = 'self'
+
+
+	body = ''.join(inits)
+	if not body:
+		body = '\tpass\n'
+
+	code = "def replaceChildren(%s):\n%s" % (args, body)
 	return code
 
 def makeRepr(name, fields):

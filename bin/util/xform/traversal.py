@@ -24,6 +24,15 @@ def allChildren(s, node, clone=False):
 	else:
 		return reconstruct(node, newchildren)
 
+def replaceAllChildren(s, node):
+	assert isShared(node)
+
+	oldchildren = children(node)
+	newchildren = [s(child) for child in oldchildren]
+
+	node.replaceChildren(*newchildren)
+	return node
+
 
 def visitAllChildren(s, node):
 	if isShared(node):
@@ -31,6 +40,13 @@ def visitAllChildren(s, node):
 
 	for child in children(node):
 		s(child)
+
+def visitAllChildrenArgs(s, node, *args):
+	if isShared(node):
+		return
+
+	for child in children(node):
+		s(child, *args)
 
 def allChildrenReversed(s, node):
 	if isShared(node):

@@ -56,6 +56,12 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 		inlineCode(dataflow, entryPoints, db)
 		console.end()
 
+		# Get rid of dead functions/contexts
+		cull(console, entryPoints, db)
+
+	if True:
+		analysis.numbering.evaluate(console, dataflow, entryPoints)
+
 	console.end()
 
 def lifetimeAnalysis(console, dataflow):
@@ -110,16 +116,11 @@ def evaluate(console, name, e, entryPoints):
 	console.begin('compile')
 	result = cpaPass(console, e, entryPoints)
 
-	# Get rid of dead functions/contexts
-	cull(console, entryPoints, result.db)
-
 	if False:
 		result = cpaPass(console, e, entryPoints)
 
-	# HACK rerun lifetime analysis, as inlining causes problems.
+	# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
 	lifetimeAnalysis(console, result)
-
-	analysis.numbering.evaluate(console, result, entryPoints)
 
 	try:
 		if False:

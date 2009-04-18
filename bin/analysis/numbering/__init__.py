@@ -10,6 +10,10 @@ import collections
 
 from util.xmloutput import XMLOutput
 
+
+from optimization.simplify import simplify
+
+
 class ReadModifyInfo(object):
 	__slots__ = 'localRead', 'localModify', 'fieldRead', 'fieldModify'
 
@@ -63,7 +67,7 @@ class FindReadModify(StrictTypeDispatcher):
 		return info
 
 
-	@dispatch(ast.DirectCall)
+	@dispatch(ast.DirectCall, ast.Call)
 	def visitDirectCall(self, node, info):
 		visitAllChildrenArgs(self, node, info)
 		info.fieldRead.update(node.annotation.reads[0])
@@ -502,7 +506,7 @@ class ForwardESSA(StrictTypeDispatcher):
 
 		self(code.ast)
 
-		self.findRedundancies(code)
+		return self.findRedundancies(code)
 
 
 	def findRedundancies(self, code):
@@ -585,6 +589,10 @@ class ForwardESSA(StrictTypeDispatcher):
 
 		if replace:
 			Replacer().processCode(code, replace)
+			simplify(self.dataflow.extractor, self.dataflow.db, code)
+			return True
+		else:
+			return False
 
 
 	def dominates(self, a, b):
@@ -625,17 +633,19 @@ class Replacer(StrictTypeDispatcher):
 		assert code.annotation.contexts is not None
 
 
-def evaluateCode(code):
-	print code
+def evaluateCode(console, dataflow, code):
 	rm = FindReadModify().processCode(code)
 	dom = MakeForwardDominance().processCode(code)
 
 	analysis = ForwardESSA(rm, dom)
-	analysis.processCode(code)
+	analysis.dataflow = dataflow
+	if analysis.processCode(code):
+		print '\t', code
 
 def evaluate(console, dataflow, entryPoints):
 	console.begin('numbering')
 
-	for code, expr, args in entryPoints:
-		evaluateCode(code)
+	for code in dataflow.db.liveCode:
+		if not code.annotation.descriptive:
+			evaluateCode(console, dataflow, code)
 	console.end()

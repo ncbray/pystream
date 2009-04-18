@@ -106,10 +106,16 @@ class RedundantLoadEliminator(object):
 							else:
 								assert len(dominator.lcls) == 1
 								old = dominator.lcls[0]
-							lcl = ast.Local(old.name)
-							lcl.annotation = old.annotation
-							newName[dominator] = lcl
-							replace[dominator] = [dominator, ast.Assign(old, [lcl])]
+
+							if isinstance(old, ast.Existing):
+								exist = ast.Existing(old.object)
+								exist.annotation = old.annotation
+								newName[dominator] = exist
+							else:
+								lcl = ast.Local(old.name)
+								lcl.annotation = old.annotation
+								newName[dominator] = lcl
+								replace[dominator] = [dominator, ast.Assign(old, [lcl])]
 						else:
 							lcl = newName[dominator]
 

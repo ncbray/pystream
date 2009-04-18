@@ -188,6 +188,11 @@ class CodeInliningTransform(object):
 		self.processed = set()
 		self.trace     = set()
 
+		self.maxInvokes  = 1
+		self.maxOps      = 4
+		self.preserveCPA = True
+		self.exhaustive  = True
+
 	@defaultdispatch
 	def default(self, node):
 		assert False, node
@@ -271,7 +276,10 @@ class CodeInliningTransform(object):
 		if allCode in self.trace: return None
 
 		# Only one calling point, or it's a small function
-		if self.analysis.invokeCount[allCode] > 1 and self.analysis.numOps[allCode] > 4:
+		tooManyInvokes = self.analysis.invokeCount[allCode] > self.maxInvokes
+		tooManyOps     = self.analysis.numOps[allCode] > self.maxOps
+
+		if not self.exhaustive and tooManyInvokes and tooManyOps:
 			return None
 
 		assert len(map) == len(self.code.annotation.contexts)

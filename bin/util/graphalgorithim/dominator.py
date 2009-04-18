@@ -28,13 +28,22 @@ class ReversePostorderCrawler(object):
 		self.order.reverse()
 
 	def __call__(self, node):
-		if node not in self.processed:
-			self.processed.add(node)
-			for next in self.G.get(node, ()):
-					self(next)
-			self.order.append(node)
+		if node in self.processed: return
 
-
+		# Ugly: maintain our own stack, as Python's is limited.
+		# Based on PADS
+		self.processed.add(node)
+		stack = [(node, iter(self.G[node]))]
+		while stack:
+			parent,children = stack[-1]
+			try:
+				child = children.next()
+				if child not in self.processed:
+					self.processed.add(child)
+					stack.append((child, iter(self.G[child])))
+			except StopIteration:
+				self.order.append(stack[-1][0])
+				stack.pop()
 
 def intersect(doms, b1, b2):
 	finger1 = b1

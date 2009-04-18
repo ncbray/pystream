@@ -188,10 +188,10 @@ class CodeInliningTransform(object):
 		self.processed = set()
 		self.trace     = set()
 
-		self.maxInvokes  = 1
-		self.maxOps      = 4
-		self.preserveCPA = True
-		self.exhaustive  = True
+		self.maxInvokes       = 1
+		self.maxOps           = 4
+		self.exhaustive       = True
+		self.preserveContexts = not self.exhaustive
 
 	@defaultdispatch
 	def default(self, node):
@@ -265,9 +265,21 @@ class CodeInliningTransform(object):
 
 				map.append(code.annotation.contexts.index(context))
 			else:
-				# Must have one-to-one context correspondence
-				# Otherwise, we're loosing CPA precision
-				return None
+				# Don't merge contexts, as precision will be list??
+				if self.preserveContexts: return None
+
+				multi = []
+				for code, context in invs:
+					if allCode is None:
+						# It must be possible to inline the code
+						if not self.analysis.canInline[code]:
+							return None
+						allCode = code
+					elif allCode != code:
+						return None
+					multi.append(code.annotation.contexts.index(context))
+
+				map.append(multi)
 
 		# No invocation
 		if allCode is None: return None

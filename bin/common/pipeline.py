@@ -115,7 +115,7 @@ def evaluate(console, name, e, entryPoints):
 	console.begin('compile')
 	result = cpaPass(console, e, entryPoints)
 
-	if False:
+	if True:
 		result = cpaPass(console, e, entryPoints)
 
 	# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.

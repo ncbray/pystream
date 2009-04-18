@@ -271,7 +271,7 @@ class CodeInliningTransform(object):
 		if allCode in self.trace: return None
 
 		# Only one calling point, or it's a small function
-		if self.analysis.invokeCount[allCode] > 1 and self.analysis.numOps[allCode] > 3:
+		if self.analysis.invokeCount[allCode] > 1 and self.analysis.numOps[allCode] > 4:
 			return None
 
 		assert len(map) == len(self.code.annotation.contexts)

@@ -19,7 +19,7 @@ class MarkLocals(object):
 		util.xform.visitAllChildren(self, node)
 
 
-nodesWithNoSideEffects = (ast.GetGlobal, ast.Existing, ast.Local, ast.Load, ast.Allocate)
+nodesWithNoSideEffects = (ast.GetGlobal, ast.Existing, ast.Local, ast.Load, ast.Allocate, ast.BuildTuple, ast.BuildList, ast.BuildMap)
 
 class MarkLive(object):
 	__metaclass__ = typedispatcher

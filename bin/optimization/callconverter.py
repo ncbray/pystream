@@ -87,7 +87,9 @@ class ConvertCalls(object):
 
 	@dispatch(ast.BuildTuple)
 	def visitBuildTuple(self, node):
-		return self.directCall(node, self.exports['buildTuple'], None, self(node.args))
+		#code = self.exports['buildTuple']
+		code = self.exports['interpreter_buildTuple%d' % len(node.args)]
+		return self.directCall(node, code, None, self(node.args))
 
 	@dispatch(ast.UnpackSequence)
 	def visitUnpackSequence(self, node):

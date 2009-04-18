@@ -48,13 +48,6 @@ def makeInterpreterStubs(collector):
 	def invertedConvertToBool(o):
 		return allocate(bool)
 
-	# Horrible hack, as vargs depend on creating a tuple,
-	# and creating a tuple depends on vargs.
-	@descriptive
-	@interpfunc
-	def buildTuple(*vargs):
-		return vargs
-
 	@interpfunc
 	def interpreterLoadGlobal(function, name):
 		# HACK Causes a problem for cloning?
@@ -121,6 +114,63 @@ def makeInterpreterStubs(collector):
 		call = loadDict(load(load(internal_self, 'type'), 'dictionary'), '__call__')
 		return call(internal_self, *vargs)
 
+	# Horrible hack, as vargs depend on creating a tuple,
+	# and creating a tuple depends on vargs.
+	@descriptive
+	@interpfunc
+	def buildTuple(*vargs):
+		return vargs
+
+	@interpfunc
+	def interpreter_buildTuple0():
+		inst = allocate(tuple)
+		store(inst, 'length', 0)
+		return inst
+
+	@interpfunc
+	def interpreter_buildTuple1(arg0):
+		inst = allocate(tuple)
+		store(inst, 'length', 1)
+		storeArray(inst, 0, arg0)
+		return inst
+
+	@interpfunc
+	def interpreter_buildTuple2(arg0, arg1):
+		inst = allocate(tuple)
+		store(inst, 'length', 2)
+		storeArray(inst, 0, arg0)
+		storeArray(inst, 1, arg1)
+		return inst
+
+	@interpfunc
+	def interpreter_buildTuple3(arg0, arg1, arg2):
+		inst = allocate(tuple)
+		store(inst, 'length', 3)
+		storeArray(inst, 0, arg0)
+		storeArray(inst, 1, arg1)
+		storeArray(inst, 2, arg2)
+		return inst
+
+	@interpfunc
+	def interpreter_buildTuple4(arg0, arg1, arg2, arg3):
+		inst = allocate(tuple)
+		store(inst, 'length', 4)
+		storeArray(inst, 0, arg0)
+		storeArray(inst, 1, arg1)
+		storeArray(inst, 2, arg2)
+		storeArray(inst, 3, arg3)
+		return inst
+
+	@interpfunc
+	def interpreter_buildTuple5(arg0, arg1, arg2, arg3, arg4):
+		inst = allocate(tuple)
+		store(inst, 'length', 5)
+		storeArray(inst, 0, arg0)
+		storeArray(inst, 1, arg1)
+		storeArray(inst, 2, arg2)
+		storeArray(inst, 3, arg3)
+		storeArray(inst, 4, arg4)
+		return inst
 
 	@interpfunc
 	def interpreter_unpack1(arg):

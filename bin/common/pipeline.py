@@ -3,7 +3,6 @@ import util
 
 import analysis.cpa
 import analysis.lifetimeanalysis
-import analysis.numbering
 import analysis.dump.dumpreport
 
 import analysis.shape
@@ -15,7 +14,7 @@ from optimization.clone import clone
 from optimization.callconverter import callConverter
 from optimization.argumentnormalization import normalizeArguments
 from optimization.codeinlining import inlineCode
-
+import optimization.loadelimination
 
 def codeConditioning(console, extractor, entryPoints, dataflow):
 	db = dataflow.db
@@ -60,7 +59,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 		cull(console, entryPoints, db)
 
 	if True:
-		analysis.numbering.evaluate(console, dataflow, entryPoints)
+		optimization.loadelimination.evaluate(console, dataflow, entryPoints)
 
 	console.end()
 

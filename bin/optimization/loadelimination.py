@@ -83,48 +83,56 @@ class RedundantLoadEliminator(object):
 
 		return signatures
 
+	def getReplacementSource(self, dominator):
+		if dominator not in self.newName:
+			if isinstance(dominator, ast.Store):
+				old = dominator.value
+			else:
+				assert len(dominator.lcls) == 1
+				old = dominator.lcls[0]
+
+			if isinstance(old, ast.Existing):
+				src = ast.Existing(old.object)
+			else:
+				src = ast.Local(old.name)
+				self.replace[dominator] = [dominator, ast.Assign(old, [src])]
+
+			src.annotation = old.annotation
+			self.newName[dominator] = src
+		else:
+			src = self.newName[dominator]
+		return src
+
+	def dominatorSubtree(self, loads):
+		# HACK n^2 for find the absolute dominator....
+		dom = {}
+
+		for load in loads:
+			dom[load] = load
+
+		for test in loads:
+			for load, dominator in dom.iteritems():
+				if self.dominates(test, dominator):
+					dom[load] = test
+		return dom
+
 	def generateReplacements(self, signatures):
-		newName = {}
-		replace = {}
+		self.newName = {}
+		self.replace = {}
 
 		for sig, loads in signatures.iteritems():
 			if len(loads) > 1:
-				# HACK n^2 for find the absolute dominator....
-				dom = {}
-				for load in loads:
-					dom[load] = load
-				for test in loads:
-					for load, dominator in dom.iteritems():
-						if self.dominates(test, dominator):
-							dom[load] = test
+				dom = self.dominatorSubtree(loads)
 
 				for op, dominator in dom.iteritems():
 					if op is not dominator:
-						if dominator not in newName:
-							if isinstance(dominator, ast.Store):
-								old = dominator.value
-							else:
-								assert len(dominator.lcls) == 1
-								old = dominator.lcls[0]
-
-							if isinstance(old, ast.Existing):
-								exist = ast.Existing(old.object)
-								exist.annotation = old.annotation
-								newName[dominator] = exist
-							else:
-								lcl = ast.Local(old.name)
-								lcl.annotation = old.annotation
-								newName[dominator] = lcl
-								replace[dominator] = [dominator, ast.Assign(old, [lcl])]
-						else:
-							lcl = newName[dominator]
-
-						self.eliminated += 1
-
 						assert not isinstance(op, ast.Store)
 						assert len(op.lcls) == 1
-						replace[op] = ast.Assign(lcl, [op.lcls[0]])
-		return replace
+
+						src = self.getReplacementSource(dominator)
+						self.replace[op] = ast.Assign(src, [op.lcls[0]])
+						self.eliminated += 1
+		return self.replace
 
 	def processCode(self, code):
 		signatures = self.generateSignatures(code)

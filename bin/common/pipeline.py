@@ -15,6 +15,7 @@ from optimization.callconverter import callConverter
 from optimization.argumentnormalization import normalizeArguments
 from optimization.codeinlining import inlineCode
 import optimization.loadelimination
+import optimization.storeelimination
 
 def codeConditioning(console, extractor, entryPoints, dataflow):
 	db = dataflow.db
@@ -60,6 +61,10 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 
 	if True:
 		optimization.loadelimination.evaluate(console, dataflow, entryPoints)
+
+	if True:
+		optimization.storeelimination.evaluate(console, dataflow, entryPoints)
+
 
 	console.end()
 

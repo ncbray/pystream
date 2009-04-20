@@ -38,7 +38,7 @@ def evaluate(console, dataflow, entryPoints):
 
 		# Rewrite the code without the dead stores
 		if replace:
-			print code, eliminated
+			console.output('%r %d' % (code, eliminated))
 			rewriteAndSimplify(dataflow, code, replace)
 
 	console.end()

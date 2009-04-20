@@ -12,6 +12,9 @@ class StubCollector(object):
 	def __init__(self, extractor):
 		self.extractor = extractor
 
+		# HACK
+		self.extractor.nameLUT = {}
+
 		self.exports = {}
 
 		self.highLevelGlobals 	= {'method':xtypes.MethodType}
@@ -91,16 +94,25 @@ class StubCollector(object):
 		self.exports[name] = funcast
 		return funcast
 
+	def registerFunction(self, func, code):
+		self.extractor.desc.functions.append(code)
+		self.extractor.nameLUT[code.name] = func
+
+		if func:
+			self.extractor.replaceCode(func, code)
+
+
 	def llast(self, f):
 		code = f()
 		assert isinstance(code, ast.Code), type(code)
+		self.registerFunction(None, code)
 		self.extractor.desc.functions.append(code)
 		return code
 
 	def llfunc(self, func):
 		code = self.extractor.decompileFunction(func)
+		self.registerFunction(func, code)
 		code = lltranslator.translate(self.extractor, func, code)
-		self.extractor.desc.functions.append(code)
 		return code
 
 	def cfuncptr(self, obj):

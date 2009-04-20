@@ -86,6 +86,8 @@ class Extractor(object):
 
 		self.attrLUT = collections.defaultdict(dict)
 
+		self.codeLUT = {}
+
 		self.complete = collections.defaultdict(lambda: False)
 		self.queue = collections.deque()
 
@@ -169,6 +171,11 @@ class Extractor(object):
 		assert obj not in self.complete # It hasn't be processed, yet.
 
 		self.attrLUT[id(obj)][attr] = replacement
+
+	def replaceCode(self, obj, code):
+		assert not isinstance(obj, program.AbstractObject), obj
+		assert not id(obj) in self.objcache, obj
+		self.codeLUT[id(obj)] = code
 
 	def initalizeObjects(self):
 		# HACK Prevents uglyness by masking the module dictionary.  This prevents leakage.
@@ -515,11 +522,15 @@ class Extractor(object):
 	def handleFunction(self, obj):
 		self.handleObject(obj)
 
-		function = self.decompileFunction(obj.pyobj)
+		replace = self.codeLUT.get(id(obj.pyobj))
+		if replace:
+			self.desc.bindCall(obj, replace)
+		else:
+			function = self.decompileFunction(obj.pyobj)
 
-		if function != None:
-			self.desc.functions.append(function)
-			self.desc.bindCall(obj, function)
+			if function != None:
+				self.desc.functions.append(function)
+				self.desc.bindCall(obj, function)
 
 
 	def decompileFunction(self, func, trace=False, ssa=True):

@@ -33,6 +33,8 @@ class LLTranslator(object):
 
 		if name in glbls:
 			pyobj = glbls[name]
+		elif name in self.extractor.nameLUT:
+			pyobj = self.extractor.nameLUT[name]
 		else:
 			pyobj = __builtins__[name]
 
@@ -61,14 +63,7 @@ class LLTranslator(object):
 		self.defn[node] = node
 		return node
 
-	@dispatch(ast.GetGlobal)
-	def visitGetGlobal(self, node):
-		node = allChildren(self, node)
-
-		namedefn = self.defn[node.name]
-		assert isinstance(namedefn, ast.Existing)
-		name = namedefn.object.pyobj
-
+	def translateName(self, name):
 		if name is 'internal_self':
 			assert self.code.selfparam
 			return self.code.selfparam
@@ -76,6 +71,20 @@ class LLTranslator(object):
 			return name
 		else:
 			return self.resolveGlobal(name)
+
+
+	@dispatch(ast.GetGlobal)
+	def visitGetGlobal(self, node):
+		node = allChildren(self, node)
+		namedefn = self.defn[node.name]
+		assert isinstance(namedefn, ast.Existing)
+		name = namedefn.object.pyobj
+		return self.translateName(name)
+
+	@dispatch(ast.GetCellDeref)
+	def visitGetGellDeref(self, node):
+		name = node.cell.name
+		return self.translateName(name)
 
 
 	@dispatch(ast.Call)

@@ -276,59 +276,59 @@ def makeOperator(collector):
 		else:
 			return NotImplemented
 
-#	@attachPtr(float, '__eq__')
-#	@llfunc
-#	def float__eq__(self, other):
-#		other = coerce_to_float(other)
-#		if isinstance(other, float):
-#			return prim_float_eq(self, other)
-#		else:
-#			return NotImplemented
+	@attachPtr(float, '__eq__')
+	@llfunc
+	def float__eq__(self, other):
+		other = coerce_to_float(other)
+		if isinstance(other, float):
+			return prim_float_eq(self, other)
+		else:
+			return NotImplemented
 
-#	@attachPtr(float, '__ne__')
-#	@llfunc
-#	def float__ne__(self, other):
-#		other = coerce_to_float(other)
-#		if isinstance(other, float):
-#			return prim_float_ne(self, other)
-#		else:
-#			return NotImplemented
+	@attachPtr(float, '__ne__')
+	@llfunc
+	def float__ne__(self, other):
+		other = coerce_to_float(other)
+		if isinstance(other, float):
+			return prim_float_ne(self, other)
+		else:
+			return NotImplemented
 
-#	@attachPtr(float, '__lt__')
-#	@llfunc
-#	def float__lt__(self, other):
-#		other = coerce_to_float(other)
-#		if isinstance(other, float):
-#			return prim_float_lt(self, other)
-#		else:
-#			return NotImplemented
+	@attachPtr(float, '__lt__')
+	@llfunc
+	def float__lt__(self, other):
+		other = coerce_to_float(other)
+		if isinstance(other, float):
+			return prim_float_lt(self, other)
+		else:
+			return NotImplemented
 
-#	@attachPtr(float, '__le__')
-#	@llfunc
-#	def float__le__(self, other):
-#		other = coerce_to_float(other)
-#		if isinstance(other, float):
-#			return prim_float_le(self, other)
-#		else:
-#			return NotImplemented
+	@attachPtr(float, '__le__')
+	@llfunc
+	def float__le__(self, other):
+		other = coerce_to_float(other)
+		if isinstance(other, float):
+			return prim_float_le(self, other)
+		else:
+			return NotImplemented
 
-#	@attachPtr(float, '__gt__')
-#	@llfunc
-#	def float__gt__(self, other):
-#		other = coerce_to_float(other)
-#		if isinstance(other, float):
-#			return prim_float_gt(self, other)
-#		else:
-#			return NotImplemented
+	@attachPtr(float, '__gt__')
+	@llfunc
+	def float__gt__(self, other):
+		other = coerce_to_float(other)
+		if isinstance(other, float):
+			return prim_float_gt(self, other)
+		else:
+			return NotImplemented
 
-#	@attachPtr(float, '__ge__')
-#	@llfunc
-#	def float__ge__(self, other):
-#		other = coerce_to_float(other)
-#		if isinstance(other, float):
-#			return prim_float_ge(self, other)
-#		else:
-#			return NotImplemented
+	@attachPtr(float, '__ge__')
+	@llfunc
+	def float__ge__(self, other):
+		other = coerce_to_float(other)
+		if isinstance(other, float):
+			return prim_float_ge(self, other)
+		else:
+			return NotImplemented
 
 
 	@attachPtr(int, '__add__')

@@ -139,7 +139,11 @@ class Extractor(object):
 
 	def makeHiddenFunction(self, parent, ptr):
 		if ptr not in self.pointerToObject:
-			obj = self.makeImaginaryFunctionObject("stub_%d" % ptr)
+			if isinstance(ptr, tuple):
+				name = "stub_%d_%d" % ptr
+			else:
+				name = "stub_%d" % ptr
+			obj = self.makeImaginaryFunctionObject(name)
 			self.registerPointer(ptr, obj)
 			self.pointerToObject[ptr] = obj
 		else:

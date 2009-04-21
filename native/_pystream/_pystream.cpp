@@ -10,6 +10,20 @@ typedef struct {
 	PyObject *self;
 } wrapperobject;
 
+PyObject *
+int_from_ptr(void *ptr)
+{
+	return PyInt_FromSsize_t(Py_ssize_t(ptr));
+}
+
+PyObject *
+tup_from_ptrs(void *ptr0, void *ptr1)
+{
+		PyObject *tup = PyTuple_New(2);
+		PyTuple_SET_ITEM(tup, 0, int_from_ptr(ptr0));
+		PyTuple_SET_ITEM(tup, 1, int_from_ptr(ptr1));
+		return tup;
+}
 
 PyObject *
 PyCFunction_cfuncptr(PyObject *self, PyObject *args)
@@ -26,6 +40,10 @@ PyCFunction_cfuncptr(PyObject *self, PyObject *args)
 	else if (PyObject_TypeCheck(func, &PyWrapperDescr_Type))
 	{
 		ptr = ((PyWrapperDescrObject *)func)->d_wrapped;
+		void *ptr_wrap = ((PyWrapperDescrObject *)func)->d_base->wrapper;
+
+		// The pointers interact.
+		return tup_from_ptrs(ptr, ptr_wrap);
 	}
 	// 2.5+?
 	else if (strcmp(func->ob_type->tp_name, "method_descriptor") == 0) // Horrible hack, but there seems to be no alternative.
@@ -43,7 +61,7 @@ PyCFunction_cfuncptr(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	return PyInt_FromSsize_t(Py_ssize_t(ptr)); 
+	return int_from_ptr(ptr); 
 }
 
 PyObject *
@@ -67,10 +85,7 @@ PyCFunction_getsetptrs(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	tup = PyTuple_New(2);
-	PyTuple_SET_ITEM(tup, 0, PyInt_FromSsize_t(Py_ssize_t(get)));
-	PyTuple_SET_ITEM(tup, 1, PyInt_FromSsize_t(Py_ssize_t(set)));
-	return tup;
+	return tup_from_ptrs(get, set);
 }
 
 static PyMethodDef BindMethods[] = {

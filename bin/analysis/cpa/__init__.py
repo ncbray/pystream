@@ -266,7 +266,7 @@ class InterproceduralDataflow(object):
 
 	def fold(self, targetcontext):
 		def notConst(obj):
-			return obj is not None and not obj.obj.isConstant()
+			return obj is util.cpa.Any or (obj is not None and not obj.obj.isConstant())
 
 		sig = targetcontext.signature
 		code = sig.code

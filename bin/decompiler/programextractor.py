@@ -157,7 +157,7 @@ class Extractor(object):
 			for obj in self.registeredPointers[ptr]:
 				self.desc.bindCall(obj, stub)
 		else:
-			assert self.pointerToStub[ptr] == stub, stub
+			assert self.pointerToStub[ptr] == stub, (stub, self.pointerToStub[ptr])
 
 
 	def replaceObject(self, original, replacement):

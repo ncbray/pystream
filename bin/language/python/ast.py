@@ -156,7 +156,8 @@ class MethodCall(Expression):
 class DirectCall(Expression):
 	# TODO func -> code?
 	# TODO kwds type?
-	__fields__ = 'func:Code selfarg:Expression? args:Expression* kwds* vargs:Expression? kargs:Expression?'
+	# HACK func is optional, as cloned "dead" direct calls may have no corresponding code.
+	__fields__ = 'func:Code? selfarg:Expression? args:Expression* kwds* vargs:Expression? kargs:Expression?'
 
 	def __repr__(self):
 		return "%s(<%s>, %r, %r, %r, %r, %r)" % (type(self).__name__, self.func.name,

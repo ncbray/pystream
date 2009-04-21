@@ -540,9 +540,9 @@ class FunctionCloner(object):
 				names = [code.name for code, context in tempresult.annotation.invokes[0]]
 				raise Exception, "Cannot clone the direct call in %r, as it has multiple targets. %r" % (self.destfunction, names)
 		else:
-			# HACK never actualy executed, so just choose an
-			# arbitrary target?
-			func = self.newfuncLUT[tempresult.func].values()[0]
+			# HACK never actualy executed, so null the target?
+			# This op should be subseqently eliminated.
+			func = None
 
 		result = ast.DirectCall(func, *tempresult.children()[1:])
 		self.transferAnalysisData(node, result)

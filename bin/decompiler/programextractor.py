@@ -353,17 +353,6 @@ class Extractor(object):
 			except TypeError:
 				print "Cannot get pointer:", f
 
-		if pyobj is int or pyobj is long:
-			dict = obj.lowlevel[self.desc.dictionaryName]
-			self.ensureLoaded(dict)
-
-			for op in ('eq', 'ne', 'lt', 'le', 'ge', 'gt'):
-				s = '__%s__' % op
-				sObj = self.__getObject(s)
-				fObj = self.makeImaginaryFunctionObject(s)
-				self.desc.bindCall(fObj, self.stubs.exports['int_rich_compare'])
-				dict.addDictionaryItem(sObj, fObj)
-
 	def canProcess(self, obj):
 		return True
 
@@ -457,7 +446,11 @@ class Extractor(object):
 				if clsid in self.attrLUT:
 					lut = self.attrLUT[clsid]
 
-			for k, v in obj.pyobj.iteritems():
+			keys = set(obj.pyobj.iterkeys())
+			keys.update(lut.iterkeys())
+
+			for k in keys:
+				v = obj.pyobj.get(k)
 				v = lut.get(k, v) # Replace the value if needed.
 				obj.addDictionaryItem(self.__getObject(k), self.__getObject(v))
 		elif isinstance(obj.pyobj, (set, frozenset)):

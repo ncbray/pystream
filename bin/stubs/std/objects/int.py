@@ -162,3 +162,65 @@ def makeInteger(collector):
 			return prim_float_pow(prim_int_to_float(self), other)
 		else:
 			return NotImplemented
+
+
+	@replaceAttr(int, '__eq__')
+	@llfunc
+	def int__eq__(self, other):
+		if isinstance(other, int):
+			return prim_int_eq(self, other)
+		elif isinstance(other, float):
+			return prim_float_eq(prim_int_to_float(self), other)
+		else:
+			return NotImplemented
+
+	@replaceAttr(int, '__ne__')
+	@llfunc
+	def int__ne__(self, other):
+		if isinstance(other, int):
+			return prim_int_ne(self, other)
+		elif isinstance(other, float):
+			return prim_float_ne(prim_int_to_float(self), other)
+		else:
+			return NotImplemented
+
+	@replaceAttr(int, '__lt__')
+	@llfunc
+	def int__le__(self, other):
+		if isinstance(other, int):
+			return prim_int_lt(self, other)
+		elif isinstance(other, float):
+			return prim_float_lt(prim_int_to_float(self), other)
+		else:
+			return NotImplemented
+
+	@replaceAttr(int, '__le__')
+	@llfunc
+	def int__le__(self, other):
+		if isinstance(other, int):
+			return prim_int_le(self, other)
+		elif isinstance(other, float):
+			return prim_float_le(prim_int_to_float(self), other)
+		else:
+			return NotImplemented
+
+
+	@replaceAttr(int, '__gt__')
+	@llfunc
+	def int__lge__(self, other):
+		if isinstance(other, int):
+			return prim_int_gt(self, other)
+		elif isinstance(other, float):
+			return prim_float_gt(prim_int_to_float(self), other)
+		else:
+			return NotImplemented
+
+	@replaceAttr(int, '__ge__')
+	@llfunc
+	def int__ge__(self, other):
+		if isinstance(other, int):
+			return prim_int_ge(self, other)
+		elif isinstance(other, float):
+			return prim_float_ge(prim_int_to_float(self), other)
+		else:
+			return NotImplemented

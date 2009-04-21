@@ -20,6 +20,8 @@ class StubCollector(object):
 		self.highLevelGlobals 	= {'method':xtypes.MethodType}
 		self.highLevelLUT 	= {}
 
+		self.codeToFunction = {}
+
 	##############################
 	### AST building utilities ###
 	##############################
@@ -100,7 +102,7 @@ class StubCollector(object):
 
 		if func:
 			self.extractor.replaceCode(func, code)
-
+			self.codeToFunction[code] = func
 
 	def llast(self, f):
 		code = f()
@@ -212,10 +214,14 @@ class StubCollector(object):
 		return callback
 
 	def replaceAttr(self, o, attr):
-		def callback(f):
-			assert self.highLevelLUT[f.func_name] == f, "Must declare as high level stub before replacing."
+		def callback(obj):
+			if isinstance(obj, ast.Code):
+				f = self.codeToFunction[obj]
+			else:
+				f = obj
+				assert self.highLevelLUT[f.func_name] == f, "Must declare as high level stub before replacing."
 			self.extractor.replaceAttr(o, attr, f)
-			return f
+			return obj
 		return callback
 
 stubgenerators = []

@@ -32,6 +32,12 @@ def makeFloat(collector):
 	##################################
 
 	@descriptive
+	@staticFold(lambda a: -a)
+	@llfunc
+	def prim_float_neg(a, b):
+		return allocate(float)
+
+	@descriptive
 	@staticFold(lambda a, b: a+b)
 	@llfunc
 	def prim_float_add(a, b):
@@ -113,6 +119,11 @@ def makeFloat(collector):
 	##############################
 	### Float object functions ###
 	##############################
+
+	@attachPtr(float, '__neg__')
+	@llfunc
+	def float__neg__(self):
+		return prim_float_neg(self)
 
 	# TODO longs?  booleans?
 	@llfunc

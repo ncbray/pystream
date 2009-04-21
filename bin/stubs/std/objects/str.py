@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 from stubs.stubcollector import stubgenerator
+import operator
 
 @stubgenerator
 def makeString(collector):
@@ -40,40 +41,45 @@ def makeString(collector):
 
 	@descriptive
 	@staticFold(lambda a, b: a==b)
+	@fold(lambda a, b: a==b)
 	@llfunc
 	def prim_str_eq(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a!=b)
+	@fold(lambda a, b: a!=b)
 	@llfunc
 	def prim_str_ne(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a<b)
+	@fold(lambda a, b: a<b)
 	@llfunc
 	def prim_str_lt(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a<=b)
+	@fold(lambda a, b: a<=b)
 	@llfunc
 	def prim_str_le(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a>b)
+	@fold(lambda a, b: a>b)
 	@llfunc
 	def prim_str_gt(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a>=b)
+	@fold(lambda a, b: a>=b)
 	@llfunc
 	def prim_str_ge(a, b):
 		return allocate(bool)
-
 
 	##############################
 	### String object functions ###
@@ -153,3 +159,33 @@ def makeString(collector):
 			return prim_str_ge(self, other)
 		else:
 			return NotImplemented
+
+
+
+	##############################
+	### Other string functions ###
+	##############################
+
+	@staticFold(chr)
+	@fold(chr)
+	@attachPtr(chr)
+	@descriptive
+	@llfunc
+	def chr_stub(i):
+		return allocate(str)
+
+	@staticFold(ord)
+	@fold(ord)
+	@attachPtr(ord)
+	@descriptive
+	@llfunc
+	def ord_stub(c):
+		return allocate(int)
+
+	@attachPtr(str, '__getitem__')
+	@staticFold(operator.getitem)
+	@fold(operator.getitem)
+	@descriptive
+	@llfunc
+	def str__getitem__(self, index):
+		return allocate(str)

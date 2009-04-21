@@ -69,36 +69,42 @@ def makeFloat(collector):
 
 	@descriptive
 	@staticFold(lambda a, b: a==b)
+	@fold(lambda a, b: a==b)
 	@llfunc
 	def prim_float_eq(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a!=b)
+	@fold(lambda a, b: a!=b)
 	@llfunc
 	def prim_float_ne(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a<b)
+	@fold(lambda a, b: a<b)
 	@llfunc
 	def prim_float_lt(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a<=b)
+	@fold(lambda a, b: a<=b)
 	@llfunc
 	def prim_float_le(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a>b)
+	@fold(lambda a, b: a>b)
 	@llfunc
 	def prim_float_gt(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a>=b)
+	@fold(lambda a, b: a>=b)
 	@llfunc
 	def prim_float_ge(a, b):
 		return allocate(bool)

@@ -281,23 +281,3 @@ def makeLLFunc(collector):
 	def min_stub(a, b):
 		return a if a < b else b
 
-
-	@staticFold(chr)
-	@attachPtr(chr)
-	@descriptive
-	@llfunc
-	def chr_stub(i):
-		return allocate(str)
-
-	@staticFold(ord)
-	@attachPtr(ord)
-	@descriptive
-	@llfunc
-	def ord_stub(c):
-		return allocate(int)
-
-	@attachPtr(str, '__getitem__')
-	@descriptive
-	@llfunc
-	def str__getitem__(self, index):
-		return allocate(str)

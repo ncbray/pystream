@@ -58,36 +58,42 @@ def makeInteger(collector):
 
 	@descriptive
 	@staticFold(lambda a, b: a==b)
+	@fold(lambda a, b: a==b)
 	@llfunc
 	def prim_int_eq(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a!=b)
+	@fold(lambda a, b: a!=b)
 	@llfunc
 	def prim_int_ne(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a<b)
+	@fold(lambda a, b: a<b)
 	@llfunc
 	def prim_int_lt(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a<=b)
+	@fold(lambda a, b: a<=b)
 	@llfunc
 	def prim_int_le(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a>b)
+	@fold(lambda a, b: a>b)
 	@llfunc
 	def prim_int_gt(a, b):
 		return allocate(bool)
 
 	@descriptive
 	@staticFold(lambda a, b: a>=b)
+	@fold(lambda a, b: a>=b)
 	@llfunc
 	def prim_int_ge(a, b):
 		return allocate(bool)

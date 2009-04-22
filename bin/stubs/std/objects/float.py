@@ -34,7 +34,7 @@ def makeFloat(collector):
 	@descriptive
 	@staticFold(lambda a: -a)
 	@llfunc
-	def prim_float_neg(a, b):
+	def prim_float_neg(a):
 		return allocate(float)
 
 	@export

@@ -115,6 +115,7 @@ class OpInliningTransform(object):
 		assert original is not replacement, original
 
 		replacement.annotation = original.annotation.contextSubset(self.contextRemap)
+		replacement.rewriteAnnotation(origin=self.originalNode.annotation.origin+replacement.annotation.origin)
 
 		assert replacement.annotation.compatable(self.dst.annotation)
 
@@ -153,10 +154,11 @@ class OpInliningTransform(object):
 			# Inlined into discard
 			return []
 
-	def process(self, dst, code, map, selfarg, args, returnargs):
+	def process(self, dst, originalNode, code, map, selfarg, args, returnargs):
 		self.localMap = {}
 
 		self.dst = dst
+		self.originalNode = originalNode
 		self.contextRemap = map
 
 		self.returnargs = returnargs
@@ -305,7 +307,7 @@ class CodeInliningTransform(object):
 
 		self.modified = True
 
-		return self.opinline.process(self.code, allCode, map, selfarg, args, returnargs)
+		return self.opinline.process(self.code, node, allCode, map, selfarg, args, returnargs)
 
 	def processInvocations(self, node):
 		invokes = node.annotation.invokes

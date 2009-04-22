@@ -53,6 +53,8 @@ class OpAnnotation(Annotation):
 		self.allocates = allocates
 		self.origin    = origin
 
+		assert isinstance(origin, tuple) and not isinstance(origin, Origin)
+
 	def rewrite(self, invokes=noMod, reads=noMod, modifies=noMod, allocates=noMod, origin=noMod):
 		if invokes   is noMod: invokes   = self.invokes
 		if reads     is noMod: reads     = self.reads
@@ -93,5 +95,5 @@ class SlotAnnotation(Annotation):
 
 
 emptyCodeAnnotation  = CodeAnnotation(None, False, None, None, None, None, None)
-emptyOpAnnotation    = OpAnnotation(None, None, None, None, None)
+emptyOpAnnotation    = OpAnnotation(None, None, None, None, (None,))
 emptySlotAnnotation  = SlotAnnotation(None)

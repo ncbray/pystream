@@ -713,7 +713,7 @@ class InstructionTranslator(object):
 
 	def setOpOrigin(self, op):
 		if not isinstance(op, (Local, Existing)):
-			op.rewriteAnnotation(origin=Origin(self.code.co_name, self.code.co_filename, self.lineno))
+			op.rewriteAnnotation(origin=(Origin(self.code.co_name, self.code.co_filename, self.lineno),))
 			assert op.annotation.origin
 
 	def pushOp(self, op):

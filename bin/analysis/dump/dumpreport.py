@@ -40,13 +40,16 @@ def outputObjectShortName(out, heap, links=None):
 	if link:
 		out.end('a')
 
-def outputOrigin(out, origin):
-	if origin:
-		out.begin('a', href="file:%s"%(urllib.pathname2url(origin.filename),))
-		out << "%s - %s:%d" % origin
-		out.end('a')
-	else:
-		out << '<unknown origin>'
+def outputOrigin(out, tabs, originTrace):
+	for origin in originTrace:
+		out << tabs
+		if origin:
+			out.begin('a', href="file:%s"%(urllib.pathname2url(origin.filename),))
+			out << "%s - %s:%d" % origin
+			out.end('a')
+		else:
+			out << '<unknown origin>'
+		out.endl()
 
 def makeReportDirectory(moduleName):
 	reportdir = os.path.join(config.outputDirectory, moduleName)
@@ -124,7 +127,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 	origin = code.annotation.origin
 	if origin:
 		out.begin('div')
-		outputOrigin(out, origin)
+		outputOrigin(out, '', (origin,))
 		out.end('div')
 		out.endl()
 
@@ -206,9 +209,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			currentOrigin = op.annotation.origin
 			if currentOrigin != origin:
 				origin = currentOrigin
-				out << '\t'
-				outputOrigin(out, origin)
-				out.endl()
+				outputOrigin(out, '\t', origin)
 				out.endl()
 
 			out << '\t\t'

@@ -141,7 +141,7 @@ class BlockBuilder(object):
 
 
 	def linkInstruction(self, i, inst, region):
-		origin = Origin(self.code.co_name, self.code.co_filename, inst.line)
+		origin = (Origin(self.code.co_name, self.code.co_filename, inst.line),)
 
 		op = inst.opcode
 

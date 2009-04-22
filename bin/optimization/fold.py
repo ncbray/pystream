@@ -8,45 +8,10 @@ import language.python.fold as fold
 
 from analysis import tools
 
-def isZero(arg):
-	return isinstance(arg, ast.Existing) and arg.object.isConstant() and arg.object.pyobj == 0
-
-def isOne(arg):
-	return isinstance(arg, ast.Existing) and arg.object.isConstant() and arg.object.pyobj == 1
-
-def isNegativeOne(arg):
-	return isinstance(arg, ast.Existing) and arg.object.isConstant() and arg.object.pyobj == -1
-
-def isBinaryOp(node):
-	return len(node.args) == 2 and not node.kwds and not node.vargs and not node.kargs
-
-def isUnaryOp(node):
-	return len(node.args) == 1 and not node.kwds and not node.vargs and not node.kargs
-
-def analysisIsInstance(node, type):
-	if isinstance(node, ast.Existing) and node.object.isConstant():
-		return isinstance(node.object.pyobj, type)
-	elif isinstance(node, ast.Local):
-		if not node.annotation.references[0]:
-			return False
-
-		for ref in node.annotation.references[0]:
-			obj = ref.xtype.obj
-			if obj.isConstant():
-				if not isinstance(obj.pyobj, type):
-					return False
-			else:
-				if not hasattr(obj, 'type'):
-					return False
-
-				if not issubclass(obj.type.pyobj, type):
-					return False
-		return True
-
-	return False
+from termrewrite import *
 
 def floatMulRewrite(node):
-	if not isBinaryOp(node): return
+	if not hasNumArgs(node, 2): return
 
 	if isZero(node.args[0]):
 		return node.args[0]
@@ -61,7 +26,7 @@ def floatMulRewrite(node):
 	# Requires calling new code?
 
 def floatAddRewrite(node):
-	if not isBinaryOp(node): return
+	if not hasNumArgs(node, 2): return
 
 	if isZero(node.args[0]):
 		return node.args[1]
@@ -69,23 +34,16 @@ def floatAddRewrite(node):
 		return node.args[0]
 
 def convertToBoolRewrite(node):
-	if not isUnaryOp(node): return
+	if not hasNumArgs(node, 1): return
 
-	if analysisIsInstance(node.args[0], bool):
+	if isAnalysisInstance(node.args[0], bool):
 		return node.args[0]
 
 def makeCallRewrite(exports):
-	callRewrite = {}
-
-	code = exports.get('prim_float_mul')
-	if code: callRewrite[code.annotation.origin] = floatMulRewrite
-
-	code = exports.get('prim_float_add')
-	if code: callRewrite[code.annotation.origin] = floatAddRewrite
-
-	code = exports.get('convertToBool')
-	if code: callRewrite[code.annotation.origin] = convertToBoolRewrite
-
+	callRewrite = DirectCallRewriter(exports)
+	callRewrite.addRewrite('prim_float_mul', floatMulRewrite)
+	callRewrite.addRewrite('prim_float_add', floatAddRewrite)
+	callRewrite.addRewrite('convertToBool',  convertToBoolRewrite)
 	return callRewrite
 
 
@@ -96,8 +54,6 @@ class FoldRewrite(object):
 		self.extractor = extractor
 		self.db = db
 		self.code = code
-
-		self.constLUT = DynamicDict()
 
 		self.created = set()
 
@@ -288,12 +244,10 @@ class FoldRewrite(object):
 		return result
 
 	def tryDirectCallRewrite(self, node):
-		rewriter = self.callRewrite.get(node.func.annotation.origin)
-		if rewriter is not None:
-			result = rewriter(node)
-			if result is not None:
-				self.logCreated(result)
-				return self(result)
+		result = self.callRewrite(node)
+		if result is not None:
+			self.logCreated(result)
+			return self(result)
 		return node
 
 	@dispatch(ast.DirectCall)

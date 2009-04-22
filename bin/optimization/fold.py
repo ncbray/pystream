@@ -8,6 +8,86 @@ import language.python.fold as fold
 
 from analysis import tools
 
+def isZero(arg):
+	return isinstance(arg, ast.Existing) and arg.object.isConstant() and arg.object.pyobj == 0
+
+def isOne(arg):
+	return isinstance(arg, ast.Existing) and arg.object.isConstant() and arg.object.pyobj == 1
+
+def isNegativeOne(arg):
+	return isinstance(arg, ast.Existing) and arg.object.isConstant() and arg.object.pyobj == -1
+
+def isBinaryOp(node):
+	return len(node.args) == 2 and not node.kwds and not node.vargs and not node.kargs
+
+def isUnaryOp(node):
+	return len(node.args) == 1 and not node.kwds and not node.vargs and not node.kargs
+
+def analysisIsInstance(node, type):
+	if isinstance(node, ast.Existing) and node.object.isConstant():
+		return isinstance(node.object.pyobj, type)
+	elif isinstance(node, ast.Local):
+		if not node.annotation.references[0]:
+			return False
+
+		for ref in node.annotation.references[0]:
+			obj = ref.xtype.obj
+			if obj.isConstant():
+				if not isinstance(obj.pyobj, type):
+					return False
+			else:
+				if not hasattr(obj, 'type'):
+					return False
+
+				if not issubclass(obj.type.pyobj, type):
+					return False
+		return True
+
+	return False
+
+def floatMulRewrite(node):
+	if not isBinaryOp(node): return
+
+	if isZero(node.args[0]):
+		return node.args[0]
+	elif isOne(node.args[0]):
+		return node.args[1]
+	elif isZero(node.args[1]):
+		return node.args[1]
+	elif isOne(node.args[1]):
+		return node.args[0]
+
+	# TODO negative 1 -> invert
+	# Requires calling new code?
+
+def floatAddRewrite(node):
+	if not isBinaryOp(node): return
+
+	if isZero(node.args[0]):
+		return node.args[1]
+	elif isZero(node.args[1]):
+		return node.args[0]
+
+def convertToBoolRewrite(node):
+	if not isUnaryOp(node): return
+
+	if analysisIsInstance(node.args[0], bool):
+		return node.args[0]
+
+def makeCallRewrite(exports):
+	callRewrite = {}
+
+	code = exports.get('prim_float_mul')
+	if code: callRewrite[code.annotation.origin] = floatMulRewrite
+
+	code = exports.get('prim_float_add')
+	if code: callRewrite[code.annotation.origin] = floatAddRewrite
+
+	code = exports.get('convertToBool')
+	if code: callRewrite[code.annotation.origin] = convertToBoolRewrite
+
+	return callRewrite
+
 
 class FoldRewrite(object):
 	__metaclass__ = typedispatcher
@@ -20,6 +100,9 @@ class FoldRewrite(object):
 		self.constLUT = DynamicDict()
 
 		self.created = set()
+
+		self.callRewrite = makeCallRewrite(extractor.stubs.exports)
+
 
 	def logCreated(self, node):
 		if isinstance(node, ast.Existing):
@@ -204,14 +287,25 @@ class FoldRewrite(object):
 		self.logCreated(result)
 		return result
 
+	def tryDirectCallRewrite(self, node):
+		rewriter = self.callRewrite.get(node.func.annotation.origin)
+		if rewriter is not None:
+			result = rewriter(node)
+			if result is not None:
+				self.logCreated(result)
+				return self(result)
+		return node
+
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node):
 		foldFunc = node.func.annotation.staticFold
 		if foldFunc and not node.kwds and not node.vargs and not node.kargs:
 			result = self.annotateFolded(fold.foldCallAST(self.extractor, node, foldFunc, node.args))
-			self.logCreated(result)
-			return result
-		return node
+			if result is not node:
+				self.logCreated(result)
+				return result
+
+		return self.tryDirectCallRewrite(node)
 
 class FoldAnalysis(object):
 	__metaclass__ = typedispatcher

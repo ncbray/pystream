@@ -29,8 +29,17 @@ class Constraint(object):
 			self.dirty = True
 			sys.dirty.append(self)
 
+	def getBad(self):
+		return [slot for slot in self.reads() if slot is not None and not slot.refs]
+
 	def check(self, console):
-		pass
+		bad = self.getBad()
+
+		if bad:
+			console.output("Unresolved %r:" % self.name())
+			for slot in bad:
+				console.output("\t%r" % slot)
+			console.output('')
 
 class CachedConstraint(Constraint):
 	__slots__ = 'observing', 'cache'
@@ -60,17 +69,14 @@ class CachedConstraint(Constraint):
 			# Nothing will trigger this constraint...
 			self.mark(sys)
 
-	def check(self, console):
-		bad = []
-		for slot in self.observing:
-			if slot is not None and not slot.refs:
-				bad.append(slot)
+	def name(self):
+		return self.op.op
 
-		if bad:
-			console.output("Unresolved %r:" % self.op.op)
-			for slot in bad:
-				console.output("\t%r" % slot)
+	def reads(self):
+		return self.observing
 
+	def writes(self):
+		return (self.target,)
 
 class AssignmentConstraint(Constraint):
 	__slots__ = 'sourceslot', 'destslot'
@@ -89,6 +95,16 @@ class AssignmentConstraint(Constraint):
 		sys.constraint(self)
 		self.sourceslot.dependsRead(sys, self)
 		self.destslot.dependsWrite(sys, self)
+
+	def name(self):
+		return self
+
+	def reads(self):
+		return (self.sourceslot,)
+
+	def writes(self):
+		return (self.destslot,)
+
 
 class LoadConstraint(CachedConstraint):
 	__slots__ = 'op', 'expr', 'slottype', 'key', 'target'
@@ -120,7 +136,6 @@ class LoadConstraint(CachedConstraint):
 		sys.logRead(self.op, field)
 
 
-
 class StoreConstraint(CachedConstraint):
 	__slots__ = 'op', 'expr', 'slottype', 'key', 'value'
 	def __init__(self, op, expr, slottype, key, value):
@@ -141,6 +156,8 @@ class StoreConstraint(CachedConstraint):
 		sys.createAssign(self.value, field)
 		sys.logModify(self.op, field)
 
+	def writes(self):
+		return ()
 
 class AllocateConstraint(CachedConstraint):
 	__slots__ = 'op', 'type_', 'target'
@@ -227,6 +244,17 @@ class SimpleCheckConstraint(Constraint):
 		self.slot.dependsRead(sys, self)
 		self.target.dependsWrite(sys, self)
 
+	def name(self):
+		return self.op.op
+
+	def reads(self):
+		# Reads no locals.
+		return ()
+
+	def write(self):
+		return (self.target,)
+
+
 # Resolves the type of the expression, varg, and karg
 class AbstractCallConstraint(CachedConstraint):
 	__slots__ = 'op', 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'targets'
@@ -294,6 +322,12 @@ class AbstractCallConstraint(CachedConstraint):
 
 			con = SimpleCallConstraint(self.op, code, expr, allslots, caller)
 			con.attach(sys)
+
+	def writes(self):
+		if self.targets:
+			return self.targets
+		else:
+			return ()
 
 
 class CallConstraint(AbstractCallConstraint):
@@ -375,6 +409,12 @@ class SimpleCallConstraint(CachedConstraint):
 				self.cache.add(args)
 			self.concreteUpdate(sys, *args)
 
+	def writes(self):
+		if self.caller.returnargs:
+			return self.caller.returnargs
+		else:
+			return ()
+
 class DeferedSwitchConstraint(Constraint):
 	def __init__(self, extractor, cond, t, f):
 		Constraint.__init__(self)
@@ -412,3 +452,12 @@ class DeferedSwitchConstraint(Constraint):
 	def attach(self, sys):
 		sys.constraint(self)
 		self.cond.dependsRead(sys, self)
+
+	def name(self):
+		return "if %r" % self.cond
+
+	def reads(self):
+		return (self.cond,)
+
+	def writes(self):
+		return ()

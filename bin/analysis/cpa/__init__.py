@@ -449,8 +449,22 @@ class InterproceduralDataflow(object):
 
 
 	def checkConstraints(self):
+		badConstraints = []
+		allBad = set()
+		allWrite = set()
 		for c in self.constraints:
-			c.check(self.console)
+			bad = c.getBad()
+			if bad:
+				badConstraints.append((c, bad))
+				allBad.update(bad)
+				allWrite.update(c.writes())
+
+		# Try to find the constraints that started the problem.
+		for c, bad in badConstraints:
+			if not allWrite.issuperset(bad):
+				c.check(self.console)
+
+
 
 	def slotMemory(self):
 		return self.setManager.memory()

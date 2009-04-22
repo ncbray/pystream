@@ -114,10 +114,13 @@ def nldot(a, b):
 
 def shadeFragment(self, pos, normal, color):
 	# TODO normalize normal?
-	trans = (self.worldToCamera*self.objectToWorld)
+	#trans = (self.worldToCamera*self.objectToWorld)
+
+	# Light in world space
+	trans = self.worldToCamera
 	lightPos = trans*self.lightPos
 
-	lightDir  = lightPos.xyz
+	lightDir  = lightPos.xyz-pos.xyz
 	lightDist = lightDir.length()
 	lightDir  = lightDir/lightDist
 

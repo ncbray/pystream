@@ -1,4 +1,4 @@
-module('pystone')
+module('tests.full.pystone')
 output('../temp')
 config(checkTypes=True)
 

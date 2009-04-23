@@ -182,10 +182,11 @@ class OpInliningTransform(object):
 class CodeInliningTransform(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, analysis, dataflow, db):
+	def __init__(self, analysis, dataflow, db, intrinsics):
 		self.analysis  = analysis
 		self.dataflow = dataflow
 		self.db = db
+		self.intrinsics = intrinsics
 		self.opinline = OpInliningTransform(analysis)
 		self.processed = set()
 		self.trace     = set()
@@ -298,6 +299,10 @@ class CodeInliningTransform(object):
 
 		assert len(map) == len(self.code.annotation.contexts)
 
+		# Prevent the inlining of potential intrinsics.
+		if self.intrinsics(node) is not None:
+			return None
+
 		# Eliminate the call
 		self.analysis.numOps[self.code] -= 1
 
@@ -337,11 +342,15 @@ class CodeInliningTransform(object):
 
 			self.trace.remove(node)
 
+import translator.glsl.intrinsics
+
 def inlineCode(dataflow, entryPoints, db):
 	analysis  = CodeInliningAnalysis()
 	for code in db.liveFunctions():
 		analysis.process(code)
 
-	transform = CodeInliningTransform(analysis, dataflow, db)
+	intrinsics = translator.glsl.intrinsics.makeIntrinsicRewriter(dataflow.extractor.stubs.exports)
+
+	transform = CodeInliningTransform(analysis, dataflow, db, intrinsics)
 	for func, funcobj, args in entryPoints:
 		transform.process(func)

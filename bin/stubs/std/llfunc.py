@@ -122,6 +122,7 @@ def makeLLFunc(collector):
 	def object__new__(cls, *vargs):
 		return allocate(cls)
 
+	@export  # HACK for intrinsics
 	@attachPtr(type, '__call__')
 	@llfunc
 	def type__call__(self, *vargs):

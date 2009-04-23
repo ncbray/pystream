@@ -1,4 +1,5 @@
 from language.python import ast
+from language.python import program
 
 def isZero(arg):
 	return isinstance(arg, ast.Existing) and arg.object.isConstant() and arg.object.pyobj == 0
@@ -34,6 +35,8 @@ def isAnalysisInstance(node, type):
 
 	return False
 
+def isAnalysis(arg, tests):
+	return isinstance(arg, ast.Existing) and isinstance(arg.object, program.Object) and arg.object.pyobj in tests
 
 class DirectCallRewriter(object):
 	def __init__(self, exports):

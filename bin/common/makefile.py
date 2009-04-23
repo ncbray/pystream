@@ -31,6 +31,12 @@ class ObjWrapper(object):
 	def getObject(self, extractor):
 		return extractor.getObject(self.pyobj)
 
+def importDeep(name):
+	mod = __import__(name)
+	components = name.split('.')
+	for comp in components[1:]:
+		mod = getattr(mod, comp)
+	return mod
 
 class Makefile(object):
 	def __init__(self, filename):
@@ -50,14 +56,7 @@ class Makefile(object):
 
 	def declModule(self, name):
 		self.moduleName = name
-
-		oldpath = sys.path
-		newpath = copy.copy(sys.path)
-		newpath[0] = self.workingdir
-
-		sys.path = newpath
-		self.module = __import__(name)
-		sys.path = oldpath
+		self.module = importDeep(name)
 
 	def declOutput(self, path):
 		self.outdir = os.path.normpath(os.path.join(self.workingdir, path))

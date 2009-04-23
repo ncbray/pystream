@@ -31,6 +31,9 @@ from language.python.simplecodegen import SimpleCodeGen
 
 import optimization.simplify
 
+from language.python.annotations import codeOrigin
+
+
 def decompile(func, extractor, trace=False, ssa=True):
 	assert not isinstance(extractor, bool)
 
@@ -141,7 +144,7 @@ class BlockBuilder(object):
 
 
 	def linkInstruction(self, i, inst, region):
-		origin = (Origin(self.code.co_name, self.code.co_filename, inst.line),)
+		origin = (codeOrigin(self.code, inst.line),)
 
 		op = inst.opcode
 
@@ -271,7 +274,7 @@ class BlockBuilder(object):
 		self.merges	= {}
 		self.regionExit = {}
 
-		origin = Origin(self.code.co_name, self.code.co_filename, self.code.co_firstlineno)
+		origin = codeOrigin(self.code)
 		func = CodeBlock(None, origin)
 
 		self.queue = [(0, func)]

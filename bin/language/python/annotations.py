@@ -3,6 +3,13 @@ from language.base.annotation import *
 
 Origin = collections.namedtuple('Origin', 'name filename lineno')
 
+def codeOrigin(code, line=None):
+	if line is None: line = code.co_firstlineno
+	return Origin(code.co_name, code.co_filename, line)
+
+def functionOrigin(func, line=None):
+	return codeOrigin(func.func_code, line)
+
 
 class Annotation(object):
 	__slots__ = ()

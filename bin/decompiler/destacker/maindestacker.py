@@ -12,6 +12,8 @@ from . import pythonstack
 from .. import flowblocks
 from . import instructiontranslator
 
+from language.python.annotations import codeOrigin
+
 from common.errors import TemporaryLimitation
 
 PythonStack = pythonstack.PythonStack
@@ -716,7 +718,7 @@ def destack(code, mname, fname, root, argnames, vargs, kargs, extractor, callbac
 	root.vparam = v
 	root.kparam = k
 
-	origin = instructiontranslator.Origin(code.co_name, code.co_filename, code.co_firstlineno)
+	origin = codeOrigin(code)
 	root.rewriteAnnotation(origin=origin)
 
 	return root

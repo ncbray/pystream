@@ -18,7 +18,7 @@ from language.python.fold import foldBinaryOpAST, foldUnaryPrefixOpAST, foldCall
 import operator
 
 
-from language.python.annotations import Origin
+from language.python.annotations import codeOrigin
 
 from language.python.simplecodegen import SimpleCodeGen
 import sys
@@ -713,7 +713,7 @@ class InstructionTranslator(object):
 
 	def setOpOrigin(self, op):
 		if not isinstance(op, (Local, Existing)):
-			op.rewriteAnnotation(origin=(Origin(self.code.co_name, self.code.co_filename, self.lineno),))
+			op.rewriteAnnotation(origin=(codeOrigin(self.code, self.lineno),))
 			assert op.annotation.origin
 
 	def pushOp(self, op):

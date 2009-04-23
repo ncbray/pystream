@@ -349,7 +349,7 @@ def inlineCode(dataflow, entryPoints, db):
 	for code in db.liveFunctions():
 		analysis.process(code)
 
-	intrinsics = translator.glsl.intrinsics.makeIntrinsicRewriter(dataflow.extractor.stubs.exports)
+	intrinsics = translator.glsl.intrinsics.makeIntrinsicRewriter(dataflow.extractor)
 
 	transform = CodeInliningTransform(analysis, dataflow, db, intrinsics)
 	for func, funcobj, args in entryPoints:

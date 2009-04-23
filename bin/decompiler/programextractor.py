@@ -213,6 +213,8 @@ class Extractor(object):
 		return self.contains(o)
 
 	def ensureLoaded(self, o):
+		assert isinstance(o, program.AbstractObject), o
+
 		# When lazy loading is used, this function needs to be defined.
 		if self.lazy:
 			if isinstance(o, program.Object) and not self.complete[o]:

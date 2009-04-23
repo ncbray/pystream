@@ -269,6 +269,7 @@ def makeLLFunc(collector):
 
 
 	# TODO multiarg?
+	@export # HACK for intrinsics
 	@staticFold(max)
 	@attachPtr(max)
 	@llfunc

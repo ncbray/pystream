@@ -1,5 +1,4 @@
 import collections
-from . destacker.instructiontranslator import Origin
 
 class CFGEdge(object):
 	def __init__(self, source, destination):

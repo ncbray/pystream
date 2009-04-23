@@ -39,8 +39,8 @@ def convertToBoolRewrite(node):
 	if isAnalysisInstance(node.args[0], bool):
 		return node.args[0]
 
-def makeCallRewrite(exports):
-	callRewrite = DirectCallRewriter(exports)
+def makeCallRewrite(extractor):
+	callRewrite = DirectCallRewriter(extractor)
 	callRewrite.addRewrite('prim_float_mul', floatMulRewrite)
 	callRewrite.addRewrite('prim_float_add', floatAddRewrite)
 	callRewrite.addRewrite('convertToBool',  convertToBoolRewrite)
@@ -57,7 +57,7 @@ class FoldRewrite(object):
 
 		self.created = set()
 
-		self.callRewrite = makeCallRewrite(extractor.stubs.exports)
+		self.callRewrite = makeCallRewrite(extractor)
 
 
 	def logCreated(self, node):

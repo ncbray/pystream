@@ -62,8 +62,8 @@ class GLSLCodeGen(StrictTypeDispatcher):
 		opPrec = self.precedenceLUT[node.op]
 		return self.wrap("%s%s%s" % (self(node.left, opPrec), node.op, self(node.right, opPrec-1)), opPrec, prec)
 
-	@dispatch(ast.Assignment)
-	def visitAssignment(self, node, prec=17):
+	@dispatch(ast.Assign)
+	def visitAssign(self, node, prec=17):
 		return self.wrap("%s = %s" % (self(node.lcl, 15), self(node.expr, 16)), 16, prec)
 
 	@dispatch(ast.Local)

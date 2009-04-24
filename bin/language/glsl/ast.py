@@ -74,7 +74,7 @@ class Local(Expression):
 	__shared__ = True
 
 
-class Assignment(Statement):
+class Assign(Statement):
 	__fields__ = 'expr:Expression lcl:Local'
 
 class Return(Statement):

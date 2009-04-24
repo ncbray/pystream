@@ -10,6 +10,11 @@ def codeOrigin(code, line=None):
 def functionOrigin(func, line=None):
 	return codeOrigin(func.func_code, line)
 
+def originString(origin):
+	if origin is not None:
+		return "%20s - %s:%d" % origin
+	else:
+		return "<unknown origin>"
 
 class Annotation(object):
 	__slots__ = ()

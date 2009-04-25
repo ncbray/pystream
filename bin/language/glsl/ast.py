@@ -58,7 +58,7 @@ class Constant(Expression):
 		return self.object
 
 class Constructor(Expression):
-	__fields__    = 'type:Type arguments:Expression*'
+	__fields__    = 'type:Type args:Expression*'
 
 class BinaryOp(Expression):
 	__fields__    = 'left:Expression op:str right:Expression'
@@ -69,13 +69,24 @@ class UnaryPrefixOp(Expression):
 class UnaryPostfixOp(Expression):
 	__fields__    = 'expr:Expression op:str'
 
+class IntrinsicOp(Expression):
+	__fields__    = 'name:str args:Expression*'
+
+class Load(Expression):
+	__fields__    = 'expr:Expression name:str'
+
+
 class Local(Expression):
-	__fields__ = 'type:Type name:str'
+	__fields__ = 'type:Type name:str?'
 	__shared__ = True
 
 
 class Assign(Statement):
 	__fields__ = 'expr:Expression lcl:Local'
+
+class Discard(Statement):
+	__fields__ = 'expr:Expression'
+
 
 class Return(Statement):
 	__fields__ = 'expr:Expression?'

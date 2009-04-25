@@ -10,7 +10,7 @@ from analysis import tools
 
 from termrewrite import *
 
-def floatMulRewrite(node):
+def floatMulRewrite(self, node):
 	if not hasNumArgs(node, 2): return
 
 	if isZero(node.args[0]):
@@ -25,7 +25,7 @@ def floatMulRewrite(node):
 	# TODO negative 1 -> invert
 	# Requires calling new code?
 
-def floatAddRewrite(node):
+def floatAddRewrite(self, node):
 	if not hasNumArgs(node, 2): return
 
 	if isZero(node.args[0]):
@@ -33,7 +33,7 @@ def floatAddRewrite(node):
 	elif isZero(node.args[1]):
 		return node.args[0]
 
-def convertToBoolRewrite(node):
+def convertToBoolRewrite(self, node):
 	if not hasNumArgs(node, 1): return
 
 	if isAnalysisInstance(node.args[0], bool):
@@ -244,7 +244,7 @@ class FoldRewrite(object):
 		return result
 
 	def tryDirectCallRewrite(self, node):
-		result = self.callRewrite(node)
+		result = self.callRewrite(self, node)
 		if result is not None:
 			self.logCreated(result)
 			return self(result)

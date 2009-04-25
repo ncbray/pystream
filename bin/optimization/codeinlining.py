@@ -300,7 +300,10 @@ class CodeInliningTransform(object):
 		assert len(map) == len(self.code.annotation.contexts)
 
 		# Prevent the inlining of potential intrinsics.
-		if self.intrinsics(node) is not None:
+		if self.intrinsics(None, node) is not None:
+#			print "INTRINSIC", node
+#			print node.func.annotation.origin
+#			print
 			return None
 
 		# Eliminate the call

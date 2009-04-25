@@ -17,6 +17,8 @@ from optimization.codeinlining import inlineCode
 import optimization.loadelimination
 import optimization.storeelimination
 
+import translator.glsl
+
 def codeConditioning(console, extractor, entryPoints, dataflow):
 	db = dataflow.db
 
@@ -129,6 +131,9 @@ def evaluate(console, name, e, entryPoints):
 	try:
 		if False:
 			shapePass(console, e, result, entryPoints)
+
+		if True:
+			translator.glsl.translate(console, result, entryPoints)
 	finally:
 		cpaDump(console, name, e, result, entryPoints)
 

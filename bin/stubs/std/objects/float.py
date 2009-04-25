@@ -57,6 +57,7 @@ def makeFloat(collector):
 	def prim_float_mul(a, b):
 		return allocate(float)
 
+	@export # HACK
 	@descriptive
 	@staticFold(lambda a, b: a/b)
 	@llfunc
@@ -69,6 +70,7 @@ def makeFloat(collector):
 	def prim_float_mod(a, b):
 		return allocate(float)
 
+	@export # HACK
 	@descriptive
 	@staticFold(lambda a, b: a**b)
 	@llfunc

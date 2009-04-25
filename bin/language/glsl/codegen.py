@@ -29,6 +29,10 @@ class GLSLCodeGen(StrictTypeDispatcher):
 
 		self.indent = ''
 
+		self.localNameLUT = {}
+		self.localNames   = set()
+		self.uid = 0
+
 	def wrap(self, s, prec, container):
 		if prec > container:
 			return "(%s)" % s
@@ -55,7 +59,18 @@ class GLSLCodeGen(StrictTypeDispatcher):
 
 	@dispatch(ast.Constructor)
 	def visitConstructor(self, node, prec=17):
-		return self.wrap("%s(%s)" % (self.typename(node.type), ", ".join([self(arg) for arg in node.arguments])), 2, prec)
+		typename = self.typename(node.type)
+		assert isinstance(typename, str), node
+		return self.wrap("%s(%s)" % (typename, ", ".join([self(arg) for arg in node.args])), 2, prec)
+
+	@dispatch(ast.IntrinsicOp)
+	def visitIntrinsicOp(self, node, prec=17):
+		return self.wrap("%s(%s)" % (node.name, ", ".join([self(arg) for arg in node.args])), 2, prec)
+
+	@dispatch(ast.Load)
+	def visitLoad(self, node, prec=17):
+		return self.wrap("%s.%s" % (self(node.expr, 1), node.name), 2, prec)
+
 
 	@dispatch(ast.BinaryOp)
 	def visitBinaryOp(self, node, prec=17):
@@ -66,9 +81,34 @@ class GLSLCodeGen(StrictTypeDispatcher):
 	def visitAssign(self, node, prec=17):
 		return self.wrap("%s = %s" % (self(node.lcl, 15), self(node.expr, 16)), 16, prec)
 
+	@dispatch(ast.Discard)
+	def visitDiscard(self, node, prec=17):
+		return self.wrap(self(node.expr, 16), 16, prec)
+
+	def newLocalName(self, base):
+		name = '%s_%d' % (base, self.uid)
+		self.uid += 1
+		return name
+
 	@dispatch(ast.Local)
 	def visitLocal(self, node, prec=17):
-		return node.name
+		if node not in self.localNameLUT:
+			basename = node.name
+			name     = basename
+
+			if name is None:
+				basename = ''
+				name = self.newLocalName(basename)
+
+			while name in self.localNames:
+				name = self.newLocalName(basename)
+
+			self.localNameLUT[node] = name
+			self.localNames.add(name)
+		else:
+			name = self.localNameLUT[node]
+
+		return name
 
 	@dispatch(ast.Return)
 	def visitReturn(self, node):

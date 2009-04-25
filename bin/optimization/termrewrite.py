@@ -12,7 +12,11 @@ def isNegativeOne(arg):
 	return isinstance(arg, ast.Existing) and arg.object.isConstant() and arg.object.pyobj == -1
 
 def hasNumArgs(node, count):
-	return len(node.args) == count and not node.kwds and not node.vargs and not node.kargs
+	return len(node.args) == count and isSimpleCall(node)
+
+def isSimpleCall(node):
+	return not node.kwds and not node.vargs and not node.kargs
+
 
 def isAnalysisInstance(node, type):
 	if isinstance(node, ast.Existing) and node.object.isConstant():
@@ -45,17 +49,22 @@ class DirectCallRewriter(object):
 		self.exports = extractor.stubs.exports
 		self.rewrites = {}
 
+	def _getOrigin(self, func):
+		if func in self.extractor:
+			obj = self.extractor.getObject(func)
+			return self.extractor.desc.origin.get(obj)
+
 	def addRewrite(self, name, func):
 		code = self.exports.get(name)
 		self._bindCode(code, func)
 
 	def attribute(self, type, name, func):
 		attr = type.__dict__[name]
-		origin = annotations.functionOrigin(attr)
+		origin = self._getOrigin(attr)
 		self._bindOrigin(origin, func)
 
 	def function(self, obj, func):
-		origin = annotations.functionOrigin(obj)
+		origin = self._getOrigin(obj)
 		self._bindOrigin(origin, func)
 
 	def _bindCode(self, code, func):
@@ -69,11 +78,11 @@ class DirectCallRewriter(object):
 		else:
 			self.rewrites[origin].append(func)
 
-	def __call__(self, node):
+	def __call__(self, strategy, node):
 		origin = node.func.annotation.origin
 		if origin in self.rewrites:
 			for rewrite in self.rewrites[origin]:
-				result = rewrite(node)
+				result = rewrite(strategy, node)
 				if result is not None:
 					return result
 		return None

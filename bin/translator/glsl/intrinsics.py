@@ -1,42 +1,148 @@
 from optimization.termrewrite import *
+from language.glsl import ast as glsl
 
 from tests.full import vec
+import random
 
 intrinsicTypes = frozenset([vec.vec2, vec.vec3, vec.vec4, vec.mat2, vec.mat3, vec.mat4])
 
-def typeCallRewrite(node):
-	if isAnalysis(node.args[0], intrinsicTypes):
-		return True
+import util
+def uniqueAttrName(type, name):
+	return util.uniqueSlotName(type.__dict__[name])
 
+def addName(type, name, fields):
+	un = uniqueAttrName(type, name)
+	fields[un] = name
+
+fields = {}
+addName(vec.vec2, 'x', fields)
+addName(vec.vec2, 'y', fields)
+
+addName(vec.vec3, 'x', fields)
+addName(vec.vec3, 'y', fields)
+addName(vec.vec3, 'z', fields)
+
+addName(vec.vec4, 'x', fields)
+addName(vec.vec4, 'y', fields)
+addName(vec.vec4, 'z', fields)
+addName(vec.vec4, 'w', fields)
+
+
+def typeCallRewrite(self, node):
+	if isSimpleCall(node) and isAnalysis(node.args[0], intrinsicTypes):
+		if self is None:
+			return True
+		else:
+			name = node.args[0].object.pyobj.__name__
+			return glsl.Constructor(glsl.BuiltinType(name), self(node.args[1:]))
 	return None
 
-def maxRewrite(node):
-	return True
+def maxRewrite(self, node):
+	if not hasNumArgs(node, 2): return
 
-def addRewrite(node):
-	return True
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('max', self(node.args))
 
-def subRewrite(node):
-	return True
+def addRewrite(self, node):
+	if not hasNumArgs(node, 2): return
 
-def mulRewrite(node):
-	return True
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '+', self(node.args[1]))
 
-def divRewrite(node):
-	return True
+def subRewrite(self, node):
+	if not hasNumArgs(node, 2): return
 
-def dotRewrite(node):
-	return True
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '-', self(node.args[1]))
 
-def swizzleRewrite(node):
-	return True
+def mulRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '*', self(node.args[1]))
+
+def divRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '/', self(node.args[1]))
+
+def dotRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('dot', self(node.args))
+
+def swizzleRewrite(self, node):
+	if not hasNumArgs(node, 1): return
+
+	if self is None:
+		return True
+	else:
+		name = node.func.annotation.origin.name
+		return glsl.Load(self(node.args[0]), name)
+
+def randomRewrite(self, node):
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('random', [])
+
+def floatAddRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '+', self(node.args[1]))
+
+def floatMulRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '*', self(node.args[1]))
+
+def floatDivRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '/', self(node.args[1]))
+
+def floatPowRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('pow', self(node.args))
 
 def makeIntrinsicRewriter(extractor):
 	rewriter = DirectCallRewriter(extractor)
+
+	rewriter.addRewrite('prim_float_add', floatAddRewrite)
+	rewriter.addRewrite('prim_float_mul', floatMulRewrite)
+	rewriter.addRewrite('prim_float_div', floatDivRewrite)
+	rewriter.addRewrite('prim_float_pow', floatPowRewrite)
+
+
 	rewriter.addRewrite('type__call__', typeCallRewrite)
 	rewriter.addRewrite('max_stub', maxRewrite)
-
-	# UGLY call may be gone after cloning?
 
 	rewriter.attribute(vec.vec2, '__add__', addRewrite)
 	rewriter.attribute(vec.vec3, '__add__', addRewrite)
@@ -68,5 +174,7 @@ def makeIntrinsicRewriter(extractor):
 
 	rewriter.function(vec.vec4.__dict__['xyz'].fget, swizzleRewrite)
 
+	# HACK
+	rewriter.attribute(random._random.Random, 'random', randomRewrite)
 
 	return rewriter

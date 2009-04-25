@@ -147,6 +147,7 @@ class ProgramDescription(object):
 		self.objects 	= []
 		self.functions 	= []
 		self.callLUT 	= {}
+		self.origin     = {}
 
 
 	def clusterObjects(self):
@@ -182,3 +183,4 @@ class ProgramDescription(object):
 		assert not isinstance(func, AbstractObject), func
 		assert obj not in self.callLUT, obj
 		self.callLUT[obj] = func
+		self.origin[obj]  = func.annotation.origin

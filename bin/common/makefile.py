@@ -47,6 +47,7 @@ class Makefile(object):
 		self.moduleStruct = None
 		self.entryPoints = []
 		self.rawEntryPoints = []
+		self.rawAttr = []
 
 		self.workingdir = os.path.dirname(os.path.join(sys.path[0], self.filename))
 		self.outdir = None
@@ -71,6 +72,11 @@ class Makefile(object):
 		for k, v in kargs.iteritems():
 			self.config[k] = v
 
+	def declAttr(self, src, attr, dst):
+		assert isinstance(src, InstWrapper), src
+		assert isinstance(dst, InstWrapper), dst
+		self.rawAttr.append((src, attr, dst))
+
 	# TODO allow direct spesification of function pointer.
 	def declEntryPoint(self, funcName, *args):
 		assert self.module, "Must declare a module first."
@@ -81,6 +87,7 @@ class Makefile(object):
 			   'const':self.declConst,
 			   'inst':self.declInstance,
 			   'config':self.declConfig,
+			   'attr':self.declAttr,
 			   'entryPoint':self.declEntryPoint,
 			   'output':self.declOutput}
 
@@ -101,8 +108,8 @@ class Makefile(object):
 
 		assert self.outdir, "No output directory declared."
 
-		e, entryPoints = extractProgram(self.moduleName, self.module, self.rawEntryPoints)
-		common.pipeline.evaluate(console, self.moduleName, e, entryPoints)
+		e, entryPoints, attr = extractProgram(self.moduleName, self.module, self.rawEntryPoints, self.rawAttr)
+		common.pipeline.evaluate(console, self.moduleName, e, entryPoints, attr)
 
 		# Output
 		assureDirectoryExists(self.outdir)

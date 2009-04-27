@@ -353,6 +353,15 @@ class InterproceduralDataflow(object):
 		dummySlot = self.roots.root(self, dummyName, self.roots.regionHint)
 		return dummySlot
 
+	def addAttr(self, src, attrName, dst):
+		srcxtype = self.canonical.externalType(src)
+		fieldName = self.canonical.fieldName(*attrName)
+		dstxtype = self.canonical.externalType(dst)
+
+		obj = self.roots.regionHint.object(self, srcxtype)
+		field = obj.field(self, fieldName, self.roots.regionHint)
+		field.initializeType(self, dstxtype)
+
 	def addEntryPoint(self, func, funcobj, args):
 		# The call point
 		# TODO generate bogus ops?
@@ -469,11 +478,14 @@ class InterproceduralDataflow(object):
 	def slotMemory(self):
 		return self.setManager.memory()
 
-def evaluate(console, extractor, entryPoints):
+def evaluate(console, extractor, entryPoints, attr):
 	dataflow = InterproceduralDataflow(console, extractor)
 
 	# HACK
 	base.externalFunctionContext.opPath = dataflow.initalOpPath()
+
+	for src, attrName, dst in attr:
+		dataflow.addAttr(src, attrName, dst)
 
 	for funcast, funcobj, args in entryPoints:
 		assert isinstance(funcast, ast.Code), type(funcast)

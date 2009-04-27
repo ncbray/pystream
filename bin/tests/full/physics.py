@@ -135,10 +135,8 @@ def randVec3():
 def randVec4():
 	return vec4(random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0), 1.0)
 
-def harness():
+def harness(pos, normal):
 	shader = Shader()
-	pos = randVec4()
-	normal = randVec3()
 	pos, normal, color = shadeVertex(shader, pos, normal)
 	finalColor = shadeFragment(shader, pos, normal, color)
 	return finalColor

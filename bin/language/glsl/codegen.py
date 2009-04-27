@@ -15,6 +15,24 @@ class TypeNameGen(StrictTypeDispatcher):
 		return "%s[%d]" % (self(node.type), node.count)
 
 
+class FindLocals(StrictTypeDispatcher):
+	@defaultdispatch
+	def visitOK(self, node):
+		visitAllChildren(self, node)
+
+	@dispatch(ast.Local)
+	def visitLocal(self, node):
+		self.locals.add(node)
+
+	def processCode(self, node):
+		self.locals = set()
+		self(node.parameters)
+		parameters = self.locals
+
+		self.locals = set()
+		self(node.body)
+		return self.locals-parameters
+
 class GLSLCodeGen(StrictTypeDispatcher):
 	precedenceLUT = {'*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6,
 		'<':7, '>':7, '>=':7, '<=':7, '==':8, '!=':8,
@@ -135,6 +153,13 @@ class GLSLCodeGen(StrictTypeDispatcher):
 
 		return '%s %s %s' % (prefix, self.typename(node.lcl.type), node.lcl.name)
 
+	def makeDecl(self, node):
+		lcls = FindLocals().processCode(node)
+		decl = "".join(["\t%s %s;\n" % (self.typename(lcl.type), self(lcl)) for lcl in lcls])
+		return decl
+
 	@dispatch(ast.Code)
 	def visitCode(self, node):
-		return "%s %s(%s)\n{\n%s}\n" % (self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.parameters]), self(node.body))
+		decl = self.makeDecl(node)
+
+		return "%s %s(%s)\n{\n%s\n%s}\n" % (self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.parameters]), decl, self(node.body))

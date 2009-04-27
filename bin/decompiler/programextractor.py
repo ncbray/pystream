@@ -26,6 +26,8 @@ from util import xtypes
 from _pystream import cfuncptr
 
 
+import util
+
 class FieldNotFoundType(object):
 	pass
 FieldNotFound = FieldNotFoundType()
@@ -72,6 +74,18 @@ def translateEntryPoint(extractor, module, name, args):
 
 def translateEntryPoints(extractor, module, rawEntryPoints):
 	return [translateEntryPoint(extractor, module, name, args) for name, args in rawEntryPoints]
+
+def translateAttr(extractor, rawAttr):
+	attrs = []
+
+	for src, attr, dst in rawAttr:
+		srcobj = src.getObject(extractor)
+		# TODO inherited slots?
+		attrName = extractor.getObject(util.uniqueSlotName(srcobj.type.pyobj.__dict__[attr]))
+		dstobj = dst.getObject(extractor)
+		attrs.append((srcobj, ('Attribute', attrName), dstobj))
+
+	return attrs
 
 class Extractor(object):
 	def __init__(self, verbose=True):
@@ -563,7 +577,7 @@ class Extractor(object):
 
 from stubs import makeStubs
 
-def extractProgram(moduleName, module, rawEntryPoints):
+def extractProgram(moduleName, module, rawEntryPoints, rawAttr):
 	extractor = Extractor()
 
 	# Create stub functions
@@ -574,5 +588,6 @@ def extractProgram(moduleName, module, rawEntryPoints):
 
 	# Get the entry points.
 	entryPoints = translateEntryPoints(extractor, moduleObj, rawEntryPoints)
+	attr = translateAttr(extractor, rawAttr)
 
-	return extractor, entryPoints
+	return extractor, entryPoints, attr

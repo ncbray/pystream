@@ -76,9 +76,9 @@ def lifetimeAnalysis(console, dataflow):
 	la.process(dataflow.db.liveCode)
 	console.end()
 
-def cpaAnalyze(console, e, entryPoints):
+def cpaAnalyze(console, e, entryPoints, attr):
 	console.begin('cpa analysis')
-	result = analysis.cpa.evaluate(console, e, entryPoints)
+	result = analysis.cpa.evaluate(console, e, entryPoints, attr)
 	console.output('')
 	console.output("Constraints:   %d" % len(result.constraints))
 	console.output("Contexts:      %d" % len(result.liveContexts))
@@ -91,9 +91,9 @@ def cpaAnalyze(console, e, entryPoints):
 	console.end()
 	return result
 
-def cpaPass(console, e, entryPoints):
+def cpaPass(console, e, entryPoints, attr):
 	console.begin('depython')
-	result = cpaAnalyze(console, e, entryPoints)
+	result = cpaAnalyze(console, e, entryPoints, attr)
 	codeConditioning(console, e, entryPoints, result)
 	console.end()
 	return result
@@ -118,12 +118,12 @@ def cull(console, entryPoints, db):
 	cullProgram(entryPoints, db)
 	console.end()
 
-def evaluate(console, name, e, entryPoints):
+def evaluate(console, name, e, entryPoints, attr):
 	console.begin('compile')
-	result = cpaPass(console, e, entryPoints)
+	result = cpaPass(console, e, entryPoints, attr)
 
 	if True:
-		result = cpaPass(console, e, entryPoints)
+		result = cpaPass(console, e, entryPoints, attr)
 
 	# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
 	lifetimeAnalysis(console, result)

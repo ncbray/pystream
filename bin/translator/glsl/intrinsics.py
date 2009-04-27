@@ -85,6 +85,22 @@ def dotRewrite(self, node):
 	else:
 		return glsl.IntrinsicOp('dot', self(node.args))
 
+def lengthRewrite(self, node):
+	if not hasNumArgs(node, 1): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('length', self(node.args))
+
+def normalizeRewrite(self, node):
+	if not hasNumArgs(node, 1): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('normalize', self(node.args))
+
 def swizzleRewrite(self, node):
 	if not hasNumArgs(node, 1): return
 
@@ -171,6 +187,14 @@ def makeIntrinsicRewriter(extractor):
 	rewriter.attribute(vec.vec2, 'dot', dotRewrite)
 	rewriter.attribute(vec.vec3, 'dot', dotRewrite)
 	rewriter.attribute(vec.vec4, 'dot', dotRewrite)
+
+	rewriter.attribute(vec.vec2, 'length', lengthRewrite)
+	rewriter.attribute(vec.vec3, 'length', lengthRewrite)
+	rewriter.attribute(vec.vec4, 'length', lengthRewrite)
+
+	rewriter.attribute(vec.vec2, 'normalize', normalizeRewrite)
+	rewriter.attribute(vec.vec3, 'normalize', normalizeRewrite)
+	rewriter.attribute(vec.vec4, 'normalize', normalizeRewrite)
 
 	rewriter.function(vec.vec4.__dict__['xyz'].fget, swizzleRewrite)
 

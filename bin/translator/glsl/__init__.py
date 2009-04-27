@@ -21,6 +21,7 @@ class TranslationError(Exception):
 class TemporaryLimitation(TranslationError):
 	pass
 
+
 class GLSLTranslator(StrictTypeDispatcher):
 	def __init__(self, intrinsicRewrite):
 		self.intrinsicRewrite = intrinsicRewrite
@@ -29,13 +30,25 @@ class GLSLTranslator(StrictTypeDispatcher):
 			float:glsl.BuiltinType('float'),
 			bool:glsl.BuiltinType('bool')}
 
-	def getType(self, references):
-		return glsl.BuiltinType('bogus')
+	def _getTypeFromRef(self, obj):
+		return obj.xtype.obj.type.pyobj
+
+	def getType(self, node, references):
+		types = set([self._getTypeFromRef(ref) for ref in references])
+
+		if len(types) != 1:
+			print node, references
+			raise TemporaryLimitation(self.code, node, "Cannot handle multiple references.")
+
+		type = types.pop()
+		# TODO validate
+
+		return glsl.BuiltinType(type.__name__)
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
 		if node not in self.localLUT:
-			lcl = glsl.Local(self.getType(node.annotation.references[0]), node.name)
+			lcl = glsl.Local(self.getType(node, node.annotation.references[0]), node.name)
 			self.localLUT[node] = lcl
 		else:
 			lcl = self.localLUT[node]

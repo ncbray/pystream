@@ -478,16 +478,16 @@ class InterproceduralDataflow(object):
 	def slotMemory(self):
 		return self.setManager.memory()
 
-def evaluate(console, extractor, entryPoints, attr):
+def evaluate(console, extractor, interface):
 	dataflow = InterproceduralDataflow(console, extractor)
 
 	# HACK
 	base.externalFunctionContext.opPath = dataflow.initalOpPath()
 
-	for src, attrName, dst in attr:
+	for src, attrName, dst in interface.attr:
 		dataflow.addAttr(src, attrName, dst)
 
-	for funcast, funcobj, args in entryPoints:
+	for funcast, funcobj, args in interface.entryPoint:
 		assert isinstance(funcast, ast.Code), type(funcast)
 		assert isinstance(funcobj, program.Object), type(funcobj)
 		assert isinstance(args, (list, tuple)), type(args)

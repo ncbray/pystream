@@ -19,7 +19,7 @@ import optimization.storeelimination
 
 import translator.glsl
 
-def codeConditioning(console, extractor, entryPoints, dataflow):
+def codeConditioning(console, extractor, interface, dataflow):
 	db = dataflow.db
 
 	console.begin('conditioning')
@@ -43,7 +43,7 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 	if True:
 		# Seperate different invocations of the same code.
 		console.begin('clone')
-		clone(console, extractor, entryPoints, db)
+		clone(console, extractor, interface.entryPoint, db)
 		console.end()
 
 	if True:
@@ -55,17 +55,17 @@ def codeConditioning(console, extractor, entryPoints, dataflow):
 	if True:
 		# Try to eliminate trivial functions.
 		console.begin('code inlining')
-		inlineCode(dataflow, entryPoints, db)
+		inlineCode(dataflow, interface.entryPoint, db)
 		console.end()
 
 		# Get rid of dead functions/contexts
-		cull(console, entryPoints, db)
+		cull(console, interface.entryPoint, db)
 
 	if True:
-		optimization.loadelimination.evaluate(console, dataflow, entryPoints)
+		optimization.loadelimination.evaluate(console, dataflow, interface.entryPoint)
 
 	if True:
-		optimization.storeelimination.evaluate(console, dataflow, entryPoints)
+		optimization.storeelimination.evaluate(console, dataflow, interface.entryPoint)
 
 
 	console.end()
@@ -76,9 +76,9 @@ def lifetimeAnalysis(console, dataflow):
 	la.process(dataflow.db.liveCode)
 	console.end()
 
-def cpaAnalyze(console, e, entryPoints, attr):
+def cpaAnalyze(console, e, interface):
 	console.begin('cpa analysis')
-	result = analysis.cpa.evaluate(console, e, entryPoints, attr)
+	result = analysis.cpa.evaluate(console, e, interface)
 	console.output('')
 	console.output("Constraints:   %d" % len(result.constraints))
 	console.output("Contexts:      %d" % len(result.liveContexts))
@@ -91,10 +91,10 @@ def cpaAnalyze(console, e, entryPoints, attr):
 	console.end()
 	return result
 
-def cpaPass(console, e, entryPoints, attr):
+def cpaPass(console, e, interface):
 	console.begin('depython')
-	result = cpaAnalyze(console, e, entryPoints, attr)
-	codeConditioning(console, e, entryPoints, result)
+	result = cpaAnalyze(console, e, interface)
+	codeConditioning(console, e, interface, result)
 	console.end()
 	return result
 
@@ -118,23 +118,26 @@ def cull(console, entryPoints, db):
 	cullProgram(entryPoints, db)
 	console.end()
 
-def evaluate(console, name, e, entryPoints, attr):
+def evaluate(console, name, extractor, interface):
+	entryPoints = interface.entryPoint
+	attr        = interface.attr
+
 	console.begin('compile')
-	result = cpaPass(console, e, entryPoints, attr)
+	result = cpaPass(console, extractor, interface)
 
 	if True:
-		result = cpaPass(console, e, entryPoints, attr)
+		result = cpaPass(console,  extractor, interface)
 
 	# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
 	lifetimeAnalysis(console, result)
 
 	try:
 		if False:
-			shapePass(console, e, result, entryPoints)
+			shapePass(console, extractor, result, entryPoints)
 
 		if True:
 			translator.glsl.translate(console, result, entryPoints)
 	finally:
-		cpaDump(console, name, e, result, entryPoints)
+		cpaDump(console, name, extractor, result, entryPoints)
 
 	console.end()

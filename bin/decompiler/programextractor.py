@@ -56,36 +56,6 @@ def flatTypeDict(t):
 		out[field] = result
 	return out
 
-def translateEntryPoint(extractor, module, name, args):
-	name = extractor.getObject(name)
-
-	extractor.ensureLoaded(module)
-
-	assert name in module.slot, name
-	fobj = module.slot[name] # Is this correct?  It might be in the dictionary...
-	# TODO just get from the pyobj?
-
-	extractor.ensureLoaded(fobj)
-	func = extractor.getCall(fobj)
-
-	argobjs  = [arg.getObject(extractor) for arg in args]
-	return func, fobj, argobjs
-
-
-def translateEntryPoints(extractor, module, rawEntryPoints):
-	return [translateEntryPoint(extractor, module, name, args) for name, args in rawEntryPoints]
-
-def translateAttr(extractor, rawAttr):
-	attrs = []
-
-	for src, attr, dst in rawAttr:
-		srcobj = src.getObject(extractor)
-		# TODO inherited slots?
-		attrName = extractor.getObject(util.uniqueSlotName(srcobj.type.pyobj.__dict__[attr]))
-		dstobj = dst.getObject(extractor)
-		attrs.append((srcobj, ('Attribute', attrName), dstobj))
-
-	return attrs
 
 class Extractor(object):
 	def __init__(self, verbose=True):
@@ -577,17 +547,12 @@ class Extractor(object):
 
 from stubs import makeStubs
 
-def extractProgram(moduleName, module, rawEntryPoints, rawAttr):
+def extractProgram(interface):
 	extractor = Extractor()
 
 	# Create stub functions
 	makeStubs(extractor)
 
-	# Seed the search
-	moduleObj = extractor.getObject(module)
+	interface.translate(extractor)
 
-	# Get the entry points.
-	entryPoints = translateEntryPoints(extractor, moduleObj, rawEntryPoints)
-	attr = translateAttr(extractor, rawAttr)
-
-	return extractor, entryPoints, attr
+	return extractor

@@ -2,4 +2,6 @@ module('tests.full.pystone')
 output('../temp')
 config(checkTypes=True)
 
-entryPoint('pystones', inst(int))
+import tests.full.pystone as pystone
+
+entryPoint(pystone.pystones, inst(int))

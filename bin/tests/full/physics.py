@@ -84,7 +84,7 @@ def simpleUpdate(dt, iterations):
 
 
 class Shader(object):
-	__slots__ = 'objectToWorld', 'worldToCamera', 'lightPos', 'ambient'
+	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'lightPos', 'ambient'
 	def __init__(self):
 		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
 					  0.0, 1.0, 0.0, 0.0,
@@ -97,6 +97,11 @@ class Shader(object):
 					  0.0, 0.0, 1.0, 0.0,
 					  0.0, 0.0, 0.0, 1.0)
 
+		self.projection = mat4(1.0, 0.0, 0.0, 0.0,
+					  0.0, 1.0, 0.0, 0.0,
+					  0.0, 0.0, 1.0, 0.0,
+					  0.0, 0.0, 0.0, 1.0)
+
 		self.lightPos = vec4(0.0, 10.0, 0.0, 1.0)
 
 		self.ambient = vec3(0.25, 0.25, 0.25)
@@ -104,7 +109,7 @@ class Shader(object):
 
 def shadeVertex(self, pos, normal):
 	trans     = (self.worldToCamera*self.objectToWorld)
-	newpos    = trans*pos
+	newpos    = self.projection*(trans*pos)
 	newnormal = trans*vec4(normal.x, normal.y, normal.z, 1.0)
 	newnormal = newnormal.xyz
 	return pos, newnormal, vec3(0.125, 0.125, 1.0)
@@ -113,8 +118,7 @@ def nldot(a, b):
 	return max(a.dot(b), 0.0)
 
 def shadeFragment(self, pos, normal, color):
-	# TODO normalize normal?
-	#trans = (self.worldToCamera*self.objectToWorld)
+	n = normal.normalize()
 
 	# Light in world space
 	trans = self.worldToCamera
@@ -126,14 +130,7 @@ def shadeFragment(self, pos, normal, color):
 
 	lightAtten = 1.0/(0.01+lightDist*lightDist)
 
-	return color*(self.ambient+nldot(lightDir, normal)*lightAtten)
-
-def randVec3():
-	return vec3(random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0))
-
-
-def randVec4():
-	return vec4(random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0), 1.0)
+	return color*(self.ambient+nldot(lightDir, n)*lightAtten)
 
 def harness(pos, normal):
 	shader = Shader()

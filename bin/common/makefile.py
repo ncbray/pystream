@@ -38,16 +38,64 @@ def importDeep(name):
 		mod = getattr(mod, comp)
 	return mod
 
+
+import util
+
+class InterfaceDeclaration(object):
+	__slots__ = 'entryPoint',  'attr', 'translated'
+
+	def __init__(self):
+		self.entryPoint = []
+		self.attr       = []
+
+		self.translated = False
+
+	def translate(self, extractor):
+		assert not self.translated
+
+		self._extractAttr(extractor)
+		self._extractEntryPoint(extractor)
+
+		self.translated = True
+
+	def _extractEntryPoint(self, extractor):
+		entryPoint = []
+
+		for expr, args in self.entryPoint:
+			fobj = extractor.getObject(expr)
+			extractor.ensureLoaded(fobj)
+			func = extractor.getCall(fobj)
+
+			argobjs  = [arg.getObject(extractor) for arg in args]
+
+			entryPoint.append((func, fobj, argobjs))
+
+		self.entryPoint = entryPoint
+
+	def _extractAttr(self, extractor):
+		attrs = []
+
+		for src, attr, dst in self.attr:
+			srcobj = src.getObject(extractor)
+			# TODO inherited slots?
+			attrName = extractor.getObject(util.uniqueSlotName(srcobj.type.pyobj.__dict__[attr]))
+			dstobj = dst.getObject(extractor)
+			attrs.append((srcobj, ('Attribute', attrName), dstobj))
+
+		self.attr = attrs
+
+	def __nonzero__(self):
+		return bool(self.entryPoint)
+
+
 class Makefile(object):
 	def __init__(self, filename):
 		self.filename = os.path.normpath(filename)
 
 		self.moduleName = None
 		self.module = None
-		self.moduleStruct = None
-		self.entryPoints = []
-		self.rawEntryPoints = []
-		self.rawAttr = []
+
+		self.interface = InterfaceDeclaration()
 
 		self.workingdir = os.path.dirname(os.path.join(sys.path[0], self.filename))
 		self.outdir = None
@@ -75,12 +123,12 @@ class Makefile(object):
 	def declAttr(self, src, attr, dst):
 		assert isinstance(src, InstWrapper), src
 		assert isinstance(dst, InstWrapper), dst
-		self.rawAttr.append((src, attr, dst))
+		self.interface.attr.append((src, attr, dst))
 
 	# TODO allow direct spesification of function pointer.
 	def declEntryPoint(self, funcName, *args):
 		assert self.module, "Must declare a module first."
-		self.rawEntryPoints.append((funcName, args))
+		self.interface.entryPoint.append((funcName, args))
 
 	def executeFile(self):
 		makeDSL = {'module':self.declModule,
@@ -102,14 +150,14 @@ class Makefile(object):
 		self.executeFile()
 		console.end()
 
-		if len(self.rawEntryPoints) <= 0:
-			print "No entry points, nothing to do."
+		if not self.interface:
+			console.output("No entry points, nothing to do.")
 			return
 
 		assert self.outdir, "No output directory declared."
 
-		e, entryPoints, attr = extractProgram(self.moduleName, self.module, self.rawEntryPoints, self.rawAttr)
-		common.pipeline.evaluate(console, self.moduleName, e, entryPoints, attr)
+		extractor = extractProgram(self.interface)
+		common.pipeline.evaluate(console, self.moduleName, extractor, self.interface)
 
 		# Output
 		assureDirectoryExists(self.outdir)

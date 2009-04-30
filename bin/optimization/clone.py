@@ -588,10 +588,10 @@ class FunctionCloner(object):
 		dstcode.ast            = self(srccode.ast)
 
 
-def clone(console, extractor, entryPoints, db):
+def clone(console, extractor, interface, db):
 	console.begin('analysis')
 
-	liveContexts = programculler.findLiveContexts(entryPoints)
+	liveContexts = programculler.findLiveContexts(interface.entryPoint)
 
 	cloner = ProgramCloner(console, db, liveContexts)
 
@@ -611,7 +611,7 @@ def clone(console, extractor, entryPoints, db):
 	# Is cloning worth while?
 	if numGroups > originalNumGroups:
 		console.begin('rewrite')
-		cloner.rewriteProgram(extractor, entryPoints)
+		cloner.rewriteProgram(extractor, interface.entryPoint)
 		console.end()
 
 		db.liveCode = cloner.newLive

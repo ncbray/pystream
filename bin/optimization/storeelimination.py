@@ -6,7 +6,7 @@ import collections
 from optimization.rewrite import rewriteAndSimplify
 
 
-def evaluate(console, dataflow, entryPoints):
+def evaluate(console, dataflow):
 	console.begin('dead store elimination')
 
 	live = set()

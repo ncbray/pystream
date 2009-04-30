@@ -445,7 +445,7 @@ def makeHeapTree(data):
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(points, head)
 	return tree, head
 
-def dumpReport(name, data, entryPoints):
+def dumpReport(name, data, interface):
 	reportDir = makeReportDirectory(name)
 
 	links = LinkManager()
@@ -472,7 +472,7 @@ def dumpReport(name, data, entryPoints):
 
 
 	liveHeap = data.db.liveObjects()
-	liveFunctions, liveInvocations = programculler.findLiveFunctions(entryPoints)
+	liveFunctions, liveInvocations = programculler.findLiveFunctions(interface.entryPoint)
 
 	out, scg = makeOutput(reportDir, 'function_index.html')
 	dumpHeader(out)
@@ -575,7 +575,7 @@ def dumpReport(name, data, entryPoints):
 		out.endl()
 		out.close()
 
-	dumpgraphs.dump(data, entryPoints, links, reportDir)
+	dumpgraphs.dump(data, interface, links, reportDir)
 
 
 class DerivedData(object):
@@ -627,8 +627,8 @@ class DerivedData(object):
 		return self.invokeDestination[(function, context)]
 
 
-def dump(name, extractor, dataflow, entryPoints):
+def dump(name, extractor, dataflow, interface):
 	data = DerivedData(dataflow.db)
 	data.sys = dataflow # HACK?
-	dumpReport(name, data, entryPoints)
+	dumpReport(name, data, interface)
 

@@ -231,18 +231,18 @@ class RegionBasedShapeAnalysis(object):
 		print "Steps:", "%d/%d" % (self.worklist.usefulSteps, self.worklist.steps)
 
 import collections
-def evaluate(console, extractor, result, entryPoints):
+def evaluate(console, extractor, result, interface):
 	console.begin('shape analysis')
 
-	regions = regionanalysis.evaluate(extractor, entryPoints, result)
+	regions = regionanalysis.evaluate(extractor, interface.entryPoint, result)
 
 	rbsa = RegionBasedShapeAnalysis(extractor, result, HeapInformationProvider(result, regions))
 
-	entryCode = set([code for code, selfobj, args in entryPoints])
+	entryCode = set([code for code, selfobj, args in interface.entryPoint])
 	rbsa.buildStructures(entryCode)
 
 
-	for code, selfobj, args in entryPoints:
+	for code, selfobj, args in interface.entryPoint:
 		rbsa.addEntryPoint(code, selfobj, args)
 
 	rbsa.handleAllocations()

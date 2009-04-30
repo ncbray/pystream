@@ -43,7 +43,7 @@ def codeConditioning(console, extractor, interface, dataflow):
 	if True:
 		# Seperate different invocations of the same code.
 		console.begin('clone')
-		clone(console, extractor, interface.entryPoint, db)
+		clone(console, extractor, interface, db)
 		console.end()
 
 	if True:
@@ -55,17 +55,17 @@ def codeConditioning(console, extractor, interface, dataflow):
 	if True:
 		# Try to eliminate trivial functions.
 		console.begin('code inlining')
-		inlineCode(dataflow, interface.entryPoint, db)
+		inlineCode(dataflow, interface, db)
 		console.end()
 
 		# Get rid of dead functions/contexts
-		cull(console, interface.entryPoint, db)
+		cull(console, interface, db)
 
 	if True:
-		optimization.loadelimination.evaluate(console, dataflow, interface.entryPoint)
+		optimization.loadelimination.evaluate(console, dataflow)
 
 	if True:
-		optimization.storeelimination.evaluate(console, dataflow, interface.entryPoint)
+		optimization.storeelimination.evaluate(console, dataflow)
 
 
 	console.end()
@@ -99,29 +99,21 @@ def cpaPass(console, e, interface):
 	return result
 
 
-def shapePass(console, e, result, entryPoints):
-#	import scriptsetup
-#	def f():
-#		analysis.shape.evaluate(console, e, result, entryPoints)
-#	scriptsetup.profile(f)
-
-	analysis.shape.evaluate(console, e, result, entryPoints)
+def shapePass(console, e, result, interface):
+	analysis.shape.evaluate(console, e, result, interface)
 
 
-def cpaDump(console, name, e, result, entryPoints):
+def cpaDump(console, name, e, result, interface):
 	console.begin('dump')
-	analysis.dump.dumpreport.dump(name, e, result, entryPoints)
+	analysis.dump.dumpreport.dump(name, e, result, interface)
 	console.end()
 
-def cull(console, entryPoints, db):
+def cull(console, interface, db):
 	console.begin('cull')
-	cullProgram(entryPoints, db)
+	cullProgram(interface, db)
 	console.end()
 
 def evaluate(console, name, extractor, interface):
-	entryPoints = interface.entryPoint
-	attr        = interface.attr
-
 	console.begin('compile')
 	result = cpaPass(console, extractor, interface)
 
@@ -133,11 +125,11 @@ def evaluate(console, name, extractor, interface):
 
 	try:
 		if False:
-			shapePass(console, extractor, result, entryPoints)
+			shapePass(console, extractor, result, interface)
 
 		if True:
-			translator.glsl.translate(console, result, entryPoints)
+			translator.glsl.translate(console, result, interface)
 	finally:
-		cpaDump(console, name, extractor, result, entryPoints)
+		cpaDump(console, name, extractor, result, interface)
 
 	console.end()

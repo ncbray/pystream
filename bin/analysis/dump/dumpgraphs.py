@@ -13,7 +13,7 @@ def dumpGraph(name, g, format='svg', prog='dot'):
 	f.close()
 	return fn
 
-def dump(data, entryPoints, links, reportDir):
+def dump(data, interface, links, reportDir):
 	# Find live functions
 	stack = []
 	processed = set()
@@ -23,7 +23,7 @@ def dump(data, entryPoints, links, reportDir):
 	invokeLUT[head] = set()
 
 	# Process the entry points
-	for code, funcobj, args in entryPoints:
+	for code, funcobj, args in interface.entryPoint:
 		for context in code.annotation.contexts:
 			context = None
 			invokeLUT[head].add(code)

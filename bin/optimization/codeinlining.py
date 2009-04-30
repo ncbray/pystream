@@ -347,7 +347,7 @@ class CodeInliningTransform(object):
 
 import translator.glsl.intrinsics
 
-def inlineCode(dataflow, entryPoints, db):
+def inlineCode(dataflow, interface, db):
 	analysis  = CodeInliningAnalysis()
 	for code in db.liveFunctions():
 		analysis.process(code)
@@ -355,5 +355,5 @@ def inlineCode(dataflow, entryPoints, db):
 	intrinsics = translator.glsl.intrinsics.makeIntrinsicRewriter(dataflow.extractor)
 
 	transform = CodeInliningTransform(analysis, dataflow, db, intrinsics)
-	for func, funcobj, args in entryPoints:
+	for func, funcobj, args in interface.entryPoint:
 		transform.process(func)

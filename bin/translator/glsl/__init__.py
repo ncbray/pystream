@@ -111,14 +111,14 @@ class GLSLTranslator(StrictTypeDispatcher):
 		body = self(node.ast)
 		return glsl.Code(node.name, [],glsl.BuiltinType('void'), body)
 
-def translate(console, dataflow, entryPoints):
+def translate(console, dataflow, interface):
 	console.begin('translate to glsl')
 
 	try:
 		translator = GLSLTranslator(intrinsics.makeIntrinsicRewriter(dataflow.extractor))
 		cg = codegen.GLSLCodeGen()
 
-		for code, expr, args in entryPoints:
+		for code, expr, args in interface.entryPoint:
 			console.output(str(code))
 			result = translator.processCode(code)
 			print cg(result)

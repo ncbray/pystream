@@ -50,10 +50,10 @@ class CallGraphFinder(Finder):
 					children.append(child)
 		return children
 
-def makeCGF(entryPoints):
+def makeCGF(interface):
 	cgf = CallGraphFinder()
 
-	for code, funcobj, args in entryPoints:
+	for code, funcobj, args in interface.entryPoint:
 		assert isinstance(code, ast.Code), type(code)
 
 		# HACK for finding the entry context, assumes there's only one context.
@@ -62,11 +62,11 @@ def makeCGF(entryPoints):
 			cgf.process((code, context))
 	return cgf
 
-def findLiveFunctions(entryPoints):
-	cgf = makeCGF(entryPoints)
+def findLiveFunctions(interface):
+	cgf = makeCGF(interface)
 
 	entry = set()
-	for code, funcobj, args in entryPoints:
+	for code, funcobj, args in interface.entryPoint:
 		entry.add(code)
 
 	live = cgf.liveFunc
@@ -76,6 +76,6 @@ def findLiveFunctions(entryPoints):
 
 	return live, G
 
-def findLiveContexts(entryPoints):
-	cgf = makeCGF(entryPoints)
+def findLiveContexts(interface):
+	cgf = makeCGF(interface)
 	return cgf.liveFuncContext

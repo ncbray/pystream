@@ -160,7 +160,12 @@ class DirectCall(Expression):
 	__fields__ = 'func:Code? selfarg:Expression? args:Expression* kwds* vargs:Expression? kargs:Expression?'
 
 	def __repr__(self):
-		return "%s(<%s>, %r, %r, %r, %r, %r)" % (type(self).__name__, self.func.name,
+		if self.func is not None:
+			funcname = self.func.name
+		else:
+			funcname = "???"
+
+		return "%s(<%s>, %r, %r, %r, %r, %r)" % (type(self).__name__, funcname,
 						       self.selfarg,
 						       self.args, self.kwds,
 						       self.vargs, self.kargs)

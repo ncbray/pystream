@@ -79,6 +79,11 @@ class GLSLTranslator(StrictTypeDispatcher):
 
 		return translated
 
+	@dispatch(ast.Call)
+	def visitCall(self, node):
+		raise TranslationError(self.code, node, "Cannot handle indirect calls.")
+
+
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		if len(node.lcls) != 1:

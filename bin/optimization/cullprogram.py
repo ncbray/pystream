@@ -51,7 +51,7 @@ class CodeContextCuller(object):
 
 def cullProgram(interface, db):
 	ccc = CodeContextCuller()
-	liveContexts = programculler.findLiveContexts(interface.entryPoint)
+	liveContexts = programculler.findLiveContexts(interface)
 
 	for code, contexts in liveContexts.iteritems():
 		if len(code.annotation.contexts) != len(contexts):

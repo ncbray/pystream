@@ -591,7 +591,7 @@ class FunctionCloner(object):
 def clone(console, extractor, interface, db):
 	console.begin('analysis')
 
-	liveContexts = programculler.findLiveContexts(interface.entryPoint)
+	liveContexts = programculler.findLiveContexts(interface)
 
 	cloner = ProgramCloner(console, db, liveContexts)
 

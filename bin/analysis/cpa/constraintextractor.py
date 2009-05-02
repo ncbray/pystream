@@ -2,6 +2,7 @@ from util.typedispatch import *
 
 from language.python import ast
 from language.python import program
+from language.python import annotations
 
 from common import opnames
 
@@ -53,7 +54,7 @@ class ExtractDataflow(object):
 
 	def directCall(self, node, code, selfarg, args, vargs, kargs, targets):
 		if self.doOnce(node):
-			assert isinstance(code, ast.Code), type(code)
+			assert isinstance(code, ast.Code), ("Incorrect code parameter.\n"+annotations.originTraceString(node.annotation.origin))
 			op   = self.contextOp(node)
 			kwds = [] # HACK
 			con = DirectCallConstraint(op, code, selfarg, args, kwds, vargs, kargs, targets)

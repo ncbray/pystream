@@ -84,7 +84,7 @@ def simpleUpdate(dt, iterations):
 
 
 class Shader(object):
-	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'lightPos', 'ambient'
+	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'lightPos', 'ambient', 'color'
 	def __init__(self):
 		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
 					  0.0, 1.0, 0.0, 0.0,
@@ -106,16 +106,18 @@ class Shader(object):
 
 		self.ambient = vec3(0.25, 0.25, 0.25)
 
-
-def shadeVertex(self, pos, normal):
-	trans     = (self.worldToCamera*self.objectToWorld)
-	newpos    = self.projection*(trans*pos)
-	newnormal = trans*vec4(normal.x, normal.y, normal.z, 1.0)
-	newnormal = newnormal.xyz
-	return pos, newnormal, vec3(0.125, 0.125, 1.0)
+		self.color = vec3(0.125, 0.125, 1.0)
 
 def nldot(a, b):
 	return max(a.dot(b), 0.0)
+
+def shadeVertex(self, pos, normal):
+	trans     = (self.worldToCamera*self.objectToWorld)
+	newpos    = (trans*pos)
+	projected = self.projection*newpos
+	newnormal = (trans*vec4(normal.x, normal.y, normal.z, 1.0)).xyz
+
+	return projected, self, pos, newnormal, self.color
 
 def shadeFragment(self, pos, normal, color):
 	n = normal.normalize()
@@ -129,11 +131,13 @@ def shadeFragment(self, pos, normal, color):
 	lightDir  = lightDir/lightDist
 
 	lightAtten = 1.0/(0.01+lightDist*lightDist)
+	transfer = nldot(lightDir, n)
+	modulated = transfer*lightAtten
 
-	return color*(self.ambient+nldot(lightDir, n)*lightAtten)
+	return color*(self.ambient+modulated)
 
 def harness(pos, normal):
 	shader = Shader()
-	pos, normal, color = shadeVertex(shader, pos, normal)
+	projected, shader, pos, normal, color = shadeVertex(shader, pos, normal)
 	finalColor = shadeFragment(shader, pos, normal, color)
 	return finalColor

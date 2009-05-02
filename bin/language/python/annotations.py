@@ -16,6 +16,9 @@ def originString(origin):
 	else:
 		return "<unknown origin>"
 
+def originTraceString(origin):
+	return "\n".join([originString(part) for part in origin])
+
 class Annotation(object):
 	__slots__ = ()
 

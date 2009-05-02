@@ -472,7 +472,7 @@ def dumpReport(name, data, interface):
 
 
 	liveHeap = data.db.liveObjects()
-	liveFunctions, liveInvocations = programculler.findLiveFunctions(interface.entryPoint)
+	liveFunctions, liveInvocations = programculler.findLiveFunctions(interface)
 
 	out, scg = makeOutput(reportDir, 'function_index.html')
 	dumpHeader(out)

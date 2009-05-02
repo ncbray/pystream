@@ -57,7 +57,7 @@ externalOp  = util.canonical.Sentinel('<externalOp>')
 
 
 class InterproceduralDataflow(object):
-	def __init__(self, console, extractor):
+	def __init__(self, console, extractor, opPathLength=0):
 		self.decompileTime = 0
 		self.console   = console
 		self.extractor = extractor
@@ -108,7 +108,7 @@ class InterproceduralDataflow(object):
 
 		# Controls how many previous ops are remembered by a context.
 		# TODO remember prior CPA signatures?
-		self.opPathLength  = 0
+		self.opPathLength = opPathLength
 		self.cache = {}
 
 		# The storage graph
@@ -478,8 +478,8 @@ class InterproceduralDataflow(object):
 	def slotMemory(self):
 		return self.setManager.memory()
 
-def evaluate(console, extractor, interface):
-	dataflow = InterproceduralDataflow(console, extractor)
+def evaluate(console, extractor, interface, opPathLength=0):
+	dataflow = InterproceduralDataflow(console, extractor, opPathLength)
 
 	# HACK
 	base.externalFunctionContext.opPath = dataflow.initalOpPath()

@@ -76,9 +76,9 @@ def lifetimeAnalysis(console, dataflow):
 	la.process(dataflow.db.liveCode)
 	console.end()
 
-def cpaAnalyze(console, e, interface):
+def cpaAnalyze(console, e, interface, opPathLength=0):
 	console.begin('cpa analysis')
-	result = analysis.cpa.evaluate(console, e, interface)
+	result = analysis.cpa.evaluate(console, e, interface, opPathLength)
 	console.output('')
 	console.output("Constraints:   %d" % len(result.constraints))
 	console.output("Contexts:      %d" % len(result.liveContexts))
@@ -91,9 +91,9 @@ def cpaAnalyze(console, e, interface):
 	console.end()
 	return result
 
-def cpaPass(console, e, interface):
+def cpaPass(console, e, interface, opPathLength=0):
 	console.begin('depython')
-	result = cpaAnalyze(console, e, interface)
+	result = cpaAnalyze(console, e, interface, opPathLength)
 	codeConditioning(console, e, interface, result)
 	console.end()
 	return result
@@ -118,7 +118,9 @@ def evaluate(console, name, extractor, interface):
 	result = cpaPass(console, extractor, interface)
 
 	if True:
-		result = cpaPass(console,  extractor, interface)
+		# Intrinsics can prevent complete exhaustive inlining.
+		# Adding call-path sensitivity compensates.
+		result = cpaPass(console,  extractor, interface, 3)
 
 	# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
 	lifetimeAnalysis(console, result)

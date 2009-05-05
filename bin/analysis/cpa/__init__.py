@@ -366,11 +366,14 @@ class InterproceduralDataflow(object):
 		field = obj.field(self, fieldName, self.roots.regionHint)
 		field.initializeType(self, dstxtype)
 
-	def addEntryPoint(self, func, funcobj, args):
+	def addEntryPoint(self, entryPoint):
+		func, funcobj, args = entryPoint.code, entryPoint.selfarg, entryPoint.args
+
 		# The call point
 		# TODO generate bogus ops?
 		dummyOp = self.canonical.opContext(base.externalFunction, externalOp, base.externalFunctionContext)
 
+		# HACK?
 		self.codeContexts[base.externalFunction].add(base.externalFunctionContext)
 
 		# Self arg
@@ -399,6 +402,9 @@ class InterproceduralDataflow(object):
 
 		# Generate the calling context
 		context = self.getContext(dummyOp, func, funcobj, args, True)
+
+		# Store the entrypoint -> context+ mapping
+		entryPoint.contexts = [context]
 
 		# Make an invocation
 		self.bindCall(dummyOp, caller, context)
@@ -498,7 +504,7 @@ def evaluate(console, extractor, interface, opPathLength=0):
 		dataflow.addAttr(src, attrName, dst)
 
 	for entryPoint in interface.entryPoint:
-		dataflow.addEntryPoint(entryPoint.code, entryPoint.selfarg, entryPoint.args)
+		dataflow.addEntryPoint(entryPoint)
 
 	dataflow.solve()
 	dataflow.checkConstraints()

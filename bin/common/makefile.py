@@ -54,12 +54,14 @@ class ClassDeclaration(object):
 		self._method[name].append(args)
 
 class EntryPoint(object):
-	__slots__ = 'code', 'selfarg', 'args'
+	__slots__ = 'code', 'selfarg', 'args', 'group', 'contexts'
 
 	def __init__(self, code, selfarg, args):
-		self.code    = code
-		self.selfarg = selfarg
-		self.args    = args
+		self.code     = code
+		self.selfarg  = selfarg
+		self.args     = args
+		self.group    = None
+		self.contexts = []
 
 import util
 
@@ -90,8 +92,12 @@ class InterfaceDeclaration(object):
 
 		self.translated = True
 
-	def _entryPoint(self, code, selfarg, args):
+	def _entryPoint(self, code, selfarg, args, group=None):
 		ep = EntryPoint(code, selfarg, args)
+
+		if group is None: group = ep
+		ep.group = group
+
 		self.entryPoint.append(ep)
 		return ep
 
@@ -118,8 +124,10 @@ class InterfaceDeclaration(object):
 
 
 			# Type call/init
+			group = None
 			for args in cls._init:
-				ep = self._entryPoint(call, tobj, [arg.getObject(extractor) for arg in args])
+				ep = self._entryPoint(call, tobj, [arg.getObject(extractor) for arg in args], group)
+				if group is None: group = ep
 
 			# Attribute getters
 			# TODO setters
@@ -133,8 +141,11 @@ class InterfaceDeclaration(object):
 				func = cls.typeobj.__dict__[name]
 				fobj, code = extractor.getObjectCall(func)
 
+				group = None
 				for args in arglist:
-					ep = self._entryPoint(code, fobj,[inst]+[arg.getObject(extractor) for arg in args])
+					ep = self._entryPoint(code, fobj,[inst]+[arg.getObject(extractor) for arg in args], group)
+					if group is None: group = ep
+
 
 
 
@@ -155,7 +166,17 @@ class InterfaceDeclaration(object):
 
 
 	def entryCode(self):
+		assert self.translated
 		return frozenset([point.code for point in self.entryPoint])
+
+	def groupedEntryContexts(self):
+		assert self.translated
+		entryPointMerge = {}
+		for entryPoint in self.entryPoint:
+			if entryPoint.group not in entryPointMerge:
+				entryPointMerge[entryPoint.group] = []
+			entryPointMerge[entryPoint.group].extend(entryPoint.contexts)
+		return entryPointMerge
 
 class Makefile(object):
 	def __init__(self, filename):

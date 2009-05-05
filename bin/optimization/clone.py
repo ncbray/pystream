@@ -102,7 +102,7 @@ class ProgramCloner(object):
 		elif indirect:
 			self.indirectGroup[code] = contexts.pop()
 
-	def unifyContexts(self):
+	def unifyContexts(self, interface):
 		# Calculates the fully cloned, realizable solution.
 		# This is used as an upper bound for cloning.
 		# This will never generate more functions than there are contexts.
@@ -115,8 +115,11 @@ class ProgramCloner(object):
 			for context in contexts:
 				self.unifier.init(context)
 
-				if context.entryPoint:
-					self.doUnify(code, set((context,)), True)
+
+		# Merge entry points that must have the same implementation.
+		for entryPoint, contexts in interface.groupedEntryContexts().iteritems():
+			self.doUnify(entryPoint.code, set(contexts), False)
+
 
 		while self.unifier.dirty:
 			current = self.unifier.dirty.pop()
@@ -133,8 +136,9 @@ class ProgramCloner(object):
 						assert self.unifier.canonical(udst) is udst
 						dsts[udst.signature.code].add(udst)
 
+				# Unify the destination contexts.
+				# If there's more than one code target, this is an indirect call.
 				indirect = len(dsts) > 1
-
 				for dstcode, dstcontexts in dsts.iteritems():
 					self.doUnify(dstcode, dstcontexts, indirect)
 
@@ -438,6 +442,13 @@ class ProgramCloner(object):
 		oldContext = self.indirectGroup[code]
 		return newfunc[code][self.groupLUT[oldContext]]
 
+	def retargetEntryPoint(self, ep, newfunc):
+		assert ep.contexts
+		group = self.groupLUT[ep.contexts[0]]
+		newcode = newfunc[ep.code][group]
+
+		ep.code = newcode
+
 	def rewriteProgram(self, extractor, interface):
 		newfunc = self.createNewCodeNodes()
 
@@ -453,7 +464,7 @@ class ProgramCloner(object):
 		# Entry points are considered to be "indirect"
 		# As there is only one indirect function, we know it is the entry point.
 		for entryPoint in interface.entryPoint:
-			entryPoint.code = self.getIndirect(entryPoint.code, newfunc)
+			self.retargetEntryPoint(entryPoint, newfunc)
 
 		# Rewrite the callLUT
 		newCallLUT = {}
@@ -467,7 +478,6 @@ class ProgramCloner(object):
 		funcs = []
 		for func, groups in newfunc.iteritems():
 			funcs.extend(groups.itervalues())
-
 		return funcs
 
 
@@ -588,7 +598,7 @@ def clone(console, extractor, interface, db):
 
 	cloner = ProgramCloner(console, db, liveContexts)
 
-	cloner.unifyContexts()
+	cloner.unifyContexts(interface)
 	cloner.findInitialConflicts()
 	cloner.process()
 	numGroups = cloner.makeGroups()

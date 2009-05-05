@@ -38,14 +38,43 @@ def importDeep(name):
 		mod = getattr(mod, comp)
 	return mod
 
+class ClassDeclaration(object):
+	def __init__(self, cls):
+		self.cls = cls
+		self._init = []
+		self._attr = []
+		self._method = {}
+
+
+	def init(self, *args):
+		self._init.append(args)
+
+	def attr(self, *args):
+		self._attr.extend(args)
+
+	def method(self, name, *args):
+		if name not in self._method:
+			self._method[name] = []
+
+		self._method[name].append(args)
+
+class EntryPoint(object):
+	__slots__ = 'code', 'selfarg', 'args'
+
+	def __init__(self, code, selfarg, args):
+		self.code    = code
+		self.selfarg = selfarg
+		self.args    = args
 
 import util
 
 class InterfaceDeclaration(object):
-	__slots__ = 'entryPoint',  'attr', 'translated'
+	__slots__ = 'entryPoint',  'attr', 'cls', 'translated'
 
 	def __init__(self):
 		self.entryPoint = []
+		self.cls        = []
+
 		self.attr       = []
 
 		self.translated = False
@@ -54,6 +83,7 @@ class InterfaceDeclaration(object):
 		assert not self.translated
 
 		self._extractAttr(extractor)
+		self._extractCls(extractor)
 		self._extractEntryPoint(extractor)
 
 		self.translated = True
@@ -68,9 +98,14 @@ class InterfaceDeclaration(object):
 
 			argobjs  = [arg.getObject(extractor) for arg in args]
 
-			entryPoint.append((func, fobj, argobjs))
+			entryPoint.append(EntryPoint(func, fobj, argobjs))
 
 		self.entryPoint = entryPoint
+
+	def _extractCls(self, extractor):
+		for cls in self.cls:
+			for attr in cls._attr:
+				pass #entryPoint.
 
 	def _extractAttr(self, extractor):
 		attrs = []
@@ -87,6 +122,9 @@ class InterfaceDeclaration(object):
 	def __nonzero__(self):
 		return bool(self.entryPoint)
 
+
+	def entryCode(self):
+		return frozenset([point.code for point in self.entryPoint])
 
 class Makefile(object):
 	def __init__(self, filename):
@@ -125,10 +163,17 @@ class Makefile(object):
 		assert isinstance(dst, InstWrapper), dst
 		self.interface.attr.append((src, attr, dst))
 
-	# TODO allow direct spesification of function pointer.
 	def declEntryPoint(self, funcName, *args):
 		assert self.module, "Must declare a module first."
 		self.interface.entryPoint.append((funcName, args))
+
+
+	def declClass(self, cls):
+		assert isinstance(cls, type), cls
+		wrapped = ClassDeclaration(cls)
+		self.interface.cls.append(wrapped)
+		return wrapped
+
 
 	def executeFile(self):
 		makeDSL = {'module':self.declModule,
@@ -137,6 +182,7 @@ class Makefile(object):
 			   'config':self.declConfig,
 			   'attr':self.declAttr,
 			   'entryPoint':self.declEntryPoint,
+			   'cls':self.declClass,
 			   'output':self.declOutput}
 
 		f = open(self.filename)

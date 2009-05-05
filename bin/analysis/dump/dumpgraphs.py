@@ -23,7 +23,7 @@ def dump(data, interface, links, reportDir):
 	invokeLUT[head] = set()
 
 	# Process the entry points
-	for code, funcobj, args in interface.entryPoint:
+	for code in interface.entryCode():
 		for context in code.annotation.contexts:
 			context = None
 			invokeLUT[head].add(code)
@@ -81,7 +81,9 @@ def dump(data, interface, links, reportDir):
 			sg.add_node(pydot.Node(str(id(node)), label=codeShortName(code),
 				shape='box', style="filled", fontsize=8,
 				fillcolor=nodecolor, URL=links.codeRef(node, None)))
-
+		else:
+			sg.add_node(pydot.Node(str(id(node)), label="entry",
+				shape='point', style="filled", fontsize=8))
 
 		children = tree.get(node)
 		if children:
@@ -94,7 +96,7 @@ def dump(data, interface, links, reportDir):
 
 	# Create edges
 	for src, dsts in invokeLUT.iteritems():
-		if src is head: continue
+		#if src is head: continue
 		for dst in dsts:
 			if idoms.get(dst) is src:
 				weight = 10

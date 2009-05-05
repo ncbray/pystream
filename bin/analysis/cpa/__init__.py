@@ -487,11 +487,8 @@ def evaluate(console, extractor, interface, opPathLength=0):
 	for src, attrName, dst in interface.attr:
 		dataflow.addAttr(src, attrName, dst)
 
-	for funcast, funcobj, args in interface.entryPoint:
-		assert isinstance(funcast, ast.Code), type(funcast)
-		assert isinstance(funcobj, program.Object), type(funcobj)
-		assert isinstance(args, (list, tuple)), type(args)
-		dataflow.addEntryPoint(funcast, funcobj, args)
+	for entryPoint in interface.entryPoint:
+		dataflow.addEntryPoint(entryPoint.code, entryPoint.selfarg, entryPoint.args)
 
 	dataflow.solve()
 	dataflow.checkConstraints()

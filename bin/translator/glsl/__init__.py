@@ -123,7 +123,7 @@ def translate(console, dataflow, interface):
 		translator = GLSLTranslator(intrinsics.makeIntrinsicRewriter(dataflow.extractor))
 		cg = codegen.GLSLCodeGen()
 
-		for code, expr, args in interface.entryPoint:
+		for code in interface.entryCode():
 			console.output(str(code))
 			result = translator.processCode(code)
 			print cg(result)

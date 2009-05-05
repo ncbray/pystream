@@ -438,7 +438,7 @@ class ProgramCloner(object):
 		oldContext = self.indirectGroup[code]
 		return newfunc[code][self.groupLUT[oldContext]]
 
-	def rewriteProgram(self, extractor, entryPoints):
+	def rewriteProgram(self, extractor, interface):
 		newfunc = self.createNewCodeNodes()
 
 		# Clone all of the functions.
@@ -452,15 +452,8 @@ class ProgramCloner(object):
 
 		# Entry points are considered to be "indirect"
 		# As there is only one indirect function, we know it is the entry point.
-		newEP = []
-		for func, funcobj, args in entryPoints:
-			func = self.getIndirect(func, newfunc)
-			newEP.append((func, funcobj, args))
-
-		# HACK Mutate the list.
-		# Used so everyone gets the update version
-		entryPoints[:] = newEP
-
+		for entryPoint in interface.entryPoint:
+			entryPoint.code = self.getIndirect(entryPoint.code, newfunc)
 
 		# Rewrite the callLUT
 		newCallLUT = {}
@@ -611,7 +604,7 @@ def clone(console, extractor, interface, db):
 	# Is cloning worth while?
 	if numGroups > originalNumGroups:
 		console.begin('rewrite')
-		cloner.rewriteProgram(extractor, interface.entryPoint)
+		cloner.rewriteProgram(extractor, interface)
 		console.end()
 
 		db.liveCode = cloner.newLive

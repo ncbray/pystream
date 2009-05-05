@@ -35,5 +35,20 @@ attr(inst(vec.mat4), 'm31', inst(float))
 attr(inst(vec.mat4), 'm32', inst(float))
 attr(inst(vec.mat4), 'm33', inst(float))
 
-#entryPoint(physics.simpleUpdate, inst(float), inst(int))
+entryPoint(physics.simpleUpdate, inst(float), inst(int))
 entryPoint(physics.harness, inst(vec.vec4), inst(vec.vec3))
+
+vec3 = cls(vec.vec3)
+vec3.init(inst(float), inst(float), inst(float))
+vec3.attr('x', 'y', 'z')
+vec3.method('__add__', inst(float))
+vec3.method('__add__', inst(vec.vec3))
+vec3.method('__radd__', inst(float))
+vec3.method('__mul__', inst(float))
+vec3.method('__mul__', inst(vec.vec3))
+vec3.method('__rmul__', inst(float))
+vec3.method('normalize')
+
+
+# UGLY: must be the same fragment shader to do uniform transformation?
+#shader(physics.shadeVertex, physics.shadeFragment)(inst(physics.Shader), stream(inst(vec.vec4)), stream(inst(vec.vec3)))

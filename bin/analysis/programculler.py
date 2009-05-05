@@ -53,7 +53,7 @@ class CallGraphFinder(Finder):
 def makeCGF(interface):
 	cgf = CallGraphFinder()
 
-	for code, funcobj, args in interface.entryPoint:
+	for code in interface.entryCode():
 		assert isinstance(code, ast.Code), type(code)
 
 		# HACK for finding the entry context, assumes there's only one context.
@@ -66,7 +66,7 @@ def findLiveFunctions(interface):
 	cgf = makeCGF(interface)
 
 	entry = set()
-	for code, funcobj, args in interface.entryPoint:
+	for code in interface.entryCode():
 		entry.add(code)
 
 	live = cgf.liveFunc

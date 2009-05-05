@@ -17,12 +17,7 @@ class InstWrapper(object):
 		self.typeobj = typeobj
 
 	def getObject(self, extractor):
-		# This may return "None" if the abstractInstances have not yet been constructed.
-
-		typeobj = extractor.getObject(self.typeobj)
-		extractor.ensureLoaded(typeobj)
-
-		return typeobj.abstractInstance()
+		return extractor.getInstance(self.typeobj)
 
 class ObjWrapper(object):
 	def __init__(self, pyobj):
@@ -40,7 +35,7 @@ def importDeep(name):
 
 class ClassDeclaration(object):
 	def __init__(self, cls):
-		self.cls = cls
+		self.typeobj = cls
 		self._init = []
 		self._attr = []
 		self._method = {}
@@ -69,43 +64,79 @@ class EntryPoint(object):
 import util
 
 class InterfaceDeclaration(object):
-	__slots__ = 'entryPoint',  'attr', 'cls', 'translated'
+	__slots__ = 'func', 'cls', 'attr', 'entryPoint', 'translated'
 
 	def __init__(self):
-		self.entryPoint = []
+
+		self.func       = []
 		self.cls        = []
 
+		# The memory image
 		self.attr       = []
+
+		# Entry points, derived from other declarations.
+		self.entryPoint = []
 
 		self.translated = False
 
 	def translate(self, extractor):
 		assert not self.translated
 
+		self.entryPoint = []
+
 		self._extractAttr(extractor)
+		self._extractFunc(extractor)
 		self._extractCls(extractor)
-		self._extractEntryPoint(extractor)
 
 		self.translated = True
 
-	def _extractEntryPoint(self, extractor):
-		entryPoint = []
+	def _entryPoint(self, code, selfarg, args):
+		ep = EntryPoint(code, selfarg, args)
+		self.entryPoint.append(ep)
+		return ep
 
-		for expr, args in self.entryPoint:
-			fobj = extractor.getObject(expr)
-			extractor.ensureLoaded(fobj)
-			func = extractor.getCall(fobj)
+	def _extractFunc(self, extractor):
+		newFunc = []
 
+		for expr, args in self.func:
+			fobj, code = extractor.getObjectCall(expr)
 			argobjs  = [arg.getObject(extractor) for arg in args]
 
-			entryPoint.append(EntryPoint(func, fobj, argobjs))
+			ep = self._entryPoint(code, fobj, argobjs)
 
-		self.entryPoint = entryPoint
+			newFunc.append((code, fobj, argobjs, ep))
+
+		self.func = newFunc
 
 	def _extractCls(self, extractor):
 		for cls in self.cls:
+			tobj = extractor.getObject(cls.typeobj)
+			inst = extractor.getInstance(cls.typeobj)
+
+			call = extractor.stubs.exports['interpreter_call']
+			getter = extractor.stubs.exports['interpreter_getattribute']
+
+
+			# Type call/init
+			for args in cls._init:
+				ep = self._entryPoint(call, tobj, [arg.getObject(extractor) for arg in args])
+
+			# Attribute getters
+			# TODO setters
 			for attr in cls._attr:
-				pass #entryPoint.
+				name = extractor.getObject(attr)
+				ep = self._entryPoint(getter, None, [inst, name])
+
+			# Method calls
+			for name, arglist in cls._method.iteritems():
+				# TODO what about inheritance?
+				func = cls.typeobj.__dict__[name]
+				fobj, code = extractor.getObjectCall(func)
+
+				for args in arglist:
+					ep = self._entryPoint(code, fobj,[inst]+[arg.getObject(extractor) for arg in args])
+
+
 
 	def _extractAttr(self, extractor):
 		attrs = []
@@ -120,7 +151,7 @@ class InterfaceDeclaration(object):
 		self.attr = attrs
 
 	def __nonzero__(self):
-		return bool(self.entryPoint)
+		return bool(self.func) or bool(self.cls)
 
 
 	def entryCode(self):
@@ -163,9 +194,9 @@ class Makefile(object):
 		assert isinstance(dst, InstWrapper), dst
 		self.interface.attr.append((src, attr, dst))
 
-	def declEntryPoint(self, funcName, *args):
+	def declFunction(self, funcName, *args):
 		assert self.module, "Must declare a module first."
-		self.interface.entryPoint.append((funcName, args))
+		self.interface.func.append((funcName, args))
 
 
 	def declClass(self, cls):
@@ -181,7 +212,7 @@ class Makefile(object):
 			   'inst':self.declInstance,
 			   'config':self.declConfig,
 			   'attr':self.declAttr,
-			   'entryPoint':self.declEntryPoint,
+			   'func':self.declFunction,
 			   'cls':self.declClass,
 			   'output':self.declOutput}
 

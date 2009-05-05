@@ -301,7 +301,11 @@ class InterproceduralDataflow(object):
 	def getContext(self, srcOp, code, funcobj, args, entryPoint=False):
 		assert isinstance(code, ast.Code), type(code)
 
-		funcobjxtype = self.canonical.existingType(funcobj)
+		if funcobj is not None:
+			funcobjxtype = self.canonical.existingType(funcobj)
+		else:
+			funcobjxtype = None
+
 		argxtypes    = tuple([self.canonical.externalType(arg) for arg in args])
 
 		targetcontext = self.canonicalContext(srcOp, code, funcobjxtype, argxtypes, entryPoint)
@@ -369,12 +373,17 @@ class InterproceduralDataflow(object):
 
 		self.codeContexts[base.externalFunction].add(base.externalFunctionContext)
 
-		funcobjxtype = self.canonical.existingType(funcobj)
-		argxtypes    = tuple([self.canonical.externalType(arg) for arg in args])
+		# Self arg
+		if funcobj is not None:
+			funcobjxtype = self.canonical.existingType(funcobj)
+			# Generate caller information
+			selfSlot = self.makeExternalSlot('dummy_self')
+			selfSlot.initializeType(self, funcobjxtype)
+		else:
+			selfSlot = None
 
-		# Generate caller information
-		selfSlot = self.makeExternalSlot('dummy_self')
-		selfSlot.initializeType(self, funcobjxtype)
+		# Positional arguments
+		argxtypes    = tuple([self.canonical.externalType(arg) for arg in args])
 
 		argSlots = []
 		for argxtype in argxtypes:
@@ -382,6 +391,7 @@ class InterproceduralDataflow(object):
 			argSlot.initializeType(self, argxtype)
 			argSlots.append(argSlot)
 
+		# Return argument
 		dummyReturnSlot = self.makeExternalSlot('dummy_return')
 
 		caller = util.calling.CallerArgs(selfSlot, argSlots, [], None, None, [dummyReturnSlot])

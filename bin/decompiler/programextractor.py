@@ -215,6 +215,18 @@ class Extractor(object):
 		result = self.__getObject(o, t)
 		return result
 
+	def getInstance(self, typeobj):
+		typeobj = self.getObject(typeobj, True)
+		self.ensureLoaded(typeobj)
+		return typeobj.abstractInstance()
+
+
+	def getObjectCall(self, func):
+		fobj = self.getObject(func)
+		self.ensureLoaded(fobj)
+		code = self.getCall(fobj)
+		return fobj, code
+
 	def __getObject(self, o, t=False):
 		assert not isinstance(o, program.AbstractObject), o
 

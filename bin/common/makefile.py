@@ -188,6 +188,13 @@ class InterfaceDeclaration(object):
 		assert self.translated
 		return frozenset([point.code for point in self.entryPoint])
 
+	def entryContexts(self):
+		entryContexts = set()
+		for ep in self.entryPoint:
+			entryContexts.update(ep.contexts)
+		return entryContexts
+
+
 	def groupedEntryContexts(self):
 		assert self.translated
 		entryPointMerge = {}

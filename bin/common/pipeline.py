@@ -30,7 +30,7 @@ def codeConditioning(console, extractor, interface, dataflow):
 		optimization.methodcall.methodCall(console, extractor, db)
 		console.end()
 
-	lifetimeAnalysis(console, dataflow)
+	lifetimeAnalysis(console, dataflow, interface)
 
 	if True:
 		# Fold, DCE, etc.
@@ -70,9 +70,9 @@ def codeConditioning(console, extractor, interface, dataflow):
 
 	console.end()
 
-def lifetimeAnalysis(console, dataflow):
+def lifetimeAnalysis(console, dataflow, interface):
 	console.begin('lifetime analysis')
-	la = analysis.lifetimeanalysis.LifetimeAnalysis()
+	la = analysis.lifetimeanalysis.LifetimeAnalysis(interface)
 	la.process(dataflow.db.liveCode)
 	console.end()
 
@@ -123,7 +123,7 @@ def evaluate(console, name, extractor, interface):
 		result = cpaPass(console,  extractor, interface, 3)
 
 	# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
-	lifetimeAnalysis(console, result)
+	lifetimeAnalysis(console, result, interface)
 
 	try:
 		if False:

@@ -243,7 +243,7 @@ class ObjectSearcher(DFSSearcher):
 				self.enqueue(next)
 
 class LifetimeAnalysis(object):
-	def __init__(self):
+	def __init__(self, interface):
 		self.heapReferedToByHeap = collections.defaultdict(set)
 		self.heapReferedToByCode = collections.defaultdict(set)
 
@@ -253,6 +253,9 @@ class LifetimeAnalysis(object):
 
 		self.globallyVisible = set()
 		self.externallyVisible = set()
+
+		self.interface = interface
+		self.entryContexts = interface.entryContexts()
 
 	def getObjectInfo(self, obj):
 		assert isinstance(obj, storegraph.ObjectNode), type(obj)
@@ -436,7 +439,7 @@ class LifetimeAnalysis(object):
 
 		for code in liveCode:
 			for context in code.annotation.contexts:
-				if context.entryPoint:
+				if context in self.entryContexts:
 					self.entries.add((code, context))
 
 
@@ -488,7 +491,7 @@ class LifetimeAnalysis(object):
 					searcher.enqueue(ref)
 
 			for cindex, context in enumerate(code.annotation.contexts):
-				if context.entryPoint:
+				if context in self.entryContexts:
 					self.markVisible(code.selfparam, cindex)
 					for param in code.parameters:
 						self.markVisible(param, cindex)

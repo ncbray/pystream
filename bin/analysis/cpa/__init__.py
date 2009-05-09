@@ -179,13 +179,13 @@ class InterproceduralDataflow(object):
 
 		return util.cpa.CPASignature(code, selfparam, params)
 
-	def canonicalContext(self, srcOp, code, selfparam, params, entryPoint=False):
+	def canonicalContext(self, srcOp, code, selfparam, params):
 		assert isinstance(srcOp, base.OpContext), type(srcOp)
 		assert isinstance(code, ast.Code), type(code)
 
 		sig     = self._signature(code, selfparam, params)
 		opPath  = self.advanceOpPath(srcOp.context.opPath, srcOp.op)
-		context = self.canonical._canonicalContext(sig, opPath, self.roots, entryPoint)
+		context = self.canonical._canonicalContext(sig, opPath, self.roots)
 
 		# Mark that we created the context.
 		self.codeContexts[code].add(context)
@@ -304,7 +304,7 @@ class InterproceduralDataflow(object):
 
 	# Only used to create an entry point.
 	# TODO use util.calling and cpa iteration to break down the context.
-	def getContext(self, srcOp, code, funcobj, args, entryPoint=False):
+	def getContext(self, srcOp, code, funcobj, args):
 		assert isinstance(code, ast.Code), type(code)
 
 		if funcobj is not None:
@@ -314,7 +314,7 @@ class InterproceduralDataflow(object):
 
 		argxtypes    = tuple([self.canonical.externalType(arg) for arg in args])
 
-		targetcontext = self.canonicalContext(srcOp, code, funcobjxtype, argxtypes, entryPoint)
+		targetcontext = self.canonicalContext(srcOp, code, funcobjxtype, argxtypes)
 		return targetcontext
 
 	def initializeContext(self, context):
@@ -406,7 +406,7 @@ class InterproceduralDataflow(object):
 		self.entryPointOp[entryPoint] = dummyOp
 
 		# Generate the calling context and bind it.
-		context = self.getContext(dummyOp, func, funcobj, args, True)
+		context = self.getContext(dummyOp, func, funcobj, args)
 		self.bindCall(dummyOp, caller, context)
 
 	def solve(self):

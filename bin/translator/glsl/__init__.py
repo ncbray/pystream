@@ -31,7 +31,9 @@ class GLSLTranslator(StrictTypeDispatcher):
 			bool:glsl.BuiltinType('bool')}
 
 	def _getTypeFromRef(self, obj):
-		return obj.xtype.obj.type.pyobj
+		wobj = obj.xtype.obj
+		assert hasattr(wobj, 'type'), wobj
+		return wobj.type.pyobj
 
 	def getType(self, node, references):
 		types = set([self._getTypeFromRef(ref) for ref in references])

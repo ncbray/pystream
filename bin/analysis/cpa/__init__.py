@@ -88,6 +88,10 @@ class InterproceduralDataflow(object):
 
 		self.codeContexts     = collections.defaultdict(set)
 
+		# HACK?
+		self.codeContexts[base.externalFunction].add(base.externalFunctionContext)
+
+
 		self.entryPointDescs = []
 
 		self.db = CPADatabase()
@@ -113,6 +117,8 @@ class InterproceduralDataflow(object):
 
 		# The storage graph
 		self.roots  = storegraph.RegionGroup()
+
+		self.entryPointOp = {}
 
 	def initalOpPath(self):
 		if self.opPathLength == 0:
@@ -369,12 +375,6 @@ class InterproceduralDataflow(object):
 	def addEntryPoint(self, entryPoint):
 		func, funcobj, args = entryPoint.code, entryPoint.selfarg, entryPoint.args
 
-		# The call point
-		# TODO generate bogus ops?
-		dummyOp = self.canonical.opContext(base.externalFunction, externalOp, base.externalFunctionContext)
-
-		# HACK?
-		self.codeContexts[base.externalFunction].add(base.externalFunctionContext)
 
 		# Self arg
 		if funcobj is not None:
@@ -399,14 +399,14 @@ class InterproceduralDataflow(object):
 
 		caller = util.calling.CallerArgs(selfSlot, argSlots, [], None, None, [dummyReturnSlot])
 
+		# The call point
+		# Make sure each op is unique.
+		op = util.canonical.Sentinel('entry point op')
+		dummyOp = self.canonical.opContext(base.externalFunction, op, base.externalFunctionContext)
+		self.entryPointOp[entryPoint] = dummyOp
 
-		# Generate the calling context
+		# Generate the calling context and bind it.
 		context = self.getContext(dummyOp, func, funcobj, args, True)
-
-		# Store the entrypoint -> context+ mapping
-		entryPoint.contexts = [context]
-
-		# Make an invocation
 		self.bindCall(dummyOp, caller, context)
 
 	def solve(self):
@@ -419,6 +419,11 @@ class InterproceduralDataflow(object):
 		self.solveTime = end-start-self.decompileTime
 
 	def annotate(self):
+		# Find the contexts that a given entrypoint invokes
+		for entryPoint, op in self.entryPointOp.iteritems():
+			contexts = [ccontext.context for ccontext in self.opInvokes[op]]
+			entryPoint.contexts = contexts
+
 		# Re-index the invocations
 		opLut = collections.defaultdict(lambda: collections.defaultdict(set))
 		for srcop, dsts in self.opInvokes.iteritems():
@@ -442,7 +447,8 @@ class InterproceduralDataflow(object):
 			ops, lcls = getOps(code)
 
 			for op in ops:
-				if op is externalOp: continue
+				# Skip it if it's not a real op.
+				if isinstance(op, util.canonical.Sentinel): continue
 
 				contextLUT = opLut[(code, op)]
 				cinvokes  = [annotations.annotationSet(contextLUT[context]) for context in contexts]

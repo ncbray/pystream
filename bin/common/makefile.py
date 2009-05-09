@@ -53,13 +53,31 @@ class ClassDeclaration(object):
 
 		self._method[name].append(args)
 
-class EntryPoint(object):
-	__slots__ = 'code', 'selfarg', 'args', 'group', 'contexts'
+class ExistingWrapper(object):
+	def __init__(self, obj):
+		self.obj = obj
 
-	def __init__(self, code, selfarg, args):
+	def get(self, dispatcher):
+		dispatcher.getExistingArg(self.obj)
+
+class ReturnValueWrapper(object):
+	def __init__(self, ep):
+		self.ep = ep
+
+	def get(self, dispatcher):
+		dispatcher.getReturnArg(self.ep)
+
+
+class EntryPoint(object):
+	__slots__ = 'code', 'selfarg', 'args', 'kwds', 'varg', 'karg', 'group', 'contexts'
+
+	def __init__(self, code, selfarg, args, kwds, varg, karg):
 		self.code     = code
 		self.selfarg  = selfarg
 		self.args     = args
+		self.kwds     = kwds
+		self.varg     = varg
+		self.karg     = karg
 		self.group    = None
 		self.contexts = []
 
@@ -92,11 +110,12 @@ class InterfaceDeclaration(object):
 
 		self.translated = True
 
-	def _entryPoint(self, code, selfarg, args, group=None):
-		ep = EntryPoint(code, selfarg, args)
+	def createEntryPoint(self, code, selfarg, args, kwds, varg, karg, group):
+		self.createEntryPointRaw(code, selfarg, args, kwds, varg, karg, group)
 
-		if group is None: group = ep
-		ep.group = group
+	def createEntryPointRaw(self, code, selfarg, args, kwds, varg, karg, group):
+		ep = EntryPoint(code, selfarg, args, kwds, varg, karg)
+		ep.group = group if group is not None else ep
 
 		self.entryPoint.append(ep)
 		return ep
@@ -108,7 +127,7 @@ class InterfaceDeclaration(object):
 			fobj, code = extractor.getObjectCall(expr)
 			argobjs  = [arg.getObject(extractor) for arg in args]
 
-			ep = self._entryPoint(code, fobj, argobjs)
+			ep = self.createEntryPoint(code, fobj, argobjs, [], None, None, None)
 
 			newFunc.append((code, fobj, argobjs, ep))
 
@@ -126,14 +145,14 @@ class InterfaceDeclaration(object):
 			# Type call/init
 			group = None
 			for args in cls._init:
-				ep = self._entryPoint(call, tobj, [arg.getObject(extractor) for arg in args], group)
+				ep = self.createEntryPoint(call, tobj, [arg.getObject(extractor) for arg in args], [], None, None, group)
 				if group is None: group = ep
 
 			# Attribute getters
 			# TODO setters
 			for attr in cls._attr:
 				name = extractor.getObject(attr)
-				ep = self._entryPoint(getter, None, [inst, name])
+				ep = self.createEntryPoint(getter, None, [inst, name], [], None, None, None)
 
 			# Method calls
 			for name, arglist in cls._method.iteritems():
@@ -143,7 +162,7 @@ class InterfaceDeclaration(object):
 
 				group = None
 				for args in arglist:
-					ep = self._entryPoint(code, fobj,[inst]+[arg.getObject(extractor) for arg in args], group)
+					ep = self.createEntryPoint(code, fobj,[inst]+[arg.getObject(extractor) for arg in args], [], None, None, group)
 					if group is None: group = ep
 
 

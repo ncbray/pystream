@@ -443,9 +443,12 @@ class ProgramCloner(object):
 		return newfunc[code][self.groupLUT[oldContext]]
 
 	def retargetEntryPoint(self, ep, newfunc):
-		assert ep.contexts
-		group = self.groupLUT[ep.contexts[0]]
-		newcode = newfunc[ep.code][group]
+		if ep.contexts:
+			group = self.groupLUT[ep.contexts[0]]
+			newcode = newfunc[ep.code][group]
+		else:
+			# HACK what should be done if analysis fails?
+			newcode = ep.code
 
 		ep.code = newcode
 

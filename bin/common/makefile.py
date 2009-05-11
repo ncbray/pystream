@@ -10,6 +10,7 @@ from . import compilerconsole
 
 import cProfile
 
+import util
 
 class ArgWrapper(object):
 	pass
@@ -35,6 +36,15 @@ class ExistingWrapper(ArgWrapper):
 	def get(self, dataflow):
 		return dataflow.getExistingSlot(self.pyobj)
 
+class ReturnWrapper(ArgWrapper):
+	def __init__(self, ep):
+		assert isinstance(ep, EntryPoint), repr(ep)
+		self.ep = ep
+
+	def get(self, dataflow):
+		return dataflow.getReturnSlot(self.ep)
+
+
 class NullWrapper(ArgWrapper):
 	def get(self, dataflow):
 		return None
@@ -47,6 +57,7 @@ nullWrapper = NullWrapper()
 def validArg(arg):
 	return isinstance(arg, ArgWrapper)
 
+
 def importDeep(name):
 	mod = __import__(name)
 	components = name.split('.')
@@ -54,13 +65,14 @@ def importDeep(name):
 		mod = getattr(mod, comp)
 	return mod
 
+
 class ClassDeclaration(object):
 	def __init__(self, cls):
 		self.typeobj = cls
-		self._init = []
-		self._attr = []
+		self._init   = []
+		self._attr   = []
 		self._method = {}
-
+		self._shader = []
 
 	def init(self, *args):
 		self._init.append(args)
@@ -73,6 +85,10 @@ class ClassDeclaration(object):
 			self._method[name] = []
 
 		self._method[name].append(args)
+
+	def shader(self, *args):
+		self._shader.append(args)
+
 
 class EntryPoint(object):
 	__slots__ = 'code', 'selfarg', 'args', 'kwds', 'varg', 'karg', 'group', 'contexts'
@@ -97,7 +113,6 @@ class EntryPoint(object):
 		self.group    = None
 		self.contexts = []
 
-import util
 
 class InterfaceDeclaration(object):
 	__slots__ = 'func', 'cls', 'attr', 'entryPoint', 'translated'
@@ -127,7 +142,7 @@ class InterfaceDeclaration(object):
 		self.translated = True
 
 	def createEntryPoint(self, code, selfarg, args, kwds, varg, karg, group):
-		self.createEntryPointRaw(code, selfarg, args, kwds, varg, karg, group)
+		return self.createEntryPointRaw(code, selfarg, args, kwds, varg, karg, group)
 
 	def createEntryPointRaw(self, code, selfarg, args, kwds, varg, karg, group):
 		ep = EntryPoint(code, selfarg, args, kwds, varg, karg)
@@ -143,6 +158,13 @@ class InterfaceDeclaration(object):
 			selfarg  = ExistingWrapper(expr)
 
 			ep = self.createEntryPoint(code, selfarg, tuple(args), [], nullWrapper, nullWrapper, None)
+
+	def getMethCode(self, cls, name, extractor):
+		# TODO what about inheritance?
+		func = cls.typeobj.__dict__[name]
+		fobj, code = extractor.getObjectCall(func)
+		selfarg  = ExistingWrapper(func)
+		return selfarg, code
 
 
 	def _extractCls(self, extractor):
@@ -168,20 +190,22 @@ class InterfaceDeclaration(object):
 
 			# Method calls
 			for name, arglist in cls._method.iteritems():
-				# TODO what about inheritance?
-				func = cls.typeobj.__dict__[name]
-				fobj, code = extractor.getObjectCall(func)
-
-				selfarg  = ExistingWrapper(func)
-
+				selfarg, code = self.getMethCode(cls, name, extractor)
 
 				group = None
 				for args in arglist:
 					ep = self.createEntryPoint(code, selfarg, (inst,)+args, [], nullWrapper, nullWrapper, group)
 					if group is None: group = ep
 
+			vsGroup = None
+			fsGroup = None
 
+			for args in cls._shader:
+				selfarg, code = self.getMethCode(cls, 'shadeVertex', extractor)
+				vep = self.createEntryPoint(code, selfarg, (inst,)+args, [], nullWrapper, nullWrapper, vsGroup)
 
+				selfarg, code = self.getMethCode(cls, 'shadeFragment', extractor)
+				fep = self.createEntryPoint(code, selfarg, (inst,), [], ReturnWrapper(vep), nullWrapper, fsGroup)
 
 	def _extractAttr(self, extractor):
 		attrs = []
@@ -209,6 +233,12 @@ class InterfaceDeclaration(object):
 			entryContexts.update(ep.contexts)
 		return entryContexts
 
+	def entryCodeContexts(self):
+		entryContexts = set()
+		for ep in self.entryPoint:
+			for context in ep.contexts:
+				entryContexts.add((ep.code, context))
+		return entryContexts
 
 	def groupedEntryContexts(self):
 		assert self.translated

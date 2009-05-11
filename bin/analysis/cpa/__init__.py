@@ -382,11 +382,8 @@ class InterproceduralDataflow(object):
 
 	def getReturnSlot(self, ep):
 		if ep not in self.entryPointReturn:
-			slot =  self.makeExternalSlot('dummy_return')
-			self.entryPointReturn[ep] = slot
-			return slot
-		else:
-			return self.entryPointReturn[ep]
+			self.entryPointReturn[ep] = self.makeExternalSlot('return_%s' % ep.code.name)
+		return self.entryPointReturn[ep]
 
 	def addEntryPoint(self, entryPoint):
 		# The call point

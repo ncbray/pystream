@@ -54,7 +54,7 @@ class ExtractDataflow(object):
 
 	def directCall(self, node, code, selfarg, args, vargs, kargs, targets):
 		if self.doOnce(node):
-			assert isinstance(code, ast.Code), ("Incorrect code parameter.\n"+annotations.originTraceString(node.annotation.origin))
+			assert isinstance(code, ast.Code), (("Incorrect code parameter %r\n" % code)+annotations.originTraceString(node.annotation.origin))
 			op   = self.contextOp(node)
 			kwds = [] # HACK
 			con = DirectCallConstraint(op, code, selfarg, args, kwds, vargs, kargs, targets)

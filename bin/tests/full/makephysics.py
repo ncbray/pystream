@@ -35,8 +35,6 @@ attr(inst(vec.mat4), 'm31', inst(float))
 attr(inst(vec.mat4), 'm32', inst(float))
 attr(inst(vec.mat4), 'm33', inst(float))
 
-func(physics.simpleUpdate, inst(float), inst(int))
-func(physics.harness, inst(vec.vec4), inst(vec.vec3))
 
 vec3 = cls(vec.vec3)
 vec3.init(inst(float), inst(float), inst(float))
@@ -50,5 +48,17 @@ vec3.method('__mul__', inst(vec.vec3))
 vec3.method('normalize')
 
 
-# UGLY: must be the same fragment shader to do uniform transformation?
-#shader(physics.shadeVertex, physics.shadeFragment)(inst(physics.Shader), stream(inst(vec.vec4)), stream(inst(vec.vec3)))
+#func(physics.simpleUpdate, inst(float), inst(int))
+#func(physics.harness, inst(vec.vec4), inst(vec.vec3))
+
+attr(inst(physics.Shader), 'objectToWorld', inst(vec.mat4))
+attr(inst(physics.Shader), 'worldToCamera', inst(vec.mat4))
+attr(inst(physics.Shader), 'projection', inst(vec.mat4))
+
+attr(inst(physics.Shader), 'lightPos', inst(vec.vec4))
+attr(inst(physics.Shader), 'ambient',  inst(vec.vec3))
+attr(inst(physics.Shader), 'color',    inst(vec.vec3))
+
+
+shader = cls(physics.Shader)
+shader.shader(inst(vec.vec4), inst(vec.vec3))

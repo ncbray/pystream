@@ -33,14 +33,14 @@ class ReversePostorderCrawler(object):
 		# Ugly: maintain our own stack, as Python's is limited.
 		# Based on PADS
 		self.processed.add(node)
-		stack = [(node, iter(self.G[node]))]
+		stack = [(node, iter(self.G.get(node, ())))]
 		while stack:
 			parent,children = stack[-1]
 			try:
 				child = children.next()
 				if child not in self.processed:
 					self.processed.add(child)
-					stack.append((child, iter(self.G[child])))
+					stack.append((child, iter(self.G.get(child, ()))))
 			except StopIteration:
 				self.order.append(stack[-1][0])
 				stack.pop()

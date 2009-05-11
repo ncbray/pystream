@@ -24,6 +24,8 @@ def dump(data, interface, links, reportDir):
 
 	# Process the entry points
 	for code in interface.entryCode():
+		if code.annotation.contexts is None: continue
+
 		for context in code.annotation.contexts:
 			context = None
 			invokeLUT[head].add(code)

@@ -144,7 +144,9 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		common.astpprint.pprint(func, out)
 		out.end('pre')
 
-	printLabel(out, '%d contexts' % len(code.annotation.contexts))
+	printLabel(out, '%d contexts' % (len(code.annotation.contexts) if code.annotation.contexts is not None else 0))
+
+	if code.annotation.contexts is None: return
 
 	for cindex, context in enumerate(code.annotation.contexts):
 		out.tag('hr')
@@ -485,6 +487,9 @@ def dumpReport(name, data, interface):
 	head =  None
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(liveInvocations, head)
 
+	# HACK makes sure dead entry points are output?
+	liveFunctions = idoms.keys()
+
 	def printChildren(node):
 		children = tree.get(node)
 		if children:
@@ -493,7 +498,7 @@ def dumpReport(name, data, interface):
 				out.begin('li')
 				makeFunctionFile(func)
 				outputCodeShortName(out, func, links)
-				numContexts = len(func.annotation.contexts)
+				numContexts = len(func.annotation.contexts) if func.annotation.contexts is not None else 0
 				if numContexts > 1:
 					out << " "
 					out << numContexts

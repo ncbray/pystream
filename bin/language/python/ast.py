@@ -338,8 +338,9 @@ class For(Loop):
 
 class Code(CompoundStatement):
 	# HACK many fields marked optional for function cloning, so their creation can be defered.
+	# HACK parameternames can be str or None, eliminated type annotation because we can't have multiple types?
 	__fields__ = """name:str selfparam:Local?
-			parameters:Local*? parameternames:str*?
+			parameters:Local*? parameternames*?
 			vparam:Local? kparam:Local?
 			returnparams:Local*? ast:Suite?"""
 	__shared__      = True

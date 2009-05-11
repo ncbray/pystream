@@ -4,17 +4,11 @@ from language.python import ast
 from . simplify import simplify
 
 # Determines the technical feasability of inlining
-class CodeInliningAnalysis(object):
-	__metaclass__ = typedispatcher
-
+class CodeInliningAnalysis(StrictTypeDispatcher):
 	def __init__(self):
 		self.canInline   = {}
 		self.invokeCount = {}
 		self.numOps      = {}
-
-	@defaultdispatch
-	def default(self, node):
-		assert False, node
 
 	@dispatch(type(None), str, int, ast.Local, ast.Existing, ast.Code)
 	def visitLeaf(self, node):
@@ -94,9 +88,7 @@ class CodeInliningAnalysis(object):
 
 # Emulates calling convention assignments
 # Clones the code and translates the inlined contexts
-class OpInliningTransform(object):
-	__metaclass__ = typedispatcher
-
+class OpInliningTransform(StrictTypeDispatcher):
 	def __init__(self, analysis):
 		self.analysis  = analysis
 
@@ -179,9 +171,7 @@ class OpInliningTransform(object):
 
 # Performs depth-first traversal of call graph,
 # inlines code in reverse postorder.
-class CodeInliningTransform(object):
-	__metaclass__ = typedispatcher
-
+class CodeInliningTransform(StrictTypeDispatcher):
 	def __init__(self, analysis, dataflow, db, intrinsics):
 		self.analysis  = analysis
 		self.dataflow = dataflow
@@ -195,10 +185,6 @@ class CodeInliningTransform(object):
 		self.maxOps           = 4
 		self.exhaustive       = True
 		self.preserveContexts = not self.exhaustive
-
-	@defaultdispatch
-	def default(self, node):
-		assert False, node
 
 	# May contain inlinable nodes
 	@dispatch(ast.Suite, list, ast.Condition, ast.Switch, ast.For, ast.While)
@@ -347,7 +333,7 @@ class CodeInliningTransform(object):
 
 import translator.glsl.intrinsics
 
-def inlineCode(dataflow, interface, db):
+def inlineCode(console, dataflow, interface, db):
 	analysis  = CodeInliningAnalysis()
 	for code in db.liveFunctions():
 		analysis.process(code)
@@ -356,4 +342,10 @@ def inlineCode(dataflow, interface, db):
 
 	transform = CodeInliningTransform(analysis, dataflow, db, intrinsics)
 	for code in interface.entryCode():
-		transform.process(code)
+		if True:
+			try:
+				transform.process(code)
+			except:
+				console.output('Failed to transform %r' % code)
+		else:
+			transform.process(code)

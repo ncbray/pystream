@@ -52,14 +52,8 @@ class CallGraphFinder(Finder):
 
 def makeCGF(interface):
 	cgf = CallGraphFinder()
-
-	for code in interface.entryCode():
-		assert isinstance(code, ast.Code), type(code)
-
-		# HACK for finding the entry context, assumes there's only one context.
-		assert code.annotation.contexts is not None
-		for context in code.annotation.contexts:
-			cgf.process((code, context))
+	for code, context in interface.entryCodeContexts():
+		cgf.process((code, context))
 	return cgf
 
 def findLiveFunctions(interface):

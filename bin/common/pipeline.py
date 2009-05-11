@@ -55,7 +55,7 @@ def codeConditioning(console, extractor, interface, dataflow):
 	if True:
 		# Try to eliminate trivial functions.
 		console.begin('code inlining')
-		inlineCode(dataflow, interface, db)
+		inlineCode(console, dataflow, interface, db)
 		console.end()
 
 		# Get rid of dead functions/contexts

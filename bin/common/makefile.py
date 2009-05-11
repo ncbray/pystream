@@ -11,20 +11,41 @@ from . import compilerconsole
 import cProfile
 
 
+class ArgWrapper(object):
+	pass
+
 # Thin wrappers made to work with decompiler.programextractor
-class InstWrapper(object):
+class InstWrapper(ArgWrapper):
 	def __init__(self, typeobj):
 		self.typeobj = typeobj
 
 	def getObject(self, extractor):
 		return extractor.getInstance(self.typeobj)
 
-class ObjWrapper(object):
+	def get(self, dataflow):
+		return dataflow.getInstanceSlot(self.typeobj)
+
+class ExistingWrapper(ArgWrapper):
 	def __init__(self, pyobj):
 		self.pyobj = pyobj
 
 	def getObject(self, extractor):
 		return extractor.getObject(self.pyobj)
+
+	def get(self, dataflow):
+		return dataflow.getExistingSlot(self.pyobj)
+
+class NullWrapper(ArgWrapper):
+	def get(self, dataflow):
+		return None
+
+	def __nonzero__(self):
+		return False
+
+nullWrapper = NullWrapper()
+
+def validArg(arg):
+	return isinstance(arg, ArgWrapper)
 
 def importDeep(name):
 	mod = __import__(name)
@@ -53,25 +74,20 @@ class ClassDeclaration(object):
 
 		self._method[name].append(args)
 
-class ExistingWrapper(object):
-	def __init__(self, obj):
-		self.obj = obj
-
-	def get(self, dispatcher):
-		dispatcher.getExistingArg(self.obj)
-
-class ReturnValueWrapper(object):
-	def __init__(self, ep):
-		self.ep = ep
-
-	def get(self, dispatcher):
-		dispatcher.getReturnArg(self.ep)
-
-
 class EntryPoint(object):
 	__slots__ = 'code', 'selfarg', 'args', 'kwds', 'varg', 'karg', 'group', 'contexts'
 
 	def __init__(self, code, selfarg, args, kwds, varg, karg):
+		assert validArg(selfarg), selfarg
+
+		for arg in args:
+			assert validArg(arg), arg
+
+		assert not kwds
+
+		assert validArg(varg), varg
+		assert validArg(karg), karg
+
 		self.code     = code
 		self.selfarg  = selfarg
 		self.args     = args
@@ -121,22 +137,18 @@ class InterfaceDeclaration(object):
 		return ep
 
 	def _extractFunc(self, extractor):
-		newFunc = []
-
 		for expr, args in self.func:
 			fobj, code = extractor.getObjectCall(expr)
-			argobjs  = [arg.getObject(extractor) for arg in args]
 
-			ep = self.createEntryPoint(code, fobj, argobjs, [], None, None, None)
+			selfarg  = ExistingWrapper(expr)
 
-			newFunc.append((code, fobj, argobjs, ep))
+			ep = self.createEntryPoint(code, selfarg, tuple(args), [], nullWrapper, nullWrapper, None)
 
-		self.func = newFunc
 
 	def _extractCls(self, extractor):
 		for cls in self.cls:
-			tobj = extractor.getObject(cls.typeobj)
-			inst = extractor.getInstance(cls.typeobj)
+			tobj = ExistingWrapper(cls.typeobj)
+			inst = InstWrapper(cls.typeobj)
 
 			call = extractor.stubs.exports['interpreter_call']
 			getter = extractor.stubs.exports['interpreter_getattribute']
@@ -145,14 +157,14 @@ class InterfaceDeclaration(object):
 			# Type call/init
 			group = None
 			for args in cls._init:
-				ep = self.createEntryPoint(call, tobj, [arg.getObject(extractor) for arg in args], [], None, None, group)
+				ep = self.createEntryPoint(call, tobj, args, [], nullWrapper, nullWrapper, group)
 				if group is None: group = ep
 
 			# Attribute getters
 			# TODO setters
 			for attr in cls._attr:
-				name = extractor.getObject(attr)
-				ep = self.createEntryPoint(getter, None, [inst, name], [], None, None, None)
+				name = ExistingWrapper(attr)
+				ep = self.createEntryPoint(getter, nullWrapper, (inst, name), [], nullWrapper, nullWrapper, None)
 
 			# Method calls
 			for name, arglist in cls._method.iteritems():
@@ -160,9 +172,12 @@ class InterfaceDeclaration(object):
 				func = cls.typeobj.__dict__[name]
 				fobj, code = extractor.getObjectCall(func)
 
+				selfarg  = ExistingWrapper(func)
+
+
 				group = None
 				for args in arglist:
-					ep = self.createEntryPoint(code, fobj,[inst]+[arg.getObject(extractor) for arg in args], [], None, None, group)
+					ep = self.createEntryPoint(code, selfarg, (inst,)+args, [], nullWrapper, nullWrapper, group)
 					if group is None: group = ep
 
 
@@ -227,7 +242,7 @@ class Makefile(object):
 		self.outdir = os.path.normpath(os.path.join(self.workingdir, path))
 
 	def declConst(self, value):
-		return ObjWrapper(value)
+		return ExistingWrapper(value)
 
 	def declInstance(self, typename):
 		return InstWrapper(typename)

@@ -10,7 +10,7 @@ from . import setmanager
 
 from constraintextractor import ExtractDataflow
 
-from constraints import AssignmentConstraint
+from constraints import AssignmentConstraint, DirectCallConstraint
 
 # Only used for creating return variables
 from language.python import ast
@@ -119,6 +119,7 @@ class InterproceduralDataflow(object):
 		self.roots  = storegraph.RegionGroup()
 
 		self.entryPointOp = {}
+		self.entryPointReturn = {}
 
 	def initalOpPath(self):
 		if self.opPathLength == 0:
@@ -302,21 +303,6 @@ class InterproceduralDataflow(object):
 
 		return False
 
-	# Only used to create an entry point.
-	# TODO use util.calling and cpa iteration to break down the context.
-	def getContext(self, srcOp, code, funcobj, args):
-		assert isinstance(code, ast.Code), type(code)
-
-		if funcobj is not None:
-			funcobjxtype = self.canonical.existingType(funcobj)
-		else:
-			funcobjxtype = None
-
-		argxtypes    = tuple([self.canonical.externalType(arg) for arg in args])
-
-		targetcontext = self.canonicalContext(srcOp, code, funcobjxtype, argxtypes)
-		return targetcontext
-
 	def initializeContext(self, context):
 		# Don't bother if the call can never happen.
 		if context.invocationMaySucceed(self):
@@ -356,13 +342,6 @@ class InterproceduralDataflow(object):
 			if self.initializeContext(targetcontext):
 				targetcontext.bindParameters(self, caller)
 
-	def makeExternalSlot(self, name):
-		code = base.externalFunction
-		dummyLocal = ast.Local(name)
-		dummyName = self.canonical.localName(code, dummyLocal, base.externalFunctionContext)
-		dummySlot = self.roots.root(self, dummyName, self.roots.regionHint)
-		return dummySlot
-
 	def addAttr(self, src, attrName, dst):
 		srcxtype = self.canonical.externalType(src)
 		fieldName = self.canonical.fieldName(*attrName)
@@ -372,42 +351,58 @@ class InterproceduralDataflow(object):
 		field = obj.field(self, fieldName, self.roots.regionHint)
 		field.initializeType(self, dstxtype)
 
-	def addEntryPoint(self, entryPoint):
-		func, funcobj, args = entryPoint.code, entryPoint.selfarg, entryPoint.args
+	def makeExternalSlot(self, name):
+		code = base.externalFunction
+		dummyLocal = ast.Local(name)
+		dummyName = self.canonical.localName(code, dummyLocal, base.externalFunctionContext)
+		dummySlot = self.roots.root(self, dummyName, self.roots.regionHint)
+		return dummySlot
 
-
-		# Self arg
-		if funcobj is not None:
-			funcobjxtype = self.canonical.existingType(funcobj)
-			# Generate caller information
-			selfSlot = self.makeExternalSlot('dummy_self')
-			selfSlot.initializeType(self, funcobjxtype)
-		else:
-			selfSlot = None
-
-		# Positional arguments
-		argxtypes    = tuple([self.canonical.externalType(arg) for arg in args])
-
-		argSlots = []
-		for argxtype in argxtypes:
-			argSlot = self.makeExternalSlot('dummy_param')
-			argSlot.initializeType(self, argxtype)
-			argSlots.append(argSlot)
-
-		# Return argument
-		dummyReturnSlot = self.makeExternalSlot('dummy_return')
-
-		caller = util.calling.CallerArgs(selfSlot, argSlots, [], None, None, [dummyReturnSlot])
-
-		# The call point
+	def createEntryOp(self, entryPoint):
 		# Make sure each op is unique.
 		op = util.canonical.Sentinel('entry point op')
-		dummyOp = self.canonical.opContext(base.externalFunction, op, base.externalFunctionContext)
-		self.entryPointOp[entryPoint] = dummyOp
+		cop = self.canonical.opContext(base.externalFunction, op, base.externalFunctionContext)
+		self.entryPointOp[entryPoint] = cop
+		return cop
 
-		# Generate the calling context and bind it.
-		context = self.getContext(dummyOp, func, funcobj, args)
-		self.bindCall(dummyOp, caller, context)
+	def getExistingSlot(self, pyobj):
+		obj = self.extractor.getObject(pyobj)
+		slot = self.makeExternalSlot('dummy_exist')
+		argxtype = self.canonical.existingType(obj)
+		slot.initializeType(self, argxtype)
+		return slot
+
+
+	def getInstanceSlot(self, typeobj):
+		obj = self.extractor.getInstance(typeobj)
+		slot = self.makeExternalSlot('dummy_inst')
+		argxtype = self.canonical.externalType(obj)
+		slot.initializeType(self, argxtype)
+		return slot
+
+	def getReturnSlot(self, ep):
+		if ep not in self.entryPointReturn:
+			slot =  self.makeExternalSlot('dummy_return')
+			self.entryPointReturn[ep] = slot
+			return slot
+		else:
+			return self.entryPointReturn[ep]
+
+	def addEntryPoint(self, entryPoint):
+		# The call point
+		cop = self.createEntryOp(entryPoint)
+
+		selfSlot = entryPoint.selfarg.get(self)
+		argSlots = [arg.get(self) for arg in entryPoint.args]
+		kwds = []
+		varg = entryPoint.varg.get(self)
+		karg = entryPoint.karg.get(self)
+		returnSlots = [self.getReturnSlot(entryPoint)]
+
+		# Create the initial constraint
+		con = DirectCallConstraint(cop, entryPoint.code, selfSlot, argSlots, kwds, varg, karg, returnSlots)
+		con.attach(self) # TODO move inside constructor?
+
 
 	def solve(self):
 		start = time.clock()

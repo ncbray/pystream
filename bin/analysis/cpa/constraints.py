@@ -261,6 +261,7 @@ class AbstractCallConstraint(CachedConstraint):
 	def __init__(self, op, selfarg, args, kwds, vargs, kargs, targets):
 		CachedConstraint.__init__(self, selfarg, vargs, kargs)
 
+		assert isinstance(op, base.OpContext), type(op)
 		assert isinstance(args, (list, tuple)), args
 		assert not kwds, kwds
 		assert targets is None or isinstance(targets, (list, tuple)), type(targets)

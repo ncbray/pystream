@@ -187,6 +187,10 @@ class StubCollector(object):
 		code.rewriteAnnotation(descriptive=True)
 		return code
 
+	def primitive(self,code):
+		assert isinstance(code, ast.Code), type(code)
+		code.rewriteAnnotation(descriptive=True, primitive=True)
+		return code
 
 	##################
 	### High Level ###

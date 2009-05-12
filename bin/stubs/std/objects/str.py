@@ -6,6 +6,7 @@ import operator
 @stubgenerator
 def makeString(collector):
 	descriptive   = collector.descriptive
+	primitive     = collector.primitive
 	llast         = collector.llast
 	llfunc        = collector.llfunc
 	export        = collector.export
@@ -21,60 +22,60 @@ def makeString(collector):
 	### Primitive str operations ###
 	################################
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a+b)
 	@llfunc
 	def prim_str_add(a, b):
 		return allocate(str)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a*b)
 	@llfunc
 	def prim_str_mul(a, b):
 		return allocate(str)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a%b)
 	@llfunc
 	def prim_str_mod(a, b):
 		return allocate(str)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a==b)
 	@fold(lambda a, b: a==b)
 	@llfunc
 	def prim_str_eq(a, b):
 		return allocate(bool)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a!=b)
 	@fold(lambda a, b: a!=b)
 	@llfunc
 	def prim_str_ne(a, b):
 		return allocate(bool)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a<b)
 	@fold(lambda a, b: a<b)
 	@llfunc
 	def prim_str_lt(a, b):
 		return allocate(bool)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a<=b)
 	@fold(lambda a, b: a<=b)
 	@llfunc
 	def prim_str_le(a, b):
 		return allocate(bool)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a>b)
 	@fold(lambda a, b: a>b)
 	@llfunc
 	def prim_str_gt(a, b):
 		return allocate(bool)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a>=b)
 	@fold(lambda a, b: a>=b)
 	@llfunc

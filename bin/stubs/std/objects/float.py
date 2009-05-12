@@ -5,6 +5,7 @@ from stubs.stubcollector import stubgenerator
 @stubgenerator
 def makeFloat(collector):
 	descriptive   = collector.descriptive
+	primitive     = collector.primitive
 	llast         = collector.llast
 	llfunc        = collector.llfunc
 	export        = collector.export
@@ -20,7 +21,7 @@ def makeFloat(collector):
 	### Primitive conversions ###
 	#############################
 
-	@descriptive
+	@primitive
 	@staticFold(lambda i: float(i))
 	@llfunc
 	def prim_int_to_float(i):
@@ -31,88 +32,88 @@ def makeFloat(collector):
 	### Primitive float operations ###
 	##################################
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a: -a)
 	@llfunc
 	def prim_float_neg(a):
 		return allocate(float)
 
 	@export
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a+b)
 	@llfunc
 	def prim_float_add(a, b):
 		return allocate(float)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a-b)
 	@llfunc
 	def prim_float_sub(a, b):
 		return allocate(float)
 
 	@export
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a*b)
 	@llfunc
 	def prim_float_mul(a, b):
 		return allocate(float)
 
 	@export # HACK
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a/b)
 	@llfunc
 	def prim_float_div(a, b):
 		return allocate(float)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a%b)
 	@llfunc
 	def prim_float_mod(a, b):
 		return allocate(float)
 
 	@export # HACK
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a**b)
 	@llfunc
 	def prim_float_pow(a, b):
 		return allocate(float)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a==b)
 	@fold(lambda a, b: a==b)
 	@llfunc
 	def prim_float_eq(a, b):
 		return allocate(bool)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a!=b)
 	@fold(lambda a, b: a!=b)
 	@llfunc
 	def prim_float_ne(a, b):
 		return allocate(bool)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a<b)
 	@fold(lambda a, b: a<b)
 	@llfunc
 	def prim_float_lt(a, b):
 		return allocate(bool)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a<=b)
 	@fold(lambda a, b: a<=b)
 	@llfunc
 	def prim_float_le(a, b):
 		return allocate(bool)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a>b)
 	@fold(lambda a, b: a>b)
 	@llfunc
 	def prim_float_gt(a, b):
 		return allocate(bool)
 
-	@descriptive
+	@primitive
 	@staticFold(lambda a, b: a>=b)
 	@fold(lambda a, b: a>=b)
 	@llfunc

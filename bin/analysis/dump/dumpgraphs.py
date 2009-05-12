@@ -34,10 +34,14 @@ def dump(data, interface, links, reportDir):
 				stack.append(key)
 				processed.add(key)
 
+	def filterCode(code):
+		return code.annotation.primitive
+
 	# Find live invocations
 	while stack:
 		node =  stack.pop()
 		code, context = node
+
 		ops, lcls = getOps(code)
 
 		invokeLUT[code] = set()
@@ -54,10 +58,13 @@ def dump(data, interface, links, reportDir):
 				for f, c in cinvokes:
 					c = None
 					key = (f, c)
-					invokeLUT[code].add(f)
-					if key not in processed:
-						stack.append(key)
-						processed.add(key)
+
+					if not filterCode(f):
+						invokeLUT[code].add(f)
+
+						if key not in processed:
+							stack.append(key)
+							processed.add(key)
 
 	# Make dominator tree
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(invokeLUT, head)

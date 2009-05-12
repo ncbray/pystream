@@ -39,10 +39,10 @@ attr(inst(vec.mat4), 'm33', inst(float))
 vec3 = cls(vec.vec3)
 vec3.init(inst(float), inst(float), inst(float))
 vec3.attr('x', 'y', 'z')
-vec3.method('__add__', inst(float))
+#vec3.method('__add__', inst(float)) # HACK Create type confusion?
 vec3.method('__add__', inst(vec.vec3))
 #vec3.method('__radd__', inst(float))
-vec3.method('__mul__', inst(float))
+#vec3.method('__mul__', inst(float)) # HACK Create type confusion?
 vec3.method('__mul__', inst(vec.vec3))
 #vec3.method('__rmul__', inst(float))
 vec3.method('normalize')

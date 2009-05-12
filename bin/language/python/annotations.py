@@ -12,7 +12,8 @@ def functionOrigin(func, line=None):
 
 def originString(origin):
 	if origin is not None:
-		return "%20s - %s:%d" % origin
+		#return "%20s - %s:%d" % origin
+		return "File \"%s\", line %d, in %s" % (origin.filename, origin.lineno, origin.name)
 	else:
 		return "<unknown origin>"
 

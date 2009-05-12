@@ -19,6 +19,7 @@ import util.graphalgorithim.dominator
 import urllib
 
 from language.python import ast
+from language.python import annotations
 
 def outputCodeShortName(out, code, links=None, context=None):
 	link = links.codeRef(code, context) if links is not None else None
@@ -43,12 +44,9 @@ def outputObjectShortName(out, heap, links=None):
 def outputOrigin(out, tabs, originTrace):
 	for origin in originTrace:
 		out << tabs
-		if origin:
-			out.begin('a', href="file:%s"%(urllib.pathname2url(origin.filename),))
-			out << "%s - %s:%d" % origin
-			out.end('a')
-		else:
-			out << '<unknown origin>'
+		if origin: out.begin('a', href="file:%s"%(urllib.pathname2url(origin.filename),))
+		out << annotations.originString(origin)
+		if origin: out.end('a')
 		out.endl()
 
 def makeReportDirectory(moduleName):

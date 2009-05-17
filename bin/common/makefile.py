@@ -213,7 +213,10 @@ class InterfaceDeclaration(object):
 		for src, attr, dst in self.attr:
 			srcobj = src.getObject(extractor)
 			# TODO inherited slots?
-			attrName = extractor.getObject(util.uniqueSlotName(srcobj.type.pyobj.__dict__[attr]))
+			d = srcobj.type.pyobj.__dict__
+
+			assert attr in d, "%r does not have attribute %r" % (srcobj, attr)
+			attrName = extractor.getObject(util.uniqueSlotName(d[attr]))
 			dstobj = dst.getObject(extractor)
 			attrs.append((srcobj, ('Attribute', attrName), dstobj))
 

@@ -81,10 +81,13 @@ def simpleUpdate(dt, iterations):
 
 	return swarm
 
-
+class Material(object):
+	__slots__ = 'color'
+	def __init__(self):
+		self.color = vec3(0.125, 0.125, 1.0)
 
 class Shader(object):
-	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'lightPos', 'ambient', 'color'
+	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'lightPos', 'ambient', 'material'
 	def __init__(self):
 		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
 					  0.0, 1.0, 0.0, 0.0,
@@ -106,7 +109,7 @@ class Shader(object):
 
 		self.ambient = vec3(0.25, 0.25, 0.25)
 
-		self.color = vec3(0.125, 0.125, 1.0)
+		self.material = Material()
 
 
 	def shadeVertex(self, pos, normal):
@@ -115,7 +118,7 @@ class Shader(object):
 		projected = self.projection*newpos
 		newnormal = (trans*vec4(normal.x, normal.y, normal.z, 1.0)).xyz
 
-		return pos, newnormal, self.color
+		return newpos.xyz, newnormal, self.material.color
 
 	def shadeFragment(self, pos, normal, color):
 		n = normal.normalize()
@@ -132,7 +135,7 @@ class Shader(object):
 		transfer = nldot(lightDir, n)
 		modulated = transfer*lightAtten
 
-		return color*(self.ambient+modulated)
+		return self.material.color*(self.ambient+modulated)
 
 def nldot(a, b):
 	return max(a.dot(b), 0.0)

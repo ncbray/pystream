@@ -17,6 +17,7 @@ from optimization.codeinlining import inlineCode
 import optimization.loadelimination
 import optimization.storeelimination
 
+import analysis.fsdf
 import translator.glsl
 
 def codeConditioning(console, extractor, interface, dataflow):
@@ -130,6 +131,7 @@ def evaluate(console, name, extractor, interface):
 			shapePass(console, extractor, result, interface)
 
 		if True:
+			#analysis.fsdf.evaluate(console, result, interface)
 			translator.glsl.translate(console, result, interface)
 	finally:
 		cpaDump(console, name, extractor, result, interface)

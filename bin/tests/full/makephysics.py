@@ -36,17 +36,12 @@ attr(inst(vec.mat4), 'm32', inst(float))
 attr(inst(vec.mat4), 'm33', inst(float))
 
 
-vec3 = cls(vec.vec3)
-vec3.init(inst(float), inst(float), inst(float))
-vec3.attr('x', 'y', 'z')
-#vec3.method('__add__', inst(float)) # HACK Create type confusion?
-vec3.method('__add__', inst(vec.vec3))
-#vec3.method('__radd__', inst(float))
-#vec3.method('__mul__', inst(float)) # HACK Create type confusion?
-vec3.method('__mul__', inst(vec.vec3))
-#vec3.method('__rmul__', inst(float))
-vec3.method('normalize')
-
+#vec3 = cls(vec.vec3)
+#vec3.init(inst(float), inst(float), inst(float))
+#vec3.attr('x', 'y', 'z')
+#vec3.method('__add__', inst(vec.vec3))
+#vec3.method('__mul__', inst(vec.vec3))
+#vec3.method('normalize')
 
 #func(physics.simpleUpdate, inst(float), inst(int))
 #func(physics.harness, inst(vec.vec4), inst(vec.vec3))
@@ -57,8 +52,11 @@ attr(inst(physics.Shader), 'projection', inst(vec.mat4))
 
 attr(inst(physics.Shader), 'lightPos', inst(vec.vec4))
 attr(inst(physics.Shader), 'ambient',  inst(vec.vec3))
-attr(inst(physics.Shader), 'color',    inst(vec.vec3))
+#attr(inst(physics.Shader), 'color',    inst(vec.vec3))
+attr(inst(physics.Shader), 'material',    inst(physics.Material))
+attr(inst(physics.Material), 'color',    inst(vec.vec3))
 
 
 shader = cls(physics.Shader)
-shader.shader(inst(vec.vec4), inst(vec.vec3))
+#shader.shader(inst(vec.vec4), inst(vec.vec3))
+shader.method('shadeFragment', inst(vec.vec4), inst(vec.vec3), inst(vec.vec3))

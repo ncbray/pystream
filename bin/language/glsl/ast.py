@@ -80,6 +80,14 @@ class Local(Expression):
 	__fields__ = 'type:Type name:str?'
 	__shared__ = True
 
+class Uniform(Expression):
+	__fields__ = 'decl:UniformDecl'
+	__shared__ = True
+
+class Input(Expression):
+	__fields__ = 'decl:InputDecl'
+	__shared__ = True
+
 
 class Assign(Statement):
 	__fields__ = 'expr:Expression lcl:Local'

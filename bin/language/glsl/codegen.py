@@ -24,12 +24,24 @@ class FindLocals(StrictTypeDispatcher):
 	def visitLocal(self, node):
 		self.locals.add(node)
 
+	@dispatch(ast.Uniform)
+	def visitUniform(self, node):
+		self.uniforms.add(node.decl)
+
+	@dispatch(ast.Input)
+	def visitInput(self, node):
+		self.inputs.add(node.decl)
+
+
 	def processCode(self, node):
 		self.locals = set()
 		self(node.parameters)
 		parameters = self.locals
 
-		self.locals = set()
+		self.locals   = set()
+		self.uniforms = set()
+		self.inputs   = set()
+
 		self(node.body)
 		return self.locals-parameters
 
@@ -108,25 +120,38 @@ class GLSLCodeGen(StrictTypeDispatcher):
 		self.uid += 1
 		return name
 
+	def uniqueName(self, basename):
+		name     = basename
+
+		if name is None:
+			basename = ''
+			name = self.newLocalName(basename)
+
+		while name in self.localNames:
+			name = self.newLocalName(basename)
+
+		self.localNames.add(name)
+
+		return name
+
 	@dispatch(ast.Local)
 	def visitLocal(self, node, prec=17):
 		if node not in self.localNameLUT:
-			basename = node.name
-			name     = basename
-
-			if name is None:
-				basename = ''
-				name = self.newLocalName(basename)
-
-			while name in self.localNames:
-				name = self.newLocalName(basename)
-
+			name = self.uniqueName(node.name)
 			self.localNameLUT[node] = name
-			self.localNames.add(name)
 		else:
 			name = self.localNameLUT[node]
-
 		return name
+
+
+	@dispatch(ast.Uniform)
+	def visitUniform(self, node, prec=17):
+		return self.visitLocal(node.decl)
+
+	@dispatch(ast.Input)
+	def visitInput(self, node, prec=17):
+		return self.visitLocal(node.decl)
+
 
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
@@ -153,13 +178,42 @@ class GLSLCodeGen(StrictTypeDispatcher):
 
 		return '%s %s %s' % (prefix, self.typename(node.lcl.type), node.lcl.name)
 
-	def makeDecl(self, node):
-		lcls = FindLocals().processCode(node)
+	@dispatch(ast.InputDecl)
+	def visitInputDecl(self, node):
+		return "in %s %s" % (self.typename(node.type), self.visitLocal(node))
+
+	@dispatch(ast.UniformDecl)
+	def visitUniformDecl(self, node):
+		return "uniform %s %s" % (self.typename(node.type), self.visitLocal(node))
+
+
+	def makeLocalDecl(self):
+		lcls = self.finder.locals
 		decl = "".join(["\t%s %s;\n" % (self.typename(lcl.type), self(lcl)) for lcl in lcls])
 		return decl
 
+	def makeUniformDecl(self):
+		lcls = self.finder.uniforms
+		decl = "".join(["%s;\n" % (self(lcl)) for lcl in lcls])
+		return decl
+
+	def makeInputDecl(self):
+		lcls = self.finder.inputs
+		decl = "".join(["%s;\n" % (self(lcl)) for lcl in lcls])
+		return decl
+
+
 	@dispatch(ast.Code)
 	def visitCode(self, node):
-		decl = self.makeDecl(node)
+		self.finder = FindLocals()
+		self.finder.processCode(node)
 
-		return "%s %s(%s)\n{\n%s\n%s}\n" % (self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.parameters]), decl, self(node.body))
+
+		uniformdecl = self.makeUniformDecl()
+		inputdecl = self.makeInputDecl()
+
+		header = "%s\n%s\n" % (uniformdecl, inputdecl)
+
+		localdecl = self.makeLocalDecl()
+
+		return "%s\n%s %s(%s)\n{\n%s\n%s}\n" % (header, self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.parameters]), localdecl, self(node.body))

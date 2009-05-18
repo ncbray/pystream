@@ -59,4 +59,5 @@ attr(inst(physics.Material), 'color',    inst(vec.vec3))
 
 shader = cls(physics.Shader)
 #shader.shader(inst(vec.vec4), inst(vec.vec3))
+#shader.method('shadeVertex', inst(vec.vec4), inst(vec.vec3))
 shader.method('shadeFragment', inst(vec.vec4), inst(vec.vec3), inst(vec.vec3))

@@ -32,6 +32,10 @@ class FindLocals(StrictTypeDispatcher):
 	def visitInput(self, node):
 		self.inputs.add(node.decl)
 
+	@dispatch(ast.Output)
+	def visitOutput(self, node):
+		self.outputs.add(node.decl)
+
 
 	def processCode(self, node):
 		self.locals = set()
@@ -41,6 +45,7 @@ class FindLocals(StrictTypeDispatcher):
 		self.locals   = set()
 		self.uniforms = set()
 		self.inputs   = set()
+		self.outputs  = set()
 
 		self(node.body)
 		return self.locals-parameters
@@ -152,6 +157,9 @@ class GLSLCodeGen(StrictTypeDispatcher):
 	def visitInput(self, node, prec=17):
 		return self.visitLocal(node.decl)
 
+	@dispatch(ast.Output)
+	def visitOutput(self, node, prec=17):
+		return self.visitLocal(node.decl)
 
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
@@ -182,38 +190,35 @@ class GLSLCodeGen(StrictTypeDispatcher):
 	def visitInputDecl(self, node):
 		return "in %s %s" % (self.typename(node.type), self.visitLocal(node))
 
+	@dispatch(ast.OutputDecl)
+	def visitOutputDecl(self, node):
+		return "out %s %s" % (self.typename(node.type), self.visitLocal(node))
+
 	@dispatch(ast.UniformDecl)
 	def visitUniformDecl(self, node):
 		return "uniform %s %s" % (self.typename(node.type), self.visitLocal(node))
 
 
-	def makeLocalDecl(self):
-		lcls = self.finder.locals
+	def makeLocalDecl(self, lcls):
 		decl = "".join(["\t%s %s;\n" % (self.typename(lcl.type), self(lcl)) for lcl in lcls])
 		return decl
 
-	def makeUniformDecl(self):
-		lcls = self.finder.uniforms
+	def makeDecl(self, lcls):
 		decl = "".join(["%s;\n" % (self(lcl)) for lcl in lcls])
 		return decl
-
-	def makeInputDecl(self):
-		lcls = self.finder.inputs
-		decl = "".join(["%s;\n" % (self(lcl)) for lcl in lcls])
-		return decl
-
 
 	@dispatch(ast.Code)
 	def visitCode(self, node):
-		self.finder = FindLocals()
-		self.finder.processCode(node)
+		finder = FindLocals()
+		finder.processCode(node)
 
 
-		uniformdecl = self.makeUniformDecl()
-		inputdecl = self.makeInputDecl()
+		uniformdecl = self.makeDecl(finder.uniforms)
+		inputdecl   = self.makeDecl(finder.inputs)
+		outputdecl  = self.makeDecl(finder.outputs)
 
-		header = "%s\n%s\n" % (uniformdecl, inputdecl)
+		header = "%s\n%s\n%s\n" % (uniformdecl, inputdecl, outputdecl)
 
-		localdecl = self.makeLocalDecl()
+		localdecl = self.makeLocalDecl(finder.locals)
 
 		return "%s\n%s %s(%s)\n{\n%s\n%s}\n" % (header, self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.parameters]), localdecl, self(node.body))

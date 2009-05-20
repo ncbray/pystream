@@ -57,6 +57,10 @@ class GLSLTranslator(StrictTypeDispatcher):
 				# TODO input modifiers?
 				decl = glsl.InputDecl(None, False, self.getType(node, node.annotation.references[0]), node.name)
 				ref  = glsl.Input(decl)
+			elif freq == 'output':
+				# TODO input modifiers?
+				decl = glsl.OutputDecl(None, False, False, self.getType(node, node.annotation.references[0]), node.name)
+				ref  = glsl.Output(decl)
 			else:
 				ref = glsl.Local(self.getType(node, node.annotation.references[0]), node.name)
 
@@ -108,9 +112,13 @@ class GLSLTranslator(StrictTypeDispatcher):
 
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
-		if len(node.exprs) != 1:
-			raise TemporaryLimitation(self.code, node, "Can only translate returns with a single value.")
-		return glsl.Return(self(node.exprs[0]))
+		if len(node.exprs) > 1:
+			raise TemporaryLimitation(self.code, node, "Cannot translate a return with multiple values.")
+
+		if len(node.exprs) == 0:
+			return glsl.Return(None)
+		else:
+			return glsl.Return(self(node.exprs[0]))
 
 	@dispatch(list)
 	def visitList(self, node):

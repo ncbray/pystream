@@ -75,11 +75,17 @@ class MarkLive(object):
 	def default(self, node):
 		if isinstance(node, ast.SimpleStatement):
 			self.marker(node)
+		return node
 
+	@dispatch(ast.Return)
+	def visitReturn(self, node):
+		for lcl in self.initialLive:
+			self.flow.define(lcl, top)
+		self.marker(node)
 		return node
 
 
-def dce(extractor, node):
+def dce(extractor, node, initialLive=None):
 	rewrite = MarkLive(node)
 	traverse = ReverseFlowTraverse(liveMeet, rewrite)
 
@@ -88,6 +94,10 @@ def dce(extractor, node):
 	rewrite.marker.flow = traverse.flow
 
 	t = MutateCode(traverse)
+
+	# For shader translation, locals may be used as outputs.
+	# We need to retain these locals.
+	rewrite.initialLive = initialLive if initialLive != None else ()
 
 	result = t(node)
 

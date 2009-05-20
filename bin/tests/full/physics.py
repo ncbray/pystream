@@ -118,9 +118,9 @@ class Shader(object):
 		projected = self.projection*newpos
 		newnormal = (trans*vec4(normal.x, normal.y, normal.z, 1.0)).xyz
 
-		return newpos.xyz, newnormal, self.material.color
+		return newpos.xyz, newnormal
 
-	def shadeFragment(self, pos, normal, color):
+	def shadeFragment(self, pos, normal):
 		n = normal.normalize()
 
 		# Light in world space

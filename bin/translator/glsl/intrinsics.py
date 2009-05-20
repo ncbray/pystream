@@ -4,7 +4,7 @@ from language.glsl import ast as glsl
 from tests.full import vec
 import random
 
-intrinsicTypes = frozenset([vec.vec2, vec.vec3, vec.vec4, vec.mat2, vec.mat3, vec.mat4])
+intrinsicTypes = frozenset([float, int, bool, vec.vec2, vec.vec3, vec.vec4, vec.mat2, vec.mat3, vec.mat4])
 
 import util
 def uniqueAttrName(type, name):

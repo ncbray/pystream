@@ -88,9 +88,13 @@ class Input(Expression):
 	__fields__ = 'decl:InputDecl'
 	__shared__ = True
 
+class Output(Expression):
+	__fields__ = 'decl:OutputDecl'
+	__shared__ = True
 
+# HACK lcl can be output?
 class Assign(Statement):
-	__fields__ = 'expr:Expression lcl:Local'
+	__fields__ = 'expr:Expression lcl:Expression'
 
 class Discard(Statement):
 	__fields__ = 'expr:Expression'

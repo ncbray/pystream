@@ -1,19 +1,6 @@
 from base import *
 from language.python import fold
 
-# Restore
-# Pre
-# Traverse
-# Post
-
-# Evaluate for entry/iteration/exit
-# Evalute while entry/iteration/exit
-
-def liveMeet(values):
-	if values:
-		return top
-	else:
-		return undefined
 
 # TODO structure like forward flow
 # TODO merge in 'raise' when may raise.
@@ -23,10 +10,11 @@ def liveMeet(values):
 
 class ReverseFlowTraverse(object):
 	__metaclass__ = typedispatcher
-	__slots__ = 'strategy', 'flow', 'mayRaise'
+	__slots__ = 'strategy', 'meet', 'flow', 'mayRaise'
 
-	def __init__(self, strategy):
+	def __init__(self, meetF, strategy):
 		self.strategy = strategy
+		self.meet = meetF
 
 		self.mayRaise = MayRaise()
 
@@ -45,9 +33,8 @@ class ReverseFlowTraverse(object):
 			assert len(self.flow.bags['raise']) == 1
 			raiseF = self.flow.bags['raise'][0]
 			normalF = self.flow.pop()
-			normalF, changed = meet(liveMeet, normalF, raiseF)
+			normalF, changed = meet(self.meet, normalF, raiseF)
 			self.flow.restore(normalF)
-
 
 		return result
 
@@ -97,7 +84,7 @@ class ReverseFlowTraverse(object):
 		ff = self.flow.pop()
 
 		# Merge
-		merged, changed = meet(liveMeet, tf, ff)
+		merged, changed = meet(self.meet, tf, ff)
 		self.flow.restore(merged)
 
 		condition = self(node.condition)
@@ -131,7 +118,7 @@ class ReverseFlowTraverse(object):
 			body = self(node.body)
 
 			loopEntry = self.flow.pop()
-			current, changed = meet(liveMeet, current, loopEntry)
+			current, changed = meet(self.meet, current, loopEntry)
 
 			if not changed:
 				break
@@ -180,7 +167,7 @@ class ReverseFlowTraverse(object):
 			#self.flow.undefine(node.index)
 
 			loopEntry = self.flow.pop()
-			current, changed = meet(liveMeet, current, loopEntry)
+			current, changed = meet(self.meet, current, loopEntry)
 
 			if not changed:
 				break
@@ -229,7 +216,7 @@ class ReverseFlowTraverse(object):
 			if bag:
 				frame, = bag
 				allF.append(frame)
-		superF, changed = meet(liveMeet, *allF)
+		superF, changed = meet(self.meet, *allF)
 
 		superF, finally_ = evalFinallyOn(superF)
 
@@ -285,7 +272,7 @@ class ReverseFlowTraverse(object):
 			raiseEntries.append(exitF)
 
 
-		raiseF, changed = meet(liveMeet, *raiseEntries)
+		raiseF, changed = meet(self.meet, *raiseEntries)
 
 		self.flow.restore(normalF)
 

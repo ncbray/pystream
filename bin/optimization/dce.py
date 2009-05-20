@@ -7,6 +7,13 @@ import util.xform
 
 from analysis import tools
 
+def liveMeet(values):
+	if values:
+		return top
+	else:
+		return undefined
+
+# Mark a locals in an AST subtree as used.
 class MarkLocals(object):
 	__metaclass__ = typedispatcher
 
@@ -74,7 +81,7 @@ class MarkLive(object):
 
 def dce(extractor, node):
 	rewrite = MarkLive(node)
-	traverse = ReverseFlowTraverse(rewrite)
+	traverse = ReverseFlowTraverse(liveMeet, rewrite)
 
 	# HACK
 	rewrite.flow = traverse.flow

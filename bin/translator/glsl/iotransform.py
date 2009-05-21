@@ -10,6 +10,15 @@ import optimization.dce
 
 from . import intrinsics
 
+def hasIntrinsicType(extractor, lcl):
+	for ref in lcl.annotation.references[0]:
+		obj = ref.xtype.obj
+		extractor.ensureLoaded(obj)
+		assert hasattr(obj, 'type'), obj
+		if obj.type.pyobj not in intrinsics.intrinsicTypes:
+			return False
+	return True
+
 def isPath(defn):
 	return defn is not forward.undefined and defn is not forward.top
 
@@ -76,6 +85,8 @@ class InputTransform(StrictTypeDispatcher):
 	def visitLoad(self, node, targets):
 		if len(targets) != 1: return node
 
+		if hasIntrinsicType(self.extractor, node.expr): return node
+
 		defn = self.flow.lookup(node.expr)
 		if isPath(defn):
 			assert isinstance(node.name, ast.Existing)
@@ -90,7 +101,7 @@ class InputTransform(StrictTypeDispatcher):
 			return node
 
 
-def transformInputs(shader):
+def transformInputs(extractor, shader):
 	analyze = InputAnalysis()
 	rewrite = InputTransform()
 
@@ -102,6 +113,7 @@ def transformInputs(shader):
 	rewrite.flow = traverse.flow
 
 	rewrite.shader = shader
+	rewrite.extractor = extractor
 
 	for arg in shader.code.parameters:
 		path = (arg,)
@@ -153,6 +165,8 @@ class OutputTransform(StrictTypeDispatcher):
 
 	@dispatch(ast.Store)
 	def visitStore(self, node):
+		if hasIntrinsicType(self.extractor, node.expr): return node
+
 		defn = self.flow.lookup(node.expr)
 
 		if isPath(defn):
@@ -199,7 +213,7 @@ class OutputTransform(StrictTypeDispatcher):
 		assigns.append(retop)
 		return assigns
 
-def transformOutputs(shader):
+def transformOutputs(extractor, shader):
 	rewrite = OutputTransform()
 
 	traverse = reverse.ReverseFlowTraverse(meet, rewrite)
@@ -208,21 +222,13 @@ def transformOutputs(shader):
 	# HACK
 	rewrite.flow   = traverse.flow
 	rewrite.shader = shader
+	rewrite.extractor = extractor
 
 	t(shader.code)
 
-def hasIntrinsicType(extractor, lcl):
-	for ref in lcl.annotation.references[0]:
-		obj = ref.xtype.obj
-		extractor.ensureLoaded(obj)
-		assert hasattr(obj, 'type'), obj
-		if obj.type.pyobj not in intrinsics.intrinsicTypes:
-			return False
-	return True
-
 def evaluateShader(console, dataflow, shader):
-	transformInputs(shader)
-	transformOutputs(shader)
+	transformInputs(dataflow.extractor, shader)
+	transformOutputs(dataflow.extractor, shader)
 
 	# Kill orphans
 	liveOut = set()

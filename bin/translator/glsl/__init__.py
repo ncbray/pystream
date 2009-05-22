@@ -14,11 +14,6 @@ def translate(console, dataflow, interface):
 
 			shader = PythonShader(code)
 
-			# HACK fixed frequency annotations for parameters.
-			shader.frequency[code.parameters[0]] = 'uniform'
-			for p in code.parameters[1:]:
-				shader.frequency[p] = 'input'
-
 			iotransform.evaluateShader(console, dataflow, shader)
 
 			result = translator.processShader(shader)

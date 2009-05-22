@@ -49,7 +49,8 @@ class GLSLTranslator(StrictTypeDispatcher):
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
 		if node not in self.referenceLUT:
-			freq = self.shader.frequency.get(node)
+			path = self.shader.localToPath.get(node)
+			freq = path.frequency if path is not None else None
 			if freq == 'uniform':
 				decl = glsl.UniformDecl(self.getType(node, node.annotation.references[0]), node.name, None)
 				ref  = glsl.Uniform(decl)

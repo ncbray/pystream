@@ -86,6 +86,17 @@ class Material(object):
 	def __init__(self):
 		self.color = vec3(0.125, 0.125, 1.0)
 
+class VSOut(object):
+	__slots__ = 'position'
+	def __init__(self, position):
+		self.position = position
+
+class FSIn(object):
+	__slots__ = 'coord', 'depth', 'frontFacing',
+
+class FSOut(object):
+	__slots__ = 'color', 'depth'
+
 class Shader(object):
 	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'lightPos', 'ambient', 'material'
 	def __init__(self):

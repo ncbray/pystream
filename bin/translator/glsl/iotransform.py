@@ -52,24 +52,17 @@ class InputAnalysis(StrictTypeDispatcher):
 		pass # TODO paths for return values?
 
 class InputTransform(StrictTypeDispatcher):
-	def pathName(self, path):
-		pathParts = [path[0].name]
-		for part in path[1:]:
-			attrParts = part[1].split('#')
-			pathParts.append(attrParts[0])
-		return "_".join(pathParts)
-
 	def translate(self, path, target, frequency):
 		if path not in self.shader.pathToLocal:
-			lcl = ast.Local(self.pathName(path))
+			lcl = ast.Local(path.fullName())
 			lcl.annotation = target.annotation
-			self.shader.pathToLocal[path] = lcl
-			self.shader.localToPath[lcl] = path
+
+			self.shader.bindPath(path, lcl)
 
 			self.shader.frequency[lcl] = frequency
 		else:
 			# TODO check that the annotation is consistant?
-			lcl = self.shader.pathToLocal[path]
+			lcl = path.local
 		return lcl
 
 	@defaultdispatch
@@ -89,14 +82,13 @@ class InputTransform(StrictTypeDispatcher):
 
 		defn = self.flow.lookup(node.expr)
 		if isPath(defn):
-			assert isinstance(node.name, ast.Existing)
-			name = node.name.object.pyobj
-			newdefn = defn+((node.fieldtype, name),)
-			freq = self.shader.frequency[self.shader.pathToLocal[defn]]
+			freq = self.shader.frequency[defn.local]
 
+			newdefn = defn.extend(node)
 			lcl = self.translate(newdefn, targets[0], freq)
-			self.flow.define(lcl, newdefn)
-			return lcl
+
+			self.flow.define(newdefn.local, newdefn)
+			return newdefn.local
 		else:
 			return node
 
@@ -115,11 +107,13 @@ def transformInputs(extractor, shader):
 	rewrite.shader = shader
 	rewrite.extractor = extractor
 
-	for arg in shader.code.parameters:
-		path = (arg,)
-		traverse.flow.define(arg, path)
-		shader.pathToLocal[path] = arg
-		shader.localToPath[arg] = path
+	# HACK first parameter as uniform
+	freqs = ['uniform']+['input']*(len(shader.code.parameters)-1)
+	for arg, freq in zip(shader.code.parameters, freqs):
+		defn = shader.getRoot(arg.name, arg)
+		lcl = defn.local
+		shader.frequency[lcl] = freq
+		traverse.flow.define(arg, defn)
 
 	t(shader.code)
 
@@ -128,31 +122,12 @@ class OutputTransform(StrictTypeDispatcher):
 	def __init__(self):
 		self.returns = None
 
-	def pathName(self, path):
-		if isinstance(path[0], ast.Local):
-			pathParts = [path[0].name]
-		else:
-			pathParts = [str(path[0])]
-
-		for attrtype, name in path[1:]:
-			if attrtype == 'Attribute':
-				pathParts.append(name.split('#')[0])
-			elif attrtype == 'Array':
-				pathParts.append(str(name))
-			elif attrtype == 'LowLevel':
-				pathParts.append("LL" + str(name))
-			else:
-				assert False, (attrtype, name)
-
-		return "_".join(pathParts)
-
 	def translate(self, path, target, frequency):
 		if path not in self.shader.pathToLocal:
-			lcl = ast.Local(self.pathName(path))
+			lcl = ast.Local(path.fullName())
 			lcl.annotation = target.annotation
-			self.shader.pathToLocal[path] = lcl
-			self.shader.localToPath[lcl] = path
 
+			self.shader.bindPath(path, lcl)
 			self.shader.frequency[lcl] = frequency
 		else:
 			# TODO check that the annotation is consistant?
@@ -170,14 +145,13 @@ class OutputTransform(StrictTypeDispatcher):
 		defn = self.flow.lookup(node.expr)
 
 		if isPath(defn):
-			assert isinstance(node.name, ast.Existing)
-			name = node.name.object.pyobj
-			newdefn = defn+((node.fieldtype, name),)
+			freq = 'output'
 
-			lcl = self.translate(newdefn, node.value, 'output')
-			self.flow.define(lcl, newdefn)
+			newdefn = defn.extend(node)
+			lcl = self.translate(newdefn, node.value, freq)
 
-			return self(ast.Assign(node.value,[lcl]))
+			self.flow.define(newdefn.local, newdefn)
+			return self(ast.Assign(node.value, [newdefn.local]))
 		else:
 			return node
 
@@ -189,28 +163,34 @@ class OutputTransform(StrictTypeDispatcher):
 		return node
 
 
+	def initReturns(self):
+		self.returns = []
+		for i, src in enumerate(self.shader.code.returnparams):
+			name = 'ret%d' % i
+
+			newdefn = self.shader.getRoot(name, src)
+			lcl = newdefn.local
+
+			self.shader.frequency[lcl] = 'output'
+			self.returns.append(lcl)
+
+			self.flow.define(lcl, newdefn)
+
+
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
-		if self.returns is None:
-			self.returns = []
-			for i, src in enumerate(node.exprs):
-				newdefn = ('ret%d' % i,)
+		self.initReturns()
 
-				lcl = self.translate(newdefn, src, 'output')
-				self.flow.define(lcl, newdefn)
-
-				self.returns.append(lcl)
-		else:
-			assert len(node.exprs) == len(self.returns)
-			for lcl in self.returns:
-				self.flow.define(lcl, (lcl,))
-
+		# Transform the return into assignments to outputs.
+		assert len(node.exprs) == len(self.returns)
 		assigns = [self(ast.Assign(src, [dst])) for src, dst in zip(node.exprs, self.returns)]
-		#assigns.append(ast.Return(list(self.returns))) # HACK for DCE
 
+		# Eliminating the return might change sematics, so create
+		# an empty return.
 		retop = ast.Return([])
 		retop.annotation = node.annotation
 		assigns.append(retop)
+
 		return assigns
 
 def transformOutputs(extractor, shader):

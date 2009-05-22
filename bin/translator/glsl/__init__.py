@@ -8,7 +8,6 @@ def translate(console, dataflow, interface):
 
 	try:
 		translator = GLSLTranslator(intrinsics.makeIntrinsicRewriter(dataflow.extractor))
-		cg = codegen.GLSLCodeGen()
 
 		for code in interface.entryCode():
 			console.output(str(code))
@@ -23,6 +22,8 @@ def translate(console, dataflow, interface):
 			iotransform.evaluateShader(console, dataflow, shader)
 
 			result = translator.processShader(shader)
+
+			cg = codegen.GLSLCodeGen()
 			print cg(result)
 			print
 	finally:

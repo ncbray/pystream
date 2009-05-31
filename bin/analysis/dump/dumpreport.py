@@ -4,7 +4,8 @@ import common.astpprint
 
 import config
 import os.path
-from util import assureDirectoryExists, itergroupings
+from util import itergroupings
+from util.filesystem import ensureDirectoryExists
 
 from analysis import programculler
 
@@ -51,7 +52,7 @@ def outputOrigin(out, tabs, originTrace):
 
 def makeReportDirectory(moduleName):
 	reportdir = os.path.join(config.outputDirectory, moduleName)
-	assureDirectoryExists(reportdir)
+	ensureDirectoryExists(reportdir)
 
 	return reportdir
 

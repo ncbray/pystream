@@ -3,7 +3,7 @@ import copy
 import os
 import os.path
 
-from util import assureDirectoryExists
+from util.filesystem import ensureDirectoryExists
 from decompiler.programextractor import extractProgram
 import common.pipeline
 from . import compilerconsole
@@ -332,5 +332,5 @@ class Makefile(object):
 		common.pipeline.evaluate(console, self.moduleName, extractor, self.interface)
 
 		# Output
-		assureDirectoryExists(self.outdir)
+		ensureDirectoryExists(self.outdir)
 		self.outfile = os.path.join(self.outdir, self.moduleName+'.py')

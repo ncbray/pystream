@@ -1,13 +1,13 @@
-from base import *
+__all__ = ['allChildren', 'replaceAllChildren',
+	'visitAllChildren', 'visitAllChildrenArgs',
+	'allChildrenReversed', 'visitAllChildrenReversed']
 
-### Generic traversal ###
+from language.base.metaast import children, reconstruct
 
 def identicalChildren(oldchildren, newchildren):
-	#return False
 	return len(oldchildren) == len(newchildren) and all(map(lambda (a,b): id(a) == id(b), zip(oldchildren, newchildren)))
 
 def isShared(node):
-	#return hasattr(node, '__shared__') and node.__shared__
 	return getattr(node, '__shared__', False)
 
 
@@ -67,67 +67,3 @@ def visitAllChildrenReversed(s, node):
 
 	for child in reversed(children(node)):
 		s(child)
-
-
-
-### Compound strategies ###
-
-
-class Innermost(object):
-	def __init__(self, strategy):
-		self.strategy = strategy
-		self.canonical = set()
-
-	def __call__(self, node):
-		if id(node) in self.canonical:
-			return node
-
-		while True:
-			node = allChildren(self, node)
-			try:
-				node = self.strategy(node)
-			except TransformFailiure:
-				self.canonical.add(id(node))
-				return node
-
-class TopDown(object):
-	def __init__(self, strategy):
-		self.strategy = strategy
-
-	def __call__(self, node):
-		node = self.strategy(node)
-		node = allChildren(self, node)
-		return node
-
-class BottomUp(object):
-	def __init__(self, strategy):
-		self.strategy = strategy
-
-	def __call__(self, node):
-		node = allChildren(self, node)
-		node = self.strategy(node)
-		return node
-
-class DownUp(object):
-	def __init__(self, down, up):
-		self.down = down
-		self.up = up
-
-	def __call__(self, node):
-		node = self.down(node)
-		node = allChildren(self, node)
-		node = self.up(node)
-		return node
-
-
-class Try(object):
-	def __init__(self, strategy):
-		self.strategy = strategy
-
-	def __call__(self, node):
-		try:
-			node = self.strategy(node)
-		except TransformFailiure:
-			pass
-
-		return node

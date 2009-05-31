@@ -1,2 +1,2 @@
 from traversal import *
-from dynamic import *
+#from dynamic import *

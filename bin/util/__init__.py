@@ -1,6 +1,5 @@
-__all__ = ['assureDirectoryExists', 'numbits', 'replaceGlobals']
+__all__ = ['numbits', 'replaceGlobals']
 
-import os.path
 import sys
 import math
 import types
@@ -15,9 +14,6 @@ def numbits(size):
 		return 0
 	else:
 		return int(math.ceil(math.log(size, 2)))
-
-def assureDirectoryExists(dirname):
-	if not os.path.exists(dirname): os.makedirs(dirname)
 
 def moduleForGlobalDict(glbls):
 	assert '__file__' in glbls, "Global dictionary does not come from a module?"

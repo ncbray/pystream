@@ -2,11 +2,13 @@ from __future__ import absolute_import
 import unittest
 
 import analysis.cpa
+import common.makefile
+from decompiler.programextractor import extractProgram
+
+
 from common.compilerconsole import CompilerConsole
 from decompiler.programextractor import Extractor
 from util import replaceGlobals
-
-from stubs import makeStubs
 
 class TestCPA(unittest.TestCase):
 	def assertIn(self, first, second, msg=None):
@@ -14,7 +16,6 @@ class TestCPA(unittest.TestCase):
 		"""
 		if first not in second:
 			raise self.failureException, (msg or '%r not in %r' % (first, second))
-
 
 	def assertLocalRefTypes(self, lcl, types):
 		refs   = lcl.annotation.references[0]
@@ -24,39 +25,28 @@ class TestCPA(unittest.TestCase):
 		for ref in refs:
 			self.assertIn(ref.xtype.obj.type, types)
 
-
-	def processFunc(self, func):
-
-		func = replaceGlobals(func, {})
-
-		funcobj = self.extractor.getObject(func)
-
-		self.extractor.ensureLoaded(funcobj)
-		funcast = self.extractor.getCall(funcobj)
-
-		return func, funcast, funcobj
-
-
 	def testAdd(self):
-		self.extractor = Extractor(verbose=False)
-		makeStubs(self.extractor)
-
 		def func(a, b):
 			return 2*a+b
 
-		func, funcast, funcobj = self.processFunc(func)
+		# Prevent leakage?
+		func = replaceGlobals(func, {})
 
-		for paramname in funcast.parameternames:
-			self.assertEqual(type(paramname), str)
+		interface = common.makefile.InterfaceDeclaration()
 
-		a = self.extractor.getObject(3)
-		b = self.extractor.getObject(5)
+		interface.func.append((func,
+			(common.makefile.ExistingWrapper(3), common.makefile.ExistingWrapper(5))
+			))
 
-		result = analysis.cpa.evaluate(CompilerConsole(), self.extractor, [(funcast, funcobj, (a, b))])
+		extractor = extractProgram(interface)
+		result = analysis.cpa.evaluate(CompilerConsole(), extractor, interface)
 
-		types = set((self.extractor.getObject(int),))
+		# Check argument and return types
+		funcobj, funcast = extractor.getObjectCall(func)
+		types = set([extractor.getObject(int)])
 
 		for param in funcast.parameters:
 			self.assertLocalRefTypes(param, types)
 
-		self.assertLocalRefTypes(funcast.returnparam, types)
+		for param in funcast.returnparams:
+			self.assertLocalRefTypes(param, types)

@@ -289,10 +289,8 @@ class Makefile(object):
 		assert isinstance(dst, InstWrapper), dst
 		self.interface.attr.append((src, attr, dst))
 
-	def declFunction(self, funcName, *args):
-		assert self.module, "Must declare a module first."
-		self.interface.func.append((funcName, args))
-
+	def declFunction(self, func, *args):
+		self.interface.func.append((func, args))
 
 	def declClass(self, cls):
 		assert isinstance(cls, type), cls

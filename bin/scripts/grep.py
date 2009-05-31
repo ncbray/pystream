@@ -1,47 +1,59 @@
+
 import os
 import os.path
+
+import optparse
 
 import sys
 
 import re
 
 
-directoryName = "."
+def check_directory(option, opt_str, value, parser):
+	if not os.path.exists(value):
+		raise optparse.OptionValueError("directory %r does not exist" % value)
+	setattr(parser.values, option.dest, value)
 
-insensitive = False
 
-grepString = r'(partialEntry)|(partialExit)'
-fileString = '\.py$'
-# Read the command line arguents
-for arg in sys.argv[1:]:
-	if arg[0] == '-' and len(arg) >= 2:
-		if arg=='-i':
-			insensitive = True
-		elif arg[:2] == '-f':
-			fileString = arg[2:]
-		elif arg[:2] == '-d':
-			directoryName = arg[2:]
-			assert os.path.exists(directoryName), "Directory %r does not exist." % directoryName
+def buildParser():
+	usage = "usage: %prog [options] textfilters"
+	parser = optparse.OptionParser(usage)
 
-		else:
-			assert False, "Unknown command: %s" % arg
-	else:
-		grepString = arg
+	group = optparse.OptionGroup(parser, "Global Configuration")
+	group.add_option('-d', dest='directory',   action='callback',  type='string',  callback=check_directory,  default='.', help="the root directory")
+	group.add_option('-i', dest='insensitive', action='store_true', default=False, help="filters are case insensitive")
+	group.add_option('--no-comments', dest='nocomments', action='store_true', default=False, help="text filters ignore comments")
+	parser.add_option_group(group)
 
-	print arg
+	group = optparse.OptionGroup(parser, "File Filters")
+	group.add_option('-f', dest='filefilters', action='append',     default=['\.py$'], help="matches the file name", metavar="FILTER")
+	parser.add_option_group(group)
 
-	
-graveyardFilter = re.compile(r'graveyard')
+	group = optparse.OptionGroup(parser, "Text Filters")
+	group.add_option('--id', dest='identifiers', action='append', default=[], metavar="FILTER" , help="specialized text filter to find an identifier")
+	group.add_option('-x', dest='excludes', action='append', default=[], help="excludes matching text", metavar="FILTER")
+	group.add_option('--import', dest='imports', action='store_true', default=False, help="restricts search to imports")
+	parser.add_option_group(group)
 
-# Build the regular expressions.
-fileFilter = re.compile(fileString)
+	return parser
 
-flags = 0
-if insensitive: flags |= re.I
 
-grepFilter = re.compile(grepString, flags)
+def fileMatches(filename):
+	for f in fileFilters:
+		if not f.search(filename):
+			return False
+	return True
 
-print
+def textMatches(text):
+	for f in textFilters:
+		if not f.search(text):
+			return False
+
+	for f in excludeFilters:
+		if f.search(text):
+			return False
+		
+	return True
 
 
 # HACK can't deal with multi-line strings?
@@ -83,11 +95,15 @@ class StandardGrep(object):
 		
 		
 	def handleLine(self, fn, lineno, line):
-		if grepFilter.search(line):
+		code, comment =  splitLine(line)
+
+		if options.nocomments:
+			line = code
+
+		if textMatches(line):
 			self.callback(fn, lineno, line)
 			self.occurances += 1
 
-		code, comment =  splitLine(line)
 		if code: self.lines += 1
 
 	def handleFile(self, fn):
@@ -106,7 +122,7 @@ class StandardGrep(object):
 		for path, dirs, files in os.walk(dn):
 			for f in files:
 				fn = os.path.join(path, f)
-				if fileFilter.search(fn) and not graveyardFilter.search(fn):
+				if fileMatches(fn):
 					self.handleFile(fn)
 
 		if self.lastFile != None:
@@ -117,6 +133,61 @@ class StandardGrep(object):
 		print "%7.d files." % self.files
 
 
-# Search the files.
-sg = StandardGrep()
-sg.walk(directoryName, sg.displayMatch)
+
+if __name__ == '__main__':
+	try:
+		import psyco
+		psyco.full()
+	except ImportError:
+		pass
+
+
+	parser = buildParser()
+	options, args = parser.parse_args()
+
+	if options.imports:
+		args.insert(0, "^\s*(import|from)\s")
+
+	# Create specialized text filters
+	# Identifiers are a little strange, as we need to take into account
+	# that they may be at the start or the end of a line.
+	for i in options.identifiers:
+		args.append('(?<![\w\d_])(%s)(?![\w\d_])' % i)
+
+
+	if len(args) < 1:
+		parser.error("at least one text filter must be spesified")
+
+
+	parser.destroy()
+
+
+	flags = 0
+	if options.insensitive: flags |= re.I
+
+	# Build the regular expressions.
+
+	print
+
+	fileFilters = []
+	for ff in options.filefilters:
+		print "file: %s" % ff
+		fileFilters.append(re.compile(ff, flags))
+
+	textFilters = []
+	for tf in args:
+		print "text: %s" % tf
+		textFilters.append(re.compile(tf, flags))
+
+	excludeFilters = []
+	for ef in options.excludes:
+		print "excl: %s" % ef
+		excludeFilters.append(re.compile(ef, flags))
+
+	print
+
+	directoryName = options.directory
+
+	# Search the files.
+	sg = StandardGrep()
+	sg.walk(directoryName, sg.displayMatch)

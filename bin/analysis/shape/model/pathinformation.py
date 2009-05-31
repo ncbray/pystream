@@ -1,4 +1,3 @@
-import util.compressedset
 from util.tvl import *
 
 class EquivalenceClass(object):

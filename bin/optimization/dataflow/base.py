@@ -250,6 +250,13 @@ class MayRaise(object):
 	def default(self, node):
 		return True
 
+	@dispatch(list, tuple)
+	def visitContainer(self, node):
+		for child in node:
+			if self(child):
+				return True
+		return False
+
 	@dispatch(ast.Existing)
 	def visitExisting(self, node):
 		return False
@@ -282,4 +289,4 @@ class MayRaise(object):
 
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
-		return self(node.expr)
+		return self(node.exprs)

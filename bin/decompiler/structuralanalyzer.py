@@ -206,7 +206,7 @@ class StructuralAnalyzer(StandardVisitor):
 		assert block.numExits() == 1 and isinstance(block.next, Merge), block
 		#assert block.next.loopMerge, block
 
-		c = Continue(block.region)
+		c = Continue(block.region, block.origin)
 
 		merge = block.next
 
@@ -252,7 +252,7 @@ class StructuralAnalyzer(StandardVisitor):
 						exitT = block.t.pulloutMerge(block, nextSwitch)
 						exitF = CFGEdge(nextSwitch, nextSwitch.f)
 
-						block.cond = ShortCircutOr(block.region, block.cond, nextSwitch.cond.replaceDefault(cond))
+						block.cond = ShortCircutOr(block.region, block.origin, block.cond, nextSwitch.cond.replaceDefault(cond))
 
 						# Cut out the or graph.
 						block.replaceNext(block.t, exitT.destination)
@@ -276,7 +276,7 @@ class StructuralAnalyzer(StandardVisitor):
 						exitF = block.f.pulloutMerge(block, nextSwitch)
 						exitT = CFGEdge(nextSwitch, nextSwitch.t)
 
-						block.cond = ShortCircutAnd(block.region, block.cond, nextSwitch.cond.replaceDefault(cond))
+						block.cond = ShortCircutAnd(block.region, block.origin, block.cond, nextSwitch.cond.replaceDefault(cond))
 
 
 						# Cut out the or graph.
@@ -384,7 +384,7 @@ class StructuralAnalyzer(StandardVisitor):
 				switch = linear.next
 				cond = switch.cond.replaceDefault(linear)
 
-				region = WhileLoop(block.region, cond, linear, switch.t)
+				region = WhileLoop(block.region, cond.origin, cond, linear, switch.t)
 
 				entryEdge = CFGEdge(entry, linear)
 				exitEdge = CFGEdge(switch, switch.f)
@@ -399,7 +399,7 @@ class StructuralAnalyzer(StandardVisitor):
 				entryEdge = CFGEdge(linear, it)
 				exitEdge = CFGEdge(it, it.done)
 
-				region = ForLoop(block.region, it.iter)
+				region = ForLoop(block.region, block.next.origin, it.iter)
 				self.moveIntoRegion(entryEdge, exitEdge, region)
 			elif isinstance(block.next, Linear) and isinstance(block.next.next, ForLoop):
 				pass # Already handled
@@ -412,7 +412,8 @@ class StructuralAnalyzer(StandardVisitor):
 				# Although this seems crazy, this case is found in Lib/sre_parse.py
 				self.contractSuite(block, block.next)
 
-				region = WhileLoop(block.region, None, None, block.next)
+				# TODO origin?
+				region = WhileLoop(block.region, None, None, None, block.next)
 
 				entryEdge = CFGEdge(block, block.next)
 				self.moveIntoRegion(entryEdge, None, region)
@@ -526,7 +527,7 @@ class StructuralAnalyzer(StandardVisitor):
 		# Step past the contracted suite.
 		exitEdge = CFGEdge(exitEdge.destination, exitEdge.destination.next)
 
-		region = TryFinally(block.region)
+		region = TryFinally(block.region, block.origin)
 
 		entryEdge = CFGEdge(block.prev, block)
 		self.moveIntoRegion(entryEdge, exitEdge, region)
@@ -593,7 +594,7 @@ class StructuralAnalyzer(StandardVisitor):
 
 			# The except block may exit normally, even if the try block does not.
 
-		region = TryExcept(block.region)
+		region = TryExcept(block.region, block.origin)
 
 		region.tryBlock 	= tryBlock
 		region.exceptBlock 	= exceptBlock

@@ -484,29 +484,33 @@ class SimpleCodeGen(StandardVisitor):
 
 	def visitAssign(self, node):
 		if isinstance(node.expr, ast.BinaryOp) and node.expr.op in opnames.inplaceOps:
+			assert len(node.lcls) == 1
+			target = node.lcls[0]
+
 			#assert not node.lcl in self.collapsable
 			# Workarround for synthesizing inplace BinaryOps that don't put their result into the left argument.
 			# If the operation actually is inplace, don't hack it.
 
 			temp = node.expr.right
-			if node.lcl != node.expr.left:
-				if node.lcl == node.expr.right:
+			if target != node.expr.left:
+				if target == node.expr.right:
 					# Take care of the case Assign(a, BinaryOp(b, inplace, a))
 					# Otherwise the subsequent statement cobbers the right value.
 					temp = Local()
 					stmt = "%s = %s" % (self.seg.process(temp), self.seg.process(node.expr.right))
 					self.emitStatement(stmt)
 
-				stmt = "%s = %s" % (self.seg.process(node.lcl), self.seg.process(node.expr.left))
+				stmt = "%s = %s" % (self.seg.process(target), self.seg.process(node.expr.left))
 				self.emitStatement(stmt)
 
-			stmt = "%s %s %s" % (self.seg.process(node.lcl), node.expr.op, self.seg.process(temp))
+			stmt = "%s %s %s" % (self.seg.process(target), node.expr.op, self.seg.process(temp))
 			self.emitStatement(stmt)
 		elif isinstance(node.expr, ast.MakeFunction):
+			assert len(node.lcls) == 1
 			# HACK to rename the function
 			self.process(node.expr)
-			name = node.expr.ast.name
-			lcl = self.seg.process(node.lcl)
+			name = node.expr.code.name
+			lcl = self.seg.process(node.lcls[0])
 			if name != lcl:
 				self.emitStatement("%s = %s" % (lcl, name))
 		elif isinstance(node.expr, ast.Existing) and node.expr.object.isConstant() and isinstance(node.expr.object.pyobj, types.CodeType):

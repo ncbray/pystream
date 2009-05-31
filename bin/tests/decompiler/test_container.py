@@ -66,7 +66,7 @@ def f(s):
 	b = s in d
 	return a, b
 """
-	inputs = [['a'],['b'],['c'],['d']]	
+	inputs = [['a'],['b'],['c'],['d']]
 
 class TestDictFlip(TestDecompiler):
 	s = """
@@ -76,7 +76,7 @@ def f(d):
 		nd[value] = key
 	return nd
 """
-	inputs = [[{'a':'1', 'b':'2', 'c':'3', 'd':'4'}]]	
+	inputs = [[{'a':'1', 'b':'2', 'c':'3', 'd':'4'}]]
 
 class TestGetSlice_3_1_Decompile(TestDecompiler):
 	s = """
@@ -180,7 +180,7 @@ def f(a, b, c):
 	return l
 """
 	inputs = [[1, 10, 2], [5, 19, 3]]
-	
+
 
 class TestDeleteSlice_2_1(TestDecompiler):
 	s = """
@@ -227,31 +227,6 @@ def listcomp(a):
 	return l
 """
 	inputs =[[[3, 7, 5]], [[11, -3, 2]]]
-
-def makeMod1():
-	d = Dummy()
-	d.__all__ = ('a', 'b', 'c')
-	d.x = 4
-	return d
-
-def makeMod2():
-	d = Dummy()
-	d.w = 3
-	d.x = 4
-	d.y = 5
-	d.z = 6
-	return d
-
-
-class TestComplexListComprehension(TestDecompiler):
-	s = """
-def complexlistcomp(module):
-    try:
-        return list(module.__all__)
-    except AttributeError:
-        return [n for n in dir(module) if n[0] != '_']
-"""
-	inputs = [[makeMod1()], [makeMod2()]]
 
 # Note: tuple comprehensions create generators.
 class TestTupleComprehension(TestDecompiler):

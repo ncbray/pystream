@@ -267,10 +267,10 @@ class DestackVisitor(StandardVisitor):
 		temp = Local()
 
 		preamble = Suite([])
-		preamble.append(Assign(condition, lcl))
+		preamble.append(Assign(condition, [lcl]))
 		conv = ConvertToBool(lcl)
 		conv.rewriteAnnotation(origin=block.origin)
-		preamble.append(Assign(conv, temp))
+		preamble.append(Assign(conv, [temp]))
 		condition = Condition(preamble, temp)
 
 		return condition, tstack, fstack, (maybeTrue, maybeFalse)
@@ -313,12 +313,12 @@ class DestackVisitor(StandardVisitor):
 
 		# Convert into a condition.
 		lcl = Local()
-		asgn1 = Assign(condition, lcl)
+		asgn1 = Assign(condition, [lcl])
 		temp = Local()
 
 		conv = ConvertToBool(lcl)
 		conv.rewriteAnnotation(origin=block.origin)
-		asgn2 = Assign(conv, temp)
+		asgn2 = Assign(conv, [temp])
 		condition = Condition(Suite([asgn1, asgn2]), temp)
 
 		return condition, tstack, fstack, (maybeTrue, maybeFalse)
@@ -632,8 +632,11 @@ class DestackVisitor(StandardVisitor):
 		if isinstance(index, Local):
 			bodyPreamble = Suite([Assign(iterNext, [index])])
 		elif isinstance(index, Cell):
-			lclTemp = Local()
+			lclTemp = Local(index.name)
 			bodyPreamble = Suite([Assign(iterNext, [lclTemp]), SetCellDeref(lclTemp, index)])
+
+			# Force the index to be a local
+			index = lclTemp
 		else:
 			assert False, type(index)
 

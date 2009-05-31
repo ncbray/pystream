@@ -170,8 +170,9 @@ class DirectCall(Expression):
 						       self.args, self.kwds,
 						       self.vargs, self.kargs)
 
+# HACK no type: the args may be all Cells if we're making a closure.
 class BuildTuple(Expression):
-	__fields__ = 'args:Expression*'
+	__fields__ = 'args*'
 
 	def isPure(self):
 		return True

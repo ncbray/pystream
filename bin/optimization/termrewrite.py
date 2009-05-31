@@ -46,7 +46,7 @@ def isAnalysis(arg, tests):
 class DirectCallRewriter(object):
 	def __init__(self, extractor):
 		self.extractor = extractor
-		self.exports = extractor.stubs.exports
+		self.exports = extractor.stubs.exports if hasattr(extractor, 'stubs') else {}
 		self.rewrites = {}
 
 	def _getOrigin(self, func):

@@ -26,6 +26,8 @@ exceptionTraceback 	= Definition('exception traceback')
 flowInfo 		= Definition('flow information')
 
 class DeferedMerge(OpaqueStackElement):
+	__slots__ = 'target', 'elements', 'onExits'
+
 	def __init__(self, elements, onExits):
 		self.target = None
 		self.elements = elements

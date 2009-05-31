@@ -449,8 +449,21 @@ class InstructionTranslator(object):
 
 	# Structure manipulation
 
+	def doListAppend(self, target, arg):
+		self.pushOp(GetAttr(target, self.makeConstant('append')))
+		expr = self.getArg()
+		self.emit(Discard(Call(expr, (arg,), (), None, None)))
+
 	def op_BUILD_LIST(self, count):
+		args = self.getArgs(count)
+
 		self.pushOp(Allocate(Existing(self.extractor.getObject(list))))
+
+		# HACK Append the arguments
+		target = self.peek()
+		for arg in args:
+			self.doListAppend(target, arg)
+
 		#self.pushOp(BuildList(self.getArgs(count)))
 
 	def op_BUILD_MAP(self, count):
@@ -520,12 +533,8 @@ class InstructionTranslator(object):
 	def op_LIST_APPEND(self):
 		arg = self.getArg()
 		target = self.getArg()
+		self.doListAppend(target, arg)
 
-		self.pushOp(GetAttr(target, self.makeConstant('append')))
-
-		expr = self.getArg()
-
-		self.emit(Discard(Call(expr, (arg,), (), None, None)))
 
 	def op_SLICE_0(self):
 		expr = self.getArg()

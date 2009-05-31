@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from . decompiler_common import TestDecompiler
+from . decompiler_common import TestDecompiler, Dummy
 
 class TestException(Exception):
 	pass
@@ -159,7 +159,7 @@ def testexceptallelse1(s, v):
 		v += 1
 		v *= 2
 		v *= 2
-	
+
 	return v
 """
 	inputs =[[False, 0], [True, 0]]
@@ -179,7 +179,7 @@ def testexceptallelse2(s, v):
 		v += 1
 		v *= 2
 		v *= 2
-	
+
 	return v
 """
 	inputs =[[False, 0], [True, 0]]
@@ -198,7 +198,7 @@ def testexceptallelse3(s, v):
 		v *= 2
 		v *= 2
 		return v
-	
+
 	return v
 """
 	inputs =[[False, 0], [True, 0]]
@@ -263,7 +263,7 @@ def testtryelse3(s):
 	return v
 """
 	inputs =[[False], [True]]
-	
+
 
 class TestTryElse4Decompile(TestDecompiler):
 	s = """
@@ -290,7 +290,7 @@ def testdegeneratetry(s):
 			raise Exception
 	except:
 		pass
-		
+
 	return v
 """
 	inputs = [[False], [True]]
@@ -310,11 +310,11 @@ def simplefinally(s):
 				v *= 2
 	except:
 		pass
-		
+
 	return v
 """
 	inputs = [[False], [True]]
-	
+
 class TestExceptFinally(TestDecompiler):
 	s = """
 def f():
@@ -356,3 +356,30 @@ def tryexceptpassfinally():
 	return i
 """
 	inputs = [[]]
+
+
+
+def makeMod1():
+	d = Dummy()
+	d.__all__ = ('a', 'b', 'c')
+	d.x = 4
+	return d
+
+def makeMod2():
+	d = Dummy()
+	d.w = 3
+	d.x = 4
+	d.y = 5
+	d.z = 6
+	return d
+
+
+class TestComplexListComprehension(TestDecompiler):
+	s = """
+def complexlistcomp(module):
+    try:
+        return list(module.__all__)
+    except AttributeError:
+        return [n for n in dir(module) if n[0] != '_']
+"""
+	inputs = [[makeMod1()], [makeMod2()]]

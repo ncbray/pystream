@@ -557,8 +557,9 @@ class SwitchRegion(SESERegion):
 		self.f = f
 
 class AbstractShortCircut(object):
-	def __init__(self, region, *terms):
+	def __init__(self, region, origin, *terms):
 		self.region = region
+		self.origin = origin
 
 		self.terms = []
 
@@ -584,7 +585,7 @@ class AbstractShortCircut(object):
 
 	def replaceDefault(self, newterm):
 		inital = self.terms[0].replaceDefault(newterm)
-		return type(self)(self.region, inital, *self.terms[1:])
+		return type(self)(self.region, self.origin, inital, *self.terms[1:])
 
 	def dump(self, tabs = ''):
 		print tabs+type(self).__name__

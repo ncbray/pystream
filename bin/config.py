@@ -7,7 +7,7 @@ base, junk = os.path.split(__file__)
 outputDirectory = os.path.normpath(os.path.join(base, '..', 'summaries'))
 
 
-if True:
+if False:
 	testOnly = [
 		('tests', 'test_full'),
 		#('tests', 'shape', 'test_shape'),
@@ -16,10 +16,10 @@ if True:
 	]
 
 testExclude = [
-	# Exclude directories
-	('tests', 'decompiler'),
+	# Known to be broken
+	('tests', 'decompiler', 'test_exception'),
 
-	# Exclude files
+	# Not completely implemented
 	('tests', 'test_lattice'),
 	('tests', 'test_sese'),
 	]

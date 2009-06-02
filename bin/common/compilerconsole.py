@@ -28,8 +28,17 @@ class Scope(object):
 		return Scope(self, name)
 
 
+class ConsoleScopeManager(object):
+	__slots__ = 'console', 'name'
+	def __init__(self, console, name):
+		self.console = console
+		self.name = name
 
+	def __enter__(self):
+		self.console.begin(self.name)
 
+	def __exit__(self, type, value, tb):
+		self.console.end()
 
 class CompilerConsole(object):
 	def __init__(self, out=None):
@@ -56,6 +65,9 @@ class CompilerConsole(object):
 		self.current.end()
 		self.output("end   %s %s" % (self.path(), util.elapsedTimeString(self.current.elapsed)), 0)
 		self.current = self.current.parent
+
+	def scope(self, name):
+		return ConsoleScopeManager(self, name)
 
 	def blame(self):
 		caller = sys._getframe(2)

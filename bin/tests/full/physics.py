@@ -87,15 +87,13 @@ class Material(object):
 		self.color = vec3(0.125, 0.125, 1.0)
 
 class VSOut(object):
-	__slots__ = 'position'
-	def __init__(self, position):
-		self.position = position
+	__slots__ = 'position', 'point_size'
 
 class FSIn(object):
-	__slots__ = 'coord', 'depth', 'frontFacing',
+	__slots__ = 'coord', 'depth', 'front_facing',
 
 class FSOut(object):
-	__slots__ = 'color', 'depth'
+	__slots__ = 'colors', 'depth'
 
 class Shader(object):
 	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'lightPos', 'ambient', 'material'
@@ -129,27 +127,35 @@ class Shader(object):
 		projected = self.projection*newpos
 		newnormal = (trans*vec4(normal.x, normal.y, normal.z, 1.0)).xyz
 
-		return VSOut(projected), (newpos.xyz, newnormal)
+		vsout = VSOut()
+		vsout.position = projected
+
+		return vsout, (newpos.xyz, newnormal)
 
 	def shadeFragment(self, pos, normal):
 		n = normal.normalize()
 
-		return n*0.5+vec3(0.5, 0.5, 0.5)
+		if True:
+			mainColor = n*0.5+vec3(0.5, 0.5, 0.5)
 
+		else:
+			# Light into camera space
+			trans = self.worldToCamera
+			lightPos = trans*self.lightPos
 
-		# Light into camera space
-		trans = self.worldToCamera
-		lightPos = trans*self.lightPos
+			lightDir  = lightPos.xyz-pos.xyz
+			lightDist = lightDir.length()
+			lightDir  = lightDir/lightDist
 
-		lightDir  = lightPos.xyz-pos.xyz
-		lightDist = lightDir.length()
-		lightDir  = lightDir/lightDist
+			lightAtten = 1.0/(0.01+lightDist*lightDist)
+			transfer = nldot(lightDir, n)
+			modulated = transfer*lightAtten
 
-		lightAtten = 1.0/(0.01+lightDist*lightDist)
-		transfer = nldot(lightDir, n)
-		modulated = transfer*lightAtten
+			mainColor = self.material.color*(self.ambient+modulated)
 
-		return self.material.color*(self.ambient+modulated)
+		fsout = FSOut()
+		fsout.colors = (mainColor,)
+		return fsout
 
 def nldot(a, b):
 	return max(a.dot(b), 0.0)

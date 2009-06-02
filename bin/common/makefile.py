@@ -173,7 +173,7 @@ class ArrayDeclaration(PathDeclaration):
 		self.index = index
 
 	def _extractPart(self, extractor):
-		raise NotImplementedError
+		return ('Array', extractor.getObject(self.index))
 
 # A extension to the makefile for spesifying glsl-spesific things.
 class GLSLDeclaration(object):

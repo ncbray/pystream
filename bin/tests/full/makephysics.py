@@ -58,6 +58,14 @@ attr(inst(physics.Material), 'color',    inst(vec.vec3))
 
 
 glsl.output(attrslot(inst(physics.VSOut), 'position'), 'gl_Position');
+glsl.output(attrslot(inst(physics.VSOut), 'point_size'), 'gl_PointSize');
+
+
+# Fragment shader
+for i in range(8):
+	glsl.output(attrslot(inst(physics.FSOut), 'colors').arrayslot(i), 'gl_FragData[%d]' % i);
+glsl.output(attrslot(inst(physics.FSOut), 'depth'), 'gl_FragDepth');
+
 
 shader = cls(physics.Shader)
 #shader.shader(inst(vec.vec4), inst(vec.vec3))

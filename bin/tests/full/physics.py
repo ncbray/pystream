@@ -129,12 +129,15 @@ class Shader(object):
 		projected = self.projection*newpos
 		newnormal = (trans*vec4(normal.x, normal.y, normal.z, 1.0)).xyz
 
-		return newpos.xyz, newnormal
+		return VSOut(projected), (newpos.xyz, newnormal)
 
 	def shadeFragment(self, pos, normal):
 		n = normal.normalize()
 
-		# Light in world space
+		return n*0.5+vec3(0.5, 0.5, 0.5)
+
+
+		# Light into camera space
 		trans = self.worldToCamera
 		lightPos = trans*self.lightPos
 

@@ -3,23 +3,45 @@ from language.glsl import codegen
 
 from . pythonshader import PythonShader
 
+class CompilerContext(object):
+	def __init__(self, console, extractor, interface):
+		self.console   = console
+		self.extractor = extractor
+		self.interface = interface
+
+
+
+
+def makePathMatcher(interface):
+	root = {}
+	for path, name, input, output in interface.glsl.attr:
+		current = root
+		for part in reversed(path[1:]):
+			if part not in current:
+				current[part] = {}
+			current = current[part]
+
+		current[path[0]] = name
+
+	return root
+
 def translate(console, dataflow, interface):
-	console.begin('translate to glsl')
+	context = CompilerContext(console, dataflow.extractor, interface)
 
-	try:
-		translator = GLSLTranslator(intrinsics.makeIntrinsicRewriter(dataflow.extractor))
+	with context.console.scope('translate to glsl'):
+		pathMatcher = makePathMatcher(context.interface)
 
-		for code in interface.entryCode():
-			console.output(str(code))
+		translator = GLSLTranslator(intrinsics.makeIntrinsicRewriter(context.extractor))
 
-			shader = PythonShader(code)
+		# HACK should only target shader?
+		for code in context.interface.entryCode():
 
-			iotransform.evaluateShader(console, dataflow, shader)
-
+			shader = PythonShader(code, pathMatcher)
+			iotransform.evaluateShader(context, shader, pathMatcher)
 			result = translator.processShader(shader)
 
-			cg = codegen.GLSLCodeGen()
-			print cg(result)
+			print str(code)
 			print
-	finally:
-		console.end()
+			print codegen.GLSLCodeGen()(result)
+			print
+			print

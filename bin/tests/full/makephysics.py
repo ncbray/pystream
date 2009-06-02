@@ -57,6 +57,8 @@ attr(inst(physics.Shader), 'material',    inst(physics.Material))
 attr(inst(physics.Material), 'color',    inst(vec.vec3))
 
 
+glsl.output(attrslot(inst(physics.VSOut), 'position'), 'gl_Position');
+
 shader = cls(physics.Shader)
 #shader.shader(inst(vec.vec4), inst(vec.vec3))
 shader.method('shadeVertex', inst(vec.vec4), inst(vec.vec3))

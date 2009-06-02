@@ -11,6 +11,9 @@ import optimization.dce
 from . import intrinsics
 
 def hasIntrinsicType(extractor, lcl):
+	if lcl.annotation.references is None:
+		return False
+
 	for ref in lcl.annotation.references[0]:
 		obj = ref.xtype.obj
 		extractor.ensureLoaded(obj)
@@ -114,7 +117,7 @@ class OutputTransform(StrictTypeDispatcher):
 	@dispatch(ast.Store)
 	def visitStore(self, node):
 		defn = self.flow.lookup(node.expr)
-		if isPath(defn) and not hasIntrinsicType(self.extractor, node.expr):
+		if isPath(defn) and not hasIntrinsicType(self.context.extractor, node.expr):
 			newdefn = self.shader.extend(defn, node, node.value, 'output')
 			self.flow.define(newdefn.local, newdefn)
 			return self(ast.Assign(node.value, [newdefn.local]))
@@ -154,28 +157,31 @@ class OutputTransform(StrictTypeDispatcher):
 
 		return assigns
 
-def transformOutputs(extractor, shader):
+def transformOutputs(context, shader, pathMatcher):
 	rewrite = OutputTransform()
 
 	traverse = reverse.ReverseFlowTraverse(meet, rewrite)
 	t = reverse.MutateCode(traverse)
 
 	# HACK
-	rewrite.flow      = traverse.flow
-	rewrite.shader    = shader
-	rewrite.extractor = extractor
+	rewrite.flow        = traverse.flow
+	rewrite.context     = context
+	rewrite.shader      = shader
+	rewrite.pathMatcher = pathMatcher
 
 	t(shader.code)
 
-def evaluateShader(console, dataflow, shader):
-	transformInputs(dataflow.extractor, shader)
-	transformOutputs(dataflow.extractor, shader)
+
+def getOutputs(extractor, shader):
+	liveOut = set()
+	for path in shader.pathToLocal.iterkeys():
+		if path.frequency == 'output' and hasIntrinsicType(extractor, path.local):
+			liveOut.add(path.local)
+	return liveOut
+
+def evaluateShader(context, shader, pathMatcher):
+	transformInputs(context.extractor, shader)
+	transformOutputs(context, shader, pathMatcher)
 
 	# Kill orphans
-	liveOut = set()
-
-	for path in shader.pathToLocal.iterkeys():
-		if path.frequency == 'output' and hasIntrinsicType(dataflow.extractor, path.local):
-			liveOut.add(path.local)
-
-	optimization.dce.dce(dataflow.extractor, shader.code, liveOut)
+	optimization.dce.dce(context.extractor, shader.code, getOutputs(context.extractor, shader))

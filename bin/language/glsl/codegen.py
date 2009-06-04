@@ -212,6 +212,7 @@ class GLSLCodeGen(StrictTypeDispatcher):
 		finder = FindLocals()
 		finder.processCode(node)
 
+		version = "#version 130"
 
 		uniformdecl = self.makeDecl(finder.uniforms)
 		inputdecl   = self.makeDecl(finder.inputs)
@@ -221,4 +222,4 @@ class GLSLCodeGen(StrictTypeDispatcher):
 
 		localdecl = self.makeLocalDecl(finder.locals)
 
-		return "%s\n%s %s(%s)\n{\n%s\n%s}\n" % (header, self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.parameters]), localdecl, self(node.body))
+		return "%s\n\n%s\n%s %s(%s)\n{\n%s\n%s}\n" % (version, header, self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.parameters]), localdecl, self(node.body))

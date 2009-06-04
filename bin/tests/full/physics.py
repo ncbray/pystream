@@ -125,7 +125,7 @@ class Shader(object):
 		trans     = (self.worldToCamera*self.objectToWorld)
 		newpos    = (trans*pos)
 		projected = self.projection*newpos
-		newnormal = (trans*vec4(normal.x, normal.y, normal.z, 1.0)).xyz
+		newnormal = (trans*vec4(normal.x, normal.y, normal.z, 0.0)).xyz
 
 		vsout = VSOut()
 		vsout.position = projected

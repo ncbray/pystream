@@ -1,4 +1,5 @@
 import argwrapper
+import abstractcode.shaderprogram
 
 class PathDeclaration(object):
 	__slots__ = 'parent'
@@ -89,8 +90,11 @@ class GLSLDeclaration(object):
 			vsobj, vscode = interface.getMethCode(shader, 'shadeVertex', extractor)
 			fsobj, fscode = interface.getMethCode(shader, 'shadeFragment', extractor)
 
-			interface.createEntryPoint(vscode, vsobj, (shader,)+args)
-			interface.createEntryPoint(fscode, fsobj, (shader,)+args)
+			#interface.createEntryPoint(vscode, vsobj, (shader,)+args)
+			#interface.createEntryPoint(fscode, fsobj, (shader,)+args)
+
+			shaderargs = (vsobj, fsobj, shader,)+args
+			interface.createEntryPoint(abstractcode.shaderprogram.ShaderProgram(), None, shaderargs)
 
 	def __nonzero__(self):
 		return bool(self._shader)

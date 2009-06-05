@@ -38,17 +38,6 @@ class CalleeParams(object):
 	def __repr__(self):
 		return "params(self=%r, params=%r, names=%r, vparam=%r, kparam=%r)" % (self.selfparam, self.params, self.paramnames, self.vparam, self.kparam)
 
-	@classmethod
-	def fromFunction(cls, func):
-		code = func.code
-		assert not hasattr(func, 'defaults'), "Temporary limitation"
-		return cls(code.selfparam, code.parameters, code.parameternames, [], code.vparam, code.kparam, code.returnparams)
-
-	@classmethod
-	def fromCode(cls, code):
-		return cls(code.selfparam, code.parameters, code.parameternames, [], code.vparam, code.kparam, code.returnparams)
-
-
 # arg  -> param / vparam
 # varg -> param / vparam
 # kwd  -> param / kparam

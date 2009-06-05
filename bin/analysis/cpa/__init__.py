@@ -172,7 +172,7 @@ class InterproceduralDataflow(object):
 		self.constraints.add(constraint)
 
 	def _signature(self, code, selfparam, params):
-		assert isinstance(code, ast.Code), type(code)
+		assert code.isAbstractCode(), type(code)
 		#assert not isinstance(code, (AbstractSlot, extendedtypes.ExtendedType)), code
 		assert selfparam is None or selfparam is util.cpa.Any or isinstance(selfparam,  extendedtypes.ExtendedType), selfparam
 		for param in params:
@@ -182,7 +182,7 @@ class InterproceduralDataflow(object):
 
 	def canonicalContext(self, srcOp, code, selfparam, params):
 		assert isinstance(srcOp, base.OpContext), type(srcOp)
-		assert isinstance(code, ast.Code), type(code)
+		assert code.isAbstractCode(), type(code)
 
 		sig     = self._signature(code, selfparam, params)
 		opPath  = self.advanceOpPath(srcOp.context.opPath, srcOp.op)
@@ -314,7 +314,8 @@ class InterproceduralDataflow(object):
 				code = context.signature.code
 				if code not in self.liveCode:
 					# HACK convert the calls before analysis to eliminate UnpackTuple nodes.
-					callConverter(self.extractor, code)
+					if isinstance(code, ast.Code):
+						callConverter(self.extractor, code)
 					self.liveCode.add(code)
 
 				# Check to see if we can just fold it.
@@ -382,7 +383,7 @@ class InterproceduralDataflow(object):
 
 	def getReturnSlot(self, ep):
 		if ep not in self.entryPointReturn:
-			self.entryPointReturn[ep] = self.makeExternalSlot('return_%s' % ep.code.name)
+			self.entryPointReturn[ep] = self.makeExternalSlot('return_%s' % ep.name())
 		return self.entryPointReturn[ep]
 
 	def addEntryPoint(self, entryPoint):

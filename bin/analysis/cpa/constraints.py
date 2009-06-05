@@ -304,7 +304,7 @@ class AbstractCallConstraint(CachedConstraint):
 
 		assert code, "Attempted to call uncallable object:\n%r\n\nat op:\n%r\n\nwith args:\n%r\n\n" % (expr.obj, self.op, vargs)
 
-		callee = util.calling.CalleeParams.fromCode(code)
+		callee = code.codeParameters()
 		numArgs = len(self.args)+vlength
 		info = util.calling.callStackToParamsInfo(callee, expr is not None, numArgs, False, None, False)
 
@@ -345,7 +345,7 @@ class DirectCallConstraint(AbstractCallConstraint):
 	__slots__ = ('code',)
 
 	def __init__(self, op, code, selfarg, args, kwds, vargs, kargs, target):
-		assert isinstance(code, ast.Code), type(code)
+		assert code.isAbstractCode(), type(code)
 		AbstractCallConstraint.__init__(self, op, selfarg, args, kwds, vargs, kargs, target)
 		self.code = code
 
@@ -361,7 +361,7 @@ class SimpleCallConstraint(CachedConstraint):
 
 	def __init__(self, op, code, selftype, slots, caller):
 		assert isinstance(op, base.OpContext), type(op)
-		assert isinstance(code, ast.Code), type(code)
+		assert code.isAbstractCode(), type(code)
 		assert selftype is None or isinstance(selftype, extendedtypes.ExtendedType), selftype
 		CachedConstraint.__init__(self, *slots)
 

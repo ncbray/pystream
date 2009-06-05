@@ -8,6 +8,9 @@ from pythonbase import *
 # Allows Existing.object to be typed.
 from . import program
 
+# For Code
+import util.calling
+
 class Existing(Reference):
 	__slots__  = 'object'
 	__shared__ = True
@@ -350,6 +353,17 @@ class Code(CompoundStatement):
 
 	def __repr__(self):
 		return "Code(%s/%d)" % (self.name, id(self))
+
+	### The abstract code interface ###
+	def isAbstractCode(self):
+		return True
+
+	def codeName(self):
+		return self.name
+
+	def codeParameters(self):
+		return util.calling.CalleeParams(self.selfparam, self.parameters, self.parameternames, [], self.vparam, self.kparam, self.returnparams)
+
 
 class Allocate(LLExpression):
 	__fields__ = 'expr:Reference'

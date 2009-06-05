@@ -53,3 +53,7 @@ def remapContextual(cdata, remap, translator=None):
 		cout.append(data)
 
 	return makeContextualAnnotation(cout)
+
+
+class Annotation(object):
+	__slots__ = ()

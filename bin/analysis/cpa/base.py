@@ -167,7 +167,7 @@ externalFunctionContext = AnalysisContext(externalSignature, None, None)
 class OpContext(CanonicalObject):
 	__slots__ ='code', 'op', 'context',
 	def __init__(self, code, op, context):
-		assert isinstance(code, ast.Code), code
+		assert code.isAbstractCode(), type(code)
 		assert isinstance(context, AnalysisContext), context
 
 		self.setCanonical(code, op, context)
@@ -180,7 +180,7 @@ class OpContext(CanonicalObject):
 class CodeContext(CanonicalObject):
 	__slots__ = 'code', 'context',
 	def __init__(self, code, context):
-		assert isinstance(code, ast.Code), code
+		assert code.isAbstractCode(), type(code)
 		assert isinstance(context, AnalysisContext), context
 
 		self.setCanonical(code, context)

@@ -49,6 +49,9 @@ class EntryPoint(object):
 		self.group    = None
 		self.contexts = []
 
+	def name(self):
+		return self.code.codeName()
+
 class InterfaceDeclaration(object):
 	__slots__ = 'func', 'cls', 'attr', 'entryPoint', 'translated', 'glsl'
 
@@ -81,6 +84,8 @@ class InterfaceDeclaration(object):
 		self.translated = True
 
 	def createEntryPoint(self, code, selfarg, args, kwds=None, varg=None, karg=None, group=None):
+		if selfarg is None: selfarg = nullWrapper
+		if args is None: args = []
 		if kwds is None: kwds = []
 		if varg is None: varg = nullWrapper
 		if karg is None: karg = nullWrapper

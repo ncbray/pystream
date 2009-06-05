@@ -3,6 +3,8 @@ from language.python import ast
 
 from . simplify import simplify
 
+from analysis.astcollector import getOps
+
 # Determines the technical feasability of inlining
 class CodeInliningAnalysis(StrictTypeDispatcher):
 	def __init__(self):
@@ -81,7 +83,9 @@ class CodeInliningAnalysis(StrictTypeDispatcher):
 
 		# Inital value
 		self.inlinable = not node.vparam and not node.kparam and not node.annotation.descriptive
-		self(node.ast)
+
+		if self.inlinable:
+			self(node.ast)
 
 		self.canInline[node] = self.inlinable
 		self.numOps[node] = self.ops
@@ -254,7 +258,7 @@ class CodeInliningTransform(StrictTypeDispatcher):
 
 				map.append(code.annotation.contexts.index(context))
 			else:
-				# Don't merge contexts, as precision will be list??
+				# Don't merge contexts, as precision will be lost?
 				if self.preserveContexts: return None
 
 				multi = []
@@ -315,19 +319,26 @@ class CodeInliningTransform(StrictTypeDispatcher):
 
 	def process(self, node):
 		if node not in self.processed:
+			assert node.isAbstractCode(), type(node)
+
 			self.processed.add(node)
 			self.trace.add(node)
 
-			self.modified = False
-			self.code = node
-			result = self(node.ast)
-			self.code = None
+			if isinstance(node, ast.Code):
+				self.modified = False
+				self.code = node
+				result = self(node.ast)
+				self.code = None
 
-			if self.modified:
-				node.ast = result
-				# Always done imediately after inlining, so if we inline
-				# this function, less needs to be processed.
-				simplify(self.dataflow.extractor, self.db, node)
+				if self.modified:
+					node.ast = result
+					# Always done imediately after inlining, so if we inline
+					# this function, less needs to be processed.
+					simplify(self.dataflow.extractor, self.db, node)
+			else:
+				ops, lcls = getOps(node)
+				for op in ops:
+					self.processInvocations(op)
 
 			self.trace.remove(node)
 

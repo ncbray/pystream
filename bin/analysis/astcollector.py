@@ -43,8 +43,12 @@ class GetOps(object):
 		visitAllChildren(self, node)
 
 	def process(self, node):
-		for child in node.children():
-			self(child)
+		if isinstance(node, ast.Code):
+			for child in node.children():
+				self(child)
+		else:
+			node.collectNodes(self)
+
 		return self.ops, self.locals
 
 

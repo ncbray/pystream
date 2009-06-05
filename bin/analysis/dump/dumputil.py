@@ -59,10 +59,12 @@ def codeShortName(code):
 		vargs = None
 		kargs = None
 	else:
-		name = code.name
-		args = [p if p is not None else '!' for p in code.parameternames]
-		vargs = None if code.vparam is None else code.vparam.name
-		kargs = None if code.kparam is None else code.kparam.name
+		name = code.codeName()
+		callee = code.codeParameters()
+
+		args = [p if p is not None else '!' for p in callee.paramnames]
+		vargs = None if callee.vparam is None else callee.vparam.name
+		kargs = None if callee.kparam is None else callee.kparam.name
 
 	if vargs is not None: args.append("*"+vargs)
 	if kargs is not None: args.append("**"+kargs)

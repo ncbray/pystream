@@ -40,7 +40,7 @@ class LocalSlotName(BaseSlotName):
 		return True
 
 	def __repr__(self):
-		return 'local(%s, %r, %d)' % (self.code.name, self.local, id(self.context))
+		return 'local(%s, %r, %d)' % (self.code.codeName(), self.local, id(self.context))
 
 
 class ExistingSlotName(BaseSlotName):
@@ -63,7 +63,7 @@ class ExistingSlotName(BaseSlotName):
 		return True
 
 	def __repr__(self):
-		return 'existing(%s, %r, %d)' % (self.code.name, self.object, id(self.context))
+		return 'existing(%s, %r, %d)' % (self.code.codeName(), self.object, id(self.context))
 
 
 class FieldSlotName(BaseSlotName):

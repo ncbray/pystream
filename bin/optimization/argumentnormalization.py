@@ -41,6 +41,9 @@ class ArgumentNormalizationAnalysis(object):
 			visitAllChildren(self, node)
 
 	def process(self, node):
+		if node.annotation.descriptive:
+			return False, 0
+
 		if node.vparam:
 			refs = node.vparam.annotation.references
 			if refs is None: return False, 0

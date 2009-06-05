@@ -320,5 +320,7 @@ class ExtractDataflow(object):
 	def visitCode(self, node):
 		self(node.ast)
 
+	### Entry point ###
 	def process(self):
-		self(self.code)
+		if isinstance(self.code, ast.Code):
+			self(self.code)

@@ -38,7 +38,7 @@ class CPASignature(util.canonical.CanonicalObject):
 		return len(self.params)
 
 	def __repr__(self):
-		return "%s(code=%s, self=%r, params=%r)" % (type(self).__name__, self.code.name, self.selfparam, self.params)
+		return "%s(code=%s, self=%r, params=%r)" % (type(self).__name__, self.code.codeName(), self.selfparam, self.params)
 
 # Abstract base class
 class CPAInfoProvider(object):

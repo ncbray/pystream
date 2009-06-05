@@ -17,7 +17,7 @@ from analysis.astcollector import getOps
 
 contextSchema   = structure.WildcardSchema()
 operationSchema = structure.TypeSchema((ast.Expression, ast.Statement))
-codeSchema  = structure.TypeSchema(ast.Code)
+codeSchema      = structure.CallbackSchema(lambda code: code.isAbstractCode())
 
 def wrapOpContext(schema):
 	schema = mapping.MappingSchema(contextSchema, schema)
@@ -443,7 +443,7 @@ class LifetimeAnalysis(object):
 					self.entries.add((code, context))
 
 
-			assert isinstance(code, ast.Code), type(code)
+			assert code.isAbstractCode(), type(code)
 			ops, lcls = getOps(code)
 			for op in ops:
 				if op.annotation.invokes is not None:

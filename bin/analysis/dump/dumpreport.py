@@ -132,7 +132,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 
 
 	# Psedo-python output
-	if func is not None:
+	if func is not None and isinstance(func, ast.Code):
 		out.begin('pre')
 		scg.walk(func)
 		out.end('pre')
@@ -493,7 +493,7 @@ def dumpReport(name, data, interface):
 		children = tree.get(node)
 		if children:
 			out.begin('ul')
-			for func in sorted(children, key=lambda f: f.name):
+			for func in sorted(children, key=lambda f: f.codeName()):
 				out.begin('li')
 				makeFunctionFile(func)
 				outputCodeShortName(out, func, links)

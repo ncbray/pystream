@@ -17,13 +17,26 @@ class TypeSchema(base.Schema):
 	def validate(self, args):
 		if not isinstance(args, self.type_):
 			raise base.SchemaError, "Expected type %r, got %r." % (self.type_, type(args))
-		
+
 	def instance(self):
 		raise base.SchemaError, "Cannot directly create instances of types."
 
 	def missing(self):
 		return self.instance()
 
+class CallbackSchema(base.Schema):
+	def __init__(self, validator):
+		self.validator = validator
+
+	def validate(self, args):
+		if not self.validator(args):
+			raise base.SchemaError, "Callback did not validate %r." % (type(args))
+
+	def instance(self):
+		raise base.SchemaError, "Cannot directly create instances of callback schemas."
+
+	def missing(self):
+		return self.instance()
 
 class StructureSchema(base.Schema):
 	__slots__ = 'fields', 'map', 'type_'
@@ -64,7 +77,7 @@ class StructureSchema(base.Schema):
 
 		if len(args) != len(self.fields):
 			raise base.SchemaError, "Structure has %d fields, but %d fields were given." % (len(self.fields), len(args))
-		
+
 		for (name, field), arg in zip(self.fields, args):
 			field.validate(arg)
 
@@ -81,10 +94,10 @@ class StructureSchema(base.Schema):
 			result, fieldChanged = fieldSchema.inplaceMerge(targetfield, *argfields)
 			accum.append(result)
 			changed |= fieldChanged
-			
+
 		output = self.type_(*accum)
 		return output, changed
-		
+
 	def merge(self, *args):
 		for arg in args: self.validate(arg)
 
@@ -93,6 +106,6 @@ class StructureSchema(base.Schema):
 		for (name, fieldSchema), argfields in zip(self.fields, zip(*args)):
 			result = fieldSchema.merge(*argfields)
 			accum.append(result)
-			
+
 		output = self.type_(*accum)
 		return output

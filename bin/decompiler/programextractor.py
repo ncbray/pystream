@@ -227,6 +227,16 @@ class Extractor(object):
 		code = self.getCall(fobj)
 		return fobj, code
 
+
+	# Returns the extacted object, plus the slot name for the attribute.
+	def getObjectAttr(self, obj, name):
+		# TODO inherited slots?
+		d = obj.type.pyobj.__dict__
+		assert name in d, "%r does not have attribute %r" % (obj, name)
+		attrName = self.getObject(util.uniqueSlotName(d[name]))
+		return ('Attribute', attrName)
+
+
 	def __getObject(self, o, t=False):
 		assert not isinstance(o, program.AbstractObject), o
 

@@ -26,7 +26,7 @@ class AttrDeclaration(PathDeclaration):
 	__slots__ = 'obj', 'name'
 
 	def __init__(self, obj, name):
-		assert isinstance(obj, argwrapper.ArgWrapper), obj
+		assert isinstance(obj, argwrapper.ArgumentWrapper), obj
 		assert isinstance(name, str), name
 
 		self.parent = None
@@ -53,6 +53,7 @@ class ArrayDeclaration(PathDeclaration):
 class GLSLDeclaration(object):
 	def __init__(self):
 		self.attr = []
+		self._shader = []
 
 	def input(self, path, name):
 		self._attr(path, name, True, False)
@@ -63,6 +64,10 @@ class GLSLDeclaration(object):
 	def inout(self, path, name):
 		self._attr(path, name, True, True)
 
+	def shader(self, shadercls, *args):
+		assert isinstance(shadercls, type)
+		self._shader.append((argwrapper.InstanceWrapper(shadercls), args))
+
 	# Declares that the specified path through the heap should be replaced
 	# with a special variable named "name".
 	def _attr(self, path, name, input, output):
@@ -70,7 +75,7 @@ class GLSLDeclaration(object):
 		assert isinstance(name, str), name
 		self.attr.append((path, name, input, output))
 
-	def _extract(self, extractor):
+	def _extract(self, extractor, interface):
 		attr = []
 
 		for path, name, input, output in self.attr:
@@ -78,3 +83,14 @@ class GLSLDeclaration(object):
 			attr.append((newpath, name, input, output))
 
 		self.attr = attr
+
+
+		for shader, args in self._shader:
+			vsobj, vscode = interface.getMethCode(shader, 'shadeVertex', extractor)
+			fsobj, fscode = interface.getMethCode(shader, 'shadeFragment', extractor)
+
+			interface.createEntryPoint(vscode, vsobj, (shader,)+args)
+			interface.createEntryPoint(fscode, fsobj, (shader,)+args)
+
+	def __nonzero__(self):
+		return bool(self._shader)

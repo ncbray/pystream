@@ -30,15 +30,15 @@ class EntryPoint(object):
 	__slots__ = 'code', 'selfarg', 'args', 'kwds', 'varg', 'karg', 'group', 'contexts'
 
 	def __init__(self, code, selfarg, args, kwds, varg, karg):
-		assert isinstance(selfarg, ArgWrapper), selfarg
+		assert isinstance(selfarg, ArgumentWrapper), selfarg
 
 		for arg in args:
-			assert isinstance(arg, ArgWrapper), arg
+			assert isinstance(arg, ArgumentWrapper), arg
 
 		assert not kwds
 
-		assert isinstance(varg, ArgWrapper), varg
-		assert isinstance(karg, ArgWrapper), karg
+		assert isinstance(varg, ArgumentWrapper), varg
+		assert isinstance(karg, ArgumentWrapper), karg
 
 		self.code     = code
 		self.selfarg  = selfarg
@@ -76,11 +76,15 @@ class InterfaceDeclaration(object):
 		self._extractFunc(extractor)
 		self._extractCls(extractor)
 
-		self.glsl._extract(extractor)
+		self.glsl._extract(extractor, self)
 
 		self.translated = True
 
-	def createEntryPoint(self, code, selfarg, args, kwds, varg, karg, group):
+	def createEntryPoint(self, code, selfarg, args, kwds=None, varg=None, karg=None, group=None):
+		if kwds is None: kwds = []
+		if varg is None: varg = nullWrapper
+		if karg is None: karg = nullWrapper
+
 		return self.createEntryPointRaw(code, selfarg, args, kwds, varg, karg, group)
 
 	def createEntryPointRaw(self, code, selfarg, args, kwds, varg, karg, group):
@@ -109,7 +113,7 @@ class InterfaceDeclaration(object):
 	def _extractCls(self, extractor):
 		for cls in self.cls:
 			tobj = ExistingWrapper(cls.typeobj)
-			inst = InstWrapper(cls.typeobj)
+			inst = InstanceWrapper(cls.typeobj)
 
 			call = extractor.stubs.exports['interpreter_call']
 			getter = extractor.stubs.exports['interpreter_getattribute']
@@ -158,7 +162,7 @@ class InterfaceDeclaration(object):
 		self.attr = attrs
 
 	def __nonzero__(self):
-		return bool(self.func) or bool(self.cls)
+		return bool(self.func) or bool(self.cls) or bool(self.glsl)
 
 
 	def entryCode(self):

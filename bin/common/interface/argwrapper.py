@@ -1,8 +1,8 @@
-class ArgWrapper(object):
+class ArgumentWrapper(object):
 	pass
 
 # Thin wrappers made to work with decompiler.programextractor
-class InstWrapper(ArgWrapper):
+class InstanceWrapper(ArgumentWrapper):
 	def __init__(self, typeobj):
 		self.typeobj = typeobj
 
@@ -12,7 +12,7 @@ class InstWrapper(ArgWrapper):
 	def get(self, dataflow):
 		return dataflow.getInstanceSlot(self.typeobj)
 
-class ExistingWrapper(ArgWrapper):
+class ExistingWrapper(ArgumentWrapper):
 	def __init__(self, pyobj):
 		self.pyobj = pyobj
 
@@ -22,7 +22,7 @@ class ExistingWrapper(ArgWrapper):
 	def get(self, dataflow):
 		return dataflow.getExistingSlot(self.pyobj)
 
-class ReturnWrapper(ArgWrapper):
+class ReturnWrapper(ArgumentWrapper):
 	def __init__(self, ep):
 		assert isinstance(ep, EntryPoint), repr(ep)
 		self.ep = ep
@@ -31,7 +31,7 @@ class ReturnWrapper(ArgWrapper):
 		return dataflow.getReturnSlot(self.ep)
 
 # Used when an argument, such as varg or karg, is not present.
-class NullWrapper(ArgWrapper):
+class NullWrapper(ArgumentWrapper):
 	def get(self, dataflow):
 		return None
 

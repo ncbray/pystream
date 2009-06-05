@@ -45,15 +45,15 @@ class Makefile(object):
 		return ExistingWrapper(value)
 
 	def declInstance(self, typename):
-		return InstWrapper(typename)
+		return InstanceWrapper(typename)
 
 	def declConfig(self, **kargs):
 		for k, v in kargs.iteritems():
 			self.config[k] = v
 
 	def declAttr(self, src, attr, dst):
-		assert isinstance(src, InstWrapper), src
-		assert isinstance(dst, InstWrapper), dst
+		assert isinstance(src, InstanceWrapper), src
+		assert isinstance(dst, InstanceWrapper), dst
 		self.interface.attr.append((src, attr, dst))
 
 	def declFunction(self, func, *args):

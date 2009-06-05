@@ -120,7 +120,6 @@ class Shader(object):
 
 		self.material = Material()
 
-
 	def shadeVertex(self, pos, normal):
 		trans     = (self.worldToCamera*self.objectToWorld)
 		newpos    = (trans*pos)

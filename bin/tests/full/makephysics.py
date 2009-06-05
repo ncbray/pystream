@@ -46,6 +46,9 @@ attr(inst(vec.mat4), 'm33', inst(float))
 #func(physics.simpleUpdate, inst(float), inst(int))
 #func(physics.harness, inst(vec.vec4), inst(vec.vec3))
 
+### Declare the types of the shader attributes ###
+# HACK should declare methods instead?
+
 attr(inst(physics.Shader), 'objectToWorld', inst(vec.mat4))
 attr(inst(physics.Shader), 'worldToCamera', inst(vec.mat4))
 attr(inst(physics.Shader), 'projection', inst(vec.mat4))
@@ -57,17 +60,16 @@ attr(inst(physics.Shader), 'material',    inst(physics.Material))
 attr(inst(physics.Material), 'color',    inst(vec.vec3))
 
 
+### Declare special paths for GLSL ###
+
 glsl.output(attrslot(inst(physics.VSOut), 'position'), 'gl_Position');
 glsl.output(attrslot(inst(physics.VSOut), 'point_size'), 'gl_PointSize');
-
 
 # Fragment shader
 for i in range(8):
 	glsl.output(attrslot(inst(physics.FSOut), 'colors').arrayslot(i), 'gl_FragData[%d]' % i);
 glsl.output(attrslot(inst(physics.FSOut), 'depth'), 'gl_FragDepth');
 
+### Declare  the shader entrypoint ###
 
-shader = cls(physics.Shader)
-#shader.shader(inst(vec.vec4), inst(vec.vec3))
-shader.method('shadeVertex', inst(vec.vec4), inst(vec.vec3))
-shader.method('shadeFragment', inst(vec.vec4), inst(vec.vec3))
+glsl.shader(physics.Shader, inst(vec.vec4), inst(vec.vec3))

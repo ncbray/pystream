@@ -20,6 +20,8 @@ import optimization.storeelimination
 import analysis.fsdf
 import translator.glsl
 
+import config
+
 def codeConditioning(console, extractor, interface, dataflow):
 	db = dataflow.db
 
@@ -134,6 +136,7 @@ def evaluate(console, name, extractor, interface):
 			#analysis.fsdf.evaluate(console, result, interface)
 			translator.glsl.translate(console, result, interface)
 	finally:
-		cpaDump(console, name, extractor, result, interface)
+		if config.doDump:
+			cpaDump(console, name, extractor, result, interface)
 
 	console.end()

@@ -109,5 +109,5 @@ class Makefile(object):
 		common.pipeline.evaluate(console, self.moduleName, extractor, self.interface)
 
 		# Output
-		ensureDirectoryExists(self.outdir)
-		self.outfile = os.path.join(self.outdir, self.moduleName+'.py')
+		#ensureDirectoryExists(self.outdir)
+		#self.outfile = os.path.join(self.outdir, self.moduleName+'.py')

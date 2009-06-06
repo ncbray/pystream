@@ -99,6 +99,7 @@ class AnalysisContext(CanonicalObject):
 		lengthObjxtype  = sys.canonical.existingType(sys.extractor.getObject(length))
 		lengthSlot = vparamObj.field(sys, sys.lengthSlotName, self.group.regionHint)
 		self._bindObjToSlot(sys, lengthObjxtype, lengthSlot)
+		sys.logModify(cop, lengthSlot)
 
 		return vparamObj
 
@@ -145,6 +146,8 @@ class AnalysisContext(CanonicalObject):
 				cpaType = sig.params[i]
 				param = self._vparamSlot(sys, vparamObj, i-numParam)
 				self.initalizeParameter(sys, param, cpaType, arg)
+				sys.logModify(cop, param)
+
 		else:
 			assert numArgs == numParam
 

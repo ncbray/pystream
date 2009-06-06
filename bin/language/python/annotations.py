@@ -64,34 +64,41 @@ class CodeAnnotation(Annotation):
 		return self.rewrite(contexts=contexts, live=live, killed=killed)
 
 class OpAnnotation(Annotation):
-	__slots__ = 'invokes', 'reads', 'modifies', 'allocates', 'origin'
+	__slots__ = 'invokes', 'opReads', 'opModifies', 'opAllocates', 'reads', 'modifies', 'allocates', 'origin'
 
-	def __init__(self, invokes, reads, modifies, allocates, origin):
-		self.invokes   = invokes
-		self.reads     = reads
-		self.modifies  = modifies
-		self.allocates = allocates
-		self.origin    = origin
+	def __init__(self, invokes, opReads, opModifies, opAllocates, reads, modifies, allocates, origin):
+		self.invokes     = invokes
+		self.opReads     = opReads
+		self.opModifies  = opModifies
+		self.opAllocates = opAllocates
+		self.reads       = reads
+		self.modifies    = modifies
+		self.allocates   = allocates
+		self.origin      = origin
 
-		assert isinstance(origin, tuple) and not isinstance(origin, Origin)
+	def rewrite(self, invokes=noMod, opReads=noMod, opModifies=noMod, opAllocates=noMod, reads=noMod, modifies=noMod, allocates=noMod, origin=noMod):
+		if invokes     is noMod: invokes     = self.invokes
+		if opReads     is noMod: opReads     = self.reads
+		if opModifies  is noMod: opModifies  = self.modifies
+		if opAllocates is noMod: opAllocates = self.allocates
+		if reads       is noMod: reads       = self.reads
+		if modifies    is noMod: modifies    = self.modifies
+		if allocates   is noMod: allocates   = self.allocates
+		if origin      is noMod: origin      = self.origin
 
-	def rewrite(self, invokes=noMod, reads=noMod, modifies=noMod, allocates=noMod, origin=noMod):
-		if invokes   is noMod: invokes   = self.invokes
-		if reads     is noMod: reads     = self.reads
-		if modifies  is noMod: modifies  = self.modifies
-		if allocates is noMod: allocates = self.allocates
-		if origin    is noMod: origin    = self.origin
-
-		return OpAnnotation(invokes, reads, modifies, allocates, origin)
+		return OpAnnotation(invokes, opReads, opModifies, opAllocates, reads, modifies, allocates, origin)
 
 	def contextSubset(self, remap, invokeMapper=None):
-		invokes   = remapContextual(self.invokes,   remap, invokeMapper)
-		reads     = remapContextual(self.reads,     remap)
-		modifies  = remapContextual(self.modifies,  remap)
-		allocates = remapContextual(self.allocates, remap)
-		origin    = self.origin
+		invokes     = remapContextual(self.invokes,   remap, invokeMapper)
+		opReads     = remapContextual(self.opReads,     remap)
+		opModifies  = remapContextual(self.opModifies,  remap)
+		opAllocates = remapContextual(self.opAllocates, remap)
+		reads       = remapContextual(self.reads,     remap)
+		modifies    = remapContextual(self.modifies,  remap)
+		allocates   = remapContextual(self.allocates, remap)
+		origin      = self.origin
 
-		return OpAnnotation(invokes, reads, modifies, allocates, origin)
+		return OpAnnotation(invokes, opReads, opModifies, opAllocates, reads, modifies, allocates, origin)
 
 	def compatable(self, codeAnnotation):
 		if self.invokes is not None:
@@ -115,5 +122,5 @@ class SlotAnnotation(Annotation):
 
 
 emptyCodeAnnotation  = CodeAnnotation(None, False, False, None, None, None, None, None)
-emptyOpAnnotation    = OpAnnotation(None, None, None, None, (None,))
+emptyOpAnnotation    = OpAnnotation(None, None, None, None, None, None, None, (None,))
 emptySlotAnnotation  = SlotAnnotation(None)

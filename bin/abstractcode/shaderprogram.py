@@ -16,22 +16,26 @@ def createShaderProgram(extractor):
 	selfparam = None
 	parameters = (Local('vs'), Local('fs'), Local('shader'))
 	parameternames = ('vs', 'fs', 'shader')
-	vparam = Local('streams')
-	kparam = None
+	streams = Local('streams')
 	returnparams = [Local('return_shader_program')]
 
-	codeparameters = CodeParameters(selfparam, parameters, parameternames, vparam, kparam, returnparams)
+	codeparameters = CodeParameters(selfparam, parameters, parameternames, streams, None, returnparams)
 
-	vsCall     = Assign(Call(parameters[0], (parameters[2],), [],vparam, kparam), [Local('vs_return')])
-	fsCall     = Assign(Call(parameters[1], (parameters[2],), [], vparam, kparam), [Local('fs_return')])
-	returnExpr = Return([Existing(extractor.getObject(None))])
+	vsout = Local('vs_return')
+	fsout = Local('fs_return')
 
+	vsCall     = Assign(Call(parameters[0], (parameters[2],), [], streams, None), [vsout])
+	fsCall     = Assign(Call(parameters[1], (parameters[2],), [], vsout, None), [fsout])
 
-	sp = ShaderProgram(name, codeparameters, vsCall, fsCall, returnExpr)
+	junk = []
+	junk.append(Return([Existing(extractor.getObject(None))]))
+	junk.append(Discard(GetAttr(fsout, Existing(extractor.getObject('colors')))))
+
+	sp = ShaderProgram(name, codeparameters, vsCall, fsCall, junk)
 	return sp
 
 class ShaderProgram(AbstractCode):
-	__fields__ = """name:str codeparameters:CodeParameters vsCall:Statement fsCall:Statement returnExpr:Return"""
+	__fields__ = """name:str codeparameters:CodeParameters vsCall:Statement fsCall:Statement junk:Statement*"""
 
 	__shared__ = True
 
@@ -49,4 +53,4 @@ class ShaderProgram(AbstractCode):
 	def extractConstraints(self, ce):
 		ce(self.vsCall)
 		ce(self.fsCall)
-		ce(self.returnExpr)
+		ce(self.junk)

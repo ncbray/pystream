@@ -358,34 +358,35 @@ def methodMeet(values):
 	return prototype
 
 def methodCall(console, extractor, db):
-	pattern = MethodPatternFinder()
-	if not pattern.preprocess(extractor, db):
-		console.output("No method calls to fuse.")
-		return
+	with console.scope('method call'):
+		pattern = MethodPatternFinder()
+		if not pattern.preprocess(extractor, db):
+			console.output("No method calls to fuse.")
+			return
 
-	numrewritten = 0
-	for code in db.liveFunctions():
-		analyze = MethodAnalysis(pattern)
-		rewrite = MethodRewrite(pattern)
+		numrewritten = 0
+		for code in db.liveFunctions():
+			analyze = MethodAnalysis(pattern)
+			rewrite = MethodRewrite(pattern)
 
-		meet = methodMeet
+			meet = methodMeet
 
-		traverse = dataflow.forward.ForwardFlowTraverse(meet, analyze, rewrite)
-		t = dataflow.forward.MutateCode(traverse)
+			traverse = dataflow.forward.ForwardFlowTraverse(meet, analyze, rewrite)
+			t = dataflow.forward.MutateCode(traverse)
 
-		# HACK
-		analyze.flow = traverse.flow
-		rewrite.flow = traverse.flow
+			# HACK
+			analyze.flow = traverse.flow
+			rewrite.flow = traverse.flow
 
-		t(code)
+			t(code)
 
-		# HACK to turn attribute access assignments into discards.
-		if rewrite.rewritten:
-			optimization.simplify.simplify(extractor, db, code)
+			# HACK to turn attribute access assignments into discards.
+			if rewrite.rewritten:
+				optimization.simplify.simplify(extractor, db, code)
 
-		if rewrite.rewritten:
-			numrewritten += len(rewrite.rewritten)
+			if rewrite.rewritten:
+				numrewritten += len(rewrite.rewritten)
 
-	# TODO may not be entirely correct, as the method call may
-	# not be fused in the final iteration.
-	console.output("%d method calls fused." % numrewritten)
+		# TODO may not be entirely correct, as the method call may
+		# not be fused in the final iteration.
+		console.output("%d method calls fused." % numrewritten)

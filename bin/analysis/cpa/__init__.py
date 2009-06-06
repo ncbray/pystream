@@ -445,21 +445,37 @@ class InterproceduralDataflow(object):
 				if isinstance(op, util.canonical.Sentinel): continue
 
 				contextLUT = opLut[(code, op)]
+
 				cinvokes  = [annotations.annotationSet(contextLUT[context]) for context in contexts]
 				invokes   = annotations.makeContextualAnnotation(cinvokes)
 
-				if not invokes[0]:
-					creads     = [annotations.annotationSet(self.opReads[(code, op, context)]) for context in contexts]
-					cmodifies  = [annotations.annotationSet(self.opModifies[(code, op, context)]) for context in contexts]
-					callocates = [annotations.annotationSet(self.opAllocates[(code, op, context)]) for context in contexts]
+				creads     = [annotations.annotationSet(self.opReads[(code, op, context)]) for context in contexts]
+				reads     = annotations.makeContextualAnnotation(creads)
 
-					op.rewriteAnnotation(invokes=invokes,
-						reads=annotations.makeContextualAnnotation(creads),
-						modifies=annotations.makeContextualAnnotation(cmodifies),
-						allocates = annotations.makeContextualAnnotation(callocates)
+				cmodifies  = [annotations.annotationSet(self.opModifies[(code, op, context)]) for context in contexts]
+				modifies  = annotations.makeContextualAnnotation(cmodifies)
+
+				callocates = [annotations.annotationSet(self.opAllocates[(code, op, context)]) for context in contexts]
+				allocates = annotations.makeContextualAnnotation(callocates)
+
+
+				if not invokes[0]:
+					op.rewriteAnnotation(
+						invokes=invokes,
+						opReads=reads,
+						opModifies=modifies,
+						opAllocates=allocates,
+						reads=reads,
+						modifies=modifies,
+						allocates=allocates,
 						)
 				else:
-					op.rewriteAnnotation(invokes=invokes)
+					op.rewriteAnnotation(
+						invokes=invokes,
+						opReads=reads,
+						opModifies=modifies,
+						opAllocates=allocates,
+						)
 
 			for lcl in lcls:
 				if isinstance(lcl, ast.Existing):

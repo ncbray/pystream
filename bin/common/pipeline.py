@@ -25,59 +25,52 @@ import config
 def codeConditioning(console, extractor, interface, dataflow):
 	db = dataflow.db
 
-	console.begin('conditioning')
+	with console.scope('conditioning'):
+		if True:
+			# Try to identify and optimize method calls
+			optimization.methodcall.methodCall(console, extractor, db)
 
-	if True:
-		# Try to identify and optimize method calls
-		console.begin('method call')
-		optimization.methodcall.methodCall(console, extractor, db)
-		console.end()
+		lifetimeAnalysis(console, dataflow, interface)
 
-	lifetimeAnalysis(console, dataflow, interface)
+		if True:
+			# Fold, DCE, etc.
+			console.begin('simplify')
+			for code in db.liveFunctions():
+				if not code.annotation.descriptive:
+					simplify(extractor, db, code)
+			console.end()
 
-	if True:
-		# Fold, DCE, etc.
-		console.begin('simplify')
-		for code in db.liveFunctions():
-			if not code.annotation.descriptive:
-				simplify(extractor, db, code)
-		console.end()
+		if True:
+			# Seperate different invocations of the same code.
+			console.begin('clone')
+			clone(console, extractor, interface, db)
+			console.end()
 
-	if True:
-		# Seperate different invocations of the same code.
-		console.begin('clone')
-		clone(console, extractor, interface, db)
-		console.end()
+		if True:
+			# Try to eliminate kwds, vargs, kargs, and default arguments.
+			console.begin('argument normalization')
+			normalizeArguments(dataflow, db)
+			console.end()
 
-	if True:
-		# Try to eliminate kwds, vargs, kargs, and default arguments.
-		console.begin('argument normalization')
-		normalizeArguments(dataflow, db)
-		console.end()
+		if True:
+			# Try to eliminate trivial functions.
+			console.begin('code inlining')
+			inlineCode(console, dataflow, interface, db)
+			console.end()
 
-	if True:
-		# Try to eliminate trivial functions.
-		console.begin('code inlining')
-		inlineCode(console, dataflow, interface, db)
-		console.end()
+			# Get rid of dead functions/contexts
+			cull(console, interface, db)
 
-		# Get rid of dead functions/contexts
-		cull(console, interface, db)
+		if True:
+			optimization.loadelimination.evaluate(console, dataflow)
 
-	if True:
-		optimization.loadelimination.evaluate(console, dataflow)
-
-	if True:
-		optimization.storeelimination.evaluate(console, dataflow)
-
-
-	console.end()
+		if True:
+			optimization.storeelimination.evaluate(console, dataflow)
 
 def lifetimeAnalysis(console, dataflow, interface):
-	console.begin('lifetime analysis')
-	la = analysis.lifetimeanalysis.LifetimeAnalysis(interface)
-	la.process(dataflow.db.liveCode)
-	console.end()
+	with console.scope('lifetime analysis'):
+		la = analysis.lifetimeanalysis.LifetimeAnalysis(interface)
+		la.process(dataflow.db.liveCode)
 
 def cpaAnalyze(console, e, interface, opPathLength=0):
 	console.begin('cpa analysis')
@@ -120,7 +113,7 @@ def evaluate(console, name, extractor, interface):
 	console.begin('compile')
 	result = cpaPass(console, extractor, interface)
 
-	if True:
+	if False:
 		# Intrinsics can prevent complete exhaustive inlining.
 		# Adding call-path sensitivity compensates.
 		result = cpaPass(console,  extractor, interface, 3)

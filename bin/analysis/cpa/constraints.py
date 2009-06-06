@@ -281,6 +281,7 @@ class AbstractCallConstraint(CachedConstraint):
 			vargsObj = self.vargs.region.object(sys, vargsType)
 			slotName = sys.lengthSlotName
 			field    = vargsObj.field(sys, slotName, None)
+			sys.logRead(self.op, field)
 
 			lengths = []
 			for lengthType in field.refs:
@@ -317,6 +318,8 @@ class AbstractCallConstraint(CachedConstraint):
 					slotName = sys.canonical.fieldName('Array', sys.extractor.getObject(index))
 					field = vargsObj.field(sys, slotName, None)
 					allslots.append(field)
+					sys.logRead(self.op, field)
+
 
 			# HACK this is actually somewhere between caller and callee...
 			caller = util.calling.CallerArgs(self.selfarg, allslots, [], None, None, self.targets)

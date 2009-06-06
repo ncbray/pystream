@@ -13,7 +13,11 @@ def annotationSet(data):
 def makeContextualAnnotation(cdata):
 	merged = set()
 	for data in cdata: merged.update(data)
-	return ContextualAnnotation(annotationSet(merged), tuple(cdata))
+	merged = annotationSet(merged)
+
+	cache = {} # Used to pool identical data
+	return ContextualAnnotation(cache.setdefault(merged, merged), tuple([cache.setdefault(data, data) for data in cdata]))
+
 
 def remapContextual(cdata, remap, translator=None):
 	if cdata is None: return None

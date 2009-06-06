@@ -167,8 +167,8 @@ class OpInliningTransform(StrictTypeDispatcher):
 		if selfarg:
 			outp.append(ast.Assign(selfarg, [self(p.selfparam)]))
 
-		assert len(args) == len(p.parameters), "TODO: default arguments."
-		for arg, param in zip(args, p.parameters):
+		assert len(args) == len(p.params), "TODO: default arguments."
+		for arg, param in zip(args, p.params):
 			outp.append(ast.Assign(arg, [self(param)]))
 
 		outp.append(self(code.ast))

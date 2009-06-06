@@ -94,7 +94,7 @@ class DefUseVisitor(CodeVisitor):
 	def visitCodeParameters(self, node):
 		if node.selfparam:
 			self.define(node, node.selfparam)
-		for param in node.parameters:
+		for param in node.params:
 			self.define(node, param)
 		if node.vparam:
 			self.define(node, node.vparam)

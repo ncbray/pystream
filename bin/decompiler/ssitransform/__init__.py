@@ -506,7 +506,7 @@ class SSITransformer(StandardVisitor):
 
 		selfparam = self.locals.writeLocal(p.selfparam) if p.selfparam else None
 
-		params = [self.locals.writeLocal(param) for param in p.parameters]
+		params = [self.locals.writeLocal(param) for param in p.params]
 
 		vparam = self.locals.writeLocal(p.vparam) if p.vparam else None
 		kparam = self.locals.writeLocal(p.kparam) if p.kparam else None
@@ -516,7 +516,7 @@ class SSITransformer(StandardVisitor):
 		# Mutate the code
 		selfparam = selfparam
 		parameters = params
-		parameternames = p.parameternames
+		parameternames = p.paramnames
 		vparam = vparam
 		kparam = kparam
 		returnparams = p.returnparams

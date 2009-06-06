@@ -690,10 +690,10 @@ class SimpleCodeGen(StandardVisitor):
 		p = node.codeparameters
 
 		# Set parmeter names
-		for lcl, pname in zip(p.parameters, p.parameternames):
+		for lcl, pname in zip(p.params, p.paramnames):
 			self.seg.setLocalName(lcl, pname)
 
-		args = [self.seg.process(param) for param in p.parameters]
+		args = [self.seg.process(param) for param in p.params]
 
 		if p.vparam:
 			args.append("*%s" % self.seg.process(p.vparam))

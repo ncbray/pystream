@@ -98,8 +98,8 @@ def transformInputs(extractor, shader):
 	rewrite.extractor = extractor
 
 	# HACK first parameter as uniform
-	freqs = ['uniform']+['input']*(len(shader.code.parameters)-1)
-	for arg, freq in zip(shader.code.parameters, freqs):
+	freqs = ['uniform']+['input']*(len(shader.code.params)-1)
+	for arg, freq in zip(shader.code.params, freqs):
 		defn = shader.getRoot(arg.name, arg, freq)
 		traverse.flow.define(arg, defn)
 

@@ -717,8 +717,8 @@ def destack(code, mname, fname, root, argnames, vargs, kargs, extractor, callbac
 	root = dv.process(root, stack)
 	root.name = fname
 
-	root.codeparameters.parameters = param
-	root.codeparameters.parameternames = argnames
+	root.codeparameters.params = param
+	root.codeparameters.paramnames = argnames
 	root.codeparameters.vparam = v
 	root.codeparameters.kparam = k
 

@@ -39,7 +39,7 @@ class FindLocals(StrictTypeDispatcher):
 
 	def processCode(self, node):
 		self.locals = set()
-		self(node.parameters)
+		self(node.params)
 		parameters = self.locals
 
 		self.locals   = set()
@@ -222,4 +222,4 @@ class GLSLCodeGen(StrictTypeDispatcher):
 
 		localdecl = self.makeLocalDecl(finder.locals)
 
-		return "%s\n\n%s\n%s %s(%s)\n{\n%s\n%s}\n" % (version, header, self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.parameters]), localdecl, self(node.body))
+		return "%s\n\n%s\n%s %s(%s)\n{\n%s\n%s}\n" % (version, header, self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.params]), localdecl, self(node.body))

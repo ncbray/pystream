@@ -173,8 +173,8 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			objs = callee.selfparam.annotation.references[1][cindex]
 			tableRow(out, links, 'self', *objs)
 
-		numParam = len(callee.parameters)
-		for i, param in enumerate(callee.parameters):
+		numParam = len(callee.params)
+		for i, param in enumerate(callee.params):
 			refs = param.annotation.references
 			if refs:
 				objs = refs[1][cindex]

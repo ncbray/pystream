@@ -160,8 +160,8 @@ class ArgumentNormalizationTransform(object):
 			self.transferReferences(self.vparam, field, lcl)
 
 		selfparam = p.selfparam
-		parameters = self.extend(p.parameters, self.newParams)
-		parameternames = self.extend(p.parameternames, self.newNames)
+		parameters = self.extend(p.params, self.newParams)
+		parameternames = self.extend(p.paramnames, self.newNames)
 		vparam = None
 		kparam = p.kparam
 		returnparams = p.returnparams

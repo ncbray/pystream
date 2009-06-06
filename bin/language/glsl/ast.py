@@ -152,4 +152,4 @@ class Parameter(ASTNode):
 	__fields__ = 'lcl:Local paramIn:bool paramOut:bool'
 
 class Code(ASTNode):
-	__fields__ = 'name:str parameters:Parameter* returnType:Type body:Suite'
+	__fields__ = 'name:str params:Parameter* returnType:Type body:Suite'

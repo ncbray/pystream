@@ -343,12 +343,12 @@ class For(Loop):
 class CodeParameters(ASTNode):
 	# HACK parameternames can be str or None, eliminated type annotation because we can't have multiple types?
 	__fields__ = """selfparam:Local?
-			parameters:Local* parameternames*
+			params:Local* paramnames*
 			vparam:Local? kparam:Local?
 			returnparams:Local*"""
 
 	def codeParameters(self):
-		return util.calling.CalleeParams(self.selfparam, self.parameters, self.parameternames, [], self.vparam, self.kparam, self.returnparams)
+		return util.calling.CalleeParams(self.selfparam, self.params, self.paramnames, [], self.vparam, self.kparam, self.returnparams)
 
 
 class Code(CompoundStatement):

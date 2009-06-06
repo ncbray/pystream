@@ -196,8 +196,8 @@ class ShapeConstraintBuilder(object):
 
 		p = code.codeparameters
 		selfparam = self.localExpr(p.selfparam)
-		params = [self.localExpr(param) for param in p.parameters]
-		paramnames = p.parameternames
+		params = [self.localExpr(param) for param in p.params]
+		paramnames = p.paramnames
 		defaults = []
 
 		vparam = self.localExpr(p.vparam)
@@ -657,13 +657,13 @@ class ShapeConstraintBuilder(object):
 			self.assign(expr, self.localExpr(p.selfparam))
 
 		# Assign positional params -> locals
-		for i, param in enumerate(p.parameters):
+		for i, param in enumerate(p.params):
 			expr = self._makeParam(i, forget)
 			self.assign(expr, self.localExpr(param))
 
 		if p.vparam:
 			vparam = self.localExpr(p.vparam)
-			base = len(p.parameters)
+			base = len(p.params)
 
 			for i in range(self.maxVParamLength()):
 				expr = self._makeParam(i+base, forget)

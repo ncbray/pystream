@@ -108,42 +108,41 @@ class StandardGrep(object):
 			self.lastFile = fn
 		print "%d\t%s" % (lineno, line.strip())
 
+		self.occurances += 1
+
 	def displayReplace(self, line, newline):
 		print "  ->\t%s" % (newline.strip(),)
 
-	def handleMatch(self, fn, lineno, line):
+
+	def handleLine(self, fn, lineno, line):
 		code, comment =  splitLine(line)
+		if code: self.lines += 1
 
 		if options.nocomments:
 			matchline = code
 		else:
 			matchline = line
 
-		if textMatches(matchline):
-			self.callback(fn, lineno, line)
-			self.occurances += 1
-			matched = True
-		else:
-			matched = False
-
-		if code: self.lines += 1
-
-		return matched
-
-	def handleLine(self, fn, lineno, line):
-		matched = self.handleMatch(fn, lineno, line)
+		matched = textMatches(matchline)
 
 		if replaceActive():
 			if matched:
 				newline = textReplace(line)
 				if newline != line:
+					self.callback(fn, lineno, line)
 					self.displayReplace(line, newline)
+
 					self.changed = True
 					line = newline
 					self.linesChanged += 1
 
 			if not options.dryrun:
 				self.lineBuffer.append(line)
+
+		else:
+			if matched:
+				self.callback(fn, lineno, line)
+
 
 	def handleFile(self, fn):
 		fh = open(fn)
@@ -184,7 +183,7 @@ class StandardGrep(object):
 		print "%7.1d files." % self.files
 
 		if replaceActive():
-			print "%7.1d lines changed." % self.linesChanged
+			print "%7.1d lines rewritten." % self.linesChanged
 			print "%7.1d files changed." % self.filesChanged
 
 

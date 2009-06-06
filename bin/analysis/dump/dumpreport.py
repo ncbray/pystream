@@ -166,13 +166,15 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.begin('p')
 		out.begin('table')
 
+		callee = code.codeParameters()
+
 		sig = context.signature
-		if code.selfparam is not None:
-			objs = code.selfparam.annotation.references[1][cindex]
+		if callee.selfparam is not None:
+			objs = callee.selfparam.annotation.references[1][cindex]
 			tableRow(out, links, 'self', *objs)
 
-		numParam = len(sig.code.parameters)
-		for i, param in enumerate(code.parameters):
+		numParam = len(callee.parameters)
+		for i, param in enumerate(callee.parameters):
 			refs = param.annotation.references
 			if refs:
 				objs = refs[1][cindex]
@@ -180,8 +182,8 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				objs = ('?',)
 			tableRow(out, links, 'param %d' % i, *objs)
 
-		if code.vparam is not None:
-			objs = code.vparam.annotation.references[1][cindex]
+		if callee.vparam is not None:
+			objs = callee.vparam.annotation.references[1][cindex]
 			tableRow(out, links, 'vparamObj', *objs)
 
 			for vparamObj in objs:
@@ -190,11 +192,11 @@ def dumpFunctionInfo(func, data, links, out, scg):
 					slot = vparamObj.knownField(name)
 					tableRow(out, links, 'vparam %d' % i, *slot)
 
-		if code.kparam is not None:
-			objs = code.kparam.annotation.references[1][cindex]
+		if callee.kparam is not None:
+			objs = callee.kparam.annotation.references[1][cindex]
 			tableRow(out, links, 'kparamObj', *objs)
 
-		for i, param in enumerate(code.returnparams):
+		for i, param in enumerate(callee.returnparams):
 			objs = param.annotation.references[1][cindex]
 			tableRow(out, links, 'return %d' % i, *objs)
 

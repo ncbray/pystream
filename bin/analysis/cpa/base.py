@@ -15,6 +15,7 @@ from . import storegraph
 
 def localSlot(sys, code, lcl, context):
 	if lcl:
+		assert isinstance(lcl, ast.Local), type(lcl)
 		name = sys.canonical.localName(code, lcl, context)
 		return context.group.root(sys, name, context.group.regionHint)
 	else:
@@ -23,15 +24,17 @@ def localSlot(sys, code, lcl, context):
 def calleeSlotsFromContext(sys, context):
 	code = context.signature.code
 
-	selfparam   = localSlot(sys, code, code.selfparam, context)
-	parameters  = tuple([localSlot(sys, code, p, context) for p in code.parameters])
+	callee = code.codeParameters()
+
+	selfparam   = localSlot(sys, code, callee.selfparam, context)
+	parameters  = tuple([localSlot(sys, code, p, context) for p in callee.params])
 	defaults    = []
-	vparam      = localSlot(sys, code, code.vparam, context)
-	kparam      = localSlot(sys, code, code.kparam, context)
-	returnparams = [localSlot(sys, code, param, context) for param in code.returnparams]
+	vparam      = localSlot(sys, code, callee.vparam, context)
+	kparam      = localSlot(sys, code, callee.kparam, context)
+	returnparams = [localSlot(sys, code, param, context) for param in callee.returnparams]
 
 	return util.calling.CalleeParams(selfparam, parameters,
-		code.parameternames, defaults, vparam, kparam, returnparams)
+		callee.paramnames, defaults, vparam, kparam, returnparams)
 
 
 class AnalysisContext(CanonicalObject):
@@ -133,7 +136,7 @@ class AnalysisContext(CanonicalObject):
 		cop = sys.canonical.opContext(sig.code, None, self)
 
 		# Bind the vparams
-		if sig.code.vparam is not None:
+		if callee.vparam is not None:
 			vparamObj = self.initializeVParam(sys, cop, callee.vparam, numArgs-numParam)
 
 			# Bind the vargs
@@ -146,17 +149,14 @@ class AnalysisContext(CanonicalObject):
 			assert numArgs == numParam
 
 		# Bind the kparams
-		assert sig.code.kparam is None
+		assert callee.kparam is None
 
 
 		# Copy the return value
 		if caller.returnargs is not None:
-			code = self.signature.code
-
-			assert len(code.returnparams) == len(caller.returnargs)
-			for param, arg in zip(code.returnparams, caller.returnargs):
-				returnSlot = localSlot(sys, code, param, self)
-				sys.createAssign(returnSlot, arg)
+			assert len(callee.returnparams) == len(caller.returnargs)
+			for param, arg in zip(callee.returnparams, caller.returnargs):
+				sys.createAssign(param, arg)
 
 # Objects for external calls.
 externalFunction = ast.Code('external', None, [], [], None, None, [ast.Local('internal_return')], ast.Suite([]))

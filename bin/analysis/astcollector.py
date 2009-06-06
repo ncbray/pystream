@@ -18,7 +18,7 @@ class GetOps(object):
 	def visitJunk(self, node):
 		pass
 
-	@dispatch(ast.Suite, ast.Condition, ast.Assign, ast.Switch, ast.Discard, ast.For, ast.While)
+	@dispatch(ast.Suite, ast.Condition, ast.Assign, ast.Switch, ast.Discard, ast.For, ast.While, ast.CodeParameters)
 	def visitOK(self, node):
 		visitAllChildren(self, node)
 

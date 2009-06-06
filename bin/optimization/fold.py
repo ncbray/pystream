@@ -201,15 +201,16 @@ class FoldRewrite(object):
 		if obj is not None:
 			return self.localToExisting(node, obj)
 
-		# Replace with dataflow
-		const = self.flow.lookup(node)
-		if const is not undefined:
-			if isinstance(const, ast.Local):
-				# Reach for the local definition
-				return const
-			elif const is not top:
-				# Reach for the constant definition
-				return self.existingFromObj(const)
+		if hasattr(self, 'flow'):
+			# Replace with dataflow
+			const = self.flow.lookup(node)
+			if const is not undefined:
+				if isinstance(const, ast.Local):
+					# Reach for the local definition
+					return const
+				elif const is not top:
+					# Reach for the constant definition
+					return self.existingFromObj(const)
 
 		return node
 
@@ -309,6 +310,10 @@ class FoldTraverse(object):
 		# Bottom up
 		return self.strategy(allChildren(self, node))
 
+	@dispatch(ast.CodeParameters)
+	def visitCodeParameters(self, node):
+		return node
+
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		# Modified bottom up
@@ -331,20 +336,27 @@ def constMeet(values):
 	return prototype
 
 def foldConstants(extractor, db, node):
-	assert isinstance(node, ast.Code), type(node)
+	assert node.isAbstractCode(), type(node)
 
-	analyze  = FoldAnalysis()
-	rewrite  = FoldRewrite(extractor, db, node)
-	rewriteS = FoldTraverse(rewrite, node)
+	if isinstance(node, ast.Code):
+		analyze  = FoldAnalysis()
+		rewrite  = FoldRewrite(extractor, db, node)
+		rewriteS = FoldTraverse(rewrite, node)
 
-	traverse = ForwardFlowTraverse(constMeet, analyze, rewriteS)
-	t = MutateCode(traverse)
+		traverse = ForwardFlowTraverse(constMeet, analyze, rewriteS)
+		t = MutateCode(traverse)
 
-	# HACK
-	analyze.flow = traverse.flow
-	rewrite.flow = traverse.flow
+		# HACK
+		analyze.flow = traverse.flow
+		rewrite.flow = traverse.flow
 
-	t(node)
+		t(node)
+	else:
+		# HACK bypass dataflow analysis, as there's no real "flow"
+		rewrite  = FoldRewrite(extractor, db, node)
+		rewriteS = FoldTraverse(rewrite, node)
+		xform.replaceAllChildren(rewriteS, node)
+
 
 	existing = set(extractor.desc.objects)
 	newobj = rewrite.created-existing

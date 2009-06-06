@@ -82,7 +82,8 @@ class CodeInliningAnalysis(StrictTypeDispatcher):
 		self.terminal = False
 
 		# Inital value
-		self.inlinable = not node.vparam and not node.kparam and not node.annotation.descriptive
+		callee = node.codeParameters()
+		self.inlinable = isinstance(node, ast.Code ) and not callee.vparam and not callee.kparam and not node.annotation.descriptive
 
 		if self.inlinable:
 			self(node.ast)
@@ -323,13 +324,11 @@ class CodeInliningTransform(StrictTypeDispatcher):
 
 			self.processed.add(node)
 			self.trace.add(node)
+			self.modified = False
+			self.code = node
 
 			if isinstance(node, ast.Code):
-				self.modified = False
-				self.code = node
 				result = self(node.ast)
-				self.code = None
-
 				if self.modified:
 					node.ast = result
 					# Always done imediately after inlining, so if we inline
@@ -340,6 +339,7 @@ class CodeInliningTransform(StrictTypeDispatcher):
 				for op in ops:
 					self.processInvocations(op)
 
+			self.code = None
 			self.trace.remove(node)
 
 import translator.glsl.intrinsics
@@ -358,5 +358,6 @@ def inlineCode(console, dataflow, interface, db):
 				transform.process(code)
 			except:
 				console.output('Failed to transform %r' % code)
+				raise
 		else:
 			transform.process(code)

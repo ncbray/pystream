@@ -35,6 +35,16 @@ class CalleeParams(object):
 		self.kparam      = kparam
 		self.returnparams = returnparams
 
+	# HACK for migration
+	@property
+	def parameters(self):
+		return self.params
+
+	@property
+	def parameternames(self):
+		return self.paramnames
+
+
 	def __repr__(self):
 		return "params(self=%r, params=%r, names=%r, vparam=%r, kparam=%r)" % (self.selfparam, self.params, self.paramnames, self.vparam, self.kparam)
 

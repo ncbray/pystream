@@ -25,7 +25,7 @@ def allChildren(s, node, clone=False):
 		return reconstruct(node, newchildren)
 
 def replaceAllChildren(s, node):
-	assert isShared(node)
+	assert isShared(node), type(node)
 
 	oldchildren = children(node)
 	newchildren = [s(child) for child in oldchildren]

@@ -52,7 +52,7 @@ def invertInvokes(invokes):
 	invokeSources = invokeSourcesSchema.instance()
 
 	for code, ops in invokes:
-		assert isinstance(code, ast.Code), type(code)
+		assert code.isAbstractCode(), type(code)
 		for op, contexts in ops:
 			for context, invs in contexts:
 				for dstCode, dstContext in invs:
@@ -117,14 +117,15 @@ class ReadModifyAnalysis(object):
 
 		# Copy reads
 		for code in liveCode:
+			callee = code.codeParameters()
 			# vargs and karg allocations.
 			# Assumes code is in SSA form, so vparam and kparam can
 			# only point to freshly allocated arg objects.
 			for cindex, context in enumerate(code.annotation.contexts):
-				if code.vparam:
-					self.allocations[(code, context)].update(code.vparam.annotation.references[1][cindex])
-				if code.kparam:
-					self.allocations[(code, context)].update(code.kparam.annotation.references[1][cindex])
+				if callee.vparam:
+					self.allocations[(code, context)].update(callee.vparam.annotation.references[1][cindex])
+				if callee.kparam:
+					self.allocations[(code, context)].update(callee.kparam.annotation.references[1][cindex])
 
 
 			ops, lcls = getOps(code)
@@ -397,7 +398,7 @@ class LifetimeAnalysis(object):
 
 	def processScope(self, current):
 		currentF, currentO, currentC = current
-		assert isinstance(currentF, ast.Code), type(currentF)
+		assert currentF.isAbstractCode(), type(currentF)
 
 		operationSchema.validate(currentO)
 
@@ -485,6 +486,8 @@ class LifetimeAnalysis(object):
 		searcher = ObjectSearcher(self)
 
 		for code in liveCode:
+			callee = code.codeParameters()
+
 			ops, lcls = getOps(code)
 			for lcl in lcls:
 				for ref in lcl.annotation.references[0]:
@@ -492,17 +495,17 @@ class LifetimeAnalysis(object):
 
 			for cindex, context in enumerate(code.annotation.contexts):
 				if context in self.entryContexts:
-					self.markVisible(code.selfparam, cindex)
-					for param in code.parameters:
+					self.markVisible(callee.selfparam, cindex)
+					for param in callee.params:
 						self.markVisible(param, cindex)
 
 					# HACK marks the tuple and the dicitonary visible, which they may not be.
 					# NOTE marking the types from the CPA context is insufficient, as there may be
 					# "any" slots.
-					self.markVisible(code.vparam, cindex)
-					self.markVisible(code.kparam, cindex)
+					self.markVisible(callee.vparam, cindex)
+					self.markVisible(callee.kparam, cindex)
 
-					for param in code.returnparams:
+					for param in callee.returnparams:
 						self.markVisible(param, cindex)
 
 		searcher.process()

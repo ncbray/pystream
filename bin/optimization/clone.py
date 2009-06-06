@@ -6,6 +6,7 @@
 import collections
 from PADS.UnionFind import UnionFind
 from util.typedispatch import *
+from util.xform.traversal import replaceAllChildren
 from language.python import ast
 from simplify import simplify
 from analysis import programculler
@@ -419,14 +420,13 @@ class ProgramCloner(object):
 			newfunc[code] = {}
 			uid = 0
 			for group in groups:
+				newcode = code.clone()
+
+				# If there's more that one group, make sure they're named differently.
 				if len(groups) > 1:
 					name = "%s_clone_%d" % (code.name, uid)
 					uid += 1
-				else:
-					name = code.name
-
-				newcode =  ast.Code(name, None, None, None, None, None, None, None)
-				newcode.annotation = code.annotation
+					newcode.setCodeName(name)
 
 				newfunc[code][id(group)] = newcode
 				self.newLive.add(newcode)
@@ -460,7 +460,7 @@ class ProgramCloner(object):
 			for group in groups:
 				newcode = newfunc[code][id(group)]
 
-				fc = FunctionCloner(newfunc, self.groupLUT, code, newcode, group)
+				fc = FunctionCloner(newfunc, self.groupLUT, newcode, group)
 				fc.process()
 				simplify(extractor, self.db, newcode)
 
@@ -488,20 +488,19 @@ class ProgramCloner(object):
 class FunctionCloner(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, newfuncLUT, groupLUT, sourcefunction, destfunction, group):
+	def __init__(self, newfuncLUT, groupLUT, code, group):
 		self.newfuncLUT     = newfuncLUT
 		self.groupLUT       = groupLUT
-		self.sourcefunction = sourcefunction
-		self.destfunction   = destfunction
+		self.code           = code
 		self.group          = group
 
 		# Remap contexts.
 		self.contextRemap = []
-		for i, context in enumerate(sourcefunction.annotation.contexts):
+		for i, context in enumerate(code.annotation.contexts):
 			if context in group:
 				self.contextRemap.append(i)
 
-		destfunction.annotation = sourcefunction.annotation.contextSubset(self.contextRemap)
+		code.annotation = code.annotation.contextSubset(self.contextRemap)
 
 		self.localMap = {}
 
@@ -582,17 +581,7 @@ class FunctionCloner(object):
 		replacement.annotation = original.annotation.contextSubset(self.contextRemap)
 
 	def process(self):
-		srccode = self.sourcefunction
-		dstcode = self.destfunction
-
-		dstcode.selfparam      = self(srccode.selfparam)
-		dstcode.parameters     = self(srccode.parameters)
-		dstcode.parameternames = self(srccode.parameternames)
-		dstcode.vparam         = self(srccode.vparam)
-		dstcode.kparam         = self(srccode.kparam)
-		dstcode.returnparams   = self(srccode.returnparams)
-		dstcode.ast            = self(srccode.ast)
-
+		replaceAllChildren(self, self.code)
 
 def clone(console, extractor, interface, db):
 	console.begin('analysis')
@@ -614,7 +603,7 @@ def clone(console, extractor, interface, db):
 
 	console.end()
 
-	# Is cloning worth while?
+	# Is cloning worthwhile?
 	if numGroups > originalNumGroups:
 		console.begin('rewrite')
 		cloner.rewriteProgram(extractor, interface)

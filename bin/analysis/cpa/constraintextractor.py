@@ -241,8 +241,10 @@ class ExtractDataflow(object):
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
 		if not self.folded:
-			assert len(node.exprs) == len(self.code.returnparams)
-			for expr, param in zip(node.exprs, self.code.returnparams):
+			callee = self.code.codeParameters()
+
+			assert len(node.exprs) == len(callee.returnparams)
+			for expr, param in zip(node.exprs, callee.returnparams):
 				self.assign(self(expr), self(param))
 
 	@dispatch(ast.Local)
@@ -324,3 +326,5 @@ class ExtractDataflow(object):
 	def process(self):
 		if isinstance(self.code, ast.Code):
 			self(self.code)
+		else:
+			self.code.extractConstraints(self)

@@ -15,11 +15,14 @@ from language.python import ast
 
 
 def simplify(extractor, db, node):
-	assert isinstance(node, ast.Code), type(node)
+	assert node.isAbstractCode(), type(node)
 
 	try:
 		node = foldConstants(extractor, db, node)
-		node = dce(extractor, node)
+
+		# Can't process arbitrary abstract code nodes.
+		if isinstance(node, ast.Code):
+			node = dce(extractor, node)
 	except InternalError:
 		print
 		print "#######################################"

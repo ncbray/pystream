@@ -6,14 +6,14 @@ import os.path
 base, junk = os.path.split(__file__)
 outputDirectory = os.path.normpath(os.path.join(base, '..', 'summaries'))
 
-doDump = False
+doDump = True
 
-if False:
+if True:
 	testOnly = [
 		('tests', 'test_full'),
 		#('tests', 'shape', 'test_shape'),
 		#('tests', 'shape', 'test_shape_compound'),
-		('tests', 'test_canonical'),
+		#('tests', 'test_canonical'),
 	]
 
 testExclude = [

@@ -90,11 +90,12 @@ class GLSLDeclaration(object):
 			vsobj, vscode = interface.getMethCode(shader, 'shadeVertex', extractor)
 			fsobj, fscode = interface.getMethCode(shader, 'shadeFragment', extractor)
 
-			#interface.createEntryPoint(vscode, vsobj, (shader,)+args)
-			#interface.createEntryPoint(fscode, fsobj, (shader,)+args)
-
-			shaderargs = (vsobj, fsobj, shader,)+args
-			interface.createEntryPoint(abstractcode.shaderprogram.ShaderProgram(), None, shaderargs)
+			if False:
+				interface.createEntryPoint(vscode, vsobj, (shader,)+args)
+				interface.createEntryPoint(fscode, fsobj, (shader,)+args)
+			else:
+				shaderargs = (vsobj, fsobj, shader,)+args
+				interface.createEntryPoint(abstractcode.shaderprogram.createShaderProgram(extractor), None, shaderargs)
 
 	def __nonzero__(self):
 		return bool(self._shader)

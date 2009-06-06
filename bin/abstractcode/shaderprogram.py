@@ -1,6 +1,6 @@
 from . base import AbstractCode
 
-from language.python import ast
+from language.python.ast import *
 import language.base.annotation as annotation
 import util.calling
 
@@ -10,37 +10,49 @@ from language.python.annotations import CodeAnnotation
 # Note that the annotation defaults to descriptive=True
 emptyShaderProgramAnnotation = CodeAnnotation(None, True, False, None, None, None, None, None)
 
+def createShaderProgram(extractor):
+	name = "shader_program"
+
+	selfparam = None
+	parameters = (Local('vs'), Local('fs'), Local('shader'))
+	parameternames = ('vs', 'fs', 'shader')
+	vparam = Local('streams')
+	kparam = None
+	returnparams = [Local('return_shader_program')]
+
+	codeparameters = CodeParameters(selfparam, parameters, parameternames, vparam, kparam, returnparams)
+
+	vsCall     = Assign(Call(parameters[0], (parameters[2],), [],vparam, kparam), [Local('vs_return')])
+	fsCall     = Assign(Call(parameters[1], (parameters[2],), [], vparam, kparam), [Local('fs_return')])
+	returnExpr = Return([Existing(extractor.getObject(None))])
+
+
+	sp = ShaderProgram(name, codeparameters, vsCall, fsCall, returnExpr)
+	return sp
+
 class ShaderProgram(AbstractCode):
-	def __init__(self):
-		self.selfparam = None
-		self.parameters = (ast.Local('vs'), ast.Local('fs'), ast.Local('shader'))
-		self.parameternames = ('vs', 'fs', 'shader')
-		self.vparam = ast.Local('streams')
-		self.kparam = None
-		self.returnparams = [ast.Local('return_shader_program')]
+	__fields__ = """_name:str codeparameters:CodeParameters vsCall:Statement fsCall:Statement returnExpr:Return"""
 
-		self.annotation = emptyShaderProgramAnnotation
+	__shared__ = True
 
-		self.vsCall = ast.Call(self.parameters[0], (self.parameters[2],), [], self.vparam, None)
-		self.fsCall = ast.Call(self.parameters[1], (self.parameters[2],), [], self.vparam, None)
+	emptyAnnotation = emptyShaderProgramAnnotation
 
 	def codeName(self):
-		return "shader_program"
+		return self._name
+
+	def setCodeName(self, name):
+		self._name = name
 
 	def codeParameters(self):
-		return util.calling.CalleeParams(self.selfparam, self.parameters, self.parameternames, [], self.vparam, self.kparam, self.returnparams)
-
-	# HACK pulled from AST node?
-	def rewriteAnnotation(self, **kwds):
-		self.annotation = self.annotation.rewrite(**kwds)
-
+		return self.codeparameters.codeParameters()
 
 	def collectNodes(self, collector):
-		collector(self.selfparam)
-		collector(self.parameters)
-		collector(self.vparam)
-		collector(self.kparam)
-		collector(self.returnparams)
-
+		collector(self.codeparameters)
 		collector(self.vsCall)
 		collector(self.fsCall)
+		collector(self.returnExpr)
+
+	def extractConstraints(self, ce):
+		ce(self.vsCall)
+		ce(self.fsCall)
+		ce(self.returnExpr)

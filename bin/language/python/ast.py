@@ -340,13 +340,22 @@ class For(Loop):
 	__fields__ = 'iterator:Expression index:Local loopPreamble:Suite bodyPreamble:Suite body:Suite else_:Suite'
 	# TODO type of index?
 
+class CodeParameters(ASTNode):
+	# HACK parameternames can be str or None, eliminated type annotation because we can't have multiple types?
+	__fields__ = """selfparam:Local? parameters:Local* parameternames*
+			vparam:Local? kparam:Local?
+			returnparams:Local*"""
+
+	def codeParameters(self):
+		return util.calling.CalleeParams(self.selfparam, self.parameters, self.parameternames, [], self.vparam, self.kparam, self.returnparams)
+
+
 class Code(CompoundStatement):
-	# HACK many fields marked optional for function cloning, so their creation can be defered.
 	# HACK parameternames can be str or None, eliminated type annotation because we can't have multiple types?
 	__fields__ = """name:str selfparam:Local?
-			parameters:Local*? parameternames*?
+			parameters:Local* parameternames*
 			vparam:Local? kparam:Local?
-			returnparams:Local*? ast:Suite?"""
+			returnparams:Local* ast:Suite"""
 	__shared__      = True
 
 	emptyAnnotation = annotations.emptyCodeAnnotation
@@ -360,6 +369,9 @@ class Code(CompoundStatement):
 
 	def codeName(self):
 		return self.name
+
+	def setCodeName(self, name):
+		self.name = name
 
 	def codeParameters(self):
 		return util.calling.CalleeParams(self.selfparam, self.parameters, self.parameternames, [], self.vparam, self.kparam, self.returnparams)

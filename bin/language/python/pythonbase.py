@@ -20,7 +20,7 @@ class PythonASTNode(ASTNode):
 class Expression(PythonASTNode):
 	__slots__ = ()
 
-	emptyAnnotation = annotations.emptyOpAnnotation
+	__emptyAnnotation__ = annotations.emptyOpAnnotation
 
 	def returnsValue(self):
 		return True
@@ -34,7 +34,7 @@ class LLExpression(Expression):
 class Reference(Expression):
 	__slots__ = ()
 
-	emptyAnnotation = annotations.emptySlotAnnotation
+	__emptyAnnotation__ = annotations.emptySlotAnnotation
 
 	def isReference(self):
 		return True
@@ -42,7 +42,7 @@ class Reference(Expression):
 class Statement(PythonASTNode):
 	__slots__ = ()
 
-	emptyAnnotation = annotations.emptyOpAnnotation
+	__emptyAnnotation__ = annotations.emptyOpAnnotation
 
 class SimpleStatement(Statement):
 	__slots__ = ()

@@ -265,10 +265,10 @@ class ASTNode(object):
 	__metaclass__ = astnode
 	__slots__ = 'annotation'
 
-	emptyAnnotation = None
+	__emptyAnnotation__ = None
 
 	def __init__(self):
-		self.annotation = self.emptyAnnotation
+		self.annotation = self.__emptyAnnotation__
 
 	def rewriteAnnotation(self, **kwds):
 		self.annotation = self.annotation.rewrite(**kwds)

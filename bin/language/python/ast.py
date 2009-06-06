@@ -357,7 +357,7 @@ class Code(CompoundStatement):
 			ast:Suite"""
 	__shared__      = True
 
-	emptyAnnotation = annotations.emptyCodeAnnotation
+	__emptyAnnotation__ = annotations.emptyCodeAnnotation
 
 	def __repr__(self):
 		return "Code(%s/%d)" % (self.name, id(self))

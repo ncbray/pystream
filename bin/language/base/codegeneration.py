@@ -58,7 +58,7 @@ def makeInitStatements(name, fields, types, optional, repeated):
 
 def makeInit(name, fields, types, optional, repeated):
 	inits = makeInitStatements(name, fields, types, optional, repeated)
-	inits.append('\tself.annotation = self.emptyAnnotation')
+	inits.append('\tself.annotation = self.__emptyAnnotation__')
 
 	if fields:
 		fieldstr = ", ".join(fields)

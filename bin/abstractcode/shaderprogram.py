@@ -35,7 +35,7 @@ class ShaderProgram(AbstractCode):
 
 	__shared__ = True
 
-	emptyAnnotation = emptyShaderProgramAnnotation
+	__emptyAnnotation__ = emptyShaderProgramAnnotation
 
 	def codeName(self):
 		return self.name

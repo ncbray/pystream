@@ -22,6 +22,8 @@ def buildParser():
 	group = optparse.OptionGroup(parser, "Global Configuration")
 	group.add_option('-d', dest='directory',   action='callback',  type='string',  callback=check_directory,  default='.', help="the root directory")
 	group.add_option('-i', dest='insensitive', action='store_true', default=False, help="filters are case insensitive")
+	group.add_option('-n', dest='dryrun', action='store_true', default=False, help="modifications are not written to disk")
+
 	group.add_option('--no-comments', dest='nocomments', action='store_true', default=False, help="text filters ignore comments")
 	parser.add_option_group(group)
 
@@ -33,6 +35,9 @@ def buildParser():
 	group.add_option('--id', dest='identifiers', action='append', default=[], metavar="FILTER" , help="specialized text filter to find an identifier")
 	group.add_option('-x', dest='excludes', action='append', default=[], help="excludes matching text", metavar="FILTER")
 	group.add_option('--import', dest='imports', action='store_true', default=False, help="restricts search to imports")
+
+	group.add_option('-r', dest='replaces', action='append', default=[], help="replaces matching text", nargs=2, metavar="MATCH SUB")
+
 	parser.add_option_group(group)
 
 	return parser
@@ -52,9 +57,16 @@ def textMatches(text):
 	for f in excludeFilters:
 		if f.search(text):
 			return False
-		
+
 	return True
 
+def textReplace(text):
+	for r, s in replaceFilters:
+		text = r.sub(s, text)
+	return text
+
+def replaceActive():
+	return bool(replaceFilters)
 
 # HACK can't deal with multi-line strings?
 def makeCommentRE():
@@ -83,6 +95,9 @@ class StandardGrep(object):
 		self.lines = 0
 		self.occurances = 0
 
+		self.linesChanged = 0
+		self.filesChanged = 0
+
 		self.lastFile = None
 
 	def displayMatch(self, fn, lineno, line):
@@ -92,33 +107,69 @@ class StandardGrep(object):
 			print fn
 			self.lastFile = fn
 		print "%d\t%s" % (lineno, line.strip())
-		
-		
-	def handleLine(self, fn, lineno, line):
+
+	def displayReplace(self, line, newline):
+		print "  ->\t%s" % (newline.strip(),)
+
+	def handleMatch(self, fn, lineno, line):
 		code, comment =  splitLine(line)
 
 		if options.nocomments:
-			line = code
+			matchline = code
+		else:
+			matchline = line
 
-		if textMatches(line):
+		if textMatches(matchline):
 			self.callback(fn, lineno, line)
 			self.occurances += 1
+			matched = True
+		else:
+			matched = False
 
 		if code: self.lines += 1
+
+		return matched
+
+	def handleLine(self, fn, lineno, line):
+		matched = self.handleMatch(fn, lineno, line)
+
+		if replaceActive():
+			if matched:
+				newline = textReplace(line)
+				if newline != line:
+					self.displayReplace(line, newline)
+					self.changed = True
+					line = newline
+					self.linesChanged += 1
+
+			if not options.dryrun:
+				self.lineBuffer.append(line)
 
 	def handleFile(self, fn):
 		fh = open(fn)
 		lineno = 1
+
+		self.lineBuffer = []
+		self.changed    = False
+
 		for line in fh:
 			self.handleLine(fn, lineno, line)
 			lineno += 1
 		fh.close()
+
+		if replaceActive() and self.changed and not options.dryrun:
+			text = "".join(self.lineBuffer)
+			fh = open(fn, 'w')
+			fh.write(text)
+			fh.close()
+			self.filesChanged += 1
+
 		self.files += 1
 
 
 	def walk(self, dn, callback):
 		self.callback = callback
-		
+
 		for path, dirs, files in os.walk(dn):
 			for f in files:
 				fn = os.path.join(path, f)
@@ -128,9 +179,13 @@ class StandardGrep(object):
 		if self.lastFile != None:
 			print
 
-		print "%7.d occurances." % self.occurances
-		print "%7.d lines." % self.lines
-		print "%7.d files." % self.files
+		print "%7.1d occurances." % self.occurances
+		print "%7.1d lines." % self.lines
+		print "%7.1d files." % self.files
+
+		if replaceActive():
+			print "%7.1d lines changed." % self.linesChanged
+			print "%7.1d files changed." % self.filesChanged
 
 
 
@@ -155,7 +210,7 @@ if __name__ == '__main__':
 		args.append('(?<![\w\d_])(%s)(?![\w\d_])' % i)
 
 
-	if len(args) < 1:
+	if len(args) < 1 and len(options.replaces) < 1:
 		parser.error("at least one text filter must be spesified")
 
 
@@ -183,6 +238,12 @@ if __name__ == '__main__':
 	for ef in options.excludes:
 		print "excl: %s" % ef
 		excludeFilters.append(re.compile(ef, flags))
+
+	replaceFilters = []
+	for rf in options.replaces:
+		print "repl: %s -> %s" % rf
+		replaceFilters.append((re.compile(rf[0], flags), rf[1]))
+
 
 	print
 

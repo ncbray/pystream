@@ -40,12 +40,7 @@ class CodeContextCuller(object):
 
 		code.annotation = code.annotation.contextSubset(self.remap)
 
-		self(code.selfparam)
-		self(code.parameters)
-		self(code.parameternames)
-		self(code.vparam)
-		self(code.kparam)
-		self(code.returnparams)
+		self(code.codeparameters)
 		self(code.ast)
 
 

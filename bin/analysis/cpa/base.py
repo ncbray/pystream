@@ -159,7 +159,8 @@ class AnalysisContext(CanonicalObject):
 				sys.createAssign(param, arg)
 
 # Objects for external calls.
-externalFunction = ast.Code('external', None, [], [], None, None, [ast.Local('internal_return')], ast.Suite([]))
+
+externalFunction = ast.Code('external', ast.CodeParameters(None, [], [], None, None, [ast.Local('internal_return')]), ast.Suite([]))
 externalSignature = util.cpa.CPASignature(externalFunction, None, ())
 externalFunctionContext = AnalysisContext(externalSignature, None, None)
 

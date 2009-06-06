@@ -342,7 +342,8 @@ class For(Loop):
 
 class CodeParameters(ASTNode):
 	# HACK parameternames can be str or None, eliminated type annotation because we can't have multiple types?
-	__fields__ = """selfparam:Local? parameters:Local* parameternames*
+	__fields__ = """selfparam:Local?
+			parameters:Local* parameternames*
 			vparam:Local? kparam:Local?
 			returnparams:Local*"""
 
@@ -351,11 +352,9 @@ class CodeParameters(ASTNode):
 
 
 class Code(CompoundStatement):
-	# HACK parameternames can be str or None, eliminated type annotation because we can't have multiple types?
-	__fields__ = """name:str selfparam:Local?
-			parameters:Local* parameternames*
-			vparam:Local? kparam:Local?
-			returnparams:Local* ast:Suite"""
+	__fields__ = """name:str
+			codeparameters:CodeParameters
+			ast:Suite"""
 	__shared__      = True
 
 	emptyAnnotation = annotations.emptyCodeAnnotation
@@ -374,7 +373,7 @@ class Code(CompoundStatement):
 		self.name = name
 
 	def codeParameters(self):
-		return util.calling.CalleeParams(self.selfparam, self.parameters, self.parameternames, [], self.vparam, self.kparam, self.returnparams)
+		return self.codeparameters.codeParameters()
 
 
 class Allocate(LLExpression):

@@ -193,14 +193,16 @@ class ShapeConstraintBuilder(object):
 
 	def _makeCalleeParams(self, node):
 		code = node
-		selfparam = self.localExpr(code.selfparam)
-		params = [self.localExpr(arg) for arg in code.parameters]
-		paramnames = code.parameternames
+
+		p = code.codeparameters
+		selfparam = self.localExpr(p.selfparam)
+		params = [self.localExpr(param) for param in p.parameters]
+		paramnames = p.parameternames
 		defaults = []
 
-		vparam = self.localExpr(code.vparam)
-		kparam = self.localExpr(code.kparam)
-		returnparams = [self.localExpr(param) for param in code.returnparams]
+		vparam = self.localExpr(p.vparam)
+		kparam = self.localExpr(p.kparam)
+		returnparams = [self.localExpr(param) for param in p.returnparams]
 
 		calleeparams = util.calling.CalleeParams(selfparam, params, paramnames, defaults, vparam, kparam, returnparams)
 		return calleeparams
@@ -648,25 +650,26 @@ class ShapeConstraintBuilder(object):
 	def transferParameters(self, node):
 		forget = set()
 
-		if node.selfparam:
+		p = node.codeparameters
+
+		if p.selfparam:
 			expr = self._makeParam('self', forget)
-			self.assign(expr, self.localExpr(node.selfparam))
+			self.assign(expr, self.localExpr(p.selfparam))
 
 		# Assign positional params -> locals
-		for i, param in enumerate(node.parameters):
+		for i, param in enumerate(p.parameters):
 			expr = self._makeParam(i, forget)
 			self.assign(expr, self.localExpr(param))
 
-		if node.vparam:
-			vparam = self.localExpr(node.vparam)
-			base = len(node.parameters)
+		if p.vparam:
+			vparam = self.localExpr(p.vparam)
+			base = len(p.parameters)
 
 			for i in range(self.maxVParamLength()):
 				expr = self._makeParam(i+base, forget)
 				self.assign(expr, self.indexExpr(vparam, i))
 
-		assert not node.kparam
-
+		assert not p.kparam
 
 		if forget: self.forgetAll(forget)
 
@@ -681,7 +684,9 @@ class ShapeConstraintBuilder(object):
 
 		self.transferParameters(node)
 
-		self.returnValues = node.returnparams
+		p = node.codeparameters
+
+		self.returnValues = p.returnparams
 		self.returnPoint = self.newID()
 
 		if self.debug:
@@ -697,7 +702,7 @@ class ShapeConstraintBuilder(object):
 		self.current = self.returnPoint
 
 		# Generate a kill constraint for the locals.
-		returnSlots = [self.sys.canonical.localSlot(param) for param in node.returnparams]
+		returnSlots = [self.sys.canonical.localSlot(param) for param in p.returnparams]
 		lcls = self.functionLocalSlots[self.function] - set(returnSlots)
 		self.forgetAll(lcls, exitPoint)
 

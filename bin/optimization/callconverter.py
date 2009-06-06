@@ -68,11 +68,13 @@ class ConvertCalls(object):
 
 	@dispatch(ast.GetGlobal)
 	def visitGetGlobal(self, node):
-		return self.directCall(node, self.exports['interpreterLoadGlobal'], None, [self(self.code.selfparam), self(node.name)])
+		p = self.code.codeparameters
+		return self.directCall(node, self.exports['interpreterLoadGlobal'], None, [self(p.selfparam), self(node.name)])
 
 	@dispatch(ast.SetGlobal)
 	def visitSetGlobal(self, node):
-		call = self.directCall(node, self.exports['interpreterStoreGlobal'], None, [self(self.code.selfparam), self(node.name), self(node.value)])
+		p = self.code.codeparameters
+		call = self.directCall(node, self.exports['interpreterStoreGlobal'], None, [self(p.selfparam), self(node.name), self(node.value)])
 		return ast.Discard(call)
 
 

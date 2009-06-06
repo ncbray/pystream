@@ -91,7 +91,7 @@ class DefUseVisitor(CodeVisitor):
 	def visitSuite(self, node):
 		pass
 
-	def visitCode(self, node):
+	def visitCodeParameters(self, node):
 		if node.selfparam:
 			self.define(node, node.selfparam)
 		for param in node.parameters:
@@ -101,6 +101,8 @@ class DefUseVisitor(CodeVisitor):
 		if node.kparam:
 			self.define(node, node.kparam)
 
+	def visitCode(self, node):
+		pass
 
 	def visitConvertToBool(self, node):
 		self.use(node, node.expr)

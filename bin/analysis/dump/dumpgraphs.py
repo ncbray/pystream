@@ -83,7 +83,7 @@ def dump(data, interface, links, reportDir):
 
 			if code.annotation.descriptive:
 				nodecolor = "#FF3333"
-			elif code.selfparam is None:
+			elif code.codeparameters.selfparam is None:
 				nodecolor = '#BBBBBB'
 			else:
 				nodecolor = '#33FF33'

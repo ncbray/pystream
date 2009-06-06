@@ -45,8 +45,8 @@ class TestCPA(unittest.TestCase):
 		funcobj, funcast = extractor.getObjectCall(func)
 		types = set([extractor.getObject(int)])
 
-		for param in funcast.parameters:
+		for param in funcast.codeparameters.parameters:
 			self.assertLocalRefTypes(param, types)
 
-		for param in funcast.returnparams:
+		for param in funcast.codeparameters.returnparams:
 			self.assertLocalRefTypes(param, types)

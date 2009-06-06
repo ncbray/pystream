@@ -43,11 +43,9 @@ class GetOps(object):
 		visitAllChildren(self, node)
 
 	def process(self, node):
-		if isinstance(node, ast.Code):
-			for child in node.children():
-				self(child)
-		else:
-			node.collectNodes(self)
+		# This is a shared node, so force traversal
+		for child in node.children():
+			self(child)
 
 		return self.ops, self.locals
 

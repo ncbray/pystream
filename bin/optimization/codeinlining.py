@@ -161,12 +161,14 @@ class OpInliningTransform(StrictTypeDispatcher):
 		self.returnargs = returnargs
 		outp = []
 
+		p = code.codeparameters
+
 		# Do argument transfer
 		if selfarg:
-			outp.append(ast.Assign(selfarg, [self(code.selfparam)]))
+			outp.append(ast.Assign(selfarg, [self(p.selfparam)]))
 
-		assert len(args) == len(code.parameters), "TODO: default arguments."
-		for arg, param in zip(args, code.parameters):
+		assert len(args) == len(p.parameters), "TODO: default arguments."
+		for arg, param in zip(args, p.parameters):
 			outp.append(ast.Assign(arg, [self(param)]))
 
 		outp.append(self(code.ast))

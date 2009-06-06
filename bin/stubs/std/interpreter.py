@@ -10,7 +10,7 @@ import operator
 import util
 
 def noself(code):
-	code.selfparam = None
+	code.codeparameters.selfparam = None
 	return code
 
 # HACK for hand-op
@@ -91,7 +91,7 @@ def makeInterpreterStubs(collector):
 			b.append(Assign(Call(func, args, [], None, None), [retval]))
 			b.append(Return([retval]))
 
-			code = Code(name, None, args, list(argnames), None, None, [retp], b)
+			code = Code(name, CodeParameters(None, args, list(argnames), None, None, [retp]), b)
 			code.rewriteAnnotation(origin=Origin(name, __file__, 0))
 			return code
 

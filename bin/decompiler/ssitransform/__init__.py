@@ -502,20 +502,26 @@ class SSITransformer(StandardVisitor):
 
 		self.handlers.returns.new()
 
-		selfparam = self.locals.writeLocal(node.selfparam) if node.selfparam else None
+		p = node.codeparameters
 
-		params = [self.locals.writeLocal(p) for p in node.parameters]
+		selfparam = self.locals.writeLocal(p.selfparam) if p.selfparam else None
 
-		vparam = self.locals.writeLocal(node.vparam) if node.vparam else None
-		kparam = self.locals.writeLocal(node.kparam) if node.kparam else None
+		params = [self.locals.writeLocal(param) for param in p.parameters]
+
+		vparam = self.locals.writeLocal(p.vparam) if p.vparam else None
+		kparam = self.locals.writeLocal(p.kparam) if p.kparam else None
 
 		ast = self.process(node.ast)
 
 		# Mutate the code
-		node.selfparam = selfparam
-		node.parameters = params
-		node.vparam = vparam
-		node.kparam = kparam
+		selfparam = selfparam
+		parameters = params
+		parameternames = p.parameternames
+		vparam = vparam
+		kparam = kparam
+		returnparams = p.returnparams
+
+		node.codeparameters = CodeParameters(selfparam, parameters, parameternames, vparam, kparam, returnparams)
 		node.ast = ast
 
 		returns = self.handlers.returns.pop()

@@ -65,8 +65,8 @@ class LLTranslator(object):
 
 	def translateName(self, name):
 		if name is 'internal_self':
-			assert self.code.selfparam
-			return self.code.selfparam
+			assert self.code.codeparameters.selfparam
+			return self.code.codeparameters.selfparam
 		elif name in self.specialGlobals:
 			return name
 		else:
@@ -220,8 +220,10 @@ class LLTranslator(object):
 	def setNumReturns(self, num):
 		if self.numReturns is None:
 			self.numReturns = num
-			if num != len(self.code.returnparams):
-				self.code.returnparams = [ast.Local('internal_return_%d' % i) for i in range(num)]
+
+			p = self.code.codeparameters
+			if num != len(p.returnparams):
+				p.returnparams = [ast.Local('internal_return_%d' % i) for i in range(num)]
 		else:
 			assert num == self.numReturns
 

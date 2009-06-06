@@ -673,7 +673,7 @@ class DestackVisitor(StandardVisitor):
 	def visitCodeBlock(self, block, stack):
 		assert isinstance(stack, PythonStack), stack
 		outblock, stack = self.handleLinearRegion(block, stack)
-		code = Code('unknown', Local('internal_self'), (), (), None, None, [Local('internal_return')], outblock)
+		code = Code('unknown', CodeParameters(Local('internal_self'), (), (), None, None, [Local('internal_return')]), outblock)
 		return code, stack
 
 
@@ -716,10 +716,11 @@ def destack(code, mname, fname, root, argnames, vargs, kargs, extractor, callbac
 	stack = PythonStack()
 	root = dv.process(root, stack)
 	root.name = fname
-	root.parameternames = argnames
-	root.parameters = param
-	root.vparam = v
-	root.kparam = k
+
+	root.codeparameters.parameters = param
+	root.codeparameters.parameternames = argnames
+	root.codeparameters.vparam = v
+	root.codeparameters.kparam = k
 
 	origin = codeOrigin(code)
 	root.rewriteAnnotation(origin=origin)

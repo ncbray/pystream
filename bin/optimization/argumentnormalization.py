@@ -44,8 +44,9 @@ class ArgumentNormalizationAnalysis(object):
 		if node.annotation.descriptive:
 			return False, 0
 
-		if node.vparam:
-			refs = node.vparam.annotation.references
+		p = node.codeparameters
+		if p.vparam:
+			refs = p.vparam.annotation.references
 			if refs is None: return False, 0
 
 			lengths = set()
@@ -66,7 +67,7 @@ class ArgumentNormalizationAnalysis(object):
 			vparamLen = lengths.pop()
 
 			self.applicable = True
-			self.vparam     = node.vparam
+			self.vparam     = p.vparam
 			self(node.ast)
 			return self.applicable, vparamLen
 		else:
@@ -146,8 +147,10 @@ class ArgumentNormalizationTransform(object):
 	def process(self, node, vparamLen):
 		# TODO rewrite local references.
 
+		p = node.codeparameters
+
 		self.code   = node
-		self.vparam = node.vparam
+		self.vparam = p.vparam
 
 		self.newParams = [ast.Local() for i in range(vparamLen)]
 		self.newNames  = [None for i in range(vparamLen)]
@@ -156,10 +159,14 @@ class ArgumentNormalizationTransform(object):
 			field = self.sys.canonical.fieldName('Array', self.sys.extractor.getObject(i))
 			self.transferReferences(self.vparam, field, lcl)
 
-		node.parameters = self.extend(node.parameters, self.newParams)
-		node.parameternames = self.extend(node.parameternames, self.newNames)
-		node.vparam = None
+		selfparam = p.selfparam
+		parameters = self.extend(p.parameters, self.newParams)
+		parameternames = self.extend(p.parameternames, self.newNames)
+		vparam = None
+		kparam = p.kparam
+		returnparams = p.returnparams
 
+		node.codeparameters = ast.CodeParameters(selfparam, parameters, parameternames, vparam, kparam, returnparams)
 		node.ast = self(node.ast)
 
 def normalizeArguments(dataflow, db):

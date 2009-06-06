@@ -687,18 +687,20 @@ class SimpleCodeGen(StandardVisitor):
 		(defines, uses), (globaldefines, globaluses), collapsable = defuse.defuse(node)
 		self.collapsable.update(collapsable)
 
+		p = node.codeparameters
+
 		# Set parmeter names
-		for lcl, pname in zip(node.parameters, node.parameternames):
+		for lcl, pname in zip(p.parameters, p.parameternames):
 			self.seg.setLocalName(lcl, pname)
 
-		args = [self.seg.process(p) for p in node.parameters]
+		args = [self.seg.process(param) for param in p.parameters]
 
-		if node.vparam:
-			args.append("*%s" % self.seg.process(node.vparam))
+		if p.vparam:
+			args.append("*%s" % self.seg.process(p.vparam))
 
 
-		if node.kparam:
-			args.append("**%s" % self.seg.process(node.kparam))
+		if p.kparam:
+			args.append("**%s" % self.seg.process(p.kparam))
 
 
 		self.out.startBlock("def %s(%s)" % (name, ', '.join(args)))

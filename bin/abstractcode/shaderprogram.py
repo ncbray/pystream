@@ -31,26 +31,20 @@ def createShaderProgram(extractor):
 	return sp
 
 class ShaderProgram(AbstractCode):
-	__fields__ = """_name:str codeparameters:CodeParameters vsCall:Statement fsCall:Statement returnExpr:Return"""
+	__fields__ = """name:str codeparameters:CodeParameters vsCall:Statement fsCall:Statement returnExpr:Return"""
 
 	__shared__ = True
 
 	emptyAnnotation = emptyShaderProgramAnnotation
 
 	def codeName(self):
-		return self._name
+		return self.name
 
 	def setCodeName(self, name):
-		self._name = name
+		self.name = name
 
 	def codeParameters(self):
 		return self.codeparameters.codeParameters()
-
-	def collectNodes(self, collector):
-		collector(self.codeparameters)
-		collector(self.vsCall)
-		collector(self.fsCall)
-		collector(self.returnExpr)
 
 	def extractConstraints(self, ce):
 		ce(self.vsCall)

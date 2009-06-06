@@ -280,8 +280,9 @@ class InterproceduralDataflow(object):
 
 		if code.annotation.dynamicFold:
 			# It's foldable.
-			assert code.vparam is None, code.name
-			assert code.kparam is None, code.name
+			p = code.codeparameters
+			assert p.vparam is None, code.name
+			assert p.kparam is None, code.name
 
 			# TODO folding with constant vargs?
 			# HACK the internal selfparam is usually not "constant" as it's a function, so we ignore it?
@@ -294,8 +295,8 @@ class InterproceduralDataflow(object):
 			resultxtype = self.canonical.existingType(result)
 
 			# Set the return value
-			assert len(code.returnparams) == 1
-			name = self.canonical.localName(code, code.returnparams[0], targetcontext)
+			assert len(p.returnparams) == 1
+			name = self.canonical.localName(code, p.returnparams[0], targetcontext)
 			returnSource = self.roots.root(self, name, self.roots.regionHint)
 			returnSource.initializeType(self, resultxtype)
 

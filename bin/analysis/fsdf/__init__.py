@@ -435,38 +435,36 @@ def checkRecursive(interface):
 	return recursive
 
 def evaluate(console, dataflow, interface):
-	console.begin('fsdf')
+	with console.scope('fsdf'):
 
-	if checkRecursive(interface):
-		console.output('recursive call detected, cannot analyze')
-		console.end()
-		return False
+		if checkRecursive(interface):
+			console.output('recursive call detected, cannot analyze')
+			return False
 
-#	bdfn = BuildDataflowNetwork()
+#		bdfn = BuildDataflowNetwork()
 
-#	for ep in interface.entryPoint:
-#		bdfn.processCode(ep.code)
+#		for ep in interface.entryPoint:
+#			bdfn.processCode(ep.code)
 
-#	for code, count in bdfn.contextLUT.iteritems():
-#		print '\t', code, count
-#	console.output('%d contexts' % bdfn.contexts)
-#	console.output('%d constraints' % bdfn.constraints)
+#		for code, count in bdfn.contextLUT.iteritems():
+#			print '\t', code, count
+#		console.output('%d contexts' % bdfn.contexts)
+#		console.output('%d constraints' % bdfn.constraints)
 
-#	print
-#	print "Loop Allocated"
-#	for obj in bdfn.loopAllocated:
-#		print '\t', obj
-#	print
+#		print
+#		print "Loop Allocated"
+#		for obj in bdfn.loopAllocated:
+#			print '\t', obj
+#		print
 
-#	print
-#	print "Unique Allocated"
-#	for obj in bdfn.uniqueAllocated:
-#		print '\t', obj
+#		print
+#		print "Unique Allocated"
+#		for obj in bdfn.uniqueAllocated:
+#			print '\t', obj
 
 
-	bcd = BuildCorrelatedDataflow()
-	for ep in interface.entryPoint:
-		bcd.processCode(ep.code)
+		bcd = BuildCorrelatedDataflow()
+		for ep in interface.entryPoint:
+			bcd.processCode(ep.code)
 
-	console.end()
-	return True
+		return True

@@ -94,16 +94,15 @@ class Makefile(object):
 	def pystreamCompile(self):
 		console = compilerconsole.CompilerConsole()
 
-		console.begin("makefile")
-		console.output("Processing %s" % self.filename)
-		self.executeFile()
-		console.end()
+		with console.scope("makefile"):
+			console.output("Processing %s" % self.filename)
+			self.executeFile()
 
-		if not self.interface:
-			console.output("No entry points, nothing to do.")
-			return
+			if not self.interface:
+				console.output("No entry points, nothing to do.")
+				return
 
-		assert self.outdir, "No output directory declared."
+			assert self.outdir, "No output directory declared."
 
 		extractor = extractProgram(self.interface)
 		common.pipeline.evaluate(console, self.moduleName, extractor, self.interface)

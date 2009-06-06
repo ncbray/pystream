@@ -34,29 +34,23 @@ def codeConditioning(console, extractor, interface, dataflow):
 
 		if True:
 			# Fold, DCE, etc.
-			console.begin('simplify')
-			for code in db.liveFunctions():
-				if not code.annotation.descriptive:
-					simplify(extractor, db, code)
-			console.end()
-
+			with console.scope('simplify'):
+				for code in db.liveFunctions():
+					if not code.annotation.descriptive:
+						simplify(extractor, db, code)
 		if True:
 			# Seperate different invocations of the same code.
-			console.begin('clone')
 			clone(console, extractor, interface, db)
-			console.end()
 
 		if True:
 			# Try to eliminate kwds, vargs, kargs, and default arguments.
-			console.begin('argument normalization')
-			normalizeArguments(dataflow, db)
-			console.end()
+			with console.scope('argument normalization'):
+				normalizeArguments(dataflow, db)
 
 		if True:
 			# Try to eliminate trivial functions.
-			console.begin('code inlining')
-			inlineCode(console, dataflow, interface, db)
-			console.end()
+			with console.scope('code inlining'):
+				inlineCode(console, dataflow, interface, db)
 
 			# Get rid of dead functions/contexts
 			cull(console, interface, db)
@@ -73,25 +67,23 @@ def lifetimeAnalysis(console, dataflow, interface):
 		la.process(dataflow.db.liveCode)
 
 def cpaAnalyze(console, e, interface, opPathLength=0):
-	console.begin('cpa analysis')
-	result = analysis.cpa.evaluate(console, e, interface, opPathLength)
-	console.output('')
-	console.output("Constraints:   %d" % len(result.constraints))
-	console.output("Contexts:      %d" % len(result.liveContexts))
-	console.output("Code:          %d" % len(result.liveCode))
-	console.output("Contexts/Code: %.1f" % (float(len(result.liveContexts))/max(len(result.liveCode), 1)))
-	console.output("Slot Memory:   %s" % util.memorySizeString(result.slotMemory()))
-	console.output('')
-	console.output("Decompile:     %s" % util.elapsedTimeString(result.decompileTime))
-	console.output("Solve:         %s" % util.elapsedTimeString(result.solveTime))
-	console.end()
+	with console.scope('cpa analysis'):
+		result = analysis.cpa.evaluate(console, e, interface, opPathLength)
+		console.output('')
+		console.output("Constraints:   %d" % len(result.constraints))
+		console.output("Contexts:      %d" % len(result.liveContexts))
+		console.output("Code:          %d" % len(result.liveCode))
+		console.output("Contexts/Code: %.1f" % (float(len(result.liveContexts))/max(len(result.liveCode), 1)))
+		console.output("Slot Memory:   %s" % util.memorySizeString(result.slotMemory()))
+		console.output('')
+		console.output("Decompile:     %s" % util.elapsedTimeString(result.decompileTime))
+		console.output("Solve:         %s" % util.elapsedTimeString(result.solveTime))
 	return result
 
 def cpaPass(console, e, interface, opPathLength=0):
-	console.begin('depython')
-	result = cpaAnalyze(console, e, interface, opPathLength)
-	codeConditioning(console, e, interface, result)
-	console.end()
+	with console.scope('depython'):
+		result = cpaAnalyze(console, e, interface, opPathLength)
+		codeConditioning(console, e, interface, result)
 	return result
 
 
@@ -100,35 +92,31 @@ def shapePass(console, e, result, interface):
 
 
 def cpaDump(console, name, e, result, interface):
-	console.begin('dump')
-	analysis.dump.dumpreport.dump(name, e, result, interface)
-	console.end()
+	with console.scope('dump'):
+		analysis.dump.dumpreport.dump(name, e, result, interface)
 
 def cull(console, interface, db):
-	console.begin('cull')
-	cullProgram(interface, db)
-	console.end()
+	with console.scope('cull'):
+		cullProgram(interface, db)
 
 def evaluate(console, name, extractor, interface):
-	console.begin('compile')
-	result = cpaPass(console, extractor, interface)
+	with console.scope('compile'):
+		result = cpaPass(console, extractor, interface)
 
-	if False:
-		# Intrinsics can prevent complete exhaustive inlining.
-		# Adding call-path sensitivity compensates.
-		result = cpaPass(console,  extractor, interface, 3)
-
-	# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
-	lifetimeAnalysis(console, result, interface)
-
-	try:
 		if False:
-			shapePass(console, extractor, result, interface)
+			# Intrinsics can prevent complete exhaustive inlining.
+			# Adding call-path sensitivity compensates.
+			result = cpaPass(console,  extractor, interface, 3)
 
-		if True:
-			pass #translator.glsl.translate(console, result, interface)
-	finally:
-		if config.doDump:
-			cpaDump(console, name, extractor, result, interface)
+		# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
+		lifetimeAnalysis(console, result, interface)
 
-	console.end()
+		try:
+			if False:
+				shapePass(console, extractor, result, interface)
+
+			if True:
+				pass #translator.glsl.translate(console, result, interface)
+		finally:
+			if config.doDump:
+				cpaDump(console, name, extractor, result, interface)

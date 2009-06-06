@@ -584,29 +584,26 @@ class FunctionCloner(object):
 		replaceAllChildren(self, self.code)
 
 def clone(console, extractor, interface, db):
-	console.begin('analysis')
+	with console.scope('clone'):
+		with console.scope('analysis'):
 
-	liveContexts = programculler.findLiveContexts(interface)
+			liveContexts = programculler.findLiveContexts(interface)
 
-	cloner = ProgramCloner(console, db, liveContexts)
+			cloner = ProgramCloner(console, db, liveContexts)
 
-	cloner.unifyContexts(interface)
-	cloner.findInitialConflicts()
-	cloner.process()
-	numGroups = cloner.makeGroups()
-	originalNumGroups = len(cloner.liveFunctions)
+			cloner.unifyContexts(interface)
+			cloner.findInitialConflicts()
+			cloner.process()
+			numGroups = cloner.makeGroups()
+			originalNumGroups = len(cloner.liveFunctions)
 
-	console.output("=== Split ===")
-	cloner.listGroups()
-	console.output("Num groups %d / %d" %  (numGroups, originalNumGroups))
-	console.output('')
+			console.output("=== Split ===")
+			cloner.listGroups()
+			console.output("Num groups %d / %d" %  (numGroups, originalNumGroups))
+			console.output('')
 
-	console.end()
-
-	# Is cloning worthwhile?
-	if numGroups > originalNumGroups:
-		console.begin('rewrite')
-		cloner.rewriteProgram(extractor, interface)
-		console.end()
-
-		db.liveCode = cloner.newLive
+		# Is cloning worthwhile?
+		if numGroups > originalNumGroups:
+			with console.scope('rewrite'):
+				cloner.rewriteProgram(extractor, interface)
+				db.liveCode = cloner.newLive

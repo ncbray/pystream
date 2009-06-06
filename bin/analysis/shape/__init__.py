@@ -232,49 +232,46 @@ class RegionBasedShapeAnalysis(object):
 
 import collections
 def evaluate(console, extractor, result, interface):
-	console.begin('shape analysis')
+	with console.scope('shape analysis'):
+		regions = regionanalysis.evaluate(extractor, interface.entryPoint, result)
 
-	regions = regionanalysis.evaluate(extractor, interface.entryPoint, result)
+		rbsa = RegionBasedShapeAnalysis(extractor, result, HeapInformationProvider(result, regions))
 
-	rbsa = RegionBasedShapeAnalysis(extractor, result, HeapInformationProvider(result, regions))
-
-	entryCode = set([code for code, selfobj, args in interface.entryPoint])
-	rbsa.buildStructures(entryCode)
+		entryCode = set([code for code, selfobj, args in interface.entryPoint])
+		rbsa.buildStructures(entryCode)
 
 
-	for code, selfobj, args in interface.entryPoint:
-		rbsa.addEntryPoint(code, selfobj, args)
+		for code, selfobj, args in interface.entryPoint:
+			rbsa.addEntryPoint(code, selfobj, args)
 
-	rbsa.handleAllocations()
+		rbsa.handleAllocations()
 
-	rbsa.dumpStatistics()
+		rbsa.dumpStatistics()
 
-	lut = collections.defaultdict(set)
-	for point, context, index in sorted(rbsa.environment._secondary.iterkeys()):
-		#if index.currentSet.containsParameter(): continue
-		if index.object in rbsa.aborted: continue
-		lut[index.object].add((point[0], index.currentSet))
+		lut = collections.defaultdict(set)
+		for point, context, index in sorted(rbsa.environment._secondary.iterkeys()):
+			#if index.currentSet.containsParameter(): continue
+			if index.object in rbsa.aborted: continue
+			lut[index.object].add((point[0], index.currentSet))
 
-	for obj, indexes in lut.iteritems():
-		print obj
-		prevCode = None
-		for code, rc in sorted(indexes):
-			if rc and not rc.containsParameter():
-				if prevCode != code:
-					print '\t', code
-					prevCode = code
+		for obj, indexes in lut.iteritems():
+			print obj
+			prevCode = None
+			for code, rc in sorted(indexes):
+				if rc and not rc.containsParameter():
+					if prevCode != code:
+						print '\t', code
+						prevCode = code
 
-				print '\t\t', rc
+					print '\t\t', rc
+			print
+
 		print
+		print "ABORTED"
+		for obj in rbsa.aborted:
+			print '\t', obj
 
-	print
-	print "ABORTED"
-	for obj in rbsa.aborted:
-		print '\t', obj
+		rbsa.summarize()
 
-	rbsa.summarize()
-
-	print
-	rbsa.dumpStatistics()
-
-	console.end()
+		print
+		rbsa.dumpStatistics()

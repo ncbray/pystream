@@ -458,7 +458,6 @@ class InterproceduralDataflow(object):
 				callocates = [annotations.annotationSet(self.opAllocates[(code, op, context)]) for context in contexts]
 				allocates = annotations.makeContextualAnnotation(callocates)
 
-
 				if not invokes[0]:
 					op.rewriteAnnotation(
 						invokes=invokes,

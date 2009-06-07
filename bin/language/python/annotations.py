@@ -78,9 +78,9 @@ class OpAnnotation(Annotation):
 
 	def rewrite(self, invokes=noMod, opReads=noMod, opModifies=noMod, opAllocates=noMod, reads=noMod, modifies=noMod, allocates=noMod, origin=noMod):
 		if invokes     is noMod: invokes     = self.invokes
-		if opReads     is noMod: opReads     = self.reads
-		if opModifies  is noMod: opModifies  = self.modifies
-		if opAllocates is noMod: opAllocates = self.allocates
+		if opReads     is noMod: opReads     = self.opReads
+		if opModifies  is noMod: opModifies  = self.opModifies
+		if opAllocates is noMod: opAllocates = self.opAllocates
 		if reads       is noMod: reads       = self.reads
 		if modifies    is noMod: modifies    = self.modifies
 		if allocates   is noMod: allocates   = self.allocates
@@ -89,13 +89,13 @@ class OpAnnotation(Annotation):
 		return OpAnnotation(invokes, opReads, opModifies, opAllocates, reads, modifies, allocates, origin)
 
 	def contextSubset(self, remap, invokeMapper=None):
-		invokes     = remapContextual(self.invokes,   remap, invokeMapper)
+		invokes     = remapContextual(self.invokes,     remap, invokeMapper)
 		opReads     = remapContextual(self.opReads,     remap)
 		opModifies  = remapContextual(self.opModifies,  remap)
 		opAllocates = remapContextual(self.opAllocates, remap)
-		reads       = remapContextual(self.reads,     remap)
-		modifies    = remapContextual(self.modifies,  remap)
-		allocates   = remapContextual(self.allocates, remap)
+		reads       = remapContextual(self.reads,       remap)
+		modifies    = remapContextual(self.modifies,    remap)
+		allocates   = remapContextual(self.allocates,   remap)
 		origin      = self.origin
 
 		return OpAnnotation(invokes, opReads, opModifies, opAllocates, reads, modifies, allocates, origin)

@@ -28,7 +28,8 @@ def buildParser():
 	parser.add_option_group(group)
 
 	group = optparse.OptionGroup(parser, "File Filters")
-	group.add_option('-f', dest='filefilters', action='append',     default=['\.py$'], help="matches the file name", metavar="FILTER")
+	group.add_option('-f', dest='filefilters', action='append', default=['\.py$'], help="matches the file name", metavar="FILTER")
+	group.add_option('-g', dest='excludefilefilters', action='append', default=[], help="excludes file name", metavar="FILTER")
 	parser.add_option_group(group)
 
 	group = optparse.OptionGroup(parser, "Text Filters")
@@ -46,6 +47,10 @@ def buildParser():
 def fileMatches(filename):
 	for f in fileFilters:
 		if not f.search(filename):
+			return False
+
+	for f in excludeFileFilters:
+		if f.search(filename):
 			return False
 	return True
 
@@ -225,22 +230,27 @@ if __name__ == '__main__':
 
 	fileFilters = []
 	for ff in options.filefilters:
-		print "file: %s" % ff
+		print "+file: %s" % ff
 		fileFilters.append(re.compile(ff, flags))
+
+	excludeFileFilters = []
+	for ff in options.excludefilefilters:
+		print "-file: %s" % ff
+		excludeFileFilters.append(re.compile(ff, flags))
 
 	textFilters = []
 	for tf in args:
-		print "text: %s" % tf
+		print "+text: %s" % tf
 		textFilters.append(re.compile(tf, flags))
 
 	excludeFilters = []
 	for ef in options.excludes:
-		print "excl: %s" % ef
+		print "-text: %s" % ef
 		excludeFilters.append(re.compile(ef, flags))
 
 	replaceFilters = []
 	for rf in options.replaces:
-		print "repl: %s -> %s" % rf
+		print "!repl: %s -> %s" % rf
 		replaceFilters.append((re.compile(rf[0], flags), rf[1]))
 
 

@@ -29,9 +29,10 @@ class CodeAnnotation(Annotation):
 		'descriptive', 'primitive',
 		'staticFold', 'dynamicFold',
 		'origin',
-		'live', 'killed']
+		'live', 'killed',
+		'codeReads', 'codeModifies', 'codeAllocates']
 
-	def __init__(self, contexts, descriptive, primitive, staticFold, dynamicFold, origin, live, killed):
+	def __init__(self, contexts, descriptive, primitive, staticFold, dynamicFold, origin, live, killed, codeReads, codeModifies, codeAllocates):
 		self.contexts    = contexts
 		self.descriptive = descriptive
 		self.primitive   = primitive
@@ -40,12 +41,16 @@ class CodeAnnotation(Annotation):
 		self.origin      = origin
 		self.live        = live
 		self.killed      = killed
+		self.codeReads     = codeReads
+		self.codeModifies  = codeModifies
+		self.codeAllocates = codeAllocates
 
 	def rewrite(self, contexts=noMod,
 			descriptive=noMod, primitive=noMod,
 			staticFold=noMod, dynamicFold=noMod,
 			origin=noMod,
-			live=noMod, killed=noMod):
+			live=noMod, killed=noMod,
+			codeReads=noMod, codeModifies=noMod, codeAllocates=noMod):
 		if contexts    is noMod: contexts    = self.contexts
 		if descriptive is noMod: descriptive = self.descriptive
 		if primitive   is noMod: primitive   = self.primitive
@@ -54,14 +59,22 @@ class CodeAnnotation(Annotation):
 		if origin      is noMod: origin      = self.origin
 		if live        is noMod: live        = self.live
 		if killed      is noMod: killed      = self.killed
+		if codeReads     is noMod: codeReads     = self.codeReads
+		if codeModifies  is noMod: codeModifies  = self.codeModifies
+		if codeAllocates is noMod: codeAllocates = self.codeAllocates
 
-		return CodeAnnotation(contexts, descriptive, primitive, staticFold, dynamicFold, origin, live, killed)
+		return CodeAnnotation(contexts, descriptive, primitive, staticFold, dynamicFold, origin, live, killed, codeReads, codeModifies, codeAllocates)
 
 	def contextSubset(self, remap):
 		contexts = [self.contexts[i] for i in remap]
 		live     = remapContextual(self.live, remap)
 		killed   = remapContextual(self.killed, remap)
-		return self.rewrite(contexts=contexts, live=live, killed=killed)
+
+		codeReads     = remapContextual(self.codeReads, remap)
+		codeModifies  = remapContextual(self.codeModifies, remap)
+		codeAllocates = remapContextual(self.codeAllocates, remap)
+
+		return self.rewrite(contexts=contexts, live=live, killed=killed, codeReads=codeReads, codeModifies=codeModifies, codeAllocates=codeAllocates)
 
 class OpAnnotation(Annotation):
 	__slots__ = 'invokes', 'opReads', 'opModifies', 'opAllocates', 'reads', 'modifies', 'allocates', 'origin'
@@ -121,6 +134,6 @@ class SlotAnnotation(Annotation):
 		return self.rewrite(references=references)
 
 
-emptyCodeAnnotation  = CodeAnnotation(None, False, False, None, None, None, None, None)
+emptyCodeAnnotation  = CodeAnnotation(None, False, False, None, None, None, None, None, None, None, None)
 emptyOpAnnotation    = OpAnnotation(None, None, None, None, None, None, None, (None,))
 emptySlotAnnotation  = SlotAnnotation(None)

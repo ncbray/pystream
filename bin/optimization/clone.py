@@ -542,8 +542,8 @@ class FunctionCloner(object):
 			# We do this computation after transfer, as it can reduce the number of invocations.
 			func = tools.singleCall(tempresult)
 			if not func:
-				names = [code.name for code, context in tempresult.annotation.invokes[0]]
-				raise Exception, "Cannot clone the direct call in %r, as it has multiple targets. %r" % (self.destfunction, names)
+				names = tuple(set([code.name for code, context in tempresult.annotation.invokes[0]]))
+				raise Exception, "Cannot clone the direct call in %r, as it has multiple targets. %r" % (self.code, names)
 		else:
 			# HACK never actualy executed, so null the target?
 			# This op should be subseqently eliminated.

@@ -230,14 +230,24 @@ def dumpFunctionInfo(func, data, links, out, scg):
 				out.endl()
 
 
-			read   = op.annotation.reads
-			modify = op.annotation.modifies
+			# dump read/modify/allocate information for this op
+			read     = op.annotation.reads
+			modify   = op.annotation.modifies
 			allocate = op.annotation.allocates
 
 			s = ''
 			if read and read[1][cindex]: s += "R"
 			if modify and modify[1][cindex]: s += "M"
 			if allocate and allocate[1][cindex]: s += "A"
+
+			if False:
+				# For debugging intermediate information
+				read     = op.annotation.opReads
+				modify   = op.annotation.opModifies
+				allocate = op.annotation.opAllocates
+				if read and read[1][cindex]: s += "(R)"
+				if modify and modify[1][cindex]: s += "(M)"
+				if allocate and allocate[1][cindex]: s += "(A)"
 
 
 			if s:
@@ -594,6 +604,9 @@ class DerivedData(object):
 		self.funcModifies      = collections.defaultdict(lambda: collections.defaultdict(set))
 
 		for func in db.liveFunctions():
+			self.handleReads(func, func.annotation.codeReads)
+			self.handleModifies(func, func.annotation.codeModifies)
+
 			ops = tools.codeOps(func)
 			for op in ops:
 				self.handleOpInvokes(func, op)
@@ -613,6 +626,9 @@ class DerivedData(object):
 
 	def handleOpReads(self, code, op):
 		reads = op.annotation.reads
+		self.handleReads(code, reads)
+
+	def handleReads(self, code, reads):
 		if reads is not None:
 			for cindex, context in enumerate(code.annotation.contexts):
 				creads = reads[1][cindex]
@@ -620,11 +636,13 @@ class DerivedData(object):
 
 	def handleOpModifies(self, code, op):
 		modifies = op.annotation.modifies
+		self.handleModifies(code, modifies)
+
+	def handleModifies(self, code, modifies):
 		if modifies is not None:
 			for cindex, context in enumerate(code.annotation.contexts):
 				cmods = modifies[1][cindex]
 				self.funcModifies[code][context].update(cmods)
-
 
 	def callers(self, function, context):
 		return self.invokeSource[(function, context)]

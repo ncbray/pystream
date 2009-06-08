@@ -3,6 +3,8 @@ from language.glsl import codegen
 
 from . pythonshader import PythonShader
 
+from abstractcode.shaderprogram import ShaderProgram
+
 class CompilerContext(object):
 	def __init__(self, console, extractor, interface):
 		self.console   = console
@@ -35,13 +37,27 @@ def translate(console, dataflow, interface):
 
 		# HACK should only target shader?
 		for code in context.interface.entryCode():
+			if isinstance(code, ShaderProgram):
 
-			shader = PythonShader(code, pathMatcher)
-			iotransform.evaluateShader(context, shader, pathMatcher)
-			result = translator.processShader(shader)
+				shadercode = code.vertexShaderCode()
+				shader = PythonShader(shadercode, pathMatcher)
+				iotransform.evaluateShader(context, shader, pathMatcher)
+				result = translator.processShader(shader)
 
-			print str(code)
-			print
-			print codegen.GLSLCodeGen()(result)
-			print
-			print
+				print str(shadercode)
+				print
+				print codegen.GLSLCodeGen()(result)
+				print
+				print
+
+
+				shadercode = code.fragmentShaderCode()
+				shader = PythonShader(shadercode, pathMatcher)
+				iotransform.evaluateShader(context, shader, pathMatcher)
+				result = translator.processShader(shader)
+
+				print str(shadercode)
+				print
+				print codegen.GLSLCodeGen()(result)
+				print
+				print

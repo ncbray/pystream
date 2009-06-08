@@ -98,8 +98,9 @@ def transformInputs(extractor, shader):
 	rewrite.extractor = extractor
 
 	# HACK first parameter as uniform
-	freqs = ['uniform']+['input']*(len(shader.code.params)-1)
-	for arg, freq in zip(shader.code.params, freqs):
+	p = shader.code.codeparameters
+	freqs = ['uniform']+['input']*(len(p.params)-1)
+	for arg, freq in zip(p.params, freqs):
 		defn = shader.getRoot(arg.name, arg, freq)
 		traverse.flow.define(arg, defn)
 
@@ -134,7 +135,8 @@ class OutputTransform(StrictTypeDispatcher):
 
 	def initReturns(self):
 		self.returns = []
-		for i, src in enumerate(self.shader.code.returnparams):
+		p = self.shader.code.codeparameters
+		for i, src in enumerate(p.returnparams):
 			newdefn = self.shader.getRoot('ret%d' % i, src, 'output')
 
 			lcl = newdefn.local

@@ -139,7 +139,7 @@ def evaluate(console, name, extractor, interface):
 				shapePass(console, extractor, result, interface)
 
 			if True:
-				pass #translator.glsl.translate(console, result, interface)
+				translator.glsl.translate(console, result, interface)
 		finally:
 			if config.doDump:
 				cpaDump(console, name, extractor, result, interface)

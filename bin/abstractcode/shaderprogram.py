@@ -54,6 +54,15 @@ class ShaderProgram(AbstractCode):
 		ce(self.fsCall)
 		ce(self.junk)
 
+	def vertexShaderCode(self):
+		# HACK assumes the call is a DirectCall
+		return self.vsCall.expr.code
+
+	def fragmentShaderCode(self):
+		# HACK assumes the call is a DirectCall
+		return self.fsCall.expr.code
+
+
 	# Used to find the slots that need to be read
 	def crawlObj(self, obj, slots):
 		if not obj.xtype.isExisting() and not obj.xtype.isExternal():

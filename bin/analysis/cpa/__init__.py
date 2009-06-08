@@ -440,6 +440,14 @@ class InterproceduralDataflow(object):
 		reads, modifies, allocates = self.collectRMA(code, None)
 		code.rewriteAnnotation(codeReads=reads, codeModifies=modifies, codeAllocates=allocates)
 
+	def mergeAbstractCode(self, code):
+		# This is done after the ops and locals are annotated as the "abstractReads", etc. may depends on the annotations.
+		reads     = annotations.mergeContextualAnnotation(code.annotation.codeReads, code.abstractReads())
+		modifies  = annotations.mergeContextualAnnotation(code.annotation.codeModifies, code.abstractModifies())
+		allocates = annotations.mergeContextualAnnotation(code.annotation.codeAllocates, code.abstractAllocates())
+
+		code.rewriteAnnotation(codeReads=reads, codeModifies=modifies, codeAllocates=allocates)
+
 	def reindexAnnotations(self):
 		# Find the contexts that a given entrypoint invokes
 		for entryPoint, op in self.entryPointOp.iteritems():
@@ -492,6 +500,7 @@ class InterproceduralDataflow(object):
 				references = self.collectContexts(contextLclLUT, contexts)
 				lcl.rewriteAnnotation(references=references)
 
+			self.mergeAbstractCode(code)
 
 	### Debugging methods ###
 

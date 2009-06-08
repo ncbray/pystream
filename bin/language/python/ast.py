@@ -375,6 +375,15 @@ class Code(CompoundStatement):
 	def codeParameters(self):
 		return self.codeparameters.codeParameters()
 
+	def abstractReads(self):
+		return None
+
+	def abstractModifies(self):
+		return None
+
+	def abstractAllocates(self):
+		return None
+
 
 class Allocate(LLExpression):
 	__fields__ = 'expr:Reference'

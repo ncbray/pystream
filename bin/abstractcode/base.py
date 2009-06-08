@@ -14,3 +14,12 @@ class AbstractCode(ast.ASTNode):
 
 	def setCodeName(self, name):
 		raise NotImplementedError
+
+	def abstractReads(self):
+		return None
+
+	def abstractModifies(self):
+		return None
+
+	def abstractAllocates(self):
+		return None

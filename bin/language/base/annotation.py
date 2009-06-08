@@ -1,7 +1,7 @@
 import util.canonical
 import collections
 
-__all__ = ['noMod', 'remapContextual', 'makeContextualAnnotation', 'annotationSet']
+__all__ = ['noMod', 'remapContextual', 'makeContextualAnnotation', 'annotationSet', 'mergeContextualAnnotation']
 
 noMod = util.canonical.Sentinel('<no mod>')
 
@@ -18,6 +18,18 @@ def makeContextualAnnotation(cdata):
 	cache = {} # Used to pool identical data
 	return ContextualAnnotation(cache.setdefault(merged, merged), tuple([cache.setdefault(data, data) for data in cdata]))
 
+def mergeAnnotationSet(a, b):
+	s = set(a)
+	s.update(b)
+	return annotationSet(s)
+
+def mergeContextualAnnotation(a, b):
+	if a is None:
+		return b
+	elif b is None:
+		return a
+	else:
+		return makeContextualAnnotation([mergeAnnotationSet(ca, cb) for ca, cb in zip(a.context, b.context)])
 
 def remapContextual(cdata, remap, translator=None):
 	if cdata is None: return None

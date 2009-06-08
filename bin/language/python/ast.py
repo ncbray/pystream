@@ -160,18 +160,17 @@ class MethodCall(Expression):
 	__fields__ = 'expr:Expression name:Expression args:Expression* kwds* vargs:Expression? kargs:Expression?'
 
 class DirectCall(Expression):
-	# TODO func -> code?
 	# TODO kwds type?
-	# HACK func is optional, as cloned "dead" direct calls may have no corresponding code.
-	__fields__ = 'func:Code? selfarg:Expression? args:Expression* kwds* vargs:Expression? kargs:Expression?'
+	# HACK code is optional, as cloned "dead" direct calls may have no corresponding code.
+	__fields__ = 'code:Code? selfarg:Expression? args:Expression* kwds* vargs:Expression? kargs:Expression?'
 
 	def __repr__(self):
-		if self.func is not None:
-			funcname = self.func.name
+		if self.code is not None:
+			codename = self.code.codeName()
 		else:
-			funcname = "???"
+			codename = "???"
 
-		return "%s(<%s>, %r, %r, %r, %r, %r)" % (type(self).__name__, funcname,
+		return "%s(<%s>, %r, %r, %r, %r, %r)" % (type(self).__name__, codename,
 						       self.selfarg,
 						       self.args, self.kwds,
 						       self.vargs, self.kargs)

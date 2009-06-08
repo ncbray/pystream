@@ -295,7 +295,7 @@ class CodeInliningTransform(StrictTypeDispatcher):
 		# Prevent the inlining of potential intrinsics.
 		if self.intrinsics(None, node) is not None:
 #			print "INTRINSIC", node
-#			print node.func.annotation.origin
+#			print node.code.annotation.origin
 #			print
 			return None
 

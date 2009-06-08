@@ -79,7 +79,7 @@ class DirectCallRewriter(object):
 			self.rewrites[origin].append(func)
 
 	def __call__(self, strategy, node):
-		origin = node.func.annotation.origin
+		origin = node.code.annotation.origin
 		if origin in self.rewrites:
 			for rewrite in self.rewrites[origin]:
 				result = rewrite(strategy, node)

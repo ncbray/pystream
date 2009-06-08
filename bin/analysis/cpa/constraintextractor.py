@@ -146,7 +146,7 @@ class ExtractDataflow(object):
 
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node, targets):
-		return self.directCall(node, node.func,
+		return self.directCall(node, node.code,
 			self(node.selfarg), self(node.args),
 			self(node.vargs), self(node.kargs), targets)
 

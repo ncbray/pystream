@@ -242,8 +242,8 @@ class SimpleExprGen(StandardVisitor):
 	def visitDirectCall(self, node):
 		prec = 4
 
-		if node.func is not None:
-			funcname = node.func.name
+		if node.code is not None:
+			funcname = node.code.name
 		else:
 			funcname = "???" # This is an error, but if it occurs we need to be able to visualize it.
 

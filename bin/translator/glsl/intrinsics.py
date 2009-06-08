@@ -107,7 +107,7 @@ def swizzleRewrite(self, node):
 	if self is None:
 		return True
 	else:
-		name = node.func.annotation.origin.name
+		name = node.code.annotation.origin.name
 		return glsl.Load(self(node.args[0]), name)
 
 def randomRewrite(self, node):

@@ -120,7 +120,7 @@ class ArgumentNormalizationTransform(object):
 			args    = self.extend(self(node.args), self.newParams)
 			kwds    = self(node.kwds)
 			kargs   = self(node.kargs)
-			result = ast.DirectCall(node.func, selfarg, args, kwds, None, kargs)
+			result = ast.DirectCall(node.code, selfarg, args, kwds, None, kargs)
 
 			result.annotation = node.annotation
 			return result

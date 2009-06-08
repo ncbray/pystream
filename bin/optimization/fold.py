@@ -253,10 +253,10 @@ class FoldRewrite(object):
 
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node):
-		if node.func is None:
+		if node.code is None:
 			return node
 
-		foldFunc = node.func.annotation.staticFold
+		foldFunc = node.code.annotation.staticFold
 		if foldFunc and not node.kwds and not node.vargs and not node.kargs:
 			result = self.annotateFolded(fold.foldCallAST(self.extractor, node, foldFunc, node.args))
 			if result is not node:

@@ -1,2 +1,2 @@
-git prune
-git gc
+call git prune
+call git gc

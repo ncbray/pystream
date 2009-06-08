@@ -527,10 +527,6 @@ class SimpleCodeGen(StandardVisitor):
 				self.seg.processCollapsed(node.lcls[0], node.expr)
 			else:
 				stmt = "%s = %s" % (', '.join([self.seg.process(lcl) for lcl in node.lcls]), self.seg.process(node.expr))
-				if node.isMerge:
-					stmt += " # Merge"
-				if node.isSplit:
-					stmt += " # Split"
 
 				self.emitStatement(stmt)
 

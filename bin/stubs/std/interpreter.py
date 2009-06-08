@@ -10,7 +10,8 @@ import operator
 import util
 
 def noself(code):
-	code.codeparameters.selfparam = None
+	p = code.codeparameters
+	code.codeparameters = CodeParameters(None, p.params, p.paramnames, p.vparam, p.kparam, p.returnparams)
 	return code
 
 # HACK for hand-op

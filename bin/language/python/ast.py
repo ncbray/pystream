@@ -11,6 +11,9 @@ from . import program
 # For Code
 import util.calling
 
+# HACK for CodeParameters.paramnames
+NoneType = type(None)
+
 class Existing(Reference):
 	__slots__  = 'object'
 	__shared__ = True
@@ -173,9 +176,9 @@ class DirectCall(Expression):
 						       self.args, self.kwds,
 						       self.vargs, self.kargs)
 
-# HACK no type: the args may be all Cells if we're making a closure.
+# The args may be all Cells if we're making a closure.
 class BuildTuple(Expression):
-	__fields__ = 'args*'
+	__fields__ = 'args:(Expression,Cell)*'
 
 	def isPure(self):
 		return True
@@ -209,27 +212,15 @@ class DeleteAttr(SimpleStatement):
 class UnpackSequence(SimpleStatement):
 	__fields__ = 'expr:Expression targets:Local*'
 
-# TODO should swap expr/lcl?
+# TODO remove markSplit/markMerge?
 class Assign(SimpleStatement):
 	__fields__ = 'expr:Expression lcls:Local*'
-	__slots__  = 'isSplit', 'isMerge'
-
-	def __init__(self, expr, lcls):
-		super(Assign, self).__init__()
-		assert expr.returnsValue(), expr
-		assert isinstance(lcls, (list, tuple)), lcls
-
-		self.expr = expr
-		self.lcls = lcls
-
-		self.isSplit = False
-		self.isMerge = False
 
 	def markSplit(self):
-		self.isSplit = True
+		pass #self.isSplit = True
 
 	def markMerge(self):
-		self.isMerge = True
+		pass #self.isMerge = True
 
 class Discard(SimpleStatement):
 	__fields__ = 'expr:Expression'
@@ -283,6 +274,7 @@ class EndFinally(ControlFlow):
 
 class Suite(ASTNode):
 	__fields__ = 'blocks:Statement*'
+	__mutable__ = True # HACK not really mutable, just need to be able to assign to blocks.
 
 	def __init__(self, blocks=None):
 		super(Suite, self).__init__()
@@ -341,9 +333,9 @@ class For(Loop):
 	# TODO type of index?
 
 class CodeParameters(ASTNode):
-	# HACK parameternames can be str or None, eliminated type annotation because we can't have multiple types?
+	# TODO support paramnames:str?* (different than paramnames:str*?)
 	__fields__ = """selfparam:Local?
-			params:Local* paramnames*
+			params:Local* paramnames:(str,NoneType)*
 			vparam:Local? kparam:Local?
 			returnparams:Local*"""
 

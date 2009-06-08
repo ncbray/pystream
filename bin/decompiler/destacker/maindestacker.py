@@ -717,10 +717,10 @@ def destack(code, mname, fname, root, argnames, vargs, kargs, extractor, callbac
 	root = dv.process(root, stack)
 	root.name = fname
 
-	root.codeparameters.params = param
-	root.codeparameters.paramnames = argnames
-	root.codeparameters.vparam = v
-	root.codeparameters.kparam = k
+	selfparam    = root.codeparameters.selfparam
+	returnparams = root.codeparameters.returnparams
+
+	root.codeparameters = CodeParameters(selfparam, param, argnames, v, k, returnparams)
 
 	origin = codeOrigin(code)
 	root.rewriteAnnotation(origin=origin)

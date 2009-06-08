@@ -156,8 +156,10 @@ class LLTranslator(object):
 			self.defn[lcl] = expr
 
 		if expr not in self.specialGlobals:
-			node.expr = expr
-			return node
+			if node.expr == expr:
+				return node
+			else:
+				return ast.Assign(expr, node.lcls)
 		else:
 			return ()
 
@@ -168,8 +170,10 @@ class LLTranslator(object):
 		if isinstance(expr, ast.Store): return expr
 
 		if expr not in self.specialGlobals:
-			node.expr = expr
-			return node
+			if node.expr == expr:
+				return node
+			else:
+				return ast.Discard(expr)
 		else:
 			return ()
 
@@ -223,7 +227,9 @@ class LLTranslator(object):
 
 			p = self.code.codeparameters
 			if num != len(p.returnparams):
-				p.returnparams = [ast.Local('internal_return_%d' % i) for i in range(num)]
+				returnparams = [ast.Local('internal_return_%d' % i) for i in range(num)]
+				self.code.codeparameters = ast.CodeParameters(p.selfparam, p.params, p.paramnames, p.vparam, p.kparam, returnparams)
+
 		else:
 			assert num == self.numReturns
 

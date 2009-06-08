@@ -1,6 +1,5 @@
-__all__ = ['astnode', 'ASTNode', 'Symbol', 'children',
-	   'reconstruct', 'makeASTManifest',
-	   'astequal', 'asthash',]
+__all__ = ['astnode', 'ASTNode', 'children',
+	   'reconstruct', 'makeASTManifest',]
 
 # A metaclass for generating AST node classes.
 
@@ -8,7 +7,8 @@ import sys
 
 from . import codegeneration
 
-doTypeChecks = False
+# Enforces mutability, but slows down the program.
+wrapProperties = False
 
 class ClassBuilder(object):
 	def __init__(self, type, name, bases, d):
@@ -25,6 +25,11 @@ class ClassBuilder(object):
 		shared = bool(self.d.get('__shared__', False))
 		self.d['__shared__'] = shared
 		return shared
+
+	def getMutable(self, shared):
+		mutable = bool(self.d.get('__mutable__', shared))
+		self.d['__mutable__'] = mutable
+		return mutable
 
 	def getGlobalDict(self):
 		module = self.d['__module__']
@@ -117,10 +122,16 @@ class ClassBuilder(object):
 	def makeWrappedFieldSlots(self, fields, types, optional):
 		slots = ["_%s" % field for field in fields]
 
-		for field in fields:
-			getter = self.makeFunc(codegeneration.makeGetter, (self.name, field))
-			setter = self.makeFunc(codegeneration.makeSetter, (self.name, field, types.get(field), field in optional, field in self.repeated))
-			self.d[field] = property(getter, setter)
+		for field, slot in zip(fields, slots):
+			getter = self.makeFunc(codegeneration.makeGetter, (self.name, field, slot))
+
+			if self.mutable:
+				setter = self.makeFunc(codegeneration.makeSetter, (self.name, field, slot, types.get(field), field in optional, field in self.repeated))
+				p = property(getter, setter)
+			else:
+				p = property(getter)
+
+			self.d[field] = p
 
 		return slots
 
@@ -129,7 +140,7 @@ class ClassBuilder(object):
 
 	def makeFieldSlots(self, fields, types, optional):
 		# Create slots for the fields.
-		if doTypeChecks:
+		if wrapProperties:
 			return self.makeWrappedFieldSlots(fields, types, optional)
 		else:
 			return self.makeDirectFieldSlots(fields, types, optional)
@@ -149,25 +160,25 @@ class ClassBuilder(object):
 		return type.__new__(self.type, self.name, self.bases, self.d)
 
 	def makeFunc(self, func, args):
-		return codegeneration.compileFunc(func(*args), self.g)
+		code = func(*args)
+		#print code
+		#print
+		return codegeneration.compileFunc(code, self.g)
 
 	def defaultFunc(self, name, func, args):
 		if not name in self.d:
 			self.d[name] = self.makeFunc(func, args)
 
-	def addDefaultMethods(self, fields, types, optional):
+	def addDefaultMethods(self, paramnames, fields, types, optional):
 		# Generate and attach methods.
-		self.defaultFunc('__init__', codegeneration.makeInit, (self.name, fields, types, optional, self.repeated))
+		self.defaultFunc('__init__', codegeneration.makeInit, (self.name, paramnames, fields, types, optional, self.repeated))
 		self.defaultFunc('__repr__', codegeneration.makeRepr, (self.name, fields))
 		self.defaultFunc('accept',   codegeneration.makeAccept, (self.name,))
 		self.defaultFunc('children', codegeneration.makeGetChildren, (fields,))
-		self.defaultFunc('fields',   codegeneration.makeGetFields, (fields,))
+		self.defaultFunc('fields',   codegeneration.makeGetFields, (paramnames, fields,))
 
-		self.defaultFunc('replaceChildren', codegeneration.makeReplaceChildren, (self.name, fields, types, optional, self.repeated))
-
-		self.defaultFunc('asteq', codegeneration.makeEq, (fields,))
-		self.defaultFunc('asthash', codegeneration.makeHash, (fields,))
-
+		if self.mutable:
+			self.defaultFunc('replaceChildren', codegeneration.makeReplaceChildren, (self.name, paramnames, fields, types, optional, self.repeated))
 
 	def mutate(self):
 		self.g   = self.getGlobalDict()
@@ -177,11 +188,13 @@ class ClassBuilder(object):
 		optional = self.getOptional(fields)
 
 		shared   = self.getShared()
+		self.mutable = self.getMutable(shared)
 
 		slots = self.makeFieldSlots(fields, types, optional)
+		internalNames = list(slots)
 		slots = self.appendToExistingSlots(slots)
 
-		self.addDefaultMethods(fields, types, optional)
+		self.addDefaultMethods(fields, internalNames, types, optional)
 
 		return self
 
@@ -231,35 +244,6 @@ def reconstruct(node, newchildren):
 			print "error", node
 			print newchildren
 			raise
-
-def astequal(a, b):
-	if isinstance(a, LeafTypes) and isinstance(b, LeafTypes):
-		return a == b
-	elif type(a) is type(b):
-		ca, cb = children(a), children(b)
-		if len(ca) == len(cb):
-			for x, y in zip(ca, cb):
-				if not astequal(x, y):
-					return False
-			return True
-	return False
-
-def asthash(node):
-	if isinstance(node, LeafTypes):
-		return hash(node)
-	else:
-		return id(type(node))^hash(tuple(node.children))
-
-class Symbol(object):
-	__metaclass__ = astnode
-	__slots__    = 'name'
-
-	def __init__(self, name):
-		assert isinstance(name, str)
-		self.name = name
-
-	def __repr__(self):
-		return "Symbol(%s)" % self.name
 
 class ASTNode(object):
 	__metaclass__ = astnode

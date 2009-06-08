@@ -703,7 +703,9 @@ class TestAllocateCase(TestCompoundConstraintBase):
 			ast.Assign(alloc, [y]),
 			])
 
-		lc = self.sys.cpacanonical.localName(None, x, self.context)
+		fakecode = ast.Code('bogus', ast.CodeParameters(None, [], [], None, None, []), self.code)
+
+		lc = self.sys.cpacanonical.localName(fakecode, x, self.context)
 		xinfo = self.root.root(self.sys, lc, self.root.regionHint)
 		btype = self.sys.cpacanonical.pathType(None, 'bogus', id(alloc))
 

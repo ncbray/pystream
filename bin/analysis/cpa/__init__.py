@@ -411,6 +411,13 @@ class InterproceduralDataflow(object):
 
 		self.solveTime = end-start-self.decompileTime
 
+
+	### Annotation methods ###
+
+	def collectContexts(self, lut, contexts):
+		cdata  = [annotations.annotationSet(lut[context]) for context in contexts]
+		return annotations.makeContextualAnnotation(cdata)
+
 	def collectRMA(self, code, op):
 		contexts = code.annotation.contexts
 
@@ -425,18 +432,25 @@ class InterproceduralDataflow(object):
 
 		return reads, modifies, allocates
 
-	def annotate(self):
+	def annotateCode(self, code, contexts):
+		code.rewriteAnnotation(contexts=tuple(contexts))
+
+		# Creating vparam and kparam objects produces side effects...
+		# Store them in the code annotation
+		reads, modifies, allocates = self.collectRMA(code, None)
+		code.rewriteAnnotation(codeReads=reads, codeModifies=modifies, codeAllocates=allocates)
+
+	def reindexAnnotations(self):
 		# Find the contexts that a given entrypoint invokes
 		for entryPoint, op in self.entryPointOp.iteritems():
 			contexts = [ccontext.context for ccontext in self.opInvokes[op]]
 			entryPoint.contexts = contexts
 
 		# Re-index the invocations
-		opLut = collections.defaultdict(lambda: collections.defaultdict(set))
+		invokeLUT = collections.defaultdict(lambda: collections.defaultdict(set))
 		for srcop, dsts in self.opInvokes.iteritems():
 			for dst in dsts:
-				opLut[(srcop.code, srcop.op)][srcop.context].add((dst.code, dst.context))
-
+				invokeLUT[(srcop.code, srcop.op)][srcop.context].add((dst.code, dst.context))
 
 		# Re-index the locals
 		lclLUT = collections.defaultdict(lambda: collections.defaultdict(set))
@@ -447,23 +461,19 @@ class InterproceduralDataflow(object):
 			elif name.isExisting():
 				lclLUT[(name.code, name.object)][name.context] = slot
 
-		for code, contexts in self.codeContexts.iteritems():
-			code.rewriteAnnotation(contexts=tuple(contexts))
-			contexts = code.annotation.contexts
+		return invokeLUT, lclLUT
 
+	def annotate(self):
+		invokeLUT, lclLUT = self.reindexAnnotations()
+
+		for code, contexts in self.codeContexts.iteritems():
+			self.annotateCode(code, contexts)
+
+			contexts = code.annotation.contexts
 			ops, lcls = getOps(code)
 
-			# Creating vparam and kparam objects produces side effects...
-			# Store them in the code annotation
-			reads, modifies, allocates = self.collectRMA(code, None)
-			code.rewriteAnnotation(codeReads=reads, codeModifies=modifies, codeAllocates=allocates)
-
 			for op in ops:
-				contextLUT = opLut[(code, op)]
-
-				cinvokes  = [annotations.annotationSet(contextLUT[context]) for context in contexts]
-				invokes   = annotations.makeContextualAnnotation(cinvokes)
-
+				invokes = self.collectContexts(invokeLUT[(code, op)], contexts)
 				reads, modifies, allocates = self.collectRMA(code, op)
 
 				op.rewriteAnnotation(
@@ -475,15 +485,15 @@ class InterproceduralDataflow(object):
 
 			for lcl in lcls:
 				if isinstance(lcl, ast.Existing):
-					contextLUT = lclLUT[(code, lcl.object)]
+					contextLclLUT = lclLUT[(code, lcl.object)]
 				else:
-					contextLUT = lclLUT[(code, lcl)]
+					contextLclLUT = lclLUT[(code, lcl)]
 
-				crefs = [annotations.annotationSet(contextLUT[context]) for context in code.annotation.contexts]
-				references = annotations.makeContextualAnnotation(crefs)
+				references = self.collectContexts(contextLclLUT, contexts)
 				lcl.rewriteAnnotation(references=references)
 
 
+	### Debugging methods ###
 
 	def checkConstraints(self):
 		badConstraints = []

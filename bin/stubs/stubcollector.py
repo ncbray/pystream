@@ -106,7 +106,7 @@ class StubCollector(object):
 
 	def llast(self, f):
 		code = f()
-		assert isinstance(code, ast.Code), type(code)
+		assert code.isAbstractCode(), type(code)
 		self.registerFunction(None, code)
 		self.extractor.desc.functions.append(code)
 		return code
@@ -135,7 +135,7 @@ class StubCollector(object):
 		ptr = self.cfuncptr(meth)
 
 		def callback(code):
-			assert isinstance(code, ast.Code), Code
+			assert code.isAbstractCode(), type(code)
 			self.extractor.attachStubToPtr(code, ptr)
 			return code
 		return callback
@@ -151,7 +151,7 @@ class StubCollector(object):
 		ptr = self.cfuncptr(pyobj)
 
 		def callback(code):
-			assert isinstance(code, ast.Code), code
+			assert code.isAbstractCode(), type(code)
 			self.extractor.attachStubToPtr(code, ptr)
 
 			# Check the binding.
@@ -170,25 +170,25 @@ class StubCollector(object):
 
 	def fold(self, func):
 		def callback(code):
-			assert isinstance(code, ast.Code), type(code)
+			assert code.isAbstractCode(), type(code)
 			code.rewriteAnnotation(staticFold=func, dynamicFold=func)
 			return code
 		return callback
 
 	def staticFold(self, func):
 		def callback(code):
-			assert isinstance(code, ast.Code), type(code)
+			assert code.isAbstractCode(), type(code)
 			code.rewriteAnnotation(staticFold=func)
 			return code
 		return callback
 
 	def descriptive(self,code):
-		assert isinstance(code, ast.Code), type(code)
+		assert code.isAbstractCode(), type(code)
 		code.rewriteAnnotation(descriptive=True)
 		return code
 
 	def primitive(self,code):
-		assert isinstance(code, ast.Code), type(code)
+		assert code.isAbstractCode(), type(code)
 		code.rewriteAnnotation(descriptive=True, primitive=True)
 		return code
 
@@ -219,7 +219,8 @@ class StubCollector(object):
 
 	def replaceAttr(self, o, attr):
 		def callback(obj):
-			if isinstance(obj, ast.Code):
+			if not isinstance(obj, xtypes.FunctionType):
+				assert obj.isAbstractCode(), type(obj)
 				f = self.codeToFunction[obj]
 			else:
 				f = obj

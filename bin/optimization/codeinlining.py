@@ -83,7 +83,7 @@ class CodeInliningAnalysis(StrictTypeDispatcher):
 
 		# Inital value
 		callee = node.codeParameters()
-		self.inlinable = isinstance(node, ast.Code ) and not callee.vparam and not callee.kparam and not node.annotation.descriptive
+		self.inlinable = node.isStandardCode() and not callee.vparam and not callee.kparam and not node.annotation.descriptive
 
 		if self.inlinable:
 			self(node.ast)
@@ -329,7 +329,7 @@ class CodeInliningTransform(StrictTypeDispatcher):
 			self.modified = False
 			self.code = node
 
-			if isinstance(node, ast.Code):
+			if node.isStandardCode():
 				result = self(node.ast)
 				if self.modified:
 					node.ast = result

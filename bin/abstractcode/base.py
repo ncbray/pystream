@@ -9,6 +9,9 @@ class AbstractCode(ast.ASTNode):
 	def isAbstractCode(self):
 		return True
 
+	def isStandardCode(self):
+		return False
+
 	def codeName(self):
 		raise NotImplementedError
 

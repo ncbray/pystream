@@ -18,11 +18,11 @@ def simplify(extractor, db, node):
 	assert node.isAbstractCode(), type(node)
 
 	try:
-		node = foldConstants(extractor, db, node)
+		foldConstants(extractor, db, node)
 
 		# Can't process arbitrary abstract code nodes.
-		if isinstance(node, ast.Code):
-			node = dce(extractor, node)
+		if node.isStandardCode():
+			dce(extractor, node)
 	except InternalError:
 		print
 		print "#######################################"
@@ -34,5 +34,3 @@ def simplify(extractor, db, node):
 		print sio.getvalue()
 		raise
 
-
-	return node

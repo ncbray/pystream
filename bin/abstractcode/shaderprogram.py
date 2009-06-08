@@ -7,8 +7,7 @@ import util.calling
 # HACK
 from language.python.annotations import CodeAnnotation
 
-# Note that the annotation defaults to descriptive=True
-emptyShaderProgramAnnotation = CodeAnnotation(None, True, False, None, None, None, None, None, None, None, None)
+emptyShaderProgramAnnotation = CodeAnnotation(None, False, False, None, None, None, None, None, None, None, None)
 
 def createShaderProgram(extractor):
 	name = "shader_program"

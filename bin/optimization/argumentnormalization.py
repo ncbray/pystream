@@ -2,9 +2,7 @@ from util.typedispatch import *
 from language.python import ast
 from language.python import annotations
 
-class ArgumentNormalizationAnalysis(object):
-	__metaclass__ = typedispatcher
-
+class ArgumentNormalizationAnalysis(StrictTypeDispatcher):
 	def __init__(self, sys):
 		self.sys = sys
 		self.applicable = True
@@ -41,6 +39,9 @@ class ArgumentNormalizationAnalysis(object):
 			visitAllChildren(self, node)
 
 	def process(self, node):
+		if not node.isStandardCode():
+			return False, 0
+
 		if node.annotation.descriptive:
 			return False, 0
 

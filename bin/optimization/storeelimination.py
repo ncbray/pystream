@@ -24,7 +24,7 @@ def evaluate(console, dataflow):
 		totalEliminated = 0
 
 		for code in dataflow.db.liveCode:
-			if code.annotation.descriptive: continue
+			if not code.isStandardCode() or code.annotation.descriptive: continue
 
 			replace = {}
 			eliminated = 0

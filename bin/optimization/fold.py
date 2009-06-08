@@ -338,7 +338,7 @@ def constMeet(values):
 def foldConstants(extractor, db, node):
 	assert node.isAbstractCode(), type(node)
 
-	if isinstance(node, ast.Code):
+	if node.isStandardCode():
 		analyze  = FoldAnalysis()
 		rewrite  = FoldRewrite(extractor, db, node)
 		rewriteS = FoldTraverse(rewrite, node)

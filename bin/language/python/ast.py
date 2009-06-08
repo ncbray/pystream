@@ -366,6 +366,9 @@ class Code(CompoundStatement):
 	def isAbstractCode(self):
 		return True
 
+	def isStandardCode(self):
+		return True
+
 	def codeName(self):
 		return self.name
 

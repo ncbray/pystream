@@ -138,7 +138,7 @@ def dumpFunctionInfo(func, dumpContext, links, out, scg):
 
 
 	# Psedo-python output
-	if func is not None and isinstance(func, ast.Code):
+	if func is not None and func.isStandardCode():
 		out.begin('pre')
 		scg.walk(func)
 		out.end('pre')

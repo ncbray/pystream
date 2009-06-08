@@ -81,7 +81,9 @@ def dump(dumpContext, links, reportDir):
 		if node is not None:
 			code = node
 
-			if code.annotation.descriptive:
+			if not code.isStandardCode():
+				nodecolor = "#4444FF"
+			elif code.annotation.descriptive:
 				nodecolor = "#FF3333"
 			elif code.codeparameters.selfparam is None:
 				nodecolor = '#BBBBBB'

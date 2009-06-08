@@ -465,7 +465,7 @@ class LifetimeAnalysis(object):
 						opInvokes = invokes[1][cindex]
 
 						for dstF, dstC in opInvokes:
-							assert isinstance(dstF, ast.Code)
+							assert dstF.isAbstractCode(), type(dstF)
 							invokesDB[code][op][context].add(dstF, dstC)
 
 

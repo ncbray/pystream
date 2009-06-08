@@ -157,5 +157,5 @@ def evaluateCode(console, dataflow, code):
 def evaluate(console, dataflow):
 	with console.scope('redundant load elimination'):
 		for code in dataflow.db.liveCode:
-			if not code.annotation.descriptive:
+			if code.isStandardCode() and not code.annotation.descriptive:
 				evaluateCode(console, dataflow, code)

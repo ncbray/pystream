@@ -72,6 +72,10 @@ class ExtractDataflow(object):
 		return result
 
 	def call(self, node, expr, args, kwds, vargs, kargs, targets):
+		# HACK for all the examples we have, indirect calls should be resolved after the first pass!
+		# In the future this may not be the case.
+		assert self.system.firstPass, self.code
+
 		if self.doOnce(node):
 			op   = self.contextOp(node)
 			con = CallConstraint(op, expr, args, kwds, vargs, kargs, targets)
@@ -133,53 +137,6 @@ class ExtractDataflow(object):
 	def visitTuple(self, node):
 		return tuple([self(child) for child in node])
 
-	@dispatch(ast.ConvertToBool)
-	def visitConvertToBool(self, node, targets):
-		return self.directCall(node, self.exports['convertToBool'],
-			None, [self(node.expr)],
-			None, None, targets)
-
-	@dispatch(ast.Not)
-	def visitNot(self, node, targets):
-		return self.directCall(node, self.exports['invertedConvertToBool'],
-			None, [self(node.expr)],
-			None, None, targets)
-
-	@dispatch(ast.BinaryOp)
-	def visitBinaryOp(self, node, targets):
-		if node.op in opnames.inplaceOps:
-			opname = opnames.inplace[node.op[:-1]]
-		else:
-			opname = opnames.forward[node.op]
-
-		return self.directCall(node, self.exports['interpreter%s' % opname],
-			None, [self(node.left), self(node.right)],
-			None, None, targets)
-
-	@dispatch(ast.UnaryPrefixOp)
-	def visitUnaryPrefixOp(self, node, target):
-		opname = opnames.unaryPrefixLUT[node.op]
-		return self.directCall(node, self.exports['interpreter%s' % opname],
-			None, [self(node.expr)],
-			None, None, target)
-
-	@dispatch(ast.GetGlobal)
-	def visitGetGlobal(self, node, targets):
-		return self.directCall(node, self.exports['interpreterLoadGlobal'],
-			None, [self(self.code.selfparam), self(node.name)],
-			None, None, targets)
-
-	@dispatch(ast.SetGlobal)
-	def visitSetGlobal(self, node):
-		return self.directCall(node, self.exports['interpreterStoreGlobal'],
-			None, [self(self.code.selfparam), self(node.name), self(node.value)],
-			None, None, None)
-
-	@dispatch(ast.GetIter)
-	def visitGetIter(self, node, targets):
-		return self.directCall(node, self.exports['interpreter_iter'],
-			None, [self(node.expr)],
-			None, None, targets)
 
 	@dispatch(ast.Call)
 	def visitCall(self, node, targets):
@@ -192,42 +149,6 @@ class ExtractDataflow(object):
 		return self.directCall(node, node.func,
 			self(node.selfarg), self(node.args),
 			self(node.vargs), self(node.kargs), targets)
-
-	@dispatch(ast.BuildList)
-	def visitBuildList(self, node, targets):
-		return self.directCall(node, self.exports['buildList'],
-			None, self(node.args),
-			None, None, targets)
-
-	@dispatch(ast.BuildTuple)
-	def visitBuildTuple(self, node, targets):
-		return self.directCall(node, self.exports['buildTuple'],
-			None, self(node.args),
-			None, None, targets)
-
-	@dispatch(ast.GetAttr)
-	def visitGetAttr(self, node, targets):
-		return self.directCall(node, self.exports['interpreter_getattribute'],
-			None, [self(node.expr), self(node.name)],
-			None, None, targets)
-
-	@dispatch(ast.SetAttr)
-	def visitSetAttr(self, node):
-		return self.directCall(node, self.exports['interpreter_setattr'],
-			None, [self(node.expr), self(node.name), self(node.value)],
-			None, None, None)
-
-	@dispatch(ast.GetSubscript)
-	def visitGetSubscript(self, node, targets):
-		return self.directCall(node, self.exports['interpreter_getitem'],
-			None, [self(node.expr), self(node.subscript)],
-			None, None, targets)
-
-	@dispatch(ast.SetSubscript)
-	def visitSetSubscript(self, node):
-		return self.directCall(node, self.exports['interpreter_setitem'],
-			None, [self(node.expr), self(node.subscript), self(node.value)],
-			None, None, None)
 
 
 	@dispatch(ast.Assign)

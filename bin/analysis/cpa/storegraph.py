@@ -260,6 +260,8 @@ class SlotNode(MergableNode):
 		diff = sys.setManager.diff(other.refs, self.refs)
 		if diff: self._update(sys, diff)
 
+		return self
+
 	def _update(self, sys, diff):
 		self.refs = sys.setManager.inplaceUnion(self.refs, diff)
 		for o in self.observers:

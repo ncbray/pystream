@@ -14,7 +14,6 @@ from analysis.database import lattice
 
 from analysis.astcollector import getOps
 
-
 contextSchema   = structure.WildcardSchema()
 operationSchema = structure.TypeSchema((ast.Expression, ast.Statement))
 codeSchema      = structure.CallbackSchema(lambda code: code.isAbstractCode())
@@ -85,6 +84,16 @@ class ObjectInfo(object):
 	def leaks(self):
 		return self.globallyVisible or self.externallyVisible
 
+	def updateHeldBy(self, newHeld):
+		assert not self.leaks(), self.obj
+
+		diff = newHeld-self.heldByClosure
+		if diff:
+			self.heldByClosure.update(diff)
+			return True
+		else:
+			return False
+
 class ReadModifyAnalysis(object):
 	def __init__(self, liveCode, invokeSources):
 		self.invokeSources       = invokeSources
@@ -94,9 +103,33 @@ class ReadModifyAnalysis(object):
 
 		self.collectDB(liveCode)
 
+	def handleModifies(self, code, op, modifies):
+		if modifies[0]:
+			for cindex, context in enumerate(code.annotation.contexts):
+				slots = modifies[1][cindex]
+				if op is not None: self.opModifyDB[code][op].merge(context, slots)
+				self.contextModifies[(code, context)].update(slots)
+				self.allModifies.update(slots)
+
+	def handleReads(self, code, op, reads):
+		if reads[0]:
+			for cindex, context in enumerate(code.annotation.contexts):
+				slots    = reads[1][cindex]
+				filtered = set([slot for slot in slots if slot in self.allModifies])
+				if op is not None: self.opReadDB[code][op].merge(context, filtered)
+				self.contextReads[(code, context)].update(filtered)
+				self.allReads.update(slots)
+
+
+	def handleAllocates(self, code, op, allocates):
+		if allocates[0]:
+			for cindex, context in enumerate(code.annotation.contexts):
+				self.allocations[(code, context)].update(allocates[1][cindex])
+
+
 	def collectDB(self, liveCode):
-		allReads        = set()
-		allModifies     = set()
+		self.allReads        = set()
+		self.allModifies     = set()
 
 		self.opReadDB   = opDataflowSchema.instance()
 		self.opModifyDB = opDataflowSchema.instance()
@@ -105,44 +138,20 @@ class ReadModifyAnalysis(object):
 
 		# Copy modifies
 		for code in liveCode:
+			self.handleModifies(code, None, code.annotation.codeModifies)
 			ops, lcls = getOps(code)
 			for op in ops:
-				for cindex, context in enumerate(code.annotation.contexts):
-					if not op.annotation.invokes[0]:
-						slots    = op.annotation.modifies[1][cindex]
-
-						self.opModifyDB[code][op].merge(context, slots)
-						self.contextModifies[(code, context)].update(slots)
-						allModifies.update(slots)
+				self.handleModifies(code, op, op.annotation.opModifies)
 
 		# Copy reads
 		for code in liveCode:
-			callee = code.codeParameters()
-			# vargs and karg allocations.
-			# Assumes code is in SSA form, so vparam and kparam can
-			# only point to freshly allocated arg objects.
-			for cindex, context in enumerate(code.annotation.contexts):
-				if callee.vparam:
-					self.allocations[(code, context)].update(callee.vparam.annotation.references[1][cindex])
-				if callee.kparam:
-					self.allocations[(code, context)].update(callee.kparam.annotation.references[1][cindex])
-
+			self.handleReads(code, None, code.annotation.codeModifies)
+			self.handleAllocates(code, None, code.annotation.codeAllocates)
 
 			ops, lcls = getOps(code)
 			for op in ops:
-				for cindex, context in enumerate(code.annotation.contexts):
-					if not op.annotation.invokes[0]:
-						slots    = op.annotation.reads[1][cindex]
-						filtered = set([slot for slot in slots if slot in allModifies])
-
-						self.opReadDB[code][op].merge(context, filtered)
-						self.contextReads[(code, context)].update(filtered)
-						allReads.update(slots)
-
-						# Copy allocations.
-						if op.annotation.allocates:
-							self.allocations[(code, context)].update(op.annotation.allocates[1][cindex])
-
+				self.handleReads(code, op, op.annotation.opReads)
+				self.handleAllocates(code, op, op.annotation.opAllocates)
 
 	def process(self, killed):
 		self.killed = killed
@@ -310,30 +319,32 @@ class LifetimeAnalysis(object):
 		for info in self.objects.itervalues():
 			info.obj.leaks = info.leaks()
 
+	def objEscapes(self, obj):
+		assert not isinstance(obj, ObjectInfo), obj
+		return obj in self.escapes
 
 	def propagateHeld(self):
 		dirty = set()
 
 		for obj, info in self.objects.iteritems():
-			if not obj in self.escapes:
-				info.heldByClosure.update(info.referedFrom)
-				for dst in info.refersTo:
-					if not dst in self.escapes: dirty.add(dst)
+			if not self.objEscapes(obj):
+				if info.updateHeldBy(info.referedFrom):
+					for dst in info.refersTo:
+						if not self.objEscapes(dst.obj): dirty.add(dst)
 
 		while dirty:
 			current = dirty.pop()
-			assert current not in self.escapes, current.obj
+			assert not self.objEscapes(current.obj), current.obj
 
 			# Find the new heldby
-			diff = set()
+			newHeld = set()
 			for prev in current.referedFrom:
-				diff.update(prev.heldByClosure-current.heldByClosure)
+				newHeld.update(prev.heldByClosure)
 
-			if diff:
+			if current.updateHeldBy(newHeld):
 				# Mark as dirty
-				current.heldByClosure.update(diff)
 				for dst in current.refersTo:
-					if not dst in self.escapes: dirty.add(dst)
+					if not self.objEscapes(dst.obj): dirty.add(dst)
 
 		#self.displayHistogram()
 
@@ -365,7 +376,8 @@ class LifetimeAnalysis(object):
 		# Seed the inital dirty set
 		self.dirty = set()
 		for (code, context), objs in self.rm.allocations.iteritems():
-			self.live[(code, context)].update(objs-self.escapes)
+			noescape = objs-self.escapes
+			self.live[(code, context)].update(noescape)
 			self.dirty.update(self.invokeSources[code][context])
 
 		while self.dirty:
@@ -434,7 +446,7 @@ class LifetimeAnalysis(object):
 
 
 	def gatherInvokes(self, liveCode):
-		invokes = invokesSchema.instance()
+		invokesDB = invokesSchema.instance()
 
 		self.entries = set()
 
@@ -447,13 +459,14 @@ class LifetimeAnalysis(object):
 			assert code.isAbstractCode(), type(code)
 			ops, lcls = getOps(code)
 			for op in ops:
-				if op.annotation.invokes is not None:
+				invokes = op.annotation.invokes
+				if invokes is not None:
 					for cindex, context in enumerate(code.annotation.contexts):
-						opInvokes = op.annotation.invokes[1][cindex]
+						opInvokes = invokes[1][cindex]
 
 						for dstF, dstC in opInvokes:
 							assert isinstance(dstF, ast.Code)
-							invokes[code][op][context].add(dstF, dstC)
+							invokesDB[code][op][context].add(dstF, dstC)
 
 
 			for lcl in lcls:
@@ -468,10 +481,8 @@ class LifetimeAnalysis(object):
 
 						self.codeRefersToHeap[(code, context)].add(ref)
 
-		invokeSources = invertInvokes(invokes)
-
-		self.invokes   = invokes
-		self.invokeSources = invokeSources
+		self.invokes       = invokesDB
+		self.invokeSources = invertInvokes(invokesDB)
 
 	def markVisible(self, lcl, cindex):
 		if lcl is not None:
@@ -493,18 +504,9 @@ class LifetimeAnalysis(object):
 				for ref in lcl.annotation.references[0]:
 					searcher.enqueue(ref)
 
+			# Mark the return parameters for external contexts as visible.
 			for cindex, context in enumerate(code.annotation.contexts):
 				if context in self.entryContexts:
-					self.markVisible(callee.selfparam, cindex)
-					for param in callee.params:
-						self.markVisible(param, cindex)
-
-					# HACK marks the tuple and the dicitonary visible, which they may not be.
-					# NOTE marking the types from the CPA context is insufficient, as there may be
-					# "any" slots.
-					self.markVisible(callee.vparam, cindex)
-					self.markVisible(callee.kparam, cindex)
-
 					for param in callee.returnparams:
 						self.markVisible(param, cindex)
 
@@ -546,7 +548,8 @@ class LifetimeAnalysis(object):
 			# Annotate the ops
 			ops, lcls = getOps(code)
 			for op in ops:
-				if not op.annotation.invokes[0]: continue
+				# TODO is this a good HACK?
+				# if not op.annotation.invokes[0]: continue
 
 				reads    = readDB[code][op]
 				modifies = modifyDB[code][op]
@@ -572,8 +575,10 @@ class LifetimeAnalysis(object):
 						live = self.live[(dstCode, dstContext)]
 						killed = kills[(dstCode, dstContext)]
 						calloc.update(live-killed)
-					aout.append(annotations.annotationSet(calloc))
 
+					calloc.update(op.annotation.opAllocates[1][cindex])
+
+					aout.append(annotations.annotationSet(calloc))
 
 				opReads     = annotations.makeContextualAnnotation(rout)
 				opModifies  = annotations.makeContextualAnnotation(mout)

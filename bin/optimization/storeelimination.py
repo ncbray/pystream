@@ -13,10 +13,11 @@ def evaluate(console, dataflow):
 
 		# Analysis pass
 		for code in dataflow.db.liveCode:
+			live.update(code.annotation.codeReads[0])
+
 			for op in codeOps(code):
-				if isinstance(op, (ast.Load, ast.Check)):
-					live.update(op.annotation.reads[0])
-				elif isinstance(op, ast.Store):
+				live.update(op.annotation.reads[0])
+				if isinstance(op, ast.Store):
 					stores[code].append(op)
 
 		# Transform pass

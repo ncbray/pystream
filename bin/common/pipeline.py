@@ -38,6 +38,7 @@ def codeConditioning(console, extractor, interface, dataflow):
 				for code in db.liveFunctions():
 					if not code.annotation.descriptive:
 						simplify(extractor, db, code)
+
 		if True:
 			# Seperate different invocations of the same code.
 			clone(console, extractor, interface, db)
@@ -66,9 +67,9 @@ def lifetimeAnalysis(console, dataflow, interface):
 		la = analysis.lifetimeanalysis.LifetimeAnalysis(interface)
 		la.process(dataflow.db.liveCode)
 
-def cpaAnalyze(console, e, interface, opPathLength=0):
+def cpaAnalyze(console, e, interface, opPathLength=0, firstPass=True):
 	with console.scope('cpa analysis'):
-		result = analysis.cpa.evaluate(console, e, interface, opPathLength)
+		result = analysis.cpa.evaluate(console, e, interface, opPathLength, firstPass=firstPass)
 		console.output('')
 		console.output("Constraints:   %d" % len(result.constraints))
 		console.output("Contexts:      %d" % len(result.liveContexts))
@@ -80,9 +81,9 @@ def cpaAnalyze(console, e, interface, opPathLength=0):
 		console.output("Solve:         %s" % util.elapsedTimeString(result.solveTime))
 	return result
 
-def cpaPass(console, e, interface, opPathLength=0):
+def cpaPass(console, e, interface, opPathLength=0, firstPass=True):
 	with console.scope('depython'):
-		result = cpaAnalyze(console, e, interface, opPathLength)
+		result = cpaAnalyze(console, e, interface, opPathLength, firstPass=firstPass)
 		codeConditioning(console, e, interface, result)
 	return result
 
@@ -101,17 +102,20 @@ def cull(console, interface, db):
 
 def evaluate(console, name, extractor, interface):
 	with console.scope('compile'):
+		# TODO move within the try?
+		# Currently, the report dumper relies on the CPA result for heap information.
 		result = cpaPass(console, extractor, interface)
 
-		if False:
-			# Intrinsics can prevent complete exhaustive inlining.
-			# Adding call-path sensitivity compensates.
-			result = cpaPass(console,  extractor, interface, 3)
-
-		# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
-		lifetimeAnalysis(console, result, interface)
-
 		try:
+			if True:
+				# Intrinsics can prevent complete exhaustive inlining.
+				# Adding call-path sensitivity compensates.
+				result = cpaPass(console,  extractor, interface, 3, firstPass=False)
+
+			# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
+			if True:
+				lifetimeAnalysis(console, result, interface)
+
 			if False:
 				shapePass(console, extractor, result, interface)
 

@@ -315,8 +315,7 @@ class InterproceduralDataflow(object):
 				code = context.signature.code
 				if code not in self.liveCode:
 					# HACK convert the calls before analysis to eliminate UnpackTuple nodes.
-					if isinstance(code, ast.Code):
-						callConverter(self.extractor, code)
+					callConverter(self.extractor, code)
 					self.liveCode.add(code)
 
 				# Check to see if we can just fold it.
@@ -412,6 +411,20 @@ class InterproceduralDataflow(object):
 
 		self.solveTime = end-start-self.decompileTime
 
+	def collectRMA(self, code, op):
+		contexts = code.annotation.contexts
+
+		creads     = [annotations.annotationSet(self.opReads[(code, op, context)]) for context in contexts]
+		reads     = annotations.makeContextualAnnotation(creads)
+
+		cmodifies  = [annotations.annotationSet(self.opModifies[(code, op, context)]) for context in contexts]
+		modifies  = annotations.makeContextualAnnotation(cmodifies)
+
+		callocates = [annotations.annotationSet(self.opAllocates[(code, op, context)]) for context in contexts]
+		allocates = annotations.makeContextualAnnotation(callocates)
+
+		return reads, modifies, allocates
+
 	def annotate(self):
 		# Find the contexts that a given entrypoint invokes
 		for entryPoint, op in self.entryPointOp.iteritems():
@@ -440,41 +453,25 @@ class InterproceduralDataflow(object):
 
 			ops, lcls = getOps(code)
 
-			for op in ops:
-				# Skip it if it's not a real op.
-				if isinstance(op, util.canonical.Sentinel): continue
+			# Creating vparam and kparam objects produces side effects...
+			# Store them in the code annotation
+			reads, modifies, allocates = self.collectRMA(code, None)
+			code.rewriteAnnotation(codeReads=reads, codeModifies=modifies, codeAllocates=allocates)
 
+			for op in ops:
 				contextLUT = opLut[(code, op)]
 
 				cinvokes  = [annotations.annotationSet(contextLUT[context]) for context in contexts]
 				invokes   = annotations.makeContextualAnnotation(cinvokes)
 
-				creads     = [annotations.annotationSet(self.opReads[(code, op, context)]) for context in contexts]
-				reads     = annotations.makeContextualAnnotation(creads)
+				reads, modifies, allocates = self.collectRMA(code, op)
 
-				cmodifies  = [annotations.annotationSet(self.opModifies[(code, op, context)]) for context in contexts]
-				modifies  = annotations.makeContextualAnnotation(cmodifies)
-
-				callocates = [annotations.annotationSet(self.opAllocates[(code, op, context)]) for context in contexts]
-				allocates = annotations.makeContextualAnnotation(callocates)
-
-				if not invokes[0]:
-					op.rewriteAnnotation(
-						invokes=invokes,
-						opReads=reads,
-						opModifies=modifies,
-						opAllocates=allocates,
-						reads=reads,
-						modifies=modifies,
-						allocates=allocates,
-						)
-				else:
-					op.rewriteAnnotation(
-						invokes=invokes,
-						opReads=reads,
-						opModifies=modifies,
-						opAllocates=allocates,
-						)
+				op.rewriteAnnotation(
+					invokes=invokes,
+					opReads=reads,
+					opModifies=modifies,
+					opAllocates=allocates,
+					)
 
 			for lcl in lcls:
 				if isinstance(lcl, ast.Existing):
@@ -509,8 +506,9 @@ class InterproceduralDataflow(object):
 	def slotMemory(self):
 		return self.setManager.memory()
 
-def evaluate(console, extractor, interface, opPathLength=0):
+def evaluate(console, extractor, interface, opPathLength=0, firstPass=True):
 	dataflow = InterproceduralDataflow(console, extractor, opPathLength)
+	dataflow.firstPass = firstPass # HACK for debugging
 
 	# HACK
 	base.externalFunctionContext.opPath = dataflow.initalOpPath()

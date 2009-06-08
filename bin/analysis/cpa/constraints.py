@@ -89,7 +89,7 @@ class AssignmentConstraint(Constraint):
 		self.destslot   = destslot
 
 	def update(self, sys):
-		self.destslot.update(sys, self.sourceslot)
+		self.destslot = self.destslot.update(sys, self.sourceslot)
 
 	def attach(self, sys):
 		sys.constraint(self)

@@ -223,8 +223,7 @@ class ProgramCloner(object):
 
 	def labelLoad(self, code, op, group):
 		reads = op.annotation.reads
-		if not reads: return None
-
+		if reads is None or not reads[0]: return None
 
 		contexts = self.unifier.group(group)
 
@@ -238,13 +237,13 @@ class ProgramCloner(object):
 		if slots:
 			return frozenset(slots)
 		else:
-			return None
+			return False
 
 
 
 	def labelStore(self, code, op, group):
 		modifies = op.annotation.modifies
-		if not modifies: return None
+		if modifies is None or not modifies[0]: return None
 
 		contexts = self.unifier.group(group)
 
@@ -535,14 +534,14 @@ class FunctionCloner(object):
 	def visitDirectCall(self, node):
 		tempresult = self.default(node)
 
-		assert tempresult.annotation.invokes, "All invocations must be resolved to clone."
+		invokes = tempresult.annotation.invokes
+		assert invokes is not None, "All invocations must be resolved to clone."
 
-		if tempresult.annotation.invokes[0]:
-
+		if invokes[0]:
 			# We do this computation after transfer, as it can reduce the number of invocations.
 			func = tools.singleCall(tempresult)
 			if not func:
-				names = tuple(set([code.name for code, context in tempresult.annotation.invokes[0]]))
+				names = tuple(set([code.name for code, context in invokes[0]]))
 				raise Exception, "Cannot clone the direct call in %r, as it has multiple targets. %r" % (self.code, names)
 		else:
 			# HACK never actualy executed, so null the target?

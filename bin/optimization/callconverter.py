@@ -1,4 +1,5 @@
 from util.typedispatch import *
+import util.xform
 
 from language.python import ast
 from language.python import program
@@ -28,7 +29,7 @@ class ConvertCalls(object):
 	def default(self, node):
 		assert False, repr(type(node))
 
-	@dispatch(str, type(None), ast.Local, ast.Existing, ast.Code, ast.Break, ast.Continue)
+	@dispatch(str, type(None), ast.Local, ast.Existing, ast.Code, ast.Break, ast.Continue, ast.CodeParameters)
 	def visitLeaf(self, node):
 		return node
 
@@ -127,6 +128,6 @@ class ConvertCalls(object):
 
 
 def callConverter(extractor, node):
-	assert isinstance(node, ast.Code), node
-	node.ast = ConvertCalls(extractor, node)(node.ast)
+	converter = ConvertCalls(extractor, node)
+	util.xform.replaceAllChildren(converter, node)
 	return node

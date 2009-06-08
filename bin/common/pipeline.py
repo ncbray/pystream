@@ -34,10 +34,7 @@ def codeConditioning(console, extractor, interface, dataflow):
 
 		if True:
 			# Fold, DCE, etc.
-			with console.scope('simplify'):
-				for code in db.liveFunctions():
-					if not code.annotation.descriptive:
-						simplify(extractor, db, code)
+			simplifyAll(console, extractor, db)
 
 		if True:
 			# Seperate different invocations of the same code.
@@ -60,7 +57,29 @@ def codeConditioning(console, extractor, interface, dataflow):
 			optimization.loadelimination.evaluate(console, dataflow)
 
 		if True:
-			optimization.storeelimination.evaluate(console, dataflow)
+			changed = optimization.storeelimination.evaluate(console, dataflow)
+
+		# HACK read/modify information is imprecise, so keep re-evaluating it
+		# basically, DCE improves read modify information, which in turn allows better DCE
+		# NOTE that this doesn't work very well without path sensitivity
+		# "modifies" are quite imprecise without it, hence DCE doesn't do much.
+		if True:
+			bruteForceSimplification(console, extractor, interface, dataflow)
+
+def simplifyAll(console, extractor, db):
+	with console.scope('simplify'):
+		changed = False
+		for code in db.liveFunctions():
+			if not code.annotation.descriptive:
+				simplify(extractor, db, code)
+
+
+def bruteForceSimplification(console, extractor, interface, dataflow):
+	with console.scope('brute force'):
+		for i in range(2):
+			lifetimeAnalysis(console, dataflow, interface)
+			simplifyAll(console, extractor, dataflow.db)
+
 
 def lifetimeAnalysis(console, dataflow, interface):
 	with console.scope('lifetime analysis'):

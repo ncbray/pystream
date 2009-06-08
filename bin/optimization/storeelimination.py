@@ -21,6 +21,8 @@ def evaluate(console, dataflow):
 					stores[code].append(op)
 
 		# Transform pass
+		totalEliminated = 0
+
 		for code in dataflow.db.liveCode:
 			if code.annotation.descriptive: continue
 
@@ -40,3 +42,7 @@ def evaluate(console, dataflow):
 			if replace:
 				console.output('%r %d' % (code, eliminated))
 				rewriteAndSimplify(dataflow, code, replace)
+
+			totalEliminated += eliminated
+
+		return totalEliminated > 0

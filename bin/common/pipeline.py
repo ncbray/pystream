@@ -93,7 +93,7 @@ def shapePass(console, e, result, interface):
 
 def cpaDump(console, name, e, result, interface):
 	with console.scope('dump'):
-		analysis.dump.dumpreport.dump(name, e, result, interface)
+		analysis.dump.dumpreport.dump(console, name, e, result, interface)
 
 def cull(console, interface, db):
 	with console.scope('cull'):

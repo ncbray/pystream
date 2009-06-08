@@ -22,6 +22,12 @@ import urllib
 from language.python import ast
 from language.python import annotations
 
+class CompilerContext(object):
+	def __init__(self, console, extractor, interface):
+		self.console   = console
+		self.extractor = extractor
+		self.interface = interface
+
 def outputCodeShortName(out, code, links=None, context=None):
 	link = links.codeRef(code, context) if links is not None else None
 
@@ -111,7 +117,7 @@ def tableRow(out, links, label, *args):
 	out.end('tr')
 	out.endl()
 
-def dumpFunctionInfo(func, data, links, out, scg):
+def dumpFunctionInfo(func, dumpContext, links, out, scg):
 	code = func
 	out.begin('h3')
 	outputCodeShortName(out, func)
@@ -187,10 +193,14 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			tableRow(out, links, 'vparamObj', *objs)
 
 			for vparamObj in objs:
+				# Find and index the array slots
+				lut = {}
+				for name, values in vparamObj.slots.iteritems():
+					if name.type == 'Array':
+						lut[name.name.pyobj] = values
+
 				for i, arg in enumerate(sig.params[numParam:]):
-					name = data.sys.canonical.fieldName('Array', data.sys.extractor.getObject(i))
-					slot = vparamObj.knownField(name)
-					tableRow(out, links, 'vparam %d' % i, *slot)
+					tableRow(out, links, 'vparam %d' % i, *lut.get(i, ()))
 
 		if callee.kparam is not None:
 			objs = callee.kparam.annotation.references[1][cindex]
@@ -292,7 +302,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.end('pre')
 		out.endl()
 
-		callers = data.callers(func, context)
+		callers = dumpContext.derived.callers(func, context)
 		if callers:
 			out.begin('h3')
 			out << "Callers"
@@ -306,7 +316,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.end('ul')
 			out.end('p')
 
-		callees = data.callees(func, context)
+		callees = dumpContext.derived.callees(func, context)
 		if callees:
 			out.begin('h3')
 			out << "Callees"
@@ -343,7 +353,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.end('p')
 
 
-		reads = data.funcReads[func][context]
+		reads = dumpContext.derived.funcReads[func][context]
 		if reads:
 			out.begin('h3')
 			out << "Reads"
@@ -366,7 +376,7 @@ def dumpFunctionInfo(func, data, links, out, scg):
 			out.end('p')
 
 
-		modifies = data.funcModifies[func][context]
+		modifies = dumpContext.derived.funcModifies[func][context]
 		if modifies:
 			out.begin('h3')
 			out << "Modifies"
@@ -390,16 +400,16 @@ def dumpFunctionInfo(func, data, links, out, scg):
 		out.end('div')
 
 
-def dumpHeapInfo(heap, data, links, out):
+def dumpHeapInfo(heap, dumpContext, links, out):
 	out.begin('h3')
 	outputObjectShortName(out, heap)
 	out.end('h3')
 	out.endl()
 
-	heapInfo = data.db.heapInfo(heap)
+	heapInfo = dumpContext.db.heapInfo(heap)
 	contexts = heapInfo.contexts
 
-	call = data.sys.extractor.getCall(heap)
+	call = dumpContext.extractor.getCall(heap)
 	if call:
 		out.begin('div')
 		out << 'On call: '
@@ -437,13 +447,13 @@ def dumpHeapInfo(heap, data, links, out):
 	out.end('pre')
 
 
-def makeHeapTree(data):
-	liveHeap = data.db.liveObjects()
+def makeHeapTree(db):
+	liveHeap = db.liveObjects()
 
 	head = None
 	points = {}
 	for heap in liveHeap:
-		heapInfo = data.db.heapInfo(heap)
+		heapInfo = db.heapInfo(heap)
 
 		points[heap] = set()
 
@@ -458,7 +468,7 @@ def makeHeapTree(data):
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(points, head)
 	return tree, head
 
-def dumpReport(name, data, interface):
+def dumpReport(name, context):
 	reportDir = makeReportDirectory(name)
 
 	links = LinkManager()
@@ -484,8 +494,8 @@ def dumpReport(name, data, interface):
 		return fn
 
 
-	liveHeap = data.db.liveObjects()
-	liveFunctions, liveInvocations = programculler.findLiveFunctions(interface)
+	liveHeap = context.db.liveObjects()
+	liveFunctions, liveInvocations = context.liveCode, context.liveInvocations
 
 	out, scg = makeOutput(reportDir, 'function_index.html')
 	dumpHeader(out)
@@ -528,7 +538,7 @@ def dumpReport(name, data, interface):
 	out.end('h2')
 
 
-	tree, head = makeHeapTree(data)
+	tree, head = makeHeapTree(context.db)
 	nodes = set()
 	def printHeapChildren(node):
 		count = 0
@@ -544,7 +554,7 @@ def dumpReport(name, data, interface):
 				nodes.add(heap)
 				if link: out.end('a')
 
-				numContexts = len(data.db.heapInfo(heap).contexts)
+				numContexts = len(context.db.heapInfo(heap).contexts)
 				if numContexts > 1:
 					out << " "
 					out << numContexts
@@ -579,7 +589,7 @@ def dumpReport(name, data, interface):
 	for func in liveFunctions:
 		out, scg = makeOutput(reportDir, funcToFile[func])
 		dumpHeader(out)
-		dumpFunctionInfo(func, data, links, out, scg)
+		dumpFunctionInfo(func, context, links, out, scg)
 		out.endl()
 		out.close()
 
@@ -587,31 +597,29 @@ def dumpReport(name, data, interface):
 	for heap in liveHeap:
 		out, scg = makeOutput(reportDir, heapToFile[heap])
 		dumpHeader(out)
-		dumpHeapInfo(heap, data, links, out)
+		dumpHeapInfo(heap, context, links, out)
 		out.endl()
 		out.close()
 
-	dumpgraphs.dump(data, interface, links, reportDir)
+	dumpgraphs.dump(context, links, reportDir)
 
 
 class DerivedData(object):
-	def __init__(self, db):
-		self.db = db
-
+	def __init__(self, context):
 		self.invokeDestination = collections.defaultdict(set)
 		self.invokeSource      = collections.defaultdict(set)
 		self.funcReads         = collections.defaultdict(lambda: collections.defaultdict(set))
 		self.funcModifies      = collections.defaultdict(lambda: collections.defaultdict(set))
 
-		for func in db.liveFunctions():
-			self.handleReads(func, func.annotation.codeReads)
-			self.handleModifies(func, func.annotation.codeModifies)
+		for code in context.liveCode:
+			self.handleReads(code, code.annotation.codeReads)
+			self.handleModifies(code, code.annotation.codeModifies)
 
-			ops = tools.codeOps(func)
+			ops = tools.codeOps(code)
 			for op in ops:
-				self.handleOpInvokes(func, op)
-				self.handleOpReads(func, op)
-				self.handleOpModifies(func, op)
+				self.handleOpInvokes(code, op)
+				self.handleOpReads(code, op)
+				self.handleOpModifies(code, op)
 
 
 	def handleOpInvokes(self, code, op):
@@ -651,8 +659,13 @@ class DerivedData(object):
 		return self.invokeDestination[(function, context)]
 
 
-def dump(name, extractor, dataflow, interface):
-	data = DerivedData(dataflow.db)
-	data.sys = dataflow # HACK?
-	dumpReport(name, data, interface)
+def dump(console, name, extractor, dataflow, interface):
+	context = CompilerContext(console, extractor, interface)
 
+	liveCode, liveInvocations = programculler.findLiveFunctions(interface)
+	context.liveCode = liveCode
+	context.liveInvocations = liveInvocations
+	context.db = dataflow.db # HACK
+
+	context.derived = DerivedData(context)
+	dumpReport(name, context)

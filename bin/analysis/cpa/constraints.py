@@ -232,10 +232,12 @@ class SimpleCheckConstraint(Constraint):
 
 	def update(self, sys):
 		if not self.refs and self.slot.refs:
+			sys.logRead(self.op, self.slot)
 			self.emit(sys, True)
 			self.refs = True
 
 		if not self.null and self.slot.null:
+			sys.logRead(self.op, self.slot)
 			self.emit(sys, False)
 			self.null = True
 

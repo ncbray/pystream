@@ -559,6 +559,10 @@ class LifetimeAnalysis(object):
 				aout = []
 
 				for cindex, context in enumerate(code.annotation.contexts):
+					# HACK if an operation directly reads a field, but it is never modified
+					# it still must appear in the reads annotation so cloning behaves correctly!
+					reads.merge(context, op.annotation.opReads[1][cindex])
+
 					creads = reads[context]
 					creads = annotations.annotationSet(creads) if creads else ()
 					rout.append(creads)

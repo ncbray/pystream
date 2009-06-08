@@ -221,43 +221,51 @@ class ProgramCloner(object):
 
 		return groups
 
+	def slotNames(self, slots):
+		return [slot.slotName for slot in slots]
+
 	def labelLoad(self, code, op, group):
 		reads = op.annotation.reads
-		if reads is None or not reads[0]: return None
 
-		contexts = self.unifier.group(group)
-
-		slots = set()
-		for context in contexts:
-			cindex = code.annotation.contexts.index(context)
-			cslots = reads[1][cindex]
-			for slot in cslots:
-				slots.add(slot.slotName)
-
-		if slots:
-			return frozenset(slots)
+		if reads is None or not reads[0]:
+			label = None
 		else:
-			return False
+			contexts = self.unifier.group(group)
+
+			slots = set()
+			for context in contexts:
+				cindex = code.annotation.contexts.index(context)
+				slots.update(self.slotNames(reads[1][cindex]))
+
+			if slots:
+				label = frozenset(slots)
+			else:
+				label = False
+
+		return label
 
 
 
 	def labelStore(self, code, op, group):
 		modifies = op.annotation.modifies
-		if modifies is None or not modifies[0]: return None
 
-		contexts = self.unifier.group(group)
-
-		slots = set()
-		for context in contexts:
-			cindex = code.annotation.contexts.index(context)
-			cslots = modifies[1][cindex]
-			for slot in cslots:
-				slots.add(slot.slotName)
-
-		if slots:
-			return frozenset(slots)
+		if modifies is None or not modifies[0]:
+			label = None
 		else:
-			return False
+			contexts = self.unifier.group(group)
+
+			slots = set()
+			for context in contexts:
+				cindex = code.annotation.contexts.index(context)
+				slots.update(self.slotNames(modifies[1][cindex]))
+
+			if slots:
+				label = frozenset(slots)
+			else:
+				label = False
+		return label
+
+
 
 	def labelAllocate(self, code, op, group):
 		contexts = self.unifier.group(group)
@@ -345,7 +353,7 @@ class ProgramCloner(object):
 		for code, groups in self.codeGroups.iteritems():
 			for op in self.liveOps[code]:
 				# Only split loads for reading different fields
-				if isinstance(op, ast.Load):
+				if isinstance(op, (ast.Load, ast.Check)):
 					self.labeledMark(code, op, groups, self.labelLoad)
 				elif isinstance(op, ast.Store):
 					self.labeledMark(code, op, groups, self.labelStore)

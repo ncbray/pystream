@@ -130,11 +130,14 @@ class GLSLTranslator(StrictTypeDispatcher):
 		return glsl.Suite(self(node.blocks))
 
 	def processShader(self, node):
-		self.shader = node
-		self.code = node.code
+		self.code = node
 		self.referenceLUT = {}
 
-		code = node.code
-		body = self(code.ast)
+		body = self(self.code.ast)
 		return glsl.Code('main', [], glsl.BuiltinType('void'), body)
 
+	def processShaderProgram(self, node):
+		self.shader = node
+		vs = self.processShader(node.vs)
+		fs = self.processShader(node.fs)
+		return vs, fs

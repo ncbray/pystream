@@ -1,7 +1,7 @@
 from . shadertranslator import GLSLTranslator
 from language.glsl import codegen
 
-from . pythonshader import PythonShader
+from . pythonshader import PythonShaderProgram
 
 from abstractcode.shaderprogram import ShaderProgram
 
@@ -35,29 +35,16 @@ def translate(console, dataflow, interface):
 
 		translator = GLSLTranslator(intrinsics.makeIntrinsicRewriter(context.extractor))
 
-		# HACK should only target shader?
 		for code in context.interface.entryCode():
 			if isinstance(code, ShaderProgram):
+				vs = code.vertexShaderCode()
+				fs = code.fragmentShaderCode()
 
-				shadercode = code.vertexShaderCode()
-				shader = PythonShader(shadercode, pathMatcher)
-				iotransform.evaluateShader(context, shader, pathMatcher)
-				result = translator.processShader(shader)
+				shader = PythonShaderProgram(vs, fs, pathMatcher)
+				iotransform.evaluateShaderProgram(context, shader, pathMatcher)
+				codes = translator.processShaderProgram(shader)
 
-				print str(shadercode)
-				print
-				print codegen.GLSLCodeGen()(result)
-				print
-				print
-
-
-				shadercode = code.fragmentShaderCode()
-				shader = PythonShader(shadercode, pathMatcher)
-				iotransform.evaluateShader(context, shader, pathMatcher)
-				result = translator.processShader(shader)
-
-				print str(shadercode)
-				print
-				print codegen.GLSLCodeGen()(result)
-				print
-				print
+				for code in codes:
+					print codegen.GLSLCodeGen()(code)
+					print
+					print

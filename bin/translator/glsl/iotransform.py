@@ -83,7 +83,7 @@ class InputTransform(StrictTypeDispatcher):
 			return allChildren(self, node)
 
 
-def transformInputs(extractor, shader):
+def transformInputs(context, shader, code):
 	analyze = InputAnalysis()
 	rewrite = InputTransform()
 
@@ -95,16 +95,16 @@ def transformInputs(extractor, shader):
 	rewrite.flow = traverse.flow
 
 	rewrite.shader = shader
-	rewrite.extractor = extractor
+	rewrite.extractor = context.extractor
 
 	# HACK first parameter as uniform
-	p = shader.code.codeparameters
+	p = code.codeparameters
 	freqs = ['uniform']+['input']*(len(p.params)-1)
 	for arg, freq in zip(p.params, freqs):
 		defn = shader.getRoot(arg.name, arg, freq)
 		traverse.flow.define(arg, defn)
 
-	t(shader.code)
+	t(code)
 
 
 class OutputTransform(StrictTypeDispatcher):
@@ -135,7 +135,7 @@ class OutputTransform(StrictTypeDispatcher):
 
 	def initReturns(self):
 		self.returns = []
-		p = self.shader.code.codeparameters
+		p = self.code.codeparameters
 		for i, src in enumerate(p.returnparams):
 			newdefn = self.shader.getRoot('ret%d' % i, src, 'output')
 
@@ -148,18 +148,19 @@ class OutputTransform(StrictTypeDispatcher):
 		self.initReturns()
 
 		# Transform the return into assignments to outputs.
-		assert len(node.exprs) == len(self.returns)
+		assert len(node.exprs) == len(self.returns), (node.exprs, self.returns)
 		assigns = [self(ast.Assign(src, [dst])) for src, dst in zip(node.exprs, self.returns)]
 
 		# Eliminating the return might change sematics, so create
 		# an empty return.
+		#retop = ast.Return([ast.Existing(self.context.extractor.getObject(None)) for i in self.returns])
 		retop = ast.Return([])
 		retop.annotation = node.annotation
 		assigns.append(retop)
 
 		return assigns
 
-def transformOutputs(context, shader, pathMatcher):
+def transformOutputs(context, shader, code, pathMatcher):
 	rewrite = OutputTransform()
 
 	traverse = reverse.ReverseFlowTraverse(meet, rewrite)
@@ -169,9 +170,10 @@ def transformOutputs(context, shader, pathMatcher):
 	rewrite.flow        = traverse.flow
 	rewrite.context     = context
 	rewrite.shader      = shader
+	rewrite.code        = code
 	rewrite.pathMatcher = pathMatcher
 
-	t(shader.code)
+	t(code)
 
 
 def getOutputs(extractor, shader):
@@ -181,9 +183,10 @@ def getOutputs(extractor, shader):
 			liveOut.add(path.local)
 	return liveOut
 
-def evaluateShader(context, shader, pathMatcher):
-	transformInputs(context.extractor, shader)
-	transformOutputs(context, shader, pathMatcher)
+def evaluateShaderProgram(context, shader, pathMatcher):
+	for code in (shader.vs, shader.fs):
+		transformInputs(context, shader, code)
+		transformOutputs(context, shader, code, pathMatcher)
 
-	# Kill orphans
-	optimization.dce.dce(context.extractor, shader.code, getOutputs(context.extractor, shader))
+		# Kill orphans
+		optimization.dce.dce(context.extractor, code, getOutputs(context.extractor, shader))

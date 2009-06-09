@@ -68,9 +68,10 @@ class IOTree(object):
 		self.local.name  = name
 
 
-class PythonShader(object):
-	def __init__(self, code, pathMatcher):
-		self.code     = code
+class PythonShaderProgram(object):
+	def __init__(self, vs, fs, pathMatcher):
+		self.vs = vs
+		self.fs = fs
 
 		self.pathToLocal  = {}
 		self.localToPath = {}

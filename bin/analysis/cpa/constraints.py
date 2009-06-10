@@ -1,7 +1,7 @@
 import itertools
-from . import base
-from . import storegraph
-from . import extendedtypes
+from analysis.storegraph import storegraph
+from analysis.storegraph import canonicalobjects
+from analysis.storegraph import extendedtypes
 
 # HACK to testing if a object is a bool True/False...
 from language.python import ast, program
@@ -270,7 +270,7 @@ class SimpleCheckConstraint(Constraint):
 class AbstractCallConstraint(CachedConstraint):
 	__slots__ = 'op', 'selfarg', 'args', 'kwds', 'vargs', 'kargs', 'targets'
 	def __init__(self, sys, op, selfarg, args, kwds, vargs, kargs, targets):
-		assert isinstance(op, base.OpContext), type(op)
+		assert isinstance(op, canonicalobjects.OpContext), type(op)
 		assert isinstance(args, (list, tuple)), args
 		assert not kwds, kwds
 		assert targets is None or isinstance(targets, (list, tuple)), type(targets)
@@ -375,7 +375,7 @@ class SimpleCallConstraint(CachedConstraint):
 	__slots__ = 'op', 'code', 'selftype', 'slots', 'caller', 'megamorphic'
 
 	def __init__(self, sys, op, code, selftype, slots, caller):
-		assert isinstance(op, base.OpContext), type(op)
+		assert isinstance(op, canonicalobjects.OpContext), type(op)
 		assert code.isAbstractCode(), type(code)
 		assert selftype is None or isinstance(selftype, extendedtypes.ExtendedType), selftype
 

@@ -9,7 +9,7 @@ import collections
 import analysis.shape
 
 from language.python import ast
-from analysis.cpa import storegraph, canonicalobjects, setmanager
+from analysis.storegraph import storegraph, canonicalobjects, setmanager
 
 import decompiler.programextractor
 

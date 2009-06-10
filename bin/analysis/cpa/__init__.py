@@ -4,8 +4,7 @@ import util
 
 import base
 
-from . import canonicalobjects
-from . import extendedtypes
+from analysis.storegraph import storegraph, canonicalobjects, extendedtypes
 
 from constraintextractor import ExtractDataflow
 
@@ -75,6 +74,8 @@ class InterproceduralDataflow(object):
 		self.dirty = collections.deque()
 
 		self.canonical = canonicalobjects.CanonicalObjects()
+		self._canonicalContext = util.canonical.CanonicalCache(base.AnalysisContext)
+
 
 		# Information for contextual operations.
 		self.opAllocates      = collections.defaultdict(set)
@@ -126,7 +127,7 @@ class InterproceduralDataflow(object):
 		return self.cache.setdefault(path, path)
 
 	def advanceOpPath(self, original, op):
-		assert not isinstance(op, base.OpContext)
+		assert not isinstance(op, canonicalobjects.OpContext)
 
 		if self.opPathLength == 0:
 			path = None
@@ -175,12 +176,12 @@ class InterproceduralDataflow(object):
 		return util.cpa.CPASignature(code, selfparam, params)
 
 	def canonicalContext(self, srcOp, code, selfparam, params):
-		assert isinstance(srcOp, base.OpContext), type(srcOp)
+		assert isinstance(srcOp, canonicalobjects.OpContext), type(srcOp)
 		assert code.isAbstractCode(), type(code)
 
 		sig     = self._signature(code, selfparam, params)
 		opPath  = self.advanceOpPath(srcOp.context.opPath, srcOp.op)
-		context = self.canonical._canonicalContext(sig, opPath, self.storeGraph)
+		context = self._canonicalContext(sig, opPath, self.storeGraph)
 
 		# Mark that we created the context.
 		self.codeContexts[code].add(context)
@@ -275,7 +276,7 @@ class InterproceduralDataflow(object):
 		return False
 
 	def bindCall(self, cop, caller, targetcontext):
-		assert isinstance(cop, base.OpContext), type(cop)
+		assert isinstance(cop, canonicalobjects.OpContext), type(cop)
 
 		sig = targetcontext.signature
 		code = sig.code

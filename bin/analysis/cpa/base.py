@@ -6,8 +6,8 @@ import util.calling
 import util.canonical
 CanonicalObject = util.canonical.CanonicalObject
 
-from . import extendedtypes
-from . import storegraph
+from analysis.storegraph import extendedtypes
+from analysis.storegraph import storegraph
 
 ###########################
 ### Evaluation Contexts ###
@@ -161,36 +161,11 @@ class AnalysisContext(CanonicalObject):
 			for param, arg in zip(callee.returnparams, caller.returnargs):
 				sys.createAssign(param, arg)
 
+	def isAnalysisContext(self):
+		return True
+
 # Objects for external calls.
 
 externalFunction = ast.Code('external', ast.CodeParameters(None, [], [], None, None, [ast.Local('internal_return')]), ast.Suite([]))
 externalSignature = util.cpa.CPASignature(externalFunction, None, ())
 externalFunctionContext = AnalysisContext(externalSignature, None, None)
-
-
-class OpContext(CanonicalObject):
-	__slots__ ='code', 'op', 'context',
-	def __init__(self, code, op, context):
-		assert code.isAbstractCode(), type(code)
-		assert isinstance(context, AnalysisContext), context
-
-		self.setCanonical(code, op, context)
-
-		self.code     = code
-		self.op       = op
-		self.context  = context
-
-
-class CodeContext(CanonicalObject):
-	__slots__ = 'code', 'context',
-	def __init__(self, code, context):
-		assert code.isAbstractCode(), type(code)
-		assert isinstance(context, AnalysisContext), context
-
-		self.setCanonical(code, context)
-
-		self.code     = code
-		self.context  = context
-
-	def decontextualize(self):
-		return self.code

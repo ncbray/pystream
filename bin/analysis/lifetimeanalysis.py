@@ -1,7 +1,8 @@
 import collections
 import time
 
-from cpa import base, storegraph
+from cpa import base
+from analysis.storegraph import storegraph
 import language.python.ast as ast
 import language.python.annotations as annotations
 

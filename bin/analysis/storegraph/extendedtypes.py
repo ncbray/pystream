@@ -1,13 +1,11 @@
 import util.canonical
-CanonicalObject = util.canonical.CanonicalObject
-
 from language.python import program
 
 # Extended types are names for objects that cannot be merged by the analysis.
 
 
 # Abstract base class
-class ExtendedType(CanonicalObject):
+class ExtendedType(util.canonical.CanonicalObject):
 	__slots__ = ()
 
 	def isExisting(self):

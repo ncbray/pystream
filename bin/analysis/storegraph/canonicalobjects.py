@@ -1,9 +1,6 @@
 import util.canonical
-
-from . import extendedtypes
-from . import base
-
 from language.python import program, ast
+from . import extendedtypes
 
 class BaseSlotName(util.canonical.CanonicalObject):
 	__slots__ =()
@@ -26,7 +23,7 @@ class LocalSlotName(BaseSlotName):
 	def __init__(self, code, lcl, context):
 		assert code.isAbstractCode(), type(code)
 #		assert isinstance(lcl, ast.Local), type(lcl)
-#		assert isinstance(context, base.AnalysisContext), type(context)
+#		assert context.isAnalysisContext(), type(context)
 
 		self.code    = code
 		self.local   = lcl
@@ -49,7 +46,7 @@ class ExistingSlotName(BaseSlotName):
 	def __init__(self, code, object, context):
 		assert code.isAbstractCode(), type(code)
 #		assert isinstance(obj, program.AbstractObject), type(obj)
-#		assert isinstance(context, base.AnalysisContext), type(context)
+#		assert context.isAnalysisContext(), type(context)
 
 		self.code    = code
 		self.object     = object
@@ -83,14 +80,38 @@ class FieldSlotName(BaseSlotName):
 		return 'field(%s, %r)' % (self.type, self.name)
 
 
+class OpContext(util.canonical.CanonicalObject):
+	__slots__ ='code', 'op', 'context',
+	def __init__(self, code, op, context):
+		assert code.isAbstractCode(), type(code)
+		assert context.isAnalysisContext(), type(context)
+
+		self.setCanonical(code, op, context)
+
+		self.code     = code
+		self.op       = op
+		self.context  = context
+
+
+class CodeContext(util.canonical.CanonicalObject):
+	__slots__ = 'code', 'context',
+	def __init__(self, code, context):
+		assert code.isAbstractCode(), type(code)
+		assert context.isAnalysisContext(),type(context)
+
+		self.setCanonical(code, context)
+
+		self.code     = code
+		self.context  = context
+
+	def decontextualize(self):
+		return self.code
+
 
 class CanonicalObjects(object):
 	def __init__(self):
-		#self.local             = util.canonical.CanonicalCache(base.LocalSlot)
-		#self.objectSlot        = util.canonical.CanonicalCache(base.ObjectSlot)
-		self._canonicalContext = util.canonical.CanonicalCache(base.AnalysisContext)
-		self.opContext         = util.canonical.CanonicalCache(base.OpContext)
-		self.codeContext       = util.canonical.CanonicalCache(base.CodeContext)
+		self.opContext   = util.canonical.CanonicalCache(OpContext)
+		self.codeContext = util.canonical.CanonicalCache(CodeContext)
 
 		self.cache = {}
 

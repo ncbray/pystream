@@ -47,7 +47,7 @@ class TestConstraintBase(unittest.TestCase):
 
 		self.sys.cpacanonical = canonicalobjects.CanonicalObjects()
 		self.sys.setManager = setmanager.CachedSetManager()
-		self.root = storegraph.RegionGroup()
+		self.root = storegraph.StoreGraph(self.extractor, self.sys.cpacanonical)
 
 		self.setInOut((None, 0), (None, 1))
 

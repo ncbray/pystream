@@ -1,6 +1,9 @@
 from . import extendedtypes
 from . import setmanager
 
+# HACK for assertions
+from language.python import program
+
 class MergableNode(object):
 	__slots__ = 'forward'
 
@@ -23,16 +26,67 @@ class MergableNode(object):
 # This corresponds to a group of nodes, such as in a function or in a program,
 # depending on how the analysis works.
 class StoreGraph(MergableNode):
-	__slots__ = 'slots', 'regionHint', 'setManager'
+	__slots__ = 'slots', 'regionHint', 'setManager', 'extractor', 'canonical', 'typeSlotName'
 
-	def __init__(self):
+	def __init__(self, extractor, canonical):
 		MergableNode.__init__(self)
 
 		# Root slots, such as locals and references to "existing" objects
 		self.slots      = {}
 		self.regionHint = RegionNode(self)
 		self.setManager = setmanager.CachedSetManager()
+		self.extractor  = extractor
+		self.canonical  = canonical
 
+		# HACK this should be centeralized?
+		self.typeSlotName = self.canonical.fieldName('LowLevel', self.extractor.getObject('type'))
+
+
+	def existingSlotRef(self, xtype, slotName):
+		assert xtype.isExisting()
+		assert not slotName.isRoot()
+
+		obj = xtype.obj
+		assert isinstance(obj, program.AbstractObject), obj
+		self.extractor.ensureLoaded(obj)
+
+		slottype, key = slotName.type, slotName.name
+		assert isinstance(key, program.AbstractObject), key
+
+		if isinstance(obj, program.Object):
+			if slottype == 'LowLevel':
+				subdict = obj.lowlevel
+			elif slottype == 'Attribute':
+				subdict = obj.slot
+			elif slottype == 'Array':
+				# HACK
+				if isinstance(obj.pyobj, list):
+					return set([self.canonical.existingType(t) for t in obj.array.itervalues()])
+
+				subdict = obj.array
+			elif slottype == 'Dictionary':
+				subdict = obj.dictionary
+			else:
+				assert False, slottype
+
+			if key in subdict:
+				return (self.canonical.existingType(subdict[key]),)
+
+		# Not found
+		return None
+
+	def setTypePointer(self, obj):
+		xtype = obj.xtype
+
+		if not xtype.isExisting():
+			# Makes sure the type pointer is valid.
+			self.extractor.ensureLoaded(xtype.obj)
+
+			# Get the type object
+			typextype = self.canonical.existingType(xtype.obj.type)
+
+			field = obj.field(self.typeSlotName, self.regionHint)
+			field.initializeType(typextype)
 
 	def root(self, slotName, regionHint=None):
 		self = self.getForward()
@@ -46,9 +100,6 @@ class StoreGraph(MergableNode):
 		else:
 			# TODO merge region?
 			return self.slots[slotName]
-
-	def knownRoot(self, slotName):
-		return self.slots[slotName]
 
 	def __iter__(self):
 		return self.slots.itervalues()
@@ -66,7 +117,7 @@ class RegionNode(MergableNode):
 		self.objects = {}
 		self.weight  = 0
 
-	def merge(self, sys, other):
+	def merge(self, other):
 		self  = self.getForward()
 		other = other.getForward()
 
@@ -78,7 +129,7 @@ class RegionNode(MergableNode):
 
 			for xtype, obj in objects.iteritems():
 				if xtype in self.objects:
-					self.objects[xtype] = self.objects[xtype].merge(sys, obj)
+					self.objects[xtype] = self.objects[xtype].merge(obj)
 				else:
 					self.objects[xtype] = obj
 
@@ -86,7 +137,7 @@ class RegionNode(MergableNode):
 
 		return self
 
-	def object(self, sys, xtype):
+	def object(self, xtype):
 		self = self.getForward()
 
 		if xtype not in self.objects:
@@ -95,15 +146,11 @@ class RegionNode(MergableNode):
 
 			# Note this is done after setting the dictionary,
 			# as this call can recurse.
-			sys.setTypePointer(obj)
+			self.group.setTypePointer(obj)
 
 			return obj
 		else:
 			return self.objects[xtype]
-
-	def knownObject(self, xtype):
-		self = self.getForward()
-		return self.objects[xtype]
 
 	def __iter__(self):
 		self = self.getForward()
@@ -121,7 +168,7 @@ class ObjectNode(MergableNode):
 		self.slots  = {}
 		self.leaks  = True
 
-	def merge(self, sys, other):
+	def merge(self, other):
 		self  = self.getForward()
 		other = other.getForward()
 
@@ -133,7 +180,7 @@ class ObjectNode(MergableNode):
 
 			for fieldName, field in slots.iteritems():
 				if fieldName in self.slots:
-					self.slots[fieldName] = self.slots[fieldName].merge(sys, field)
+					self.slots[fieldName] = self.slots[fieldName].merge(field)
 				else:
 					self.slots[fieldName] = obj
 
@@ -142,7 +189,7 @@ class ObjectNode(MergableNode):
 		self.region = self.region.getForward()
 		return self
 
-	def field(self, sys, slotName, regionHint):
+	def field(self, slotName, regionHint):
 		if slotName not in self.slots:
 			assert not slotName.isRoot()
 
@@ -157,9 +204,9 @@ class ObjectNode(MergableNode):
 			self.slots[slotName] = field
 
 			if self.xtype.isExisting():
-				ref = sys.existingSlotRef(self.xtype, slotName)
+				ref = group.existingSlotRef(self.xtype, slotName)
 				if ref is not None:
-					field.initializeTypes(sys, ref)
+					field.initializeTypes(ref)
 			return field
 		else:
 			# TODO merge region?
@@ -186,7 +233,7 @@ class SlotNode(MergableNode):
 		self.null      = True
 		self.observers = []
 
-	def merge(self, sys, other):
+	def merge(self, other):
 		self  = self.getForward()
 		other = other.getForward()
 
@@ -200,7 +247,7 @@ class SlotNode(MergableNode):
 			other.observers = None
 
 			# May merge
-			self.region = self.region.merge(sys, other.region)
+			self.region = self.region.merge(other.region)
 			self = self.getForward()
 
 			group = self.region.group
@@ -225,15 +272,14 @@ class SlotNode(MergableNode):
 
 		return self
 
-	def initializeTypes(self, sys, xtypes):
+	def initializeTypes(self, xtypes):
 		for xtype in xtypes:
-			self.initializeType(sys, xtype)
+			self.initializeType(xtype)
 
-	def initializeType(self, sys, xtype):
-		self = self.getForward()
-
-
+	def initializeType(self, xtype):
 		assert isinstance(xtype, extendedtypes.ExtendedType), type(xtype)
+
+		self = self.getForward()
 
 		# TODO use diffTypeSet from canonicalSlots?
 		if xtype not in self.refs:
@@ -241,14 +287,14 @@ class SlotNode(MergableNode):
 			self.null = False
 
 		# Ensure the object exists
-		return self.region.object(sys, xtype)
+		return self.region.object(xtype)
 
 
-	def update(self, sys, other):
+	def update(self, other):
 		self = self.getForward()
 
 		if self.region != other.region:
-			self.region = self.region.merge(sys, other.region)
+			self.region = self.region.merge(other.region)
 
 			self  = self.getForward()
 			self.region  = self.region.getForward()
@@ -280,17 +326,12 @@ class SlotNode(MergableNode):
 		self.observers.append(constraint)
 		if self.refs: constraint.mark()
 
-	def knownObject(self, xtype):
-		self = self.getForward()
-
-		return self.region.knownObject(xtype)
-
 	def __iter__(self):
 		self = self.getForward()
 
 		# HACK use setManager.iter?
 		for xtype in self.refs:
-			yield self.region.knownObject(xtype)
+			yield self.region.object(xtype)
 
 	def __repr__(self):
 		self = self.getForward()

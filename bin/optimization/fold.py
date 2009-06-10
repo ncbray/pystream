@@ -169,7 +169,7 @@ class FoldRewrite(object):
 		slot = sys.storeGraph.root(slotName)
 
 		xtype = sys.canonical.existingType(obj)
-		return slot.initializeType(sys, xtype)
+		return slot.initializeType(xtype)
 
 	def existingFromObj(self, obj):
 		if self.db:

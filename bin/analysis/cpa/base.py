@@ -53,7 +53,7 @@ class AnalysisContext(CanonicalObject):
 			assert isinstance(obj, extendedtypes.ExtendedType), type(obj)
 			assert isinstance(slot, storegraph.SlotNode)
 
-			slot.initializeType(sys, obj)
+			slot.initializeType(obj)
 
 	def vparamType(self, sys):
 		return self._extendedParamType(sys, sys.tupleClass.typeinfo.abstractInstance)
@@ -65,7 +65,7 @@ class AnalysisContext(CanonicalObject):
 
 	def _vparamSlot(self, sys, vparamObj, index):
 		slotName = sys.canonical.fieldName('Array', sys.extractor.getObject(index))
-		field = vparamObj.field(sys, slotName, self.group.regionHint)
+		field = vparamObj.field(slotName, self.group.regionHint)
 		return field
 
 	def invocationMaySucceed(self, sys):
@@ -92,12 +92,12 @@ class AnalysisContext(CanonicalObject):
 		# Ensures the object node is created.
 		self._bindObjToSlot(sys, vparamType, vparamSlot)
 
-		vparamObj = vparamSlot.initializeType(sys, vparamType)
+		vparamObj = vparamSlot.initializeType(vparamType)
 		sys.logAllocation(cop, vparamObj) # Implicitly allocated
 
 		# Set the length of the vparam tuple.
 		lengthObjxtype  = sys.canonical.existingType(sys.extractor.getObject(length))
-		lengthSlot = vparamObj.field(sys, sys.lengthSlotName, self.group.regionHint)
+		lengthSlot = vparamObj.field(sys.lengthSlotName, self.group.regionHint)
 		self._bindObjToSlot(sys, lengthObjxtype, lengthSlot)
 		sys.logModify(cop, lengthSlot)
 
@@ -115,7 +115,7 @@ class AnalysisContext(CanonicalObject):
 		else:
 			# TODO skip this if this context has already been bound
 			# but for a different caller
-			param.initializeType(sys, cpaType)
+			param.initializeType(cpaType)
 
 
 	def bindParameters(self, sys, caller):

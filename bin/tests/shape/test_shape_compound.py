@@ -706,16 +706,20 @@ class TestAllocateCase(TestCompoundConstraintBase):
 		fakecode = ast.Code('bogus', ast.CodeParameters(None, [], [], None, None, []), self.code)
 
 		lc = self.sys.cpacanonical.localName(fakecode, x, self.context)
-		xinfo = self.root.root(self.sys, lc, self.root.regionHint)
-		btype = self.sys.cpacanonical.pathType(None, 'bogus', id(alloc))
+		xinfo = self.root.root(lc)
 
-		bogusinfo = xinfo.initializeType(self.sys, btype)
+		intobj = self.extractor.getObject(int)
+		bobj   = self.extractor.makeImaginary('bogus', intobj, False)
+
+		btype = self.sys.cpacanonical.pathType(None, bobj, id(alloc))
+
+		bogusinfo = xinfo.initializeType(btype)
 
 		self.aField = self.sys.cpacanonical.fieldName('LowLevel', aobj)
 		self.bField = self.sys.cpacanonical.fieldName('LowLevel', bobj)
 
-		bogusinfo.field(self.sys, self.aField, self.root.regionHint)
-		bogusinfo.field(self.sys, self.bField, self.root.regionHint)
+		bogusinfo.field(self.aField, self.root.regionHint)
+		bogusinfo.field(self.bField, self.root.regionHint)
 
 		alloc.rewriteAnnotation(allocates=((bogusinfo,),None))
 

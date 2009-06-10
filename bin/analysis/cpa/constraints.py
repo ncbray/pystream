@@ -94,7 +94,7 @@ class AssignmentConstraint(Constraint):
 
 
 	def update(self):
-		self.destslot = self.destslot.update(self.sys, self.sourceslot)
+		self.destslot = self.destslot.update(self.sourceslot)
 
 	def attach(self):
 		self.sys.constraint(self)
@@ -128,16 +128,16 @@ class LoadConstraint(CachedConstraint):
 	def concreteUpdate(self, exprType, keyType):
 		assert keyType.isExisting() or keyType.isExternal(), keyType
 
-		obj   = self.expr.region.object(self.sys, exprType)
+		obj   = self.expr.region.object(exprType)
 		name  = self.sys.canonical.fieldName(self.slottype, keyType.obj)
 
 		if self.target:
-			field = obj.field(self.sys, name, self.target.region)
+			field = obj.field(name, self.target.region)
 			self.sys.createAssign(field, self.target)
 		else:
 			# The load is being discarded.  This is probally in a
 			# descriptive stub.  As such, we want to log the read.
-			field = obj.field(self.sys, name, self.expr.region.group.regionHint)
+			field = obj.field(name, self.expr.region.group.regionHint)
 
 		self.sys.logRead(self.op, field)
 
@@ -156,9 +156,9 @@ class StoreConstraint(CachedConstraint):
 	def concreteUpdate(self, exprType, keyType):
 		assert keyType.isExisting() or keyType.isExternal(), keyType
 
-		obj   = self.expr.region.object(self.sys, exprType)
+		obj   = self.expr.region.object(exprType)
 		name  = self.sys.canonical.fieldName(self.slottype, keyType.obj)
-		field = obj.field(self.sys, name, self.value.region)
+		field = obj.field(name, self.value.region)
 
 		self.sys.createAssign(self.value, field)
 		self.sys.logModify(self.op, field)
@@ -178,7 +178,7 @@ class AllocateConstraint(CachedConstraint):
 	def concreteUpdate(self, type_):
 		if type_.obj.isType():
 			xtype = self.sys.extendedInstanceType(self.op.context, type_, id(self.op.op))
-			obj = self.target.initializeType(self.sys, xtype)
+			obj = self.target.initializeType(xtype)
 			self.sys.logAllocation(self.op, obj)
 
 	def attach(self):
@@ -206,10 +206,10 @@ class CheckConstraint(CachedConstraint):
 
 		self.expr = self.expr.getForward()
 
-		obj   = self.expr.region.object(self.sys, exprType)
+		obj   = self.expr.region.object(exprType)
 		name  = self.sys.canonical.fieldName(self.slottype, keyType.obj)
 
-		slot = obj.field(self.sys, name, obj.region.group.regionHint)
+		slot = obj.field(name, obj.region.group.regionHint)
 
 		con = SimpleCheckConstraint(self.sys, self.op, slot, self.target)
 
@@ -234,7 +234,7 @@ class SimpleCheckConstraint(Constraint):
 
 		# HACK initalize type implies then reference is never null...
 		# Make sound?
-		cobj = self.target.initializeType(self.sys, xtype)
+		cobj = self.target.initializeType(xtype)
 		assert cobj is not None
 		self.sys.logAllocation(self.op, cobj)
 
@@ -290,9 +290,9 @@ class AbstractCallConstraint(CachedConstraint):
 	def getVArgLengths(self, vargsType):
 		if vargsType is not None:
 			assert isinstance(vargsType, extendedtypes.ExtendedType), type(vargsType)
-			vargsObj = self.vargs.region.object(self.sys, vargsType)
+			vargsObj = self.vargs.region.object(vargsType)
 			slotName = self.sys.lengthSlotName
-			field    = vargsObj.field(self.sys, slotName, None)
+			field    = vargsObj.field(slotName, None)
 			self.sys.logRead(self.op, field)
 
 			lengths = []
@@ -325,10 +325,10 @@ class AbstractCallConstraint(CachedConstraint):
 			allslots = list(self.args)
 
 			if vargs:
-				vargsObj = self.vargs.region.object(self.sys, vargs)
+				vargsObj = self.vargs.region.object(vargs)
 				for index in range(vlength):
 					slotName = self.sys.canonical.fieldName('Array', self.sys.extractor.getObject(index))
-					field = vargsObj.field(self.sys, slotName, None)
+					field = vargsObj.field(slotName, None)
 					allslots.append(field)
 					self.sys.logRead(self.op, field)
 

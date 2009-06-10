@@ -67,7 +67,7 @@ class ExtractDataflow(object):
 		result = self.existingSlot(obj)
 		if self.doOnce(node):
 			sys = self.system
-			result.initializeType(sys, sys.canonical.existingType(obj))
+			result.initializeType(sys.canonical.existingType(obj))
 		return result
 
 	def call(self, node, expr, args, kwds, vargs, kargs, targets):
@@ -178,7 +178,7 @@ class ExtractDataflow(object):
 
 		if targets is not None:
 			assert len(targets) == 1
-			targets[0].initializeType(self.system, self.system.canonical.existingType(node.object))
+			targets[0].initializeType(self.system.canonical.existingType(node.object))
 		else:
 			return value
 

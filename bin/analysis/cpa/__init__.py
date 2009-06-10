@@ -87,7 +87,7 @@ class InterproceduralDataflow(object):
 		# HACK?
 		self.codeContexts[base.externalFunction].add(base.externalFunctionContext)
 
-		self.storeGraph = storegraph.StoreGraph()
+		self.storeGraph = storegraph.StoreGraph(self.extractor, self.canonical)
 
 		self.entryPointDescs = []
 
@@ -137,6 +137,7 @@ class InterproceduralDataflow(object):
 
 		return self.cache.setdefault(path, path)
 	def ensureLoaded(self, obj):
+		# TODO the timing is no longer guarenteed, as the store graph bypasses this...
 		start = time.clock()
 		self.extractor.ensureLoaded(obj)
 		self.decompileTime += time.clock()-start
@@ -186,54 +187,7 @@ class InterproceduralDataflow(object):
 
 		return context
 
-	def setTypePointer(self, obj):
-		assert isinstance(obj, storegraph.ObjectNode), type(obj)
-		xtype = obj.xtype
-
-		if not xtype.isExisting():
-			# Makes sure the type pointer is valid.
-			self.ensureLoaded(xtype.obj)
-
-			# Get the type object
-			typextype = self.canonical.existingType(xtype.obj.type)
-
-			field = obj.field(self, self.typeSlotName, obj.region.group.regionHint)
-			field.initializeType(self, typextype)
-
-	def existingSlotRef(self, xtype, slotName):
-		assert xtype.isExisting()
-		assert not slotName.isRoot()
-
-		obj = xtype.obj
-		assert isinstance(obj, program.AbstractObject), obj
-		self.ensureLoaded(obj)
-
-		slottype, key = slotName.type, slotName.name
-
-		assert isinstance(key, program.AbstractObject), key
-
-		if isinstance(obj, program.Object):
-			if slottype == 'LowLevel':
-				subdict = obj.lowlevel
-			elif slottype == 'Attribute':
-				subdict = obj.slot
-			elif slottype == 'Array':
-				# HACK
-				if isinstance(obj.pyobj, list):
-					return set([self.canonical.existingType(t) for t in obj.array.itervalues()])
-
-				subdict = obj.array
-			elif slottype == 'Dictionary':
-				subdict = obj.dictionary
-			else:
-				assert False, slottype
-
-			if key in subdict:
-				return (self.canonical.existingType(subdict[key]),)
-
-		# Not found
-		return None
-
+	# This is the policy that determines what names a given allocation gets.
 	def extendedInstanceType(self, context, xtype, op):
 		self.ensureLoaded(xtype.obj)
 		instObj = xtype.obj.abstractInstance()
@@ -289,7 +243,7 @@ class InterproceduralDataflow(object):
 			assert len(p.returnparams) == 1
 			name = self.canonical.localName(code, p.returnparams[0], targetcontext)
 			returnSource = self.storeGraph.root(name)
-			returnSource.initializeType(self, resultxtype)
+			returnSource.initializeType(resultxtype)
 
 			return True
 
@@ -339,9 +293,9 @@ class InterproceduralDataflow(object):
 		fieldName = self.canonical.fieldName(*attrName)
 		dstxtype = self.canonical.externalType(dst)
 
-		obj = self.storeGraph.regionHint.object(self, srcxtype)
-		field = obj.field(self, fieldName, self.storeGraph.regionHint)
-		field.initializeType(self, dstxtype)
+		obj = self.storeGraph.regionHint.object(srcxtype)
+		field = obj.field(fieldName, self.storeGraph.regionHint)
+		field.initializeType(dstxtype)
 
 	def makeExternalSlot(self, name):
 		code = base.externalFunction
@@ -358,18 +312,15 @@ class InterproceduralDataflow(object):
 		return cop
 
 	def getExistingSlot(self, pyobj):
-		obj = self.extractor.getObject(pyobj)
+		obj  = self.extractor.getObject(pyobj)
 		slot = self.makeExternalSlot('dummy_exist')
-		argxtype = self.canonical.existingType(obj)
-		slot.initializeType(self, argxtype)
+		slot.initializeType(self.canonical.existingType(obj))
 		return slot
-
 
 	def getInstanceSlot(self, typeobj):
 		obj = self.extractor.getInstance(typeobj)
 		slot = self.makeExternalSlot('dummy_inst')
-		argxtype = self.canonical.externalType(obj)
-		slot.initializeType(self, argxtype)
+		slot.initializeType(self.canonical.externalType(obj))
 		return slot
 
 	def getReturnSlot(self, ep):

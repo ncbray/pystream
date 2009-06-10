@@ -26,7 +26,7 @@ class HeapInformationProvider(object):
 		iobj = self.sys.extractor.getObject(i)
 		fieldName = self.sys.canonical.fieldName('Array', iobj)
 		for ref in lcl.annotation.references[0]:
-			return ref.field(self.sys, fieldName, ref.region.group.regionHint)
+			return ref.field(fieldName, ref.region.group.regionHint)
 
 class OrderConstraints(object):
 	def __init__(self, sys, entryCode):
@@ -92,10 +92,6 @@ class RegionBasedShapeAnalysis(object):
 			print "ITERATION LIMIT HIT"
 			self.worklist.worklist[:] = []
 		return success
-
-	def setTypePointer(self, obj):
-		# HACK for test harnesses.
-		pass
 
 	def processCode(self, code):
 		if code not in self.visited:

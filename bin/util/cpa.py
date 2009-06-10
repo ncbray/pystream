@@ -10,6 +10,9 @@ class CPASignature(util.canonical.CanonicalObject):
 	def __init__(self, code, selfparam, params):
 		params = tuple(params)
 
+		# HACK - Sanity check.  Used for catching infinite loops in the analysis
+		assert len(params) < 30, code
+
 		self.code      = code
 		self.selfparam = selfparam
 		self.params    = params

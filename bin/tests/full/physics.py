@@ -81,19 +81,13 @@ def simpleUpdate(dt, iterations):
 
 	return swarm
 
+
+from abstractcode.shaderprogram import VSContext, FSContext
+
 class Material(object):
 	__slots__ = 'color'
 	def __init__(self):
 		self.color = vec3(0.125, 0.125, 1.0)
-
-class VSOut(object):
-	__slots__ = 'position', 'point_size'
-
-class FSIn(object):
-	__slots__ = 'coord', 'depth', 'front_facing',
-
-class FSOut(object):
-	__slots__ = 'colors', 'depth'
 
 class Shader(object):
 	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'lightPos', 'ambient', 'material'
@@ -120,23 +114,20 @@ class Shader(object):
 
 		self.material = Material()
 
-	def shadeVertex(self, pos, normal):
-		trans     = (self.worldToCamera*self.objectToWorld)
-		newpos    = (trans*pos)
-		projected = self.projection*newpos
-		newnormal = (trans*vec4(normal.x, normal.y, normal.z, 0.0)).xyz
+	def shadeVertex(self, context, pos, normal):
+		trans     = self.worldToCamera*self.objectToWorld
+		newpos    = trans*pos
+		newnormal = trans*vec4(normal.x, normal.y, normal.z, 0.0)
 
-		#vsout = VSOut()
-		#vsout.position = projected
+		#context.position = self.projection*newpos
 
-		return newpos.xyz, newnormal
+		return newpos.xyz, newnormal.xyz
 
-	def shadeFragment(self, pos, normal):
+	def shadeFragment(self, context, pos, normal):
 		n = normal.normalize()
 
 		if True:
 			mainColor = n*0.5+vec3(0.5, 0.5, 0.5)
-
 		else:
 			# Light into camera space
 			trans = self.worldToCamera
@@ -152,9 +143,10 @@ class Shader(object):
 
 			mainColor = self.material.color*(self.ambient+modulated)
 
-		fsout = FSOut()
-		fsout.colors = (mainColor,)
-		return fsout
+		context = FSContext()
+		context.colors = (mainColor,)
+
+		return context # Keeps context live
 
 def nldot(a, b):
 	return max(a.dot(b), 0.0)

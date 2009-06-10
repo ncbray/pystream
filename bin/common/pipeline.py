@@ -64,7 +64,7 @@ def codeConditioning(console, extractor, interface, storeGraph):
 		# basically, DCE improves read modify information, which in turn allows better DCE
 		# NOTE that this doesn't work very well without path sensitivity
 		# "modifies" are quite imprecise without it, hence DCE doesn't do much.
-		if True:
+		if False:
 			bruteForceSimplification(console, extractor, interface, storeGraph, liveCode)
 
 		return liveCode

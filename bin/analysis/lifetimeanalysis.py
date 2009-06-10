@@ -146,7 +146,7 @@ class ReadModifyAnalysis(object):
 
 		# Copy reads
 		for code in liveCode:
-			self.handleReads(code, None, code.annotation.codeModifies)
+			self.handleReads(code, None, code.annotation.codeReads)
 			self.handleAllocates(code, None, code.annotation.codeAllocates)
 
 			ops, lcls = getOps(code)

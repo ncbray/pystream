@@ -515,7 +515,8 @@ class LifetimeAnalysis(object):
 
 
 	def process(self, console, liveCode):
-		with console.scope('solve'):
+		self.console = console
+		with self.console.scope('solve'):
 			self.gatherSlots(liveCode)
 			self.gatherInvokes(liveCode)
 
@@ -526,12 +527,15 @@ class LifetimeAnalysis(object):
 			self.inferScope()
 			self.rm.process(self.killed)
 
-		with console.scope('annotate'):
+		with self.console.scope('annotate'):
 			self.createDB(liveCode)
 
 		del self.rm
 
 	def createDB(self, liveCode):
+		self.annotationCount = 0
+		self.annotationCache = {}
+
 		readDB   = self.rm.opReadDB
 		modifyDB = self.rm.opModifyDB
 		self.allocations = self.rm.allocations
@@ -591,8 +595,17 @@ class LifetimeAnalysis(object):
 				opModifies  = annotations.makeContextualAnnotation(mout)
 				opAllocates = annotations.makeContextualAnnotation(aout)
 
+				opReads     = self.annotationCache.setdefault(opReads,     opReads)
+				opModifies  = self.annotationCache.setdefault(opModifies,  opModifies)
+				opAllocates = self.annotationCache.setdefault(opAllocates, opAllocates)
+				self.annotationCount += 3
+
 				op.rewriteAnnotation(reads=opReads, modifies=opModifies, allocates=opAllocates)
 
+		self.console.output("Annotation compression %f - %d" % (float(len(self.annotationCache))/max(self.annotationCount, 1), self.annotationCount))
+
+		del self.annotationCache
+		del self.annotationCount
 
 def evaluate(console, interface, liveCode):
 	with console.scope('lifetime analysis'):

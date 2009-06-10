@@ -344,7 +344,12 @@ class InterproceduralDataflow(object):
 
 	def collectContexts(self, lut, contexts):
 		cdata  = [annotations.annotationSet(lut[context]) for context in contexts]
-		return annotations.makeContextualAnnotation(cdata)
+		data = annotations.makeContextualAnnotation(cdata)
+
+		data = self.annotationCache.setdefault(data, data)
+		self.annotationCount += 1
+
+		return data
 
 	def collectRMA(self, code, op):
 		contexts = code.annotation.contexts
@@ -357,6 +362,11 @@ class InterproceduralDataflow(object):
 
 		callocates = [annotations.annotationSet(self.opAllocates[(code, op, context)]) for context in contexts]
 		allocates = annotations.makeContextualAnnotation(callocates)
+
+		reads     = self.annotationCache.setdefault(reads, reads)
+		modifies  = self.annotationCache.setdefault(modifies, modifies)
+		allocates = self.annotationCache.setdefault(allocates, allocates)
+		self.annotationCount += 3
 
 		return reads, modifies, allocates
 
@@ -373,6 +383,11 @@ class InterproceduralDataflow(object):
 		reads     = annotations.mergeContextualAnnotation(code.annotation.codeReads, code.abstractReads())
 		modifies  = annotations.mergeContextualAnnotation(code.annotation.codeModifies, code.abstractModifies())
 		allocates = annotations.mergeContextualAnnotation(code.annotation.codeAllocates, code.abstractAllocates())
+
+		reads     = self.annotationCache.setdefault(reads, reads)
+		modifies  = self.annotationCache.setdefault(modifies, modifies)
+		allocates = self.annotationCache.setdefault(allocates, allocates)
+		self.annotationCount += 3
 
 		code.rewriteAnnotation(codeReads=reads, codeModifies=modifies, codeAllocates=allocates)
 
@@ -400,6 +415,9 @@ class InterproceduralDataflow(object):
 		return invokeLUT, lclLUT
 
 	def annotate(self):
+		self.annotationCount = 0
+		self.annotationCache = {}
+
 		invokeLUT, lclLUT = self.reindexAnnotations()
 
 		for code, contexts in self.codeContexts.iteritems():
@@ -429,6 +447,11 @@ class InterproceduralDataflow(object):
 				lcl.rewriteAnnotation(references=references)
 
 			self.mergeAbstractCode(code)
+
+		self.console.output("Annotation compression %f - %d" % (float(len(self.annotationCache))/max(self.annotationCount, 1), self.annotationCount))
+
+		del self.annotationCache
+		del self.annotationCount
 
 	### Debugging methods ###
 

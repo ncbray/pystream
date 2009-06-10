@@ -1,7 +1,7 @@
 from util.typedispatch import *
 from language.python import ast
 
-from . simplify import simplify
+import optimization.simplify
 
 from analysis.astcollector import getOps
 
@@ -179,10 +179,9 @@ class OpInliningTransform(StrictTypeDispatcher):
 # Performs depth-first traversal of call graph,
 # inlines code in reverse postorder.
 class CodeInliningTransform(StrictTypeDispatcher):
-	def __init__(self, analysis, extractor, storeGraph, intrinsics):
+	def __init__(self, analysis, compiler, intrinsics):
 		self.analysis  = analysis
-		self.extractor  = extractor
-		self.storeGraph = storeGraph
+		self.compiler  = compiler
 		self.intrinsics = intrinsics
 		self.opinline = OpInliningTransform(analysis)
 		self.processed = set()
@@ -335,7 +334,7 @@ class CodeInliningTransform(StrictTypeDispatcher):
 					node.ast = result
 					# Always done imediately after inlining, so if we inline
 					# this function, less needs to be processed.
-					simplify(self.extractor, self.storeGraph, node)
+					optimization.simplify.evaluateCode(self.compiler, node)
 			else:
 				ops, lcls = getOps(node)
 				for op in ops:
@@ -346,20 +345,21 @@ class CodeInliningTransform(StrictTypeDispatcher):
 
 import translator.glsl.intrinsics
 
-def inlineCode(console, extractor, interface, storeGraph, liveCode):
-	analysis  = CodeInliningAnalysis()
-	for code in liveCode:
-		analysis.process(code)
+def evaluate(compiler):
+	with compiler.console.scope('code inlining'):
+		analysis  = CodeInliningAnalysis()
+		for code in compiler.liveCode:
+			analysis.process(code)
 
-	intrinsics = translator.glsl.intrinsics.makeIntrinsicRewriter(extractor)
+		intrinsics = translator.glsl.intrinsics.makeIntrinsicRewriter(compiler.extractor)
 
-	transform = CodeInliningTransform(analysis, extractor, storeGraph, intrinsics)
-	for code in interface.entryCode():
-		if True:
-			try:
+		transform = CodeInliningTransform(analysis, compiler, intrinsics)
+		for code in compiler.interface.entryCode():
+			if True:
+				try:
+					transform.process(code)
+				except:
+					compiler.console.output('Failed to transform %r' % code)
+					raise
+			else:
 				transform.process(code)
-			except:
-				console.output('Failed to transform %r' % code)
-				raise
-		else:
-			transform.process(code)

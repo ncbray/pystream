@@ -5,15 +5,6 @@ from . pythonshader import PythonShaderProgram
 
 from abstractcode.shaderprogram import ShaderProgram
 
-class CompilerContext(object):
-	def __init__(self, console, extractor, interface):
-		self.console   = console
-		self.extractor = extractor
-		self.interface = interface
-
-
-
-
 def makePathMatcher(interface):
 	root = {}
 	for path, name, input, output in interface.glsl.attr:
@@ -27,21 +18,19 @@ def makePathMatcher(interface):
 
 	return root
 
-def translate(console, extractor, interface):
-	context = CompilerContext(console, extractor, interface)
+def translate(compiler):
+	with compiler.console.scope('translate to glsl'):
+		pathMatcher = makePathMatcher(compiler.interface)
 
-	with context.console.scope('translate to glsl'):
-		pathMatcher = makePathMatcher(context.interface)
+		translator = GLSLTranslator(intrinsics.makeIntrinsicRewriter(compiler.extractor))
 
-		translator = GLSLTranslator(intrinsics.makeIntrinsicRewriter(context.extractor))
-
-		for code in context.interface.entryCode():
+		for code in compiler.interface.entryCode():
 			if isinstance(code, ShaderProgram):
 				vs = code.vertexShaderCode()
 				fs = code.fragmentShaderCode()
 
 				shader = PythonShaderProgram(vs, fs, pathMatcher)
-				iotransform.evaluateShaderProgram(context, shader, pathMatcher)
+				iotransform.evaluateShaderProgram(compiler, shader, pathMatcher)
 				codes = translator.processShaderProgram(shader)
 
 				for code in codes:

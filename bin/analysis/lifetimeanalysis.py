@@ -254,7 +254,7 @@ class ObjectSearcher(DFSSearcher):
 				self.enqueue(next)
 
 class LifetimeAnalysis(object):
-	def __init__(self, interface):
+	def __init__(self):
 		self.heapReferedToByHeap = collections.defaultdict(set)
 		self.heapReferedToByCode = collections.defaultdict(set)
 
@@ -264,9 +264,6 @@ class LifetimeAnalysis(object):
 
 		self.globallyVisible = set()
 		self.externallyVisible = set()
-
-		self.interface = interface
-		self.entryContexts = interface.entryContexts()
 
 	def getObjectInfo(self, obj):
 		assert isinstance(obj, storegraph.ObjectNode), type(obj)
@@ -446,14 +443,14 @@ class LifetimeAnalysis(object):
 			self.dirty.update(self.invokeSources[currentF][currentC])
 
 
-	def gatherInvokes(self, liveCode):
+	def gatherInvokes(self, liveCode, entryContexts):
 		invokesDB = invokesSchema.instance()
 
 		self.entries = set()
 
 		for code in liveCode:
 			for context in code.annotation.contexts:
-				if context in self.entryContexts:
+				if context in entryContexts:
 					self.entries.add((code, context))
 
 
@@ -493,7 +490,7 @@ class LifetimeAnalysis(object):
 				obj.externallyVisible = True
 
 
-	def gatherSlots(self, liveCode):
+	def gatherSlots(self, liveCode, entryContexts):
 
 		searcher = ObjectSearcher(self)
 
@@ -507,32 +504,33 @@ class LifetimeAnalysis(object):
 
 			# Mark the return parameters for external contexts as visible.
 			for cindex, context in enumerate(code.annotation.contexts):
-				if context in self.entryContexts:
+				if context in entryContexts:
 					for param in callee.returnparams:
 						self.markVisible(param, cindex)
 
 		searcher.process()
 
 
-	def process(self, console, liveCode):
-		self.console = console
-		with self.console.scope('solve'):
-			self.gatherSlots(liveCode)
-			self.gatherInvokes(liveCode)
+	def process(self, compiler):
+		with compiler.console.scope('solve'):
+			entryContexts = compiler.interface.entryContexts()
+
+			self.gatherSlots(compiler.liveCode, entryContexts)
+			self.gatherInvokes(compiler.liveCode, entryContexts)
 
 			self.propagateVisibility()
 			self.propagateHeld()
 
-			self.rm = ReadModifyAnalysis(liveCode, self.invokeSources)
+			self.rm = ReadModifyAnalysis(compiler.liveCode, self.invokeSources)
 			self.inferScope()
 			self.rm.process(self.killed)
 
-		with self.console.scope('annotate'):
-			self.createDB(liveCode)
+		with compiler.console.scope('annotate'):
+			self.createDB(compiler)
 
 		del self.rm
 
-	def createDB(self, liveCode):
+	def createDB(self, compiler):
 		self.annotationCount = 0
 		self.annotationCache = {}
 
@@ -540,7 +538,7 @@ class LifetimeAnalysis(object):
 		modifyDB = self.rm.opModifyDB
 		self.allocations = self.rm.allocations
 
-		for code in liveCode:
+		for code in compiler.liveCode:
 			# Annotate the code
 			live   = []
 			killed = []
@@ -602,11 +600,11 @@ class LifetimeAnalysis(object):
 
 				op.rewriteAnnotation(reads=opReads, modifies=opModifies, allocates=opAllocates)
 
-		self.console.output("Annotation compression %f - %d" % (float(len(self.annotationCache))/max(self.annotationCount, 1), self.annotationCount))
+		compiler.console.output("Annotation compression %f - %d" % (float(len(self.annotationCache))/max(self.annotationCount, 1), self.annotationCount))
 
 		del self.annotationCache
 		del self.annotationCount
 
-def evaluate(console, interface, liveCode):
-	with console.scope('lifetime analysis'):
-		la = LifetimeAnalysis(interface).process(console, liveCode)
+def evaluate(compiler):
+	with compiler.console.scope('lifetime analysis'):
+		la = LifetimeAnalysis().process(compiler)

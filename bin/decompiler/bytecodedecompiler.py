@@ -34,19 +34,17 @@ import optimization.simplify
 from language.python.annotations import codeOrigin
 
 
-def decompile(func, extractor, trace=False, ssa=True):
-	assert not isinstance(extractor, bool)
-
+def decompile(compiler, func, trace=False, ssa=True):
 	# HACK can't find modules for "fake" globals.
 	try:
 		mname, module = moduleForGlobalDict(func.func_globals)
 	except:
 		mname = 'unknown_module'
 
-	return decompileCode(extractor, func.func_code, mname, trace=trace, ssa=ssa)
+	return decompileCode(compiler, func.func_code, mname, trace=trace, ssa=ssa)
 
-def decompileCode(extractor, code, mname, trace=False, ssa=True):
-	return Decompiler(extractor).disassemble(code, mname, trace=trace, ssa=ssa)
+def decompileCode(compiler, code, mname, trace=False, ssa=True):
+	return Decompiler(compiler).disassemble(code, mname, trace=trace, ssa=ssa)
 
 def getargs(co):
     nargs = co.co_argcount
@@ -64,8 +62,8 @@ def getargs(co):
     return args, vargs, kargs
 
 class Decompiler(object):
-	def __init__(self, extractor):
-		self.extractor = extractor
+	def __init__(self, compiler):
+		self.compiler = compiler
 
 	def disassemble(self, code, mname, trace=False, ssa=True):
 		argnames, vargs, kargs = getargs(code)
@@ -95,13 +93,13 @@ class Decompiler(object):
 			if trace and post:
 				FlowBlockDump().process(name+"_post", root)
 
-		root = destack(code, mname, name, root, argnames, vargs, kargs, self.extractor, decompileCode, trace)
+		root = destack(code, mname, name, root, argnames, vargs, kargs, self.compiler.extractor, decompileCode, trace)
 
 		if ssa:
 			root = ssitransform.ssiTransform(root)
 
 		# Flow sensitive, works without a ssa or ssi transform.
-		optimization.simplify.simplify(self.extractor, None, root)
+		optimization.simplify.evaluateCode(self.compiler, root)
 
 
 		if trace:

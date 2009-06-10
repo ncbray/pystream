@@ -13,9 +13,8 @@ import collections
 
 
 class RedundantLoadEliminator(object):
-	def __init__(self, extractor, storeGraph, readNumbers, writeNumbers, dom):
-		self.extractor    = extractor
-		self.storeGraph   = storeGraph
+	def __init__(self, compiler, readNumbers, writeNumbers, dom):
+		self.compiler = compiler
 		self.readNumbers  = readNumbers
 		self.writeNumbers = writeNumbers
 		self.dom = dom
@@ -139,11 +138,11 @@ class RedundantLoadEliminator(object):
 		signatures = self.generateSignatures(code)
 		replace = self.generateReplacements(signatures)
 
-		rewriteAndSimplify(self.extractor, self.storeGraph, code, replace)
+		rewriteAndSimplify(self.compiler, code, replace)
 		return self.eliminated
 
 
-def evaluateCode(console, extractor, storeGraph, code):
+def evaluateCode(compiler, code):
 	rm = FindReadModify().processCode(code)
 
 	dom = MakeForwardDominance().processCode(code)
@@ -151,13 +150,13 @@ def evaluateCode(console, extractor, storeGraph, code):
 	analysis = ForwardESSA(rm)
 	analysis.processCode(code)
 
-	rle = RedundantLoadEliminator(extractor, storeGraph, analysis.readLUT, analysis.writeLUT, dom)
+	rle = RedundantLoadEliminator(compiler, analysis.readLUT, analysis.writeLUT, dom)
 	eliminated = rle.processCode(code)
 	if eliminated:
 		print '\t', code, eliminated
 
-def evaluate(console, extractor, storeGraph, liveCode):
-	with console.scope('redundant load elimination'):
-		for code in liveCode:
+def evaluate(compiler):
+	with compiler.console.scope('redundant load elimination'):
+		for code in compiler.liveCode:
 			if code.isStandardCode() and not code.annotation.descriptive:
-				evaluateCode(console, extractor, storeGraph, code)
+				evaluateCode(compiler, code)

@@ -9,11 +9,11 @@ import util
 from . import lltranslator
 
 class StubCollector(object):
-	def __init__(self, extractor):
-		self.extractor = extractor
+	def __init__(self, compiler):
+		self.compiler = compiler
 
 		# HACK
-		self.extractor.nameLUT = {}
+		self.compiler.extractor.nameLUT = {}
 
 		self.exports = {}
 
@@ -27,7 +27,7 @@ class StubCollector(object):
 	##############################
 
 	def existing(self, obj):
-		return ast.Existing(self.extractor.getObject(obj))
+		return ast.Existing(self.compiler.extractor.getObject(obj))
 
 	def allocate(self, t, target):
 		return ast.Assign(ast.Allocate(t), [target])
@@ -97,24 +97,25 @@ class StubCollector(object):
 		return funcast
 
 	def registerFunction(self, func, code):
-		self.extractor.desc.functions.append(code)
-		self.extractor.nameLUT[code.name] = func
+		extractor = self.compiler.extractor
+		extractor.desc.functions.append(code)
+		extractor.nameLUT[code.name] = func
 
 		if func:
-			self.extractor.replaceCode(func, code)
+			extractor.replaceCode(func, code)
 			self.codeToFunction[code] = func
 
 	def llast(self, f):
 		code = f()
 		assert code.isAbstractCode(), type(code)
 		self.registerFunction(None, code)
-		self.extractor.desc.functions.append(code)
+		self.compiler.extractor.desc.functions.append(code)
 		return code
 
 	def llfunc(self, func):
-		code = self.extractor.decompileFunction(func)
+		code = self.compiler.extractor.decompileFunction(func)
 		self.registerFunction(func, code)
-		code = lltranslator.translate(self.extractor, func, code)
+		code = lltranslator.translate(self.compiler, func, code)
 		return code
 
 	def cfuncptr(self, obj):
@@ -136,7 +137,7 @@ class StubCollector(object):
 
 		def callback(code):
 			assert code.isAbstractCode(), type(code)
-			self.extractor.attachStubToPtr(code, ptr)
+			self.compiler.extractor.attachStubToPtr(code, ptr)
 			return code
 		return callback
 
@@ -152,15 +153,17 @@ class StubCollector(object):
 
 		def callback(code):
 			assert code.isAbstractCode(), type(code)
-			self.extractor.attachStubToPtr(code, ptr)
+			extractor = self.compiler.extractor
+
+			extractor.attachStubToPtr(code, ptr)
 
 			# Check the binding.
-			obj  = self.extractor.getObject(pyobj)
-			call = self.extractor.getCall(obj)
+			obj  = extractor.getObject(pyobj)
+			call = extractor.getCall(obj)
 
 			if code is not call:
-				print self.extractor.pointerToObject
-				print self.extractor.pointerToStub
+				print extractor.pointerToObject
+				print extractor.pointerToStub
 
 			assert code is call, (original, pyobj, code, call)
 
@@ -213,7 +216,7 @@ class StubCollector(object):
 	def replaceObject(self, o):
 		def callback(f):
 			assert self.highLevelLUT[f.func_name] == f, "Must declare as high level stub before replacing."
-			self.extractor.replaceObject(o, f)
+			self.compiler.extractor.replaceObject(o, f)
 			return f
 		return callback
 
@@ -225,7 +228,7 @@ class StubCollector(object):
 			else:
 				f = obj
 				assert self.highLevelLUT[f.func_name] == f, "Must declare as high level stub before replacing."
-			self.extractor.replaceAttr(o, attr, f)
+			self.compiler.extractor.replaceAttr(o, attr, f)
 			return obj
 		return callback
 
@@ -233,9 +236,9 @@ stubgenerators = []
 def stubgenerator(f):
 	stubgenerators.append(f)
 
-def makeStubs(extractor):
-	collector = StubCollector(extractor)
-	extractor.stubs = collector
+def makeStubs(compiler):
+	collector = StubCollector(compiler)
+	compiler.extractor.stubs = collector
 	for gen in stubgenerators:
 		gen(collector)
 	return collector

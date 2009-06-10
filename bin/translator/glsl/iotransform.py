@@ -189,4 +189,4 @@ def evaluateShaderProgram(context, shader, pathMatcher):
 		transformOutputs(context, shader, code, pathMatcher)
 
 		# Kill orphans
-		optimization.dce.dce(context.extractor, code, getOutputs(context.extractor, shader))
+		optimization.dce.evaluateCode(context, code, getOutputs(context.extractor, shader))

@@ -1,5 +1,5 @@
 from util.xform.traversal import allChildren, replaceAllChildren
-from . simplify import simplify
+import optimization.simplify
 
 
 class Rewriter(object):
@@ -30,8 +30,8 @@ class Rewriter(object):
 			replaceAllChildren(self, code)
 		return code
 
-def rewriteAndSimplify(extractor, storeGraph, code, replace):
+def rewriteAndSimplify(compiler, code, replace):
 	if replace:
 		Rewriter().processCode(code, replace)
-		simplify(extractor, storeGraph, code)
+		optimization.simplify.evaluateCode(compiler, code)
 	return code

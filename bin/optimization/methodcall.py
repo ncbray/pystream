@@ -149,10 +149,10 @@ class MethodPatternFinder(object):
 			self.invokeLUT[(code, context)] = annotations.annotationSet(reach)
 
 
-	def preprocess(self, extractor, liveCode):
-		if not self.findOriginals(extractor):
+	def preprocess(self, compiler):
+		if not self.findOriginals(compiler.extractor):
 			return False
-		self.findExisting(liveCode)
+		self.findExisting(compiler.liveCode)
 		return self.findContexts()
 
 
@@ -357,15 +357,15 @@ def methodMeet(values):
 			return dataflow.forward.top
 	return prototype
 
-def methodCall(console, extractor, storeGraph, liveCode):
-	with console.scope('method call'):
+def evaluate(compiler):
+	with compiler.console.scope('method call'):
 		pattern = MethodPatternFinder()
-		if not pattern.preprocess(extractor, liveCode):
-			console.output("No method calls to fuse.")
+		if not pattern.preprocess(compiler):
+			compiler.console.output("No method calls to fuse.")
 			return
 
 		numrewritten = 0
-		for code in liveCode:
+		for code in compiler.liveCode:
 			analyze = MethodAnalysis(pattern)
 			rewrite = MethodRewrite(pattern)
 
@@ -382,11 +382,11 @@ def methodCall(console, extractor, storeGraph, liveCode):
 
 			# HACK to turn attribute access assignments into discards.
 			if rewrite.rewritten:
-				optimization.simplify.simplify(extractor, storeGraph, code)
+				optimization.simplify.evaluateCode(compiler, code)
 
 			if rewrite.rewritten:
 				numrewritten += len(rewrite.rewritten)
 
 		# TODO may not be entirely correct, as the method call may
 		# not be fused in the final iteration.
-		console.output("%d method calls fused." % numrewritten)
+		compiler.console.output("%d method calls fused." % numrewritten)

@@ -22,12 +22,6 @@ import urllib
 from language.python import ast
 from language.python import annotations
 
-class CompilerContext(object):
-	def __init__(self, console, extractor, interface):
-		self.console   = console
-		self.extractor = extractor
-		self.interface = interface
-
 def outputCodeShortName(out, code, links=None, context=None):
 	link = links.codeRef(code, context) if links is not None else None
 
@@ -117,7 +111,7 @@ def tableRow(out, links, label, *args):
 	out.end('tr')
 	out.endl()
 
-def dumpFunctionInfo(func, dumpContext, links, out, scg):
+def dumpFunctionInfo(func, compiler, derived, links, out, scg):
 	code = func
 	out.begin('h3')
 	outputCodeShortName(out, func)
@@ -302,7 +296,7 @@ def dumpFunctionInfo(func, dumpContext, links, out, scg):
 		out.end('pre')
 		out.endl()
 
-		callers = dumpContext.derived.callers(func, context)
+		callers = derived.callers(func, context)
 		if callers:
 			out.begin('h3')
 			out << "Callers"
@@ -316,7 +310,7 @@ def dumpFunctionInfo(func, dumpContext, links, out, scg):
 			out.end('ul')
 			out.end('p')
 
-		callees = dumpContext.derived.callees(func, context)
+		callees = derived.callees(func, context)
 		if callees:
 			out.begin('h3')
 			out << "Callees"
@@ -353,7 +347,7 @@ def dumpFunctionInfo(func, dumpContext, links, out, scg):
 			out.end('p')
 
 
-		reads = dumpContext.derived.funcReads[func][context]
+		reads = derived.funcReads[func][context]
 		if reads:
 			out.begin('h3')
 			out << "Reads"
@@ -376,7 +370,7 @@ def dumpFunctionInfo(func, dumpContext, links, out, scg):
 			out.end('p')
 
 
-		modifies = dumpContext.derived.funcModifies[func][context]
+		modifies = derived.funcModifies[func][context]
 		if modifies:
 			out.begin('h3')
 			out << "Modifies"
@@ -400,21 +394,21 @@ def dumpFunctionInfo(func, dumpContext, links, out, scg):
 		out.end('div')
 
 
-def dumpHeapInfo(heap, dumpContext, links, out):
+def dumpHeapInfo(heap, compiler, heapContexts, links, out):
 	out.begin('h3')
 	outputObjectShortName(out, heap)
 	out.end('h3')
 	out.endl()
 
-	if heap not in dumpContext.heapContexts:
+	if heap not in heapContexts:
 		print heap
 		print
-		for other in dumpContext.heapContexts.iterkeys():
+		for other in heapContexts.iterkeys():
 			print other
 
-	contexts = dumpContext.heapContexts[heap]
+	contexts = heapContexts[heap]
 
-	call = dumpContext.extractor.getCall(heap)
+	call = compiler.extractor.getCall(heap)
 	if call:
 		out.begin('div')
 		out << 'On call: '
@@ -452,13 +446,10 @@ def dumpHeapInfo(heap, dumpContext, links, out):
 	out.end('pre')
 
 
-def makeHeapTree(dumpContext):
-
-	liveHeap = dumpContext.liveHeap
-
+def makeHeapTree(liveHeap, heapContexts):
 	head = None
 	points = {}
-	for heap, contexts in dumpContext.heapContexts.iteritems():
+	for heap, contexts in heapContexts.iteritems():
 		points[heap] = set()
 
 		for context in contexts:
@@ -472,7 +463,7 @@ def makeHeapTree(dumpContext):
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(points, head)
 	return tree, head
 
-def dumpReport(name, context):
+def dumpReport(name, compiler, derived, liveInvocations, liveHeap, heapContexts):
 	reportDir = makeReportDirectory(name)
 
 	links = LinkManager()
@@ -498,8 +489,7 @@ def dumpReport(name, context):
 		return fn
 
 
-	liveHeap = set(context.heapContexts.keys())
-	liveFunctions, liveInvocations = context.liveCode, context.liveInvocations
+	liveHeap = set(heapContexts.keys()) # TODO elo,omate?
 
 	out, scg = makeOutput(reportDir, 'function_index.html')
 	dumpHeader(out)
@@ -513,7 +503,7 @@ def dumpReport(name, context):
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(liveInvocations, head)
 
 	# HACK makes sure dead entry points are output?
-	liveFunctions = idoms.keys()
+	#liveFunctions = idoms.keys()
 
 	def printChildren(node):
 		children = tree.get(node)
@@ -542,7 +532,7 @@ def dumpReport(name, context):
 	out.end('h2')
 
 
-	tree, head = makeHeapTree(context)
+	tree, head = makeHeapTree(liveHeap, heapContexts)
 	nodes = set()
 	def printHeapChildren(node):
 		count = 0
@@ -558,7 +548,7 @@ def dumpReport(name, context):
 				nodes.add(heap)
 				if link: out.end('a')
 
-				numContexts = len(context.heapContexts[heap])
+				numContexts = len(heapContexts[heap])
 				if numContexts > 1:
 					out << " "
 					out << numContexts
@@ -590,10 +580,10 @@ def dumpReport(name, context):
 
 	out.close()
 
-	for func in liveFunctions:
+	for func in compiler.liveCode:
 		out, scg = makeOutput(reportDir, funcToFile[func])
 		dumpHeader(out)
-		dumpFunctionInfo(func, context, links, out, scg)
+		dumpFunctionInfo(func, compiler, derived, links, out, scg)
 		out.endl()
 		out.close()
 
@@ -601,11 +591,11 @@ def dumpReport(name, context):
 	for heap in liveHeap:
 		out, scg = makeOutput(reportDir, heapToFile[heap])
 		dumpHeader(out)
-		dumpHeapInfo(heap, context, links, out)
+		dumpHeapInfo(heap, compiler, heapContexts, links, out)
 		out.endl()
 		out.close()
 
-	dumpgraphs.dump(context, links, reportDir)
+	dumpgraphs.dump(compiler, links, reportDir)
 
 
 class DerivedData(object):
@@ -663,18 +653,14 @@ class DerivedData(object):
 		return self.invokeDestination[(function, context)]
 
 
-def dump(console, extractor, interface, name):
-	with console.scope('dump'):
+def evaluate(compiler, name):
+	with compiler.console.scope('dump'):
 
-		context = CompilerContext(console, extractor, interface)
+		liveCode, liveInvocations = programculler.findLiveFunctions(compiler.interface)
+		compiler.liveCode = liveCode
 
-		liveCode, liveInvocations = programculler.findLiveFunctions(interface)
-		liveHeap, heapContexts = programculler.findLiveHeap(liveCode)
+		liveHeap, heapContexts = programculler.findLiveHeap(compiler.liveCode)
 
-		context.liveCode = liveCode
-		context.liveInvocations = liveInvocations
-		context.liveHeap = liveHeap
-		context.heapContexts = heapContexts
+		derived = DerivedData(compiler)
 
-		context.derived = DerivedData(context)
-		dumpReport(name, context)
+		dumpReport(name, compiler, derived, liveInvocations, liveHeap, heapContexts)

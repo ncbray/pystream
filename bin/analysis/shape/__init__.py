@@ -227,17 +227,17 @@ class RegionBasedShapeAnalysis(object):
 		print "Steps:", "%d/%d" % (self.worklist.usefulSteps, self.worklist.steps)
 
 import collections
-def evaluate(console, extractor, interface, storeGraph, liveCode):
-	with console.scope('shape analysis'):
-		regions = regionanalysis.evaluate(extractor, interface.entryPoint, liveCode)
+def evaluate(compiler):
+	with compiler.console.scope('shape analysis'):
+		regions = regionanalysis.evaluate(compiler.extractor, compiler.interface.entryPoint, compiler.liveCode)
 
-		rbsa = RegionBasedShapeAnalysis(extractor, storeGraph.canonical, HeapInformationProvider(storeGraph, regions))
+		rbsa = RegionBasedShapeAnalysis(compiler.extractor, compiler.storeGraph.canonical, HeapInformationProvider(compiler.storeGraph, regions))
 
-		rbsa.buildStructures(interface.entryCode())
+		rbsa.buildStructures(compiler.interface.entryCode())
 
 
-		for ep in interface.entryPoint:
-			rbsa.addEntryPoint(ep.code, ep.selfarg.getObject(extractor), [arg.getObject(extractor) for arg in ep.args])
+		for ep in compiler.interface.entryPoint:
+			rbsa.addEntryPoint(ep.code, ep.selfarg.getObject(extractor), [arg.getObject(compiler.extractor) for arg in ep.args])
 
 		rbsa.handleAllocations()
 

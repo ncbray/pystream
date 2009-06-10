@@ -1,5 +1,5 @@
-from fold import foldConstants
-from dce import dce
+from . import fold
+from . import dce
 from dataflow.base import InternalError
 
 from cStringIO import StringIO
@@ -14,15 +14,16 @@ from language.python import ast
 #
 
 
-def simplify(extractor, storeGraph, node):
+def evaluateCode(compiler, node):
 	assert node.isAbstractCode(), type(node)
 
 	try:
-		foldConstants(extractor, storeGraph, node)
+		fold.evaluateCode(compiler, node)
 
 		# Can't process arbitrary abstract code nodes.
 		if node.isStandardCode():
-			dce(extractor, node)
+			dce.evaluateCode(compiler, node)
+
 	except InternalError:
 		print
 		print "#######################################"
@@ -34,3 +35,9 @@ def simplify(extractor, storeGraph, node):
 		print sio.getvalue()
 		raise
 
+
+def evaluate(compiler):
+	with compiler.console.scope('simplify'):
+		for code in compiler.liveCode:
+			if not code.annotation.descriptive:
+				evaluateCode(compiler, code)

@@ -16,8 +16,8 @@ def checkCallArgs(node, count):
 class LLTranslator(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, extractor, func):
-		self.extractor = extractor
+	def __init__(self, compiler, func):
+		self.compiler = compiler
 		self.func = func
 
 		self.defn      = {}
@@ -33,12 +33,12 @@ class LLTranslator(object):
 
 		if name in glbls:
 			pyobj = glbls[name]
-		elif name in self.extractor.nameLUT:
-			pyobj = self.extractor.nameLUT[name]
+		elif name in self.compiler.extractor.nameLUT:
+			pyobj = self.compiler.extractor.nameLUT[name]
 		else:
 			pyobj = __builtins__[name]
 
-		obj = self.extractor.getObject(pyobj)
+		obj = self.compiler.extractor.getObject(pyobj)
 		e = ast.Existing(obj)
 		self.defn[e] = e
 		return e
@@ -139,7 +139,7 @@ class LLTranslator(object):
 			elif isinstance(defn, ast.Existing):
 				# Try to make it a direct call.
 				# Not always possible, depends on the order of declaration.
-				code = self.extractor.getCall(defn.object)
+				code = self.compiler.extractor.getCall(defn.object)
 				if code:
 					node = ast.DirectCall(code, node.expr, node.args, node.kwds, node.vargs, node.kargs)
 
@@ -244,11 +244,11 @@ class LLTranslator(object):
 		node.ast = self(node.ast)
 		self.code = None
 
-		optimization.simplify.simplify(self.extractor, None, node)
+		optimization.simplify.evaluateCode(self.compiler, node)
 
 		#astpprint.pprint(node)
 		return node
 
-def translate(extractor, func, code):
-	llt = LLTranslator(extractor, func)
+def translate(compiler, func, code):
+	llt = LLTranslator(compiler, func)
 	return llt.process(code)

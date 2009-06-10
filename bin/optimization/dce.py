@@ -85,7 +85,7 @@ class MarkLive(object):
 		return node
 
 
-def dce(extractor, node, initialLive=None):
+def evaluateCode(compiler, node, initialLive=None):
 	rewrite = MarkLive(node)
 	traverse = ReverseFlowTraverse(liveMeet, rewrite)
 

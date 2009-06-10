@@ -170,11 +170,12 @@ class ArgumentNormalizationTransform(object):
 		node.codeparameters = ast.CodeParameters(selfparam, parameters, parameternames, vparam, kparam, returnparams)
 		node.ast = self(node.ast)
 
-def normalizeArguments(storeGraph, liveCode):
-	analysis  = ArgumentNormalizationAnalysis(storeGraph)
-	transform = ArgumentNormalizationTransform(storeGraph)
+def evaluate(compiler):
+	with compiler.console.scope('argument normalization'):
+		analysis  = ArgumentNormalizationAnalysis(compiler.storeGraph)
+		transform = ArgumentNormalizationTransform(compiler.storeGraph)
 
-	for code in liveCode:
-		applicable, vparamLen = analysis.process(code)
-		if applicable:
-			transform.process(code, vparamLen)
+		for code in compiler.liveCode:
+			applicable, vparamLen = analysis.process(code)
+			if applicable:
+				transform.process(code, vparamLen)

@@ -19,8 +19,6 @@ import util
 
 from common.errors import TemporaryLimitation, InternalError
 
-import optimization.simplify
-
 from util import xtypes
 
 from _pystream import cfuncptr
@@ -58,7 +56,9 @@ def flatTypeDict(t):
 
 
 class Extractor(object):
-	def __init__(self, verbose=True):
+	def __init__(self, compiler, verbose=True):
+		self.compiler = compiler # Circular reference, ugly!
+
 		self.types 	= {}
 		self.objcache 	= {}
 
@@ -542,7 +542,7 @@ class Extractor(object):
 		function = None
 
 		try:
-			function = decompile(func, self, trace=trace, ssa=ssa)
+			function = decompile(self.compiler, func, trace=trace, ssa=ssa)
 		except IrreducibleGraphException:
 			raise Exception, ("Cannot reduce graph for %s" % repr(func))
 		except errors.UnsupportedOpcodeError, e:
@@ -569,12 +569,10 @@ class Extractor(object):
 
 from stubs import makeStubs
 
-def extractProgram(interface):
-	extractor = Extractor()
+def extractProgram(compiler):
+	compiler.extractor = Extractor(compiler)
 
 	# Create stub functions
-	makeStubs(extractor)
+	makeStubs(compiler)
 
-	interface.translate(extractor)
-
-	return extractor
+	compiler.interface.translate(compiler.extractor)

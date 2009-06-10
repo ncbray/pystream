@@ -19,6 +19,16 @@ def importDeep(name):
 		mod = getattr(mod, comp)
 	return mod
 
+class CompilerContext(object):
+	__slots__ = 'console', 'extractor', 'interface', 'storeGraph', 'liveCode'
+
+	def __init__(self, console):
+		self.console    = console
+		self.extractor  = None
+		self.interface  = None
+		self.storeGraph = None
+		self.liveCode   = None
+
 class Makefile(object):
 	def __init__(self, filename):
 		self.filename = os.path.normpath(filename)
@@ -93,9 +103,10 @@ class Makefile(object):
 
 	def pystreamCompile(self):
 		console = compilerconsole.CompilerConsole()
+		compiler = CompilerContext(console)
 
-		with console.scope("makefile"):
-			console.output("Processing %s" % self.filename)
+		with compiler.console.scope("makefile"):
+			compiler.console.output("Processing %s" % self.filename)
 			self.executeFile()
 
 			if not self.interface:
@@ -104,8 +115,10 @@ class Makefile(object):
 
 			assert self.outdir, "No output directory declared."
 
-		extractor = extractProgram(self.interface)
-		common.pipeline.evaluate(console, self.moduleName, extractor, self.interface)
+		compiler.interface = self.interface
+		extractProgram(compiler)
+
+		common.pipeline.evaluate(compiler, self.moduleName)
 
 		# Output
 		#ensureDirectoryExists(self.outdir)

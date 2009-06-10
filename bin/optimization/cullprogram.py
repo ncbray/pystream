@@ -44,16 +44,17 @@ class CodeContextCuller(object):
 		self(code.ast)
 
 
-def cullProgram(interface):
-	ccc = CodeContextCuller()
-	liveContexts = programculler.findLiveContexts(interface)
+def evaluate(compiler):
+	with compiler.console.scope('cull'):
+		ccc = CodeContextCuller()
+		liveContexts = programculler.findLiveContexts(compiler.interface)
 
-	for code, contexts in liveContexts.iteritems():
-		if len(code.annotation.contexts) != len(contexts):
-			ccc.process(code, contexts)
+		for code, contexts in liveContexts.iteritems():
+			if len(code.annotation.contexts) != len(contexts):
+				ccc.process(code, contexts)
 
-	return set(liveContexts.iterkeys())
+		compiler.liveCode = set(liveContexts.iterkeys())
 
-	# TODO cull objects
-	# Object culling is complicated by implicit read/writes in function
-	# call resolution, etc.
+		# TODO cull objects
+		# Object culling is complicated by implicit read/writes in function
+		# call resolution, etc.

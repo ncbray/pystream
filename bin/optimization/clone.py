@@ -8,7 +8,7 @@ from PADS.UnionFind import UnionFind
 from util.typedispatch import *
 from util.xform.traversal import replaceAllChildren
 from language.python import ast
-from simplify import simplify
+import optimization.simplify
 from analysis import programculler
 from analysis import tools
 
@@ -58,10 +58,7 @@ class GroupUnifier(object):
 # Figures out what functions should have seperate implementations,
 # to improve optimization / realizability
 class ProgramCloner(object):
-	def __init__(self, console, storeGraph, liveContexts):
-		self.console = console
-		self.storeGraph = storeGraph
-
+	def __init__(self, liveContexts):
 		self.liveFunctions = set(liveContexts.iterkeys())
 		self.liveContexts  = liveContexts
 
@@ -170,10 +167,10 @@ class ProgramCloner(object):
 
 
 
-	def listGroups(self):
+	def listGroups(self, console):
 		for func, groups in self.groups.iteritems():
 			if len(groups) > 1:
-				self.console.output("%s %d groups" % (func.name, len(groups)))
+				console.output("%s %d groups" % (func.name, len(groups)))
 
 	def makeGroups(self):
 		# Create groups of contexts
@@ -459,7 +456,7 @@ class ProgramCloner(object):
 
 		ep.code = newcode
 
-	def rewriteProgram(self, extractor, interface):
+	def rewriteProgram(self, compiler):
 		newfunc = self.createNewCodeNodes()
 
 		# Clone all of the functions.
@@ -469,20 +466,20 @@ class ProgramCloner(object):
 
 				fc = FunctionCloner(newfunc, self.groupLUT, newcode, group)
 				fc.process()
-				simplify(extractor, self.storeGraph, newcode)
+				optimization.simplify.evaluateCode(compiler, newcode)
 
 		# Entry points are considered to be "indirect"
 		# As there is only one indirect function, we know it is the entry point.
-		for entryPoint in interface.entryPoint:
+		for entryPoint in compiler.interface.entryPoint:
 			self.retargetEntryPoint(entryPoint, newfunc)
 
 		# Rewrite the callLUT
 		newCallLUT = {}
-		for obj, code in extractor.desc.callLUT.iteritems():
+		for obj, code in compiler.extractor.desc.callLUT.iteritems():
 			if code in self.indirectGroup:
 				newCallLUT[obj] = self.getIndirect(code, newfunc)
 
-		extractor.desc.callLUT = newCallLUT
+		compiler.extractor.desc.callLUT = newCallLUT
 
 		# Collect and return the new functions.
 		funcs = []
@@ -590,31 +587,31 @@ class FunctionCloner(object):
 	def process(self):
 		replaceAllChildren(self, self.code)
 
-def clone(console, extractor, interface, storeGraph):
-	with console.scope('clone'):
-		with console.scope('analysis'):
+def evaluate(compiler):
+	with compiler.console.scope('clone'):
+		with compiler.console.scope('analysis'):
 
-			liveContexts = programculler.findLiveContexts(interface)
+			liveContexts = programculler.findLiveContexts(compiler.interface)
 
-			cloner = ProgramCloner(console, storeGraph, liveContexts)
+			cloner = ProgramCloner(liveContexts)
 
-			cloner.unifyContexts(interface)
+			cloner.unifyContexts(compiler.interface)
 			cloner.findInitialConflicts()
 			cloner.process()
 			numGroups = cloner.makeGroups()
 			originalNumGroups = len(cloner.liveFunctions)
 
-			console.output("=== Split ===")
-			cloner.listGroups()
-			console.output("Num groups %d / %d" %  (numGroups, originalNumGroups))
-			console.output('')
+			compiler.console.output("=== Split ===")
+			cloner.listGroups(compiler.console)
+			compiler.console.output("Num groups %d / %d" %  (numGroups, originalNumGroups))
+			compiler.console.output('')
 
 		liveCode = cloner.liveFunctions
 
 		# Is cloning worthwhile?
 		if numGroups > originalNumGroups:
-			with console.scope('rewrite'):
-				cloner.rewriteProgram(extractor, interface)
+			with compiler.console.scope('rewrite'):
+				cloner.rewriteProgram(compiler)
 				liveCode = cloner.newLive
 
-		return liveCode
+		compiler.liveCode = liveCode

@@ -474,30 +474,33 @@ class InterproceduralDataflow(object):
 	def slotMemory(self):
 		return self.storeGraph.setManager.memory()
 
-def evaluate(console, extractor, interface, opPathLength=0, firstPass=True):
-	dataflow = InterproceduralDataflow(console, extractor, opPathLength)
+def evaluate(compiler, opPathLength=0, firstPass=True):
+	dataflow = InterproceduralDataflow(compiler.console, compiler.extractor, opPathLength)
 	dataflow.firstPass = firstPass # HACK for debugging
 
 	# HACK
 	base.externalFunctionContext.opPath = dataflow.initalOpPath()
 
-	for src, attrName, dst in interface.attr:
+	for src, attrName, dst in compiler.interface.attr:
 		dataflow.addAttr(src, attrName, dst)
 
-	for entryPoint in interface.entryPoint:
+	for entryPoint in compiler.interface.entryPoint:
 		dataflow.addEntryPoint(entryPoint)
 
 	try:
-		with console.scope('solve'):
+		with compiler.console.scope('solve'):
 			dataflow.solve()
 			dataflow.checkConstraints()
 	finally:
 		# Helps free up memory.
-		with console.scope('cleanup'):
+		with compiler.console.scope('cleanup'):
 			dataflow.constraints.clear()
 			dataflow.storeGraph.removeObservers()
 
-		with console.scope('annotate'):
+		with compiler.console.scope('annotate'):
 			dataflow.annotate()
+
+		compiler.storeGraph = dataflow.storeGraph
+		compiler.liveCode   = dataflow.liveCode
 
 	return dataflow

@@ -16,16 +16,6 @@ import decompiler.programextractor
 import util.compressedset
 from util.tvl import *
 
-class MockDB(object):
-	def __init__(self):
-		self.invokeLUT = collections.defaultdict(set)
-
-	def addInvocation(self, function, context, op, dstfunc, dstcontext):
-		self.invokeLUT[(function, context, op)].add((dstfunc, dstcontext))
-
-	def invocations(self, function, context, op):
-		return self.invokeLUT[(function, context, op)]
-
 class MockInformationProvider(object):
 	def __init__(self, sys):
 		self.sys = sys
@@ -42,12 +32,9 @@ class MockInformationProvider(object):
 class TestConstraintBase(unittest.TestCase):
 	def setUp(self):
 		self.extractor = decompiler.programextractor.Extractor()
-		self.db  = MockDB()
-		self.sys = analysis.shape.RegionBasedShapeAnalysis(self.extractor, self.db, MockInformationProvider(self))
-
-		self.sys.cpacanonical = canonicalobjects.CanonicalObjects()
-		self.sys.setManager = setmanager.CachedSetManager()
-		self.root = storegraph.StoreGraph(self.extractor, self.sys.cpacanonical)
+		cpacanonical = canonicalobjects.CanonicalObjects()
+		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.extractor, cpacanonical, MockInformationProvider(self))
+		self.root = storegraph.StoreGraph(self.extractor, cpacanonical)
 
 		self.setInOut((None, 0), (None, 1))
 

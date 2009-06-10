@@ -179,10 +179,10 @@ class OpInliningTransform(StrictTypeDispatcher):
 # Performs depth-first traversal of call graph,
 # inlines code in reverse postorder.
 class CodeInliningTransform(StrictTypeDispatcher):
-	def __init__(self, analysis, dataflow, db, intrinsics):
+	def __init__(self, analysis, extractor, storeGraph, intrinsics):
 		self.analysis  = analysis
-		self.dataflow = dataflow
-		self.db = db
+		self.extractor  = extractor
+		self.storeGraph = storeGraph
 		self.intrinsics = intrinsics
 		self.opinline = OpInliningTransform(analysis)
 		self.processed = set()
@@ -335,7 +335,7 @@ class CodeInliningTransform(StrictTypeDispatcher):
 					node.ast = result
 					# Always done imediately after inlining, so if we inline
 					# this function, less needs to be processed.
-					simplify(self.dataflow.extractor, self.db, node)
+					simplify(self.extractor, self.storeGraph, node)
 			else:
 				ops, lcls = getOps(node)
 				for op in ops:
@@ -346,14 +346,14 @@ class CodeInliningTransform(StrictTypeDispatcher):
 
 import translator.glsl.intrinsics
 
-def inlineCode(console, dataflow, interface, db):
+def inlineCode(console, extractor, interface, storeGraph, liveCode):
 	analysis  = CodeInliningAnalysis()
-	for code in db.liveFunctions():
+	for code in liveCode:
 		analysis.process(code)
 
-	intrinsics = translator.glsl.intrinsics.makeIntrinsicRewriter(dataflow.extractor)
+	intrinsics = translator.glsl.intrinsics.makeIntrinsicRewriter(extractor)
 
-	transform = CodeInliningTransform(analysis, dataflow, db, intrinsics)
+	transform = CodeInliningTransform(analysis, extractor, storeGraph, intrinsics)
 	for code in interface.entryCode():
 		if True:
 			try:

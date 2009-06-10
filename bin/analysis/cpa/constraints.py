@@ -291,7 +291,7 @@ class AbstractCallConstraint(CachedConstraint):
 		if vargsType is not None:
 			assert isinstance(vargsType, extendedtypes.ExtendedType), type(vargsType)
 			vargsObj = self.vargs.region.object(vargsType)
-			slotName = self.sys.lengthSlotName
+			slotName = self.sys.storeGraph.lengthSlotName
 			field    = vargsObj.field(slotName, None)
 			self.sys.logRead(self.op, field)
 

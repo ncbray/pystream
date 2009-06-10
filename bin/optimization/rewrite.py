@@ -30,8 +30,8 @@ class Rewriter(object):
 			replaceAllChildren(self, code)
 		return code
 
-def rewriteAndSimplify(dataflow, code, replace):
+def rewriteAndSimplify(extractor, storeGraph, code, replace):
 	if replace:
 		Rewriter().processCode(code, replace)
-		simplify(dataflow.extractor, dataflow.db, code)
+		simplify(extractor, storeGraph, code)
 	return code

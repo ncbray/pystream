@@ -23,10 +23,10 @@ class Region(object):
 		return obj in self.objects
 
 class RegionAnalysis(object):
-	def __init__(self, extractor, entryPoints, db):
+	def __init__(self, extractor, entryPoints, liveCode):
 		self.extractor = extractor
 		self.entryPoints = entryPoints
-		self.db = db
+		self.liveCode = liveCode
 		self.uf = PADS.UnionFind.UnionFind()
 
 		self.liveObjs = {}
@@ -37,12 +37,10 @@ class RegionAnalysis(object):
 			self.uf.union(*references)
 
 	def process(self):
-		db = self.db.db
-
 		# TODO get all fields from heap?
 
 		# Local references
-		for code in db.liveCode:
+		for code in self.liveCode:
 			self.liveObjs[code]   = set()
 			self.liveFields[code] = set()
 
@@ -88,7 +86,7 @@ class RegionAnalysis(object):
 					print '\t', slot
 			print
 
-def evaluate(extractor, entryPoints, db):
-	ra = RegionAnalysis(extractor, entryPoints, db)
+def evaluate(extractor, entryPoints, liveCode):
+	ra = RegionAnalysis(extractor, entryPoints, liveCode)
 	ra.process()
 	return ra

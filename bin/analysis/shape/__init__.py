@@ -10,8 +10,8 @@ from . import constraintbuilder
 from . import dataflow
 
 class HeapInformationProvider(object):
-	def __init__(self, sys, regions):
-		self.sys = sys
+	def __init__(self, storeGraph, regions):
+		self.storeGraph = storeGraph
 		self.regions = regions
 
 	def loadSlotName(self, node):
@@ -23,8 +23,8 @@ class HeapInformationProvider(object):
 		#return (node.fieldtype, node.name.object)
 
 	def indexSlotName(self, lcl, i):
-		iobj = self.sys.extractor.getObject(i)
-		fieldName = self.sys.canonical.fieldName('Array', iobj)
+		iobj = self.storeGraph.extractor.getObject(i)
+		fieldName = self.storeGraph.canonical.fieldName('Array', iobj)
 		for ref in lcl.annotation.references[0]:
 			return ref.field(fieldName, ref.region.group.regionHint)
 
@@ -66,7 +66,7 @@ class OrderConstraints(object):
 
 
 class RegionBasedShapeAnalysis(object):
-	def __init__(self, extractor, db, info):
+	def __init__(self, extractor, cpacanonical, info):
 		self.extractor   = extractor
 		self.canonical   = canonical.CanonicalObjects()
 		self.worklist    = dataflow.Worklist()
@@ -74,7 +74,7 @@ class RegionBasedShapeAnalysis(object):
 
 		self.constraintbuilder = constraintbuilder.ShapeConstraintBuilder(self, self.processCode)
 
-		self.db   = db
+		self.cpacanonical = cpacanonical
 		self.info = info
 
 
@@ -138,7 +138,7 @@ class RegionBasedShapeAnalysis(object):
 		refs = self.canonical.refs(slot)
 
 
-		type_ = self.db.canonical.externalType(obj)
+		type_ = self.cpacanonical.externalType(obj)
 		region = None
 		entry = refs
 		current = refs
@@ -227,18 +227,17 @@ class RegionBasedShapeAnalysis(object):
 		print "Steps:", "%d/%d" % (self.worklist.usefulSteps, self.worklist.steps)
 
 import collections
-def evaluate(console, extractor, result, interface):
+def evaluate(console, extractor, interface, storeGraph, liveCode):
 	with console.scope('shape analysis'):
-		regions = regionanalysis.evaluate(extractor, interface.entryPoint, result)
+		regions = regionanalysis.evaluate(extractor, interface.entryPoint, liveCode)
 
-		rbsa = RegionBasedShapeAnalysis(extractor, result, HeapInformationProvider(result, regions))
+		rbsa = RegionBasedShapeAnalysis(extractor, storeGraph.canonical, HeapInformationProvider(storeGraph, regions))
 
-		entryCode = set([code for code, selfobj, args in interface.entryPoint])
-		rbsa.buildStructures(entryCode)
+		rbsa.buildStructures(interface.entryCode())
 
 
-		for code, selfobj, args in interface.entryPoint:
-			rbsa.addEntryPoint(code, selfobj, args)
+		for ep in interface.entryPoint:
+			rbsa.addEntryPoint(ep.code, ep.selfarg.getObject(extractor), [arg.getObject(extractor) for arg in ep.args])
 
 		rbsa.handleAllocations()
 

@@ -97,7 +97,7 @@ class AnalysisContext(CanonicalObject):
 
 		# Set the length of the vparam tuple.
 		lengthObjxtype  = sys.canonical.existingType(sys.extractor.getObject(length))
-		lengthSlot = vparamObj.field(sys.lengthSlotName, self.group.regionHint)
+		lengthSlot = vparamObj.field(sys.storeGraph.lengthSlotName, self.group.regionHint)
 		self._bindObjToSlot(sys, lengthObjxtype, lengthSlot)
 		sys.logModify(cop, lengthSlot)
 

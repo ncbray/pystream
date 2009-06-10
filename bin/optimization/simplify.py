@@ -14,11 +14,11 @@ from language.python import ast
 #
 
 
-def simplify(extractor, db, node):
+def simplify(extractor, storeGraph, node):
 	assert node.isAbstractCode(), type(node)
 
 	try:
-		foldConstants(extractor, db, node)
+		foldConstants(extractor, storeGraph, node)
 
 		# Can't process arbitrary abstract code nodes.
 		if node.isStandardCode():

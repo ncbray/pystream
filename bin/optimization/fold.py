@@ -51,9 +51,10 @@ def makeCallRewrite(extractor):
 class FoldRewrite(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, extractor, db, code):
+	def __init__(self, extractor, storeGraph, code):
 		self.extractor = extractor
-		self.db = db
+		self.storeGraph = storeGraph
+		self.canonical = storeGraph.canonical if storeGraph else None
 		self.code = code
 
 		self.created = set()
@@ -101,14 +102,12 @@ class FoldRewrite(object):
 			return (ref.object,)
 
 	def _cobjSlotRefs(self, cobj, slotType, key):
-			fieldName = self.db.canonical.fieldName(slotType, key)
+			fieldName = self.canonical.fieldName(slotType, key)
 			slot = cobj.knownField(fieldName)
 			return tuple(iter(slot))
 
 	def getMethodFunction(self, expr, name):
 		# Static setup
-		canonical = self.db.canonical
-
 		typeStrObj = self.extractor.getObject('type')
 		dictStrObj = self.extractor.getObject('dictionary')
 
@@ -163,16 +162,13 @@ class FoldRewrite(object):
 		return node
 
 	def storeGraphForExistingObject(self, obj):
-		sys = self.db.system
-
-		slotName = sys.canonical.existingName(self.code, obj, None)
-		slot = sys.storeGraph.root(slotName)
-
-		xtype = sys.canonical.existingType(obj)
+		slotName = self.canonical.existingName(self.code, obj, None)
+		slot     = self.storeGraph.root(slotName)
+		xtype    = self.canonical.existingType(obj)
 		return slot.initializeType(xtype)
 
 	def existingFromObj(self, obj):
-		if self.db:
+		if self.storeGraph:
 			cobj = self.storeGraphForExistingObject(obj)
 			node = self.existingFromNode(cobj)
 			return node
@@ -321,12 +317,12 @@ def constMeet(values):
 			return top
 	return prototype
 
-def foldConstants(extractor, db, node):
+def foldConstants(extractor, storeGraph, node):
 	assert node.isAbstractCode(), type(node)
 
 	if node.isStandardCode():
 		analyze  = FoldAnalysis()
-		rewrite  = FoldRewrite(extractor, db, node)
+		rewrite  = FoldRewrite(extractor, storeGraph, node)
 		rewriteS = FoldTraverse(rewrite, node)
 
 		traverse = ForwardFlowTraverse(constMeet, analyze, rewriteS)
@@ -339,7 +335,7 @@ def foldConstants(extractor, db, node):
 		t(node)
 	else:
 		# HACK bypass dataflow analysis, as there's no real "flow"
-		rewrite  = FoldRewrite(extractor, db, node)
+		rewrite  = FoldRewrite(extractor, storeGraph, node)
 		rewriteS = FoldTraverse(rewrite, node)
 		xform.replaceAllChildren(rewriteS, node)
 

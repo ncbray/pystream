@@ -69,7 +69,7 @@ class MethodPatternFinder(object):
 		return True
 
 
-	def findExisting(self, db):
+	def findExisting(self, liveCode):
 		self.fgets = set()
 		self.ogets = set()
 		self.igets = set()
@@ -87,16 +87,16 @@ class MethodPatternFinder(object):
 		mcallO = self.mcall.annotation.origin
 
 
-		for func in db.liveFunctions():
-			origin = func.annotation.origin
+		for code in liveCode:
+			origin = code.annotation.origin
 
-			if origin is igetO:  self.igets.add(func)
-			if origin is ogetO:  self.ogets.add(func)
-			if origin is fgetO:  self.fgets.add(func)
-			if origin is mdgetO: self.fgets.add(func)
+			if origin is igetO:  self.igets.add(code)
+			if origin is ogetO:  self.ogets.add(code)
+			if origin is fgetO:  self.fgets.add(code)
+			if origin is mdgetO: self.fgets.add(code)
 
-			if origin is icallO: self.icalls.add(func)
-			if origin is mcallO: self.mcalls.add(func)
+			if origin is icallO: self.icalls.add(code)
+			if origin is mcallO: self.mcalls.add(code)
 
 	def findContexts(self):
 		### Get patterns ###
@@ -149,10 +149,10 @@ class MethodPatternFinder(object):
 			self.invokeLUT[(code, context)] = annotations.annotationSet(reach)
 
 
-	def preprocess(self, extractor, db):
+	def preprocess(self, extractor, liveCode):
 		if not self.findOriginals(extractor):
 			return False
-		self.findExisting(db)
+		self.findExisting(liveCode)
 		return self.findContexts()
 
 
@@ -357,15 +357,15 @@ def methodMeet(values):
 			return dataflow.forward.top
 	return prototype
 
-def methodCall(console, extractor, db):
+def methodCall(console, extractor, storeGraph, liveCode):
 	with console.scope('method call'):
 		pattern = MethodPatternFinder()
-		if not pattern.preprocess(extractor, db):
+		if not pattern.preprocess(extractor, liveCode):
 			console.output("No method calls to fuse.")
 			return
 
 		numrewritten = 0
-		for code in db.liveFunctions():
+		for code in liveCode:
 			analyze = MethodAnalysis(pattern)
 			rewrite = MethodRewrite(pattern)
 
@@ -382,7 +382,7 @@ def methodCall(console, extractor, db):
 
 			# HACK to turn attribute access assignments into discards.
 			if rewrite.rewritten:
-				optimization.simplify.simplify(extractor, db, code)
+				optimization.simplify.simplify(extractor, storeGraph, code)
 
 			if rewrite.rewritten:
 				numrewritten += len(rewrite.rewritten)

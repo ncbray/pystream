@@ -44,7 +44,7 @@ class CodeContextCuller(object):
 		self(code.ast)
 
 
-def cullProgram(interface, db):
+def cullProgram(interface):
 	ccc = CodeContextCuller()
 	liveContexts = programculler.findLiveContexts(interface)
 
@@ -52,7 +52,7 @@ def cullProgram(interface, db):
 		if len(code.annotation.contexts) != len(contexts):
 			ccc.process(code, contexts)
 
-	db.liveCode = set(liveContexts.iterkeys())
+	return set(liveContexts.iterkeys())
 
 	# TODO cull objects
 	# Object culling is complicated by implicit read/writes in function

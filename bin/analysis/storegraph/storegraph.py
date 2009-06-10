@@ -26,7 +26,7 @@ class MergableNode(object):
 # This corresponds to a group of nodes, such as in a function or in a program,
 # depending on how the analysis works.
 class StoreGraph(MergableNode):
-	__slots__ = 'slots', 'regionHint', 'setManager', 'extractor', 'canonical', 'typeSlotName'
+	__slots__ = 'slots', 'regionHint', 'setManager', 'extractor', 'canonical', 'typeSlotName', 'lengthSlotName'
 
 	def __init__(self, extractor, canonical):
 		MergableNode.__init__(self)
@@ -40,6 +40,7 @@ class StoreGraph(MergableNode):
 
 		# HACK this should be centeralized?
 		self.typeSlotName = self.canonical.fieldName('LowLevel', self.extractor.getObject('type'))
+		self.lengthSlotName = self.canonical.fieldName('LowLevel', self.extractor.getObject('length'))
 
 
 	def existingSlotRef(self, xtype, slotName):

@@ -58,9 +58,9 @@ class GroupUnifier(object):
 # Figures out what functions should have seperate implementations,
 # to improve optimization / realizability
 class ProgramCloner(object):
-	def __init__(self, console, db, liveContexts):
+	def __init__(self, console, storeGraph, liveContexts):
 		self.console = console
-		self.db = db
+		self.storeGraph = storeGraph
 
 		self.liveFunctions = set(liveContexts.iterkeys())
 		self.liveContexts  = liveContexts
@@ -469,7 +469,7 @@ class ProgramCloner(object):
 
 				fc = FunctionCloner(newfunc, self.groupLUT, newcode, group)
 				fc.process()
-				simplify(extractor, self.db, newcode)
+				simplify(extractor, self.storeGraph, newcode)
 
 		# Entry points are considered to be "indirect"
 		# As there is only one indirect function, we know it is the entry point.
@@ -590,13 +590,13 @@ class FunctionCloner(object):
 	def process(self):
 		replaceAllChildren(self, self.code)
 
-def clone(console, extractor, interface, db):
+def clone(console, extractor, interface, storeGraph):
 	with console.scope('clone'):
 		with console.scope('analysis'):
 
 			liveContexts = programculler.findLiveContexts(interface)
 
-			cloner = ProgramCloner(console, db, liveContexts)
+			cloner = ProgramCloner(console, storeGraph, liveContexts)
 
 			cloner.unifyContexts(interface)
 			cloner.findInitialConflicts()
@@ -609,8 +609,12 @@ def clone(console, extractor, interface, db):
 			console.output("Num groups %d / %d" %  (numGroups, originalNumGroups))
 			console.output('')
 
+		liveCode = cloner.liveFunctions
+
 		# Is cloning worthwhile?
 		if numGroups > originalNumGroups:
 			with console.scope('rewrite'):
 				cloner.rewriteProgram(extractor, interface)
-				db.liveCode = cloner.newLive
+				liveCode = cloner.newLive
+
+		return liveCode

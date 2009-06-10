@@ -4,6 +4,7 @@ import util
 import analysis.cpa
 import analysis.lifetimeanalysis
 import analysis.dump.dumpreport
+import analysis.programculler
 
 import analysis.shape
 
@@ -22,69 +23,71 @@ import translator.glsl
 
 import config
 
-def codeConditioning(console, extractor, interface, dataflow):
-	db = dataflow.db
-
+def codeConditioning(console, extractor, interface, storeGraph):
 	with console.scope('conditioning'):
+		liveCode, liveInvokes = analysis.programculler.findLiveFunctions(interface)
+
 		if True:
 			# Try to identify and optimize method calls
-			optimization.methodcall.methodCall(console, extractor, db)
+			optimization.methodcall.methodCall(console, extractor, storeGraph, liveCode)
 
-		lifetimeAnalysis(console, dataflow, interface)
+		lifetimeAnalysis(console, interface, liveCode)
 
 		if True:
 			# Fold, DCE, etc.
-			simplifyAll(console, extractor, db)
+			simplifyAll(console, extractor, storeGraph, liveCode)
 
 		if True:
 			# Seperate different invocations of the same code.
-			clone(console, extractor, interface, db)
+			liveCode = clone(console, extractor, interface, storeGraph)
 
 		if True:
 			# Try to eliminate kwds, vargs, kargs, and default arguments.
 			with console.scope('argument normalization'):
-				normalizeArguments(dataflow, db)
+				normalizeArguments(storeGraph, liveCode)
 
 		if True:
 			# Try to eliminate trivial functions.
 			with console.scope('code inlining'):
-				inlineCode(console, dataflow, interface, db)
+				inlineCode(console, extractor, interface, storeGraph, liveCode)
 
 			# Get rid of dead functions/contexts
-			cull(console, interface, db)
+			liveCode = cull(console, interface)
 
 		if True:
-			optimization.loadelimination.evaluate(console, dataflow)
+			optimization.loadelimination.evaluate(console, extractor, storeGraph, liveCode)
 
 		if True:
-			changed = optimization.storeelimination.evaluate(console, dataflow)
+			changed = optimization.storeelimination.evaluate(console, extractor, storeGraph, liveCode)
 
 		# HACK read/modify information is imprecise, so keep re-evaluating it
 		# basically, DCE improves read modify information, which in turn allows better DCE
 		# NOTE that this doesn't work very well without path sensitivity
 		# "modifies" are quite imprecise without it, hence DCE doesn't do much.
 		if True:
-			bruteForceSimplification(console, extractor, interface, dataflow)
+			bruteForceSimplification(console, extractor, interface, storeGraph, liveCode)
 
-def simplifyAll(console, extractor, db):
+		return liveCode
+
+def simplifyAll(console, extractor, storeGraph, liveCode):
 	with console.scope('simplify'):
 		changed = False
-		for code in db.liveFunctions():
+		for code in liveCode:
 			if not code.annotation.descriptive:
-				simplify(extractor, db, code)
+				simplify(extractor, storeGraph, code)
 
 
-def bruteForceSimplification(console, extractor, interface, dataflow):
+def bruteForceSimplification(console, extractor, interface, storeGraph, liveCode):
 	with console.scope('brute force'):
 		for i in range(2):
-			lifetimeAnalysis(console, dataflow, interface)
-			simplifyAll(console, extractor, dataflow.db)
+			lifetimeAnalysis(console, interface, liveCode)
+			simplifyAll(console, extractor, storeGraph, liveCode)
 
 
-def lifetimeAnalysis(console, dataflow, interface):
+def lifetimeAnalysis(console, interface, liveCode):
 	with console.scope('lifetime analysis'):
 		la = analysis.lifetimeanalysis.LifetimeAnalysis(interface)
-		la.process(dataflow.db.liveCode)
+		la.process(liveCode)
 
 def cpaAnalyze(console, e, interface, opPathLength=0, firstPass=True):
 	with console.scope('cpa analysis'):
@@ -100,23 +103,19 @@ def cpaAnalyze(console, e, interface, opPathLength=0, firstPass=True):
 		console.output("Solve:         %s" % util.elapsedTimeString(result.solveTime))
 	return result
 
-def cpaPass(console, e, interface, opPathLength=0, firstPass=True):
+def cpaPass(console, extractor, interface, opPathLength=0, firstPass=True):
 	with console.scope('depython'):
-		result = cpaAnalyze(console, e, interface, opPathLength, firstPass=firstPass)
-		codeConditioning(console, e, interface, result)
-	return result
-
-
-def shapePass(console, e, result, interface):
-	analysis.shape.evaluate(console, e, result, interface)
-
+		result = cpaAnalyze(console, extractor, interface, opPathLength, firstPass=firstPass)
+		liveCode = codeConditioning(console, extractor, interface, result.storeGraph)
+		result.liveCode = liveCode # HACK for returning liveCode
+		return result
 
 def cpaDump(console, extractor, interface, name):
 	analysis.dump.dumpreport.dump(console, extractor, interface, name)
 
-def cull(console, interface, db):
+def cull(console, interface):
 	with console.scope('cull'):
-		cullProgram(interface, db)
+		return cullProgram(interface)
 
 def evaluate(console, name, extractor, interface):
 	with console.scope('compile'):
@@ -130,16 +129,23 @@ def evaluate(console, name, extractor, interface):
 				# Adding call-path sensitivity compensates.
 				result = cpaPass(console,  extractor, interface, 3, firstPass=False)
 
+			storeGraph = result.storeGraph
+			liveCode   = result.liveCode
+
 			if True:
 				# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
-				lifetimeAnalysis(console, result, interface)
+				lifetimeAnalysis(console, interface, liveCode)
 
 			if False:
-				shapePass(console, extractor, result, interface)
+				analysis.shape.evaluate(console, extractor, interface, storeGraph, liveCode)
 
 			if True:
 				# Translate abstract shader programs into code.
-				translator.glsl.translate(console, result, interface)
+				translator.glsl.translate(console, extractor, interface)
 		finally:
 			if config.doDump:
-				cpaDump(console, extractor, interface, name)
+				try:
+					cpaDump(console, extractor, interface, name)
+				except Exception, e:
+					# HACK prevents it from masking any exception that was thrown before.
+					print "Exception dumping the report: ", e

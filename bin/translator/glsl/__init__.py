@@ -27,8 +27,8 @@ def makePathMatcher(interface):
 
 	return root
 
-def translate(console, dataflow, interface):
-	context = CompilerContext(console, dataflow.extractor, interface)
+def translate(console, extractor, interface):
+	context = CompilerContext(console, extractor, interface)
 
 	with context.console.scope('translate to glsl'):
 		pathMatcher = makePathMatcher(context.interface)

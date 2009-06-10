@@ -3,8 +3,8 @@ from language.python import ast
 from language.python import annotations
 
 class ArgumentNormalizationAnalysis(StrictTypeDispatcher):
-	def __init__(self, sys):
-		self.sys = sys
+	def __init__(self, storeGraph):
+		self.storeGraph = storeGraph
 		self.applicable = True
 		self.vparam = None
 
@@ -52,7 +52,7 @@ class ArgumentNormalizationAnalysis(StrictTypeDispatcher):
 
 			lengths = set()
 			for ref in refs[0]:
-				length = ref.knownField(self.sys.lengthSlotName)
+				length = ref.knownField(self.storeGraph.lengthSlotName)
 				for obj in length:
 					obj = obj.xtype
 					if not obj.isExisting(): return False, 0
@@ -78,8 +78,8 @@ class ArgumentNormalizationAnalysis(StrictTypeDispatcher):
 class ArgumentNormalizationTransform(object):
 	__metaclass__ = typedispatcher
 
-	def __init__(self, sys):
-		self.sys = sys
+	def __init__(self, storeGraph):
+		self.storeGraph = storeGraph
 
 	@defaultdispatch
 	def visitDefault(self, node):
@@ -157,7 +157,7 @@ class ArgumentNormalizationTransform(object):
 		self.newNames  = [None for i in range(vparamLen)]
 
 		for i, lcl in enumerate(self.newParams):
-			field = self.sys.canonical.fieldName('Array', self.sys.extractor.getObject(i))
+			field = self.storeGraph.canonical.fieldName('Array', self.storeGraph.extractor.getObject(i))
 			self.transferReferences(self.vparam, field, lcl)
 
 		selfparam = p.selfparam
@@ -170,11 +170,11 @@ class ArgumentNormalizationTransform(object):
 		node.codeparameters = ast.CodeParameters(selfparam, parameters, parameternames, vparam, kparam, returnparams)
 		node.ast = self(node.ast)
 
-def normalizeArguments(dataflow, db):
-	analysis  = ArgumentNormalizationAnalysis(dataflow)
-	transform = ArgumentNormalizationTransform(dataflow)
+def normalizeArguments(storeGraph, liveCode):
+	analysis  = ArgumentNormalizationAnalysis(storeGraph)
+	transform = ArgumentNormalizationTransform(storeGraph)
 
-	for code in db.liveFunctions():
+	for code in liveCode:
 		applicable, vparamLen = analysis.process(code)
 		if applicable:
 			transform.process(code, vparamLen)

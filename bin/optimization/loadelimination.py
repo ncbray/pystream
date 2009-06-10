@@ -13,8 +13,9 @@ import collections
 
 
 class RedundantLoadEliminator(object):
-	def __init__(self, dataflow, readNumbers, writeNumbers, dom):
-		self.dataflow     = dataflow
+	def __init__(self, extractor, storeGraph, readNumbers, writeNumbers, dom):
+		self.extractor    = extractor
+		self.storeGraph   = storeGraph
 		self.readNumbers  = readNumbers
 		self.writeNumbers = writeNumbers
 		self.dom = dom
@@ -137,11 +138,12 @@ class RedundantLoadEliminator(object):
 	def processCode(self, code):
 		signatures = self.generateSignatures(code)
 		replace = self.generateReplacements(signatures)
-		rewriteAndSimplify(self.dataflow, code, replace)
+
+		rewriteAndSimplify(self.extractor, self.storeGraph, code, replace)
 		return self.eliminated
 
 
-def evaluateCode(console, dataflow, code):
+def evaluateCode(console, extractor, storeGraph, code):
 	rm = FindReadModify().processCode(code)
 
 	dom = MakeForwardDominance().processCode(code)
@@ -149,13 +151,13 @@ def evaluateCode(console, dataflow, code):
 	analysis = ForwardESSA(rm)
 	analysis.processCode(code)
 
-	rle = RedundantLoadEliminator(dataflow, analysis.readLUT, analysis.writeLUT, dom)
+	rle = RedundantLoadEliminator(extractor, storeGraph, analysis.readLUT, analysis.writeLUT, dom)
 	eliminated = rle.processCode(code)
 	if eliminated:
 		print '\t', code, eliminated
 
-def evaluate(console, dataflow):
+def evaluate(console, extractor, storeGraph, liveCode):
 	with console.scope('redundant load elimination'):
-		for code in dataflow.db.liveCode:
+		for code in liveCode:
 			if code.isStandardCode() and not code.annotation.descriptive:
-				evaluateCode(console, dataflow, code)
+				evaluateCode(console, extractor, storeGraph, code)

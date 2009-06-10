@@ -79,9 +79,6 @@ class TestSimpleCase(TestCompoundConstraintBase):
 
 		dc.rewriteAnnotation(invokes=(((self.code, self.context),), None))
 
-		# Make a dummy invocation
-		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
-
 		self.funcInput,  self.funcOutput   = self.makeConstraints(self.code)
 		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
 
@@ -201,9 +198,6 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 
 		dc.rewriteAnnotation(invokes=(((self.code, self.context),), None))
 
-		# Make a dummy invocation
-		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
-
 		self.funcInput,  self.funcOutput   = self.makeConstraints(self.code)
 
 		self.callerInput, self.callerOutput = self.makeConstraints(self.caller)
@@ -322,9 +316,6 @@ class TestVArgCase(TestCompoundConstraintBase):
 
 
 		dc.rewriteAnnotation(invokes=(((self.code, self.context),), None))
-
-		# Make a dummy invocation
-		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
 
 		self.funcInput,   self.funcOutput   = self.makeConstraints(self.code)
 
@@ -455,9 +446,6 @@ class TestVParamCase(TestCompoundConstraintBase):
 		self.dv2Expr = self.expr(self.dExpr, self.v2Slot)
 
 		dc.rewriteAnnotation(invokes=(((self.code, self.context),), None))
-
-		# Make a dummy invocation
-		self.db.addInvocation(self.caller, self.context, dc, self.code, self.context)
 
 		self.funcInput,   self.funcOutput   = self.makeConstraints(self.code)
 
@@ -611,9 +599,6 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 
 
 		dc.rewriteAnnotation(invokes=(((callCode, self.context),), None))
-
-		# Make a dummy invocation
-		self.db.addInvocation(self.code, self.context, dc, callCode, self.context)
 
 		self.codeInput, self.codeOutput = self.makeConstraints(self.code)
 		self.setInOut(self.codeInput, self.codeOutput)

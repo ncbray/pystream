@@ -21,8 +21,6 @@ from util.fold import foldFunction
 
 from analysis.astcollector import getOps
 
-from . cpadatabase import CPADatabase
-
 # For keeping track of how much time we spend decompiling.
 import time
 
@@ -65,9 +63,7 @@ class InterproceduralDataflow(object):
 
 		self.liveCode = set()
 
-		# Constraint information
-		self.constraintReads   = collections.defaultdict(set)
-		self.constraintWrites  = collections.defaultdict(set)
+		# Constraint information, for debugging
 		self.constraints = set()
 
 		# The worklist
@@ -90,12 +86,6 @@ class InterproceduralDataflow(object):
 
 		self.storeGraph = storegraph.StoreGraph(self.extractor, self.canonical)
 
-		self.entryPointDescs = []
-
-		self.db = CPADatabase()
-		self.db.canonical = self.canonical # HACK so the canonical objects are accessable.
-		self.db.system = self # HACK even bigger hack...
-
 		# For vargs
 		self.tupleClass = self.extractor.getObject(tuple)
 		self.ensureLoaded(self.tupleClass)
@@ -103,10 +93,6 @@ class InterproceduralDataflow(object):
 		# For kargs
 		self.dictionaryClass = self.extractor.getObject(dict)
 		self.ensureLoaded(self.dictionaryClass)
-
-		# Cache common slot names
-		self.typeSlotName     = self.canonical.fieldName('LowLevel', self.extractor.getObject('type'))
-		self.lengthSlotName   = self.canonical.fieldName('LowLevel', self.extractor.getObject('length'))
 
 		# Controls how many previous ops are remembered by a context.
 		# TODO remember prior CPA signatures?
@@ -483,7 +469,5 @@ def evaluate(console, extractor, interface, opPathLength=0, firstPass=True):
 		dataflow.checkConstraints()
 	finally:
 		dataflow.annotate()
-		# HACK?
-		dataflow.db.load(dataflow)
 
 	return dataflow

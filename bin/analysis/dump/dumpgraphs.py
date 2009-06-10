@@ -1,8 +1,6 @@
 import os.path
 import pydot
 import util.graphalgorithim.dominator
-from analysis.astcollector import getOps
-
 from . dumputil import *
 
 def dumpGraph(name, g, format='svg', prog='dot'):
@@ -13,58 +11,16 @@ def dumpGraph(name, g, format='svg', prog='dot'):
 	f.close()
 	return fn
 
-def dump(compiler, links, reportDir):
-	# Find live functions
-	stack = []
-	processed = set()
+def dump(compiler, liveInvoke, links, reportDir):
+	# Filter out primitive nodes
+	def keepCode(code):
+		return code is None or not code.annotation.primitive
 
 	head = None
 	invokeLUT = {}
-	invokeLUT[head] = set()
-
-	# Process the entry points
-	for code in compiler.interface.entryCode():
-		if code.annotation.contexts is None: continue
-
-		for context in code.annotation.contexts:
-			context = None
-			invokeLUT[head].add(code)
-			key = (code, context)
-			if key not in processed:
-				stack.append(key)
-				processed.add(key)
-
-	def filterCode(code):
-		return code.annotation.primitive
-
-	# Find live invocations
-	while stack:
-		node =  stack.pop()
-		code, context = node
-
-		ops, lcls = getOps(code)
-
-		invokeLUT[code] = set()
-
-		for op in ops:
-			invokes = op.annotation.invokes
-			if invokes is not None:
-				if context is None:
-					cinvokes = invokes[0]
-				else:
-					cindex = code.annotation.contexts.index(context)
-					cinvokes = invokes[1][cindex]
-
-				for f, c in cinvokes:
-					c = None
-					key = (f, c)
-
-					if not filterCode(f):
-						invokeLUT[code].add(f)
-
-						if key not in processed:
-							stack.append(key)
-							processed.add(key)
+	for src, dst in liveInvoke.iteritems():
+		if keepCode(src):
+			invokeLUT[src] = [code for code in dst if keepCode(code)]
 
 	# Make dominator tree
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(invokeLUT, head)

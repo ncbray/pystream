@@ -595,7 +595,7 @@ def dumpReport(name, compiler, derived, liveInvocations, liveHeap, heapContexts)
 		out.endl()
 		out.close()
 
-	dumpgraphs.dump(compiler, links, reportDir)
+	dumpgraphs.dump(compiler, liveInvocations, links, reportDir)
 
 
 class DerivedData(object):

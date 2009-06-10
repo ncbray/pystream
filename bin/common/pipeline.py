@@ -31,7 +31,7 @@ def codeConditioning(console, extractor, interface, storeGraph):
 			# Try to identify and optimize method calls
 			optimization.methodcall.methodCall(console, extractor, storeGraph, liveCode)
 
-		lifetimeAnalysis(console, interface, liveCode)
+		analysis.lifetimeanalysis.evaluate(console, interface, liveCode)
 
 		if True:
 			# Fold, DCE, etc.
@@ -80,14 +80,11 @@ def simplifyAll(console, extractor, storeGraph, liveCode):
 def bruteForceSimplification(console, extractor, interface, storeGraph, liveCode):
 	with console.scope('brute force'):
 		for i in range(2):
-			lifetimeAnalysis(console, interface, liveCode)
+			analysis.lifetimeanalysis.evaluate(console, interface, liveCode)
 			simplifyAll(console, extractor, storeGraph, liveCode)
 
 
-def lifetimeAnalysis(console, interface, liveCode):
-	with console.scope('lifetime analysis'):
-		la = analysis.lifetimeanalysis.LifetimeAnalysis(interface)
-		la.process(liveCode)
+
 
 def cpaAnalyze(console, e, interface, opPathLength=0, firstPass=True):
 	with console.scope('cpa analysis'):
@@ -134,7 +131,7 @@ def evaluate(console, name, extractor, interface):
 
 			if True:
 				# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
-				lifetimeAnalysis(console, interface, liveCode)
+				analysis.lifetimeanalysis.evaluate(console, interface, liveCode)
 
 			if False:
 				analysis.shape.evaluate(console, extractor, interface, storeGraph, liveCode)

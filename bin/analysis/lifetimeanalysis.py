@@ -514,18 +514,20 @@ class LifetimeAnalysis(object):
 		searcher.process()
 
 
-	def process(self, liveCode):
-		self.gatherSlots(liveCode)
-		self.gatherInvokes(liveCode)
+	def process(self, console, liveCode):
+		with console.scope('solve'):
+			self.gatherSlots(liveCode)
+			self.gatherInvokes(liveCode)
 
+			self.propagateVisibility()
+			self.propagateHeld()
 
-		self.propagateVisibility()
-		self.propagateHeld()
+			self.rm = ReadModifyAnalysis(liveCode, self.invokeSources)
+			self.inferScope()
+			self.rm.process(self.killed)
 
-		self.rm = ReadModifyAnalysis(liveCode, self.invokeSources)
-		self.inferScope()
-		self.rm.process(self.killed)
-		self.createDB(liveCode)
+		with console.scope('annotate'):
+			self.createDB(liveCode)
 
 		del self.rm
 
@@ -590,3 +592,8 @@ class LifetimeAnalysis(object):
 				opAllocates = annotations.makeContextualAnnotation(aout)
 
 				op.rewriteAnnotation(reads=opReads, modifies=opModifies, allocates=opAllocates)
+
+
+def evaluate(console, interface, liveCode):
+	with console.scope('lifetime analysis'):
+		la = LifetimeAnalysis(interface).process(console, liveCode)

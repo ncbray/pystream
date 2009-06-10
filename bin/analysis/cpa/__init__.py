@@ -465,9 +465,16 @@ def evaluate(console, extractor, interface, opPathLength=0, firstPass=True):
 		dataflow.addEntryPoint(entryPoint)
 
 	try:
-		dataflow.solve()
-		dataflow.checkConstraints()
+		with console.scope('solve'):
+			dataflow.solve()
+			dataflow.checkConstraints()
 	finally:
-		dataflow.annotate()
+		# Helps free up memory.
+		with console.scope('cleanup'):
+			dataflow.constraints.clear()
+			dataflow.storeGraph.removeObservers()
+
+		with console.scope('annotate'):
+			dataflow.annotate()
 
 	return dataflow

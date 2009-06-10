@@ -105,6 +105,10 @@ class StoreGraph(MergableNode):
 	def __iter__(self):
 		return self.slots.itervalues()
 
+	def removeObservers(self):
+		processed = set()
+		for slot in self:
+			slot.removeObservers(processed)
 
 class RegionNode(MergableNode):
 	__slots__ = 'objects', 'group', 'weight'
@@ -221,6 +225,14 @@ class ObjectNode(MergableNode):
 
 	def __repr__(self):
 		return "obj(%r, %r)" % (self.xtype, id(self.region))
+
+	def removeObservers(self, processed):
+		self = self.getForward()
+		if self not in processed:
+			processed.add(self)
+
+			for ref in self:
+				ref.removeObservers(processed)
 
 class SlotNode(MergableNode):
 	__slots__ = 'object', 'slotName', 'region', 'refs', 'null', 'observers'
@@ -339,3 +351,12 @@ class SlotNode(MergableNode):
 
 		xtype = None if self.object is None else self.object.xtype
 		return "slot(%r, %r)" % (xtype, self.slotName)
+
+	def removeObservers(self, processed):
+		self = self.getForward()
+		if self not in processed:
+			processed.add(self)
+			self.observers = []
+
+			for ref in self:
+				ref.removeObservers(processed)

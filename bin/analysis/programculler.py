@@ -57,17 +57,19 @@ def makeCGF(interface):
 		cgf.process((code, context))
 	return cgf
 
-def findLiveFunctions(interface):
-	cgf = makeCGF(interface)
+def findLiveCode(compiler):
+	cgf = makeCGF(compiler.interface)
 
 	entry = set()
-	for code in interface.entryCode():
+	for code in compiler.interface.entryCode():
 		entry.add(code)
 
 	live = cgf.liveFunc
 	G = cgf.invokes
 	head = None
 	G[head] = entry
+
+	compiler.liveCode = live
 
 	return live, G
 
@@ -94,9 +96,9 @@ class LiveHeapFinder(StrictTypeDispatcher):
 
 # HACK this may not be 100% sound, as it only considers references
 # directly embedded in the code.
-def findLiveHeap(liveCode):
+def findLiveHeap(compiler):
 	finder = LiveHeapFinder()
-	for code in liveCode:
+	for code in compiler.liveCode:
 		finder.process(code)
 
 	index = {}

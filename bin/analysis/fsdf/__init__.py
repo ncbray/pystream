@@ -429,15 +429,15 @@ class BuildCorrelatedDataflow(StrictTypeDispatcher):
 		print
 
 
-def checkRecursive(interface):
-	liveFunctions, liveInvocations = programculler.findLiveFunctions(interface)
+def checkRecursive(compiler):
+	liveFunctions, liveInvocations = programculler.findLiveCode(compiler.interface)
 	recursive = findRecursiveGroups(liveInvocations)
 	return recursive
 
-def evaluate(console, dataflow, interface):
-	with console.scope('fsdf'):
+def evaluate(compiler):
+	with compiler.console.scope('fsdf'):
 
-		if checkRecursive(interface):
+		if checkRecursive(compiler):
 			console.output('recursive call detected, cannot analyze')
 			return False
 
@@ -464,7 +464,7 @@ def evaluate(console, dataflow, interface):
 
 
 		bcd = BuildCorrelatedDataflow()
-		for ep in interface.entryPoint:
+		for ep in compiler.interface.entryPoint:
 			bcd.processCode(ep.code)
 
 		return True

@@ -656,10 +656,10 @@ class DerivedData(object):
 def evaluate(compiler, name):
 	with compiler.console.scope('dump'):
 
-		liveCode, liveInvocations = programculler.findLiveFunctions(compiler.interface)
+		liveCode, liveInvocations = programculler.findLiveCode(compiler)
 		compiler.liveCode = liveCode
 
-		liveHeap, heapContexts = programculler.findLiveHeap(compiler.liveCode)
+		liveHeap, heapContexts = programculler.findLiveHeap(compiler)
 
 		derived = DerivedData(compiler)
 

@@ -1,5 +1,6 @@
 from analysis.astcollector import getOps
 from language.python import ast
+from util.typedispatch import *
 
 class Finder(object):
 	def __init__(self):
@@ -73,3 +74,36 @@ def findLiveFunctions(interface):
 def findLiveContexts(interface):
 	cgf = makeCGF(interface)
 	return cgf.liveFuncContext
+
+
+class LiveHeapFinder(StrictTypeDispatcher):
+	def __init__(self):
+		self.live = set()
+
+	@dispatch(ast.Local, ast.Existing)
+	def visitReference(self, node):
+		self.live.update(node.annotation.references.merged)
+
+	@defaultdispatch
+	def visitDefault(self, node):
+		visitAllChildren(self, node)
+
+	def process(self, code):
+		for child in code.children():
+			self(child)
+
+# HACK this may not be 100% sound, as it only considers references
+# directly embedded in the code.
+def findLiveHeap(liveCode):
+	finder = LiveHeapFinder()
+	for code in liveCode:
+		finder.process(code)
+
+	index = {}
+	for obj in finder.live:
+		group = obj.xtype.group()
+		if not group in index:
+			index[group] = []
+		index[group].append(obj)
+
+	return finder.live, index

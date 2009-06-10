@@ -111,9 +111,8 @@ def shapePass(console, e, result, interface):
 	analysis.shape.evaluate(console, e, result, interface)
 
 
-def cpaDump(console, name, e, result, interface):
-	with console.scope('dump'):
-		analysis.dump.dumpreport.dump(console, name, e, result, interface)
+def cpaDump(console, extractor, interface, name):
+	analysis.dump.dumpreport.dump(console, extractor, interface, name)
 
 def cull(console, interface, db):
 	with console.scope('cull'):
@@ -121,25 +120,26 @@ def cull(console, interface, db):
 
 def evaluate(console, name, extractor, interface):
 	with console.scope('compile'):
-		# TODO move within the try?
-		# Currently, the report dumper relies on the CPA result for heap information.
-		result = cpaPass(console, extractor, interface)
-
 		try:
+			# First compiler pass
+			result = cpaPass(console, extractor, interface)
+
 			if True:
+				# Second compiler pass
 				# Intrinsics can prevent complete exhaustive inlining.
 				# Adding call-path sensitivity compensates.
 				result = cpaPass(console,  extractor, interface, 3, firstPass=False)
 
-			# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
 			if True:
+				# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
 				lifetimeAnalysis(console, result, interface)
 
 			if False:
 				shapePass(console, extractor, result, interface)
 
 			if True:
+				# Translate abstract shader programs into code.
 				translator.glsl.translate(console, result, interface)
 		finally:
 			if config.doDump:
-				cpaDump(console, name, extractor, result, interface)
+				cpaDump(console, extractor, interface, name)

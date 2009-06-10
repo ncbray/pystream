@@ -406,8 +406,13 @@ def dumpHeapInfo(heap, dumpContext, links, out):
 	out.end('h3')
 	out.endl()
 
-	heapInfo = dumpContext.db.heapInfo(heap)
-	contexts = heapInfo.contexts
+	if heap not in dumpContext.heapContexts:
+		print heap
+		print
+		for other in dumpContext.heapContexts.iterkeys():
+			print other
+
+	contexts = dumpContext.heapContexts[heap]
 
 	call = dumpContext.extractor.getCall(heap)
 	if call:
@@ -447,22 +452,21 @@ def dumpHeapInfo(heap, dumpContext, links, out):
 	out.end('pre')
 
 
-def makeHeapTree(db):
-	liveHeap = db.liveObjects()
+def makeHeapTree(dumpContext):
+
+	liveHeap = dumpContext.liveHeap
 
 	head = None
 	points = {}
-	for heap in liveHeap:
-		heapInfo = db.heapInfo(heap)
-
+	for heap, contexts in dumpContext.heapContexts.iteritems():
 		points[heap] = set()
 
-		for (slottype, key), info in heapInfo.slotInfos.iteritems():
-			values = info.merged.references
-			for dst in values:
-				ogroup = dst.xtype.group()
-				assert ogroup in liveHeap, (heap, ogroup)
-				points[heap].add(ogroup)
+		for context in contexts:
+			for slot in context:
+				for ref in slot:
+					if ref in liveHeap:
+						ogroup = ref.xtype.group()
+						points[heap].add(ogroup)
 
 	util.graphalgorithim.dominator.makeSingleHead(points, head)
 	tree, idoms = util.graphalgorithim.dominator.dominatorTree(points, head)
@@ -494,7 +498,7 @@ def dumpReport(name, context):
 		return fn
 
 
-	liveHeap = context.db.liveObjects()
+	liveHeap = set(context.heapContexts.keys())
 	liveFunctions, liveInvocations = context.liveCode, context.liveInvocations
 
 	out, scg = makeOutput(reportDir, 'function_index.html')
@@ -538,7 +542,7 @@ def dumpReport(name, context):
 	out.end('h2')
 
 
-	tree, head = makeHeapTree(context.db)
+	tree, head = makeHeapTree(context)
 	nodes = set()
 	def printHeapChildren(node):
 		count = 0
@@ -554,7 +558,7 @@ def dumpReport(name, context):
 				nodes.add(heap)
 				if link: out.end('a')
 
-				numContexts = len(context.db.heapInfo(heap).contexts)
+				numContexts = len(context.heapContexts[heap])
 				if numContexts > 1:
 					out << " "
 					out << numContexts
@@ -659,13 +663,18 @@ class DerivedData(object):
 		return self.invokeDestination[(function, context)]
 
 
-def dump(console, name, extractor, dataflow, interface):
-	context = CompilerContext(console, extractor, interface)
+def dump(console, extractor, interface, name):
+	with console.scope('dump'):
 
-	liveCode, liveInvocations = programculler.findLiveFunctions(interface)
-	context.liveCode = liveCode
-	context.liveInvocations = liveInvocations
-	context.db = dataflow.db # HACK
+		context = CompilerContext(console, extractor, interface)
 
-	context.derived = DerivedData(context)
-	dumpReport(name, context)
+		liveCode, liveInvocations = programculler.findLiveFunctions(interface)
+		liveHeap, heapContexts = programculler.findLiveHeap(liveCode)
+
+		context.liveCode = liveCode
+		context.liveInvocations = liveInvocations
+		context.liveHeap = liveHeap
+		context.heapContexts = heapContexts
+
+		context.derived = DerivedData(context)
+		dumpReport(name, context)

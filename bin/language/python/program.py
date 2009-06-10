@@ -103,8 +103,8 @@ class Object(AbstractObject):
 		else:
 			r = repr(self.pyobj)
 
-		if len(r) > 30:
-			return "%s(%s...)" % (type(self).__name__, r[:27])
+		if len(r) > 40:
+			return "%s(%s...)" % (type(self).__name__, r[:37])
 		else:
 			return "%s(%s)" % (type(self).__name__, r)
 

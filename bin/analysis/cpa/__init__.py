@@ -537,11 +537,12 @@ def evaluate(console, extractor, interface, opPathLength=0, firstPass=True):
 	for entryPoint in interface.entryPoint:
 		dataflow.addEntryPoint(entryPoint)
 
-	dataflow.solve()
-	dataflow.checkConstraints()
-	dataflow.annotate()
-
-	# HACK?
-	dataflow.db.load(dataflow)
+	try:
+		dataflow.solve()
+		dataflow.checkConstraints()
+	finally:
+		dataflow.annotate()
+		# HACK?
+		dataflow.db.load(dataflow)
 
 	return dataflow

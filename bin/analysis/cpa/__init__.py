@@ -47,11 +47,6 @@ def foldFunctionIR(extractor, func, vargs=(), kargs={}):
 ### Main class for analysis ###
 ###############################
 
-externalOp  = util.canonical.Sentinel('<externalOp>')
-
-
-
-
 class InterproceduralDataflow(object):
 	def __init__(self, console, extractor, opPathLength=0):
 		self.decompileTime = 0
@@ -72,6 +67,10 @@ class InterproceduralDataflow(object):
 		self.canonical = canonicalobjects.CanonicalObjects()
 		self._canonicalContext = util.canonical.CanonicalCache(base.AnalysisContext)
 
+		# Controls how many previous ops are remembered by a context.
+		# TODO remember prior CPA signatures?
+		self.opPathLength = opPathLength
+		self.cache = {}
 
 		# Information for contextual operations.
 		self.opAllocates      = collections.defaultdict(set)
@@ -81,10 +80,17 @@ class InterproceduralDataflow(object):
 
 		self.codeContexts     = collections.defaultdict(set)
 
-		# HACK?
-		self.codeContexts[base.externalFunction].add(base.externalFunctionContext)
-
 		self.storeGraph = storegraph.StoreGraph(self.extractor, self.canonical)
+
+		# Setup the "external" context, used for creaing bogus slots.
+		self.externalOp  = util.canonical.Sentinel('<externalOp>')
+
+		self.externalFunction = ast.Code('external', ast.CodeParameters(None, [], [], None, None, [ast.Local('internal_return')]), ast.Suite([]))
+		externalSignature = self._signature(self.externalFunction, None, ())
+		opPath  = self.initialOpPath()
+		self.externalFunctionContext = self._canonicalContext(externalSignature, opPath, self.storeGraph)
+		self.codeContexts[self.externalFunction].add(self.externalFunctionContext)
+
 
 		# For vargs
 		self.tupleClass = self.extractor.getObject(tuple)
@@ -94,21 +100,16 @@ class InterproceduralDataflow(object):
 		self.dictionaryClass = self.extractor.getObject(dict)
 		self.ensureLoaded(self.dictionaryClass)
 
-		# Controls how many previous ops are remembered by a context.
-		# TODO remember prior CPA signatures?
-		self.opPathLength = opPathLength
-		self.cache = {}
-
 		self.entryPointOp = {}
 		self.entryPointReturn = {}
 
-	def initalOpPath(self):
+	def initialOpPath(self):
 		if self.opPathLength == 0:
 			path = None
 		elif self.opPathLength == 1:
-			path = externalOp
+			path = self.externalOp
 		else:
-			path = (externalOp,)*self.opPathLength
+			path = (self.externalOp,)*self.opPathLength
 
 		return self.cache.setdefault(path, path)
 
@@ -285,16 +286,20 @@ class InterproceduralDataflow(object):
 		field.initializeType(dstxtype)
 
 	def makeExternalSlot(self, name):
-		code = base.externalFunction
+		code    = self.externalFunction
+		context = self.externalFunctionContext
 		dummyLocal = ast.Local(name)
-		dummyName = self.canonical.localName(code, dummyLocal, base.externalFunctionContext)
+		dummyName = self.canonical.localName(code, dummyLocal, context)
 		dummySlot = self.storeGraph.root(dummyName)
 		return dummySlot
 
 	def createEntryOp(self, entryPoint):
+		code    = self.externalFunction
+		context = self.externalFunctionContext
+
 		# Make sure each op is unique.
 		op = util.canonical.Sentinel('entry point op')
-		cop = self.canonical.opContext(base.externalFunction, op, base.externalFunctionContext)
+		cop = self.canonical.opContext(code, op, context)
 		self.entryPointOp[entryPoint] = cop
 		return cop
 
@@ -477,9 +482,6 @@ class InterproceduralDataflow(object):
 def evaluate(compiler, opPathLength=0, firstPass=True):
 	dataflow = InterproceduralDataflow(compiler.console, compiler.extractor, opPathLength)
 	dataflow.firstPass = firstPass # HACK for debugging
-
-	# HACK
-	base.externalFunctionContext.opPath = dataflow.initalOpPath()
 
 	for src, attrName, dst in compiler.interface.attr:
 		dataflow.addAttr(src, attrName, dst)

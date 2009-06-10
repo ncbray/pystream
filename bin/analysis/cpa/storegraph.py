@@ -209,13 +209,13 @@ class SlotNode(MergableNode):
 
 
 			if sdiff or (not self.null and other.null):
-				self._update(sys, sdiff)
+				self._update(sdiff)
 
 			self.observers.extend(observers)
 
 			if odiff or (self.null and not other.null):
 				for o in observers:
-					o.mark(sys)
+					o.mark()
 
 			# Merge flags
 			self.null |= other.null
@@ -237,7 +237,7 @@ class SlotNode(MergableNode):
 
 		# TODO use diffTypeSet from canonicalSlots?
 		if xtype not in self.refs:
-			self._update(sys, frozenset((xtype,)))
+			self._update(frozenset((xtype,)))
 			self.null = False
 
 		# Ensure the object exists
@@ -260,27 +260,25 @@ class SlotNode(MergableNode):
 
 		group = self.region.group
 		diff = group.setManager.diff(other.refs, self.refs)
-		if diff: self._update(sys, diff)
+		if diff: self._update(diff)
 
 		return self
 
-	def _update(self, sys, diff):
+	def _update(self, diff):
 		group = self.region.group
 		self.refs = group.setManager.inplaceUnion(self.refs, diff)
 		for o in self.observers:
-			o.mark(sys)
+			o.mark()
 
-	def dependsRead(self, sys, constraint):
+	def dependsRead(self, constraint):
 		self = self.getForward()
-
 		self.observers.append(constraint)
-		if self.refs: constraint.mark(sys)
+		if self.refs: constraint.mark()
 
-	def dependsWrite(self, sys, constraint):
+	def dependsWrite(self, constraint):
 		self = self.getForward()
-
 		self.observers.append(constraint)
-		if self.refs: constraint.mark(sys)
+		if self.refs: constraint.mark()
 
 	def knownObject(self, xtype):
 		self = self.getForward()

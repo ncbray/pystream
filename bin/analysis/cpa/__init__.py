@@ -257,12 +257,10 @@ class InterproceduralDataflow(object):
 	def process(self):
 		while self.dirty:
 			current = self.dirty.popleft()
-			current.process(self)
+			current.process()
 
 	def createAssign(self, source, dest):
-		con = AssignmentConstraint(source, dest)
-		con.attach(self)
-		return con
+		AssignmentConstraint(self, source, dest)
 
 	def fold(self, targetcontext):
 		def notConst(obj):
@@ -391,8 +389,7 @@ class InterproceduralDataflow(object):
 		returnSlots = [self.getReturnSlot(entryPoint)]
 
 		# Create the initial constraint
-		con = DirectCallConstraint(cop, entryPoint.code, selfSlot, argSlots, kwds, varg, karg, returnSlots)
-		con.attach(self) # TODO move inside constructor?
+		DirectCallConstraint(self, cop, entryPoint.code, selfSlot, argSlots, kwds, varg, karg, returnSlots)
 
 
 	def solve(self):

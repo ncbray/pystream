@@ -57,12 +57,11 @@ class ExtractDataflow(object):
 			assert code.isAbstractCode(), (("Incorrect code parameter %r\n" % code)+annotations.originTraceString(node.annotation.origin))
 			op   = self.contextOp(node)
 			kwds = [] # HACK
-			con = DirectCallConstraint(op, code, selfarg, args, kwds, vargs, kargs, targets)
-			con.attach(self.system) # TODO move inside constructor?
+			DirectCallConstraint(self.system, op, code, selfarg, args, kwds, vargs, kargs, targets)
 		return targets
 
 	def assign(self, src, dst):
-		return self.system.createAssign(src, dst)
+		self.system.createAssign(src, dst)
 
 	def init(self, node, obj):
 		result = self.existingSlot(obj)
@@ -78,37 +77,32 @@ class ExtractDataflow(object):
 
 		if self.doOnce(node):
 			op   = self.contextOp(node)
-			con = CallConstraint(op, expr, args, kwds, vargs, kargs, targets)
-			con.attach(self.system) # TODO move inside constructor?
+			CallConstraint(self.system, op, expr, args, kwds, vargs, kargs, targets)
 		return targets
 
 	def load(self, node, expr, fieldtype, name, targets):
 		if self.doOnce(node):
 			assert len(targets) == 1
 			op   = self.contextOp(node)
-			con = LoadConstraint(op, expr, fieldtype, name, targets[0])
-			con.attach(self.system) # TODO move inside constructor?
+			LoadConstraint(self.system, op, expr, fieldtype, name, targets[0])
 		return targets
 
 	def store(self, node, expr, fieldtype, name, value):
 		op   = self.contextOp(node)
-		con = StoreConstraint(op, expr, fieldtype, name, value)
-		con.attach(self.system) # TODO move inside constructor?
+		StoreConstraint(self.system, op, expr, fieldtype, name, value)
 
 	def allocate(self, node, expr, targets):
 		if self.doOnce(node):
 			assert len(targets) == 1
 			op   = self.contextOp(node)
-			con = AllocateConstraint(op, expr, targets[0])
-			con.attach(self.system) # TODO move inside constructor?
+			AllocateConstraint(self.system, op, expr, targets[0])
 		return targets
 
 	def check(self, node, expr, fieldtype, name, targets):
 		if self.doOnce(node):
 			assert len(targets) == 1
 			op   = self.contextOp(node)
-			con = CheckConstraint(op, expr, fieldtype, name, targets[0])
-			con.attach(self.system) # TODO move inside constructor?
+			CheckConstraint(self.system, op, expr, fieldtype, name, targets[0])
 		return targets
 
 	##################################
@@ -209,8 +203,7 @@ class ExtractDataflow(object):
 		self(node.condition)
 
 		cond = self.localSlot(node.condition.conditional)
-		con = DeferedSwitchConstraint(self, cond, node.t, node.f)
-		con.attach(self.system) # TODO move inside constructor?
+		DeferedSwitchConstraint(self.system, self, cond, node.t, node.f)
 
 	@dispatch(ast.Break)
 	def visitBreak(self, node):

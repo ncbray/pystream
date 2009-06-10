@@ -122,6 +122,7 @@ class SlotAnnotation(Annotation):
 	__slots__ = 'references'
 
 	def __init__(self, references=None):
+		#assert references is None or isinstance(references, ContextualAnnotation), type(references)
 		self.references = references
 
 	def rewrite(self, references=noMod):

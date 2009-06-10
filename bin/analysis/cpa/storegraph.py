@@ -1,5 +1,5 @@
 from . import extendedtypes
-
+from . import setmanager
 
 class MergableNode(object):
 	__slots__ = 'forward'
@@ -20,27 +20,27 @@ class MergableNode(object):
 		assert other.forward is None
 		self.forward = other
 
-class RegionGroup(MergableNode):
-	__slots__ = 'slots', 'regionHint'
+# This corresponds to a group of nodes, such as in a function or in a program,
+# depending on how the analysis works.
+class StoreGraph(MergableNode):
+	__slots__ = 'slots', 'regionHint', 'setManager'
 
 	def __init__(self):
 		MergableNode.__init__(self)
 
 		# Root slots, such as locals and references to "existing" objects
-		self.slots   = {}
+		self.slots      = {}
 		self.regionHint = RegionNode(self)
+		self.setManager = setmanager.CachedSetManager()
 
-	def root(self, sys, slotName, regionHint):
+
+	def root(self, slotName, regionHint=None):
 		self = self.getForward()
 
 		if slotName not in self.slots:
 			assert slotName.isRoot(), slot
-			if regionHint is None:
-				assert False
-				region = RegionNode(self)
-			else:
-				region = regionHint
-			root = SlotNode(None, slotName, region, sys.setManager.empty())
+			region = self.regionHint if regionHint is None else regionHint
+			root = SlotNode(None, slotName, region, self.setManager.empty())
 			self.slots[slotName] = root
 			return root
 		else:
@@ -152,7 +152,8 @@ class ObjectNode(MergableNode):
 			else:
 				region = regionHint
 
-			field = SlotNode(self, slotName, region, sys.setManager.empty())
+			group = region.group
+			field = SlotNode(self, slotName, region, group.setManager.empty())
 			self.slots[slotName] = field
 
 			if self.xtype.isExisting():
@@ -202,8 +203,9 @@ class SlotNode(MergableNode):
 			self.region = self.region.merge(sys, other.region)
 			self = self.getForward()
 
-			sdiff = sys.setManager.diff(refs, self.refs)
-			odiff = sys.setManager.diff(self.refs, refs)
+			group = self.region.group
+			sdiff = group.setManager.diff(refs, self.refs)
+			odiff = group.setManager.diff(self.refs, refs)
 
 
 			if sdiff or (not self.null and other.null):
@@ -256,14 +258,15 @@ class SlotNode(MergableNode):
 
 		assert self.region == other.region, (self.region, other.region)
 
-
-		diff = sys.setManager.diff(other.refs, self.refs)
+		group = self.region.group
+		diff = group.setManager.diff(other.refs, self.refs)
 		if diff: self._update(sys, diff)
 
 		return self
 
 	def _update(self, sys, diff):
-		self.refs = sys.setManager.inplaceUnion(self.refs, diff)
+		group = self.region.group
+		self.refs = group.setManager.inplaceUnion(self.refs, diff)
 		for o in self.observers:
 			o.mark(sys)
 

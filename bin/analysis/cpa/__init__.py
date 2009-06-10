@@ -6,7 +6,6 @@ import base
 
 from . import canonicalobjects
 from . import extendedtypes
-from . import setmanager
 
 from constraintextractor import ExtractDataflow
 
@@ -67,9 +66,6 @@ class InterproceduralDataflow(object):
 
 		self.liveCode = set()
 
-		# The value of every slot
-		self.setManager = setmanager.CachedSetManager()
-
 		# Constraint information
 		self.constraintReads   = collections.defaultdict(set)
 		self.constraintWrites  = collections.defaultdict(set)
@@ -91,6 +87,7 @@ class InterproceduralDataflow(object):
 		# HACK?
 		self.codeContexts[base.externalFunction].add(base.externalFunctionContext)
 
+		self.storeGraph = storegraph.StoreGraph()
 
 		self.entryPointDescs = []
 
@@ -114,9 +111,6 @@ class InterproceduralDataflow(object):
 		# TODO remember prior CPA signatures?
 		self.opPathLength = opPathLength
 		self.cache = {}
-
-		# The storage graph
-		self.roots  = storegraph.RegionGroup()
 
 		self.entryPointOp = {}
 		self.entryPointReturn = {}
@@ -185,7 +179,7 @@ class InterproceduralDataflow(object):
 
 		sig     = self._signature(code, selfparam, params)
 		opPath  = self.advanceOpPath(srcOp.context.opPath, srcOp.op)
-		context = self.canonical._canonicalContext(sig, opPath, self.roots)
+		context = self.canonical._canonicalContext(sig, opPath, self.storeGraph)
 
 		# Mark that we created the context.
 		self.codeContexts[code].add(context)
@@ -296,7 +290,7 @@ class InterproceduralDataflow(object):
 			# Set the return value
 			assert len(p.returnparams) == 1
 			name = self.canonical.localName(code, p.returnparams[0], targetcontext)
-			returnSource = self.roots.root(self, name, self.roots.regionHint)
+			returnSource = self.storeGraph.root(name)
 			returnSource.initializeType(self, resultxtype)
 
 			return True
@@ -347,15 +341,15 @@ class InterproceduralDataflow(object):
 		fieldName = self.canonical.fieldName(*attrName)
 		dstxtype = self.canonical.externalType(dst)
 
-		obj = self.roots.regionHint.object(self, srcxtype)
-		field = obj.field(self, fieldName, self.roots.regionHint)
+		obj = self.storeGraph.regionHint.object(self, srcxtype)
+		field = obj.field(self, fieldName, self.storeGraph.regionHint)
 		field.initializeType(self, dstxtype)
 
 	def makeExternalSlot(self, name):
 		code = base.externalFunction
 		dummyLocal = ast.Local(name)
 		dummyName = self.canonical.localName(code, dummyLocal, base.externalFunctionContext)
-		dummySlot = self.roots.root(self, dummyName, self.roots.regionHint)
+		dummySlot = self.storeGraph.root(dummyName)
 		return dummySlot
 
 	def createEntryOp(self, entryPoint):
@@ -461,7 +455,7 @@ class InterproceduralDataflow(object):
 
 		# Re-index the locals
 		lclLUT = collections.defaultdict(lambda: collections.defaultdict(set))
-		for slot in self.roots:
+		for slot in self.storeGraph:
 			name = slot.slotName
 			if name.isLocal():
 				lclLUT[(name.code, name.local)][name.context] = slot
@@ -519,10 +513,8 @@ class InterproceduralDataflow(object):
 			if not allWrite.issuperset(bad):
 				c.check(self.console)
 
-
-
 	def slotMemory(self):
-		return self.setManager.memory()
+		return self.storeGraph.setManager.memory()
 
 def evaluate(console, extractor, interface, opPathLength=0, firstPass=True):
 	dataflow = InterproceduralDataflow(console, extractor, opPathLength)

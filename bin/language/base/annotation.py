@@ -1,7 +1,7 @@
 import util.canonical
 import collections
 
-__all__ = ['noMod', 'remapContextual', 'makeContextualAnnotation', 'annotationSet', 'mergeContextualAnnotation']
+__all__ = ['noMod', 'remapContextual', 'makeContextualAnnotation', 'annotationSet', 'mergeContextualAnnotation', 'ContextualAnnotation']
 
 noMod = util.canonical.Sentinel('<no mod>')
 

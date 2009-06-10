@@ -1,5 +1,6 @@
 from util.typedispatch import *
 from language.python import ast
+import language.base.annotation
 from util import xform
 
 from dataflow.forward import *
@@ -79,39 +80,14 @@ class FoldRewrite(object):
 		return node
 
 	def getObjects(self, ref):
-		if isinstance(ref, ast.Local):
+		if isinstance(ref, (ast.Local, ast.Existing)):
 			refs = ref.annotation.references
 			if refs is not None:
 				return refs[0]
 			else:
 				return () # HACK?
-		elif isinstance(ref, ast.Existing):
-			# May happen durring decompilation.
-			if self.db is None:
-				return ()
-
-			# HACK creating a de-contextualized existing object?  This should really be a "global" object...
-			obj = ref.object
-			sys = self.db.system
-			existingName = sys.canonical.existingName(self.code, obj, None)
-			slot = sys.roots.root(sys, existingName, sys.roots.regionHint)
-			slot.initializeType(sys, sys.canonical.existingType(obj))
-
-			objs = tuple(iter(slot))
-			return objs
 		else:
 			assert False, type(ref)
-
-
-	def storeGraphForExistingObject(self, obj):
-		sys = self.db.system
-
-		slotName = sys.canonical.existingName(self.code, obj, None)
-		slot = sys.roots.root(sys, slotName, sys.roots.regionHint)
-
-		xtype = sys.canonical.existingType(obj)
-		return slot.initializeType(sys, xtype)
-
 
 	def getExistingNames(self, ref):
 		if isinstance(ref, ast.Local):
@@ -182,8 +158,18 @@ class FoldRewrite(object):
 
 	def existingFromNode(self, cobj):
 		node = ast.Existing(cobj.xtype.obj)
-		node.rewriteAnnotation(references=((cobj,), tuple([(cobj,) for context in self.code.annotation.contexts])))
+		references = language.base.annotation.makeContextualAnnotation([(cobj,) for context in self.code.annotation.contexts])
+		node.rewriteAnnotation(references=references)
 		return node
+
+	def storeGraphForExistingObject(self, obj):
+		sys = self.db.system
+
+		slotName = sys.canonical.existingName(self.code, obj, None)
+		slot = sys.storeGraph.root(slotName)
+
+		xtype = sys.canonical.existingType(obj)
+		return slot.initializeType(sys, xtype)
 
 	def existingFromObj(self, obj):
 		if self.db:

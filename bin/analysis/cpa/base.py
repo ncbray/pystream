@@ -17,7 +17,7 @@ def localSlot(sys, code, lcl, context):
 	if lcl:
 		assert isinstance(lcl, ast.Local), type(lcl)
 		name = sys.canonical.localName(code, lcl, context)
-		return context.group.root(sys, name, context.group.regionHint)
+		return context.group.root(name)
 	else:
 		return None
 

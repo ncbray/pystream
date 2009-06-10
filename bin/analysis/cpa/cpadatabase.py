@@ -83,7 +83,7 @@ class CPADatabase(object):
 
 	def loadObjects(self, sys):
 		# Find the live object nodes
-		objs = getLiveObjectNodes(sys.roots)
+		objs = getLiveObjectNodes(sys.storeGraph)
 
 		# Build the database
 		self.liveObjectGroups = set()

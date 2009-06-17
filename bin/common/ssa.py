@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
-import language.python.ast as code
-from util.visitor import StandardVisitor
+import language.python.ast as ast
 
 from . import opnames
 
@@ -34,12 +33,12 @@ class SSADefinitions(object):
 			return expr
 
 	def definition(self, local):
-		#assert isinstance(local, code.Local), local
+		#assert isinstance(local, ast.Local), local
 		return self.defn.get(local, local)
 
 def constify(node):
 	return node
 
 def emitInstruction(op, instructions, merge=False):
-	assert isinstance(op, code.SimpleStatement), op
+	assert isinstance(op, ast.SimpleStatement), op
 	instructions.append(op)

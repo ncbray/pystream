@@ -1,9 +1,10 @@
 __all__ = ['TypeDispatcher',
            'defaultdispatch', 'dispatch',
-           'allChildren', 'visitAllChildren']
+           'allChildren', 'visitAllChildren',
+           'allChildrenReversed', 'visitAllChildrenReversed']
 
 # Not used inside this module, only exported.
-from xform import allChildren, visitAllChildren
+from xform import allChildren, visitAllChildren, allChildrenReversed, visitAllChildrenReversed
 
 import inspect
 

@@ -4,7 +4,9 @@ import sys
 from util.visitor import StandardVisitor
 from util.pythonoutput import PythonOutput
 
-from common import opnames, defuse
+from analysis import defuse
+import analysis.collapser
+from common import opnames
 
 from language.python import ast, program
 
@@ -680,7 +682,9 @@ class SimpleCodeGen(StandardVisitor):
 		if name is None: name = node.name
 		assert isIdentifier.match(name), name
 
-		(defines, uses), (globaldefines, globaluses), collapsable = defuse.defuse(node)
+		(defines, uses), (globaldefines, globaluses) = defuse.evaluateCode(None, node)
+
+		collapsable = analysis.collapser.evaluateCode(None, node, defines, uses)
 		self.collapsable.update(collapsable)
 
 		p = node.codeparameters

@@ -231,8 +231,8 @@ class Print(SimpleStatement):
 	__fields__ = 'target:Expression? expr:Expression?'
 
 class MakeFunction(Expression):
-	# TODO type?
-	__fields__ = 'defaults* cells* code'
+	# TODO code type?
+	__fields__ = 'defaults:Local* cells:Cell* code'
 
 	def isPure(self):
 		return True

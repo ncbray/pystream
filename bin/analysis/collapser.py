@@ -1,326 +1,7 @@
-import util.traversal as traversal
-from util.visitor import StandardVisitor
+from util.typedispatch import *
+from language.python import ast
 
-import collections
-from language.python.ast import Local, Existing, Cell, ASTNode, Statement, Assign, Suite
-
-class CodeVisitor(traversal.ConcreteVisitor):
-	def visit(self, node, args):
-		if isinstance(node, (list, tuple)):
-			return
-		elif isinstance(node, ASTNode):
-			self.om.disbatch(self, node, args)
-		else:
-			# Just for development.
-			assert node==None or isinstance(node, (str, int, float))
-			return
-
-
-class DefUseVisitor(CodeVisitor):
-	def __init__(self):
-		self.lcldef 	= collections.defaultdict(list)
-		self.lcluse 	= collections.defaultdict(list)
-
-		self.globaldef 	= collections.defaultdict(list)
-		self.globaluse	= collections.defaultdict(list)
-
-		self.celldef 	= collections.defaultdict(list)
-		self.celluse	= collections.defaultdict(list)
-
-
-	def define(self, location, lcl):
-		if isinstance(lcl, Local):
-			self.lcldef[lcl].append(location)
-		elif isinstance(lcl, Cell):
-			self.celldef[lcl].append(location)
-		else:
-			assert False, (location, repr(lcl))
-
-
-	def use(self, location, lcl):
-		if isinstance(lcl, Local):
-			self.lcluse[lcl].append(location)
-		elif isinstance(lcl, Cell):
-			self.celluse[lcl].append(location)
-		elif lcl==None:
-			pass
-		else:
-			pass #assert False, (location, lcl)
-
-	def defineGlobal(self, location, gname):
-		assert isinstance(gname, Existing)
-		name = gname.constantValue()
-		assert isinstance(name, str)
-		self.globaldef[name].append(location)
-
-	def useGlobal(self, location, gname):
-		assert isinstance(gname, Existing)
-		name = gname.constantValue()
-		assert isinstance(name, str)
-		self.globaluse[name].append(location)
-
-	def visitLocal(self, node):
-		pass
-
-	def visitDelete(self, node):
-		self.use(node, node.lcl)
-
-	def visitExisting(self, node):
-		pass
-
-	def visitCell(self, node):
-		pass
-
-
-	def visitImport(self, node):
-		pass
-
-	def visitGetGlobal(self, node):
-		# TODO use internal self?
-		self.useGlobal(node, node.name)
-
-	def visitSetGlobal(self, node):
-		# TODO use internal self?
-		self.defineGlobal(node, node.name)
-		self.use(node, node.value)
-
-	def visitDeleteGlobal(self, node):
-		# TODO use internal self?
-		self.defineGlobal(node, node.name)
-
-	def visitSuite(self, node):
-		pass
-
-	def visitCodeParameters(self, node):
-		if node.selfparam:
-			self.define(node, node.selfparam)
-		for param in node.params:
-			self.define(node, param)
-		if node.vparam:
-			self.define(node, node.vparam)
-		if node.kparam:
-			self.define(node, node.kparam)
-
-	def visitCode(self, node):
-		pass
-
-	def visitConvertToBool(self, node):
-		self.use(node, node.expr)
-
-	def visitUnaryPrefixOp(self, node):
-		self.use(node, node.expr)
-
-	def visitNot(self, node):
-		self.use(node, node.expr)
-
-
-	def visitYield(self, node):
-		self.use(node, node.expr)
-
-	def visitGetIter(self, node):
-		self.use(node, node.expr)
-
-	def visitBinaryOp(self, node):
-		self.use(node, node.left)
-		self.use(node, node.right)
-
-	def handleArgs(self, node):
-		for arg in node.args:
-			self.use(node, arg)
-
-		for name, arg in node.kwds:
-			self.use(node, arg)
-
-		if node.vargs:
-			self.use(node, node.vargs)
-
-		if node.kargs:
-			self.use(node, node.kargs)
-
-	def visitCall(self, node):
-		self.use(node, node.expr)
-		self.handleArgs(node)
-
-
-	def visitDirectCall(self, node):
-		if node.selfarg:
-			self.use(node, node.selfarg)
-		self.handleArgs(node)
-
-	def visitMethodCall(self, node):
-		self.use(node, node.expr)
-		self.use(node, node.name)
-		self.handleArgs(node)
-
-	def visitBuildTuple(self, node):
-		for arg in node.args:
-			self.use(node, arg)
-
-	def visitBuildMap(self, node):
-		pass
-
-	def visitBuildList(self, node):
-		for arg in node.args:
-			self.use(node, arg)
-
-
-	def visitGetCell(self, node):
-		self.use(node, node.cell)
-
-
-	def visitGetCellDeref(self, node):
-		self.use(node, node.cell)
-
-
-	def visitSetCellDeref(self, node):
-		self.define(node, node.cell)
-		self.use(node, node.value)
-
-
-	def visitSetAttr(self, node):
-		self.use(node, node.value)
-		self.use(node, node.expr)
-
-	def visitGetAttr(self, node):
-		self.use(node, node.expr)
-
-	def visitDeleteAttr(self, node):
-		self.use(node, node.expr)
-
-	def visitBuildSlice(self, node):
-		if node.start: self.use(node, node.start)
-		if node.stop: self.use(node, node.stop)
-		if node.step: self.use(node, node.step)
-
-	def visitGetSlice(self, node):
-		self.use(node, node.expr)
-
-		if node.start: self.use(node, node.start)
-		if node.stop: self.use(node, node.stop)
-		if node.step: self.use(node, node.step)
-
-	def visitSetSlice(self, node):
-		self.use(node, node.value)
-		self.use(node, node.expr)
-
-		if node.start: self.use(node, node.start)
-		if node.stop: self.use(node, node.stop)
-		if node.step: self.use(node, node.step)
-
-
-	def visitDeleteSlice(self, node):
-		self.use(node, node.expr)
-
-		if node.start: self.use(node, node.start)
-		if node.stop: self.use(node, node.stop)
-		if node.step: self.use(node, node.step)
-
-	def visitSwitch(self, node):
-		assert len(self.lcluse[node.condition]) == 0
-
-	def visitCondition(self, node):
-		self.use(node, node.conditional)
-
-	def visitExceptionHandler(self, node):
-		if node.type: self.use(node, node.type)
-		if node.value: self.define(node, node.value)
-
-	def visitShortCircutOr(self, node):
-		pass
-
-	def visitShortCircutAnd(self, node):
-		pass
-
-	def visitWhile(self, node):
-		pass
-
-	def visitTryExceptFinally(self, node):
-		pass
-
-	def visitFor(self, node):
-		pass
-		#assert len(self.lcluse[node.iterator]) == 0
-		#self.define(node, node.index)
-		#self.use(node, node.iterator)
-
-	def visitBreak(self, node):
-		pass
-
-	def visitContinue(self, node):
-		pass
-
-
-	def visitGetSubscript(self, node):
-		self.use(node, node.expr)
-		self.use(node, node.subscript)
-
-	def visitSetSubscript(self, node):
-		self.use(node, node.value)
-		self.use(node, node.expr)
-		self.use(node, node.subscript)
-
-
-	def visitDeleteSubscript(self, node):
-		self.use(node, node.expr)
-		self.use(node, node.subscript)
-
-	def visitReturn(self, node):
-		for expr in node.exprs:
-			if not isinstance(expr, Existing):
-				self.use(node, expr)
-
-	def visitRaise(self, node):
-		if node.exception: self.use(node, node.exception)
-		if node.parameter: self.use(node, node.parameter)
-		if node.traceback: self.use(node, node.traceback)
-
-	def visitAssign(self, node):
-		for lcl in node.lcls:
-			self.define(node, lcl)
-
-		if isinstance(node.expr, Local):
-			self.use(node, node.expr)
-
-	def visitUnpackSequence(self, node):
-		for lcl in node.targets:
-			self.define(node, lcl)
-		self.use(node, node.expr)
-
-	def visitDiscard(self, node):
-		if isinstance(node.expr, Local):
-			# Sure, this node will be killed later, but until then it counts as a use.
-			self.use(node, node.expr)
-
-	def visitPrint(self, node):
-		if node.target: self.use(node, node.target)
-		if node.expr:  self.use(node, node.expr)
-
-	def visitMakeFunction(self, node):
-		#self.use(node, node.code)
-
-		for default in node.defaults:
-			self.use(node, default)
-
-		for cell in node.cells:
-			self.use(node, cell)
-
-	def visitAllocate(self, node):
-		self.use(node, node.expr)
-
-	def visitLoad(self, node):
-		self.use(node, node.expr)
-		self.use(node, node.name)
-
-	def visitStore(self, node):
-		self.use(node, node.expr)
-		self.use(node, node.name)
-		self.use(node, node.value)
-
-	def visitCheck(self, node):
-		self.use(node, node.expr)
-		self.use(node, node.name)
-
-class Collapser(StandardVisitor):
+class Collapser(TypeDispatcher):
 	def __init__(self, defines, uses):
 		self.defines	= defines
 		self.uses 	= uses
@@ -332,7 +13,7 @@ class Collapser(StandardVisitor):
 		self.stack = []
 
 	def markCollapsable(self, lcl):
-		assert isinstance(lcl, Local)
+		assert isinstance(lcl, ast.Local)
 		# Multiple uses for an existing object is ok.
 		if len(self.defines[lcl]) == 1 and len(self.uses[lcl]) >= 1:
 			self.collapsable.add(lcl)
@@ -341,7 +22,7 @@ class Collapser(StandardVisitor):
 		for arg in args:
 			if arg == None:
 				continue
-			elif isinstance(arg, Local):
+			elif isinstance(arg, ast.Local):
 				# Can we collapse it?
 				# Only a single use for a non-constant is acceptable.
 				if len(self.uses[arg]) == 1:
@@ -353,32 +34,24 @@ class Collapser(StandardVisitor):
 		if node == None:
 			return
 
-		if isinstance(node, Statement) and not isinstance(node, Assign) and not isinstance(node, Suite):
+		if isinstance(node, ast.Statement) and not isinstance(node, ast.Assign) and not isinstance(node, ast.Suite):
 			self.resetStack()
 
-##		for assign in reversed(node.onExit):
-##			self.process(assign)
+		self(node)
 
-		self.visit(node)
-
-##		for assign in reversed(node.onEntry):
-##			self.process(assign)
-
-	def visitCode(self, node):
-		self.process(node.ast)
-
+	@dispatch(ast.Suite)
 	def visitSuite(self, node):
-		for block in reversed(node.blocks):
-			self.process(block)
+		visitAllChildrenReversed(self.process, node.blocks)
 
+	@dispatch(ast.Return)
 	def visitReturn(self, node):
-		for expr in reversed(node.exprs):
-			self.process(expr)
+		visitAllChildrenReversed(self.process, node.exprs)
 
 		for expr in node.exprs:
-			if not isinstance(expr, Existing):
+			if not isinstance(expr, ast.Existing):
 				self.markPossible(expr)
 
+	@dispatch(ast.Raise)
 	def visitRaise(self, node):
 		if node.exception:
 			if node.parameter:
@@ -394,34 +67,26 @@ class Collapser(StandardVisitor):
 				if node.traceback:
 					self.markPossible(node.traceback)
 
-	def visitBreak(self, node):
+	@dispatch(ast.Break, ast.Continue, ast.Local, ast.Existing, ast.Cell)
+	def visitNOP(self, node):
 		pass
 
-	def visitContinue(self, node):
-		pass
-
-	def visitLocal(self, node):
-		pass
-
-	def visitExisting(self, node):
-		pass
-
-	def visitCell(self, node):
-		pass
-
-
+	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
 		self.handleUnaryExpr(node)
 
+	@dispatch(ast.Yield)
 	def visitYield(self, node):
 		self.handleUnaryExpr(node)
 
+	@dispatch(ast.Condition)
 	def visitCondition(self, node):
 		self.resetStack()
 		self.markPossible(node.conditional)
 		#self.process(node.conditional)
 		self.process(node.preamble)
 
+	@dispatch(ast.ExceptionHandler)
 	def visitExceptionHandler(self, node):
 		self.resetStack()
 		self.process(node.body)
@@ -435,18 +100,13 @@ class Collapser(StandardVisitor):
 
 		self.process(node.preamble)
 
-
-	def visitShortCircutOr(self, node):
+	@dispatch(ast.ShortCircutOr, ast.ShortCircutAnd)
+	def visitShortCircut(self, node):
 		for term in reversed(node.terms):
 			self.resetStack()
 			self.process(term)
 
-	def visitShortCircutAnd(self, node):
-		for term in reversed(node.terms):
-			self.resetStack()
-			self.process(term)
-
-
+	@dispatch(ast.Switch)
 	def visitSwitch(self, node):
 		self.resetStack()
 		self.process(node.f)
@@ -457,6 +117,7 @@ class Collapser(StandardVisitor):
 		self.resetStack()
 		self.process(node.condition)
 
+	@dispatch(ast.TryExceptFinally)
 	def visitTryExceptFinally(self, node):
 		if node.finally_:
 			self.resetStack()
@@ -477,6 +138,7 @@ class Collapser(StandardVisitor):
 		self.resetStack()
 		self.process(node.body)
 
+	@dispatch(ast.While)
 	def visitWhile(self, node):
 		if node.else_:
 			self.resetStack()
@@ -488,6 +150,7 @@ class Collapser(StandardVisitor):
 		self.process(node.condition)
 		self.resetStack()
 
+	@dispatch(ast.For)
 	def visitFor(self, node):
 		# Preambles are ignored, as they're "internal"
 		if node.else_:
@@ -523,13 +186,14 @@ class Collapser(StandardVisitor):
 		if lcl in self.stack:
 			self.markCollapsable(lcl)
 
+	@dispatch(ast.Assign)
 	def visitAssign(self, node):
-		if isinstance(node.expr, Existing):
+		if isinstance(node.expr, ast.Existing):
 			# Can reorder and duplicate without penalty
 			# Should have already optimized out, however?
 			assert len(node.lcls) == 1
 			self.markCollapsable(node.lcls[0])
-		elif isinstance(node.expr, Local):
+		elif isinstance(node.expr, ast.Local):
 			# TODO is this sound?
 			assert len(node.lcls) == 1
 			self.searchForTargetNondestructive(node.lcls[0])
@@ -541,12 +205,15 @@ class Collapser(StandardVisitor):
 				self.resetStack()
 			self.process(node.expr)
 
+	@dispatch(ast.Delete)
 	def visitDelete(self, node):
 		self.resetStack()
 
+	@dispatch(ast.Import)
 	def visitImport(self, node):
 		self.resetStack()
 
+	@dispatch(ast.Discard)
 	def visitDiscard(self, node):
 		if not node.expr.isReference():
 			# May have side effects, but cannot be collapsed.
@@ -554,16 +221,17 @@ class Collapser(StandardVisitor):
 			self.resetStack()
 			self.process(node.expr)
 
+	@dispatch(ast.BinaryOp)
 	def visitBinaryOp(self, node):
 		self.process(node.right)
 		self.process(node.left)
 		self.markPossible(node.left, node.right)
 
-
-
+	@dispatch(ast.UnaryPrefixOp)
 	def visitUnaryPrefixOp(self, node):
 		self.handleUnaryExpr(node)
 
+	@dispatch(ast.GetIter)
 	def visitGetIter(self, node):
 		self.handleUnaryExpr(node)
 
@@ -571,16 +239,18 @@ class Collapser(StandardVisitor):
 		self.process(node.expr)
 		self.markPossible(node.expr)
 
+	@dispatch(ast.Not)
 	def visitNot(self, node):
 		self.process(node.expr)
 		self.markPossible(node.expr)
 
 
-
+	@dispatch(ast.GetAttr)
 	def visitGetAttr(self, node):
 		self.process(node.expr)
 		self.markPossible(node.expr)
 
+	@dispatch(ast.SetAttr)
 	def visitSetAttr(self, node):
 		self.process(node.value)
 		self.process(node.expr)
@@ -589,25 +259,26 @@ class Collapser(StandardVisitor):
 
 		self.markPossible(node.expr, node.value)
 
+	@dispatch(ast.DeleteAttr)
 	def visitDeleteAttr(self, node):
 		self.process(node.expr)
 		self.markPossible(node.expr)
 
+	@dispatch(ast.GetCell, ast.GetCellDeref)
 	def visitGetCell(self, node):
 		self.process(node.cell)
 
-	def visitGetCellDeref(self, node):
-		self.process(node.cell)
 
-
+	@dispatch(ast.SetCellDeref)
 	def visitSetCellDeref(self, node):
 		self.process(node.value)
 		self.markPossible(node.value)
 
-
+	@dispatch(ast.GetGlobal)
 	def visitGetGlobal(self, node):
 		self.process(node.name)
 
+	@dispatch(ast.SetGlobal)
 	def visitSetGlobal(self, node):
 		#self.process(node.name)
 		self.process(node.value)
@@ -616,15 +287,18 @@ class Collapser(StandardVisitor):
 
 		self.markPossible(node.value)
 
+	@dispatch(ast.DeleteGlobal)
 	def visitDeleteGlobal(self, node):
 		self.resetStack()
 		self.process(node.name)
 
+	@dispatch(ast.GetSubscript)
 	def visitGetSubscript(self, node):
 		self.process(node.subscript)
 		self.process(node.expr)
 		self.markPossible(node.expr, node.subscript)
 
+	@dispatch(ast.SetSubscript)
 	def visitSetSubscript(self, node):
 		self.process(node.subscript)
 		self.process(node.expr)
@@ -634,7 +308,7 @@ class Collapser(StandardVisitor):
 
 		self.markPossible(node.value, node.expr, node.subscript)
 
-
+	@dispatch(ast.DeleteSubscript)
 	def visitDeleteSubscript(self, node):
 		self.resetStack()
 
@@ -643,7 +317,7 @@ class Collapser(StandardVisitor):
 
 		self.markPossible(node.expr, node.subscript)
 
-
+	@dispatch(ast.BuildSlice)
 	def visitBuildSlice(self, node):
 		if node.step: self.process(node.step)
 		if node.stop: self.process(node.stop)
@@ -653,6 +327,7 @@ class Collapser(StandardVisitor):
 		if node.stop: self.markPossible(node.stop)
 		if node.step: self.markPossible(node.step)
 
+	@dispatch(ast.GetSlice)
 	def visitGetSlice(self, node):
 		if node.step: self.process(node.step)
 		if node.stop: self.process(node.stop)
@@ -664,7 +339,7 @@ class Collapser(StandardVisitor):
 		if node.stop: self.markPossible(node.stop)
 		if node.step: self.markPossible(node.step)
 
-
+	@dispatch(ast.SetSlice)
 	def visitSetSlice(self, node):
 		if node.step: self.process(node.step)
 		if node.stop: self.process(node.stop)
@@ -677,7 +352,7 @@ class Collapser(StandardVisitor):
 		if node.stop: self.markPossible(node.stop)
 		if node.step: self.markPossible(node.step)
 
-
+	@dispatch(ast.DeleteSlice)
 	def visitDeleteSlice(self, node):
 		self.resetStack()
 
@@ -691,19 +366,23 @@ class Collapser(StandardVisitor):
 		if node.stop: self.markPossible(node.stop)
 		if node.step: self.markPossible(node.step)
 
+	@dispatch(ast.BuildTuple)
 	def visitBuildTuple(self, node):
 		for arg in reversed(node.args):
 			self.process(arg)
 
 		self.markPossible(*node.args)
 
+	@dispatch(ast.BuildMap)
 	def visitBuildMap(self, node):
 		pass
 
+	@dispatch(ast.UnpackSequence)
 	def visitUnpackSequence(self, node):
 		self.resetStack()
 		self.markPossible(node.expr)
 
+	@dispatch(ast.BuildList)
 	def visitBuildList(self, node):
 		for arg in reversed(node.args):
 			self.process(arg)
@@ -733,13 +412,14 @@ class Collapser(StandardVisitor):
 		if node.kargs:
 			self.markPossible(node.kargs)
 
+	@dispatch(ast.Call)
 	def visitCall(self, node):
 		self.processArgs(node)
 		self.process(node.expr)
 		self.markPossible(node.expr)
 		self.markArgs(node)
 
-
+	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node):
 		self.processArgs(node)
 
@@ -749,6 +429,7 @@ class Collapser(StandardVisitor):
 
 		self.markArgs(node)
 
+	@dispatch(ast.MethodCall)
 	def visitMethodCall(self, node):
 		self.processArgs(node)
 
@@ -759,6 +440,7 @@ class Collapser(StandardVisitor):
 
 		self.markArgs(node)
 
+	@dispatch(ast.Print)
 	def visitPrint(self, node):
 		if node.expr: self.process(node.expr)
 		if node.target: self.process(node.target)
@@ -766,7 +448,7 @@ class Collapser(StandardVisitor):
 		if node.target: self.markPossible(node.target)
 		if node.expr: self.markPossible(node.expr)
 
-
+	@dispatch(ast.MakeFunction)
 	def visitMakeFunction(self, node):
 		for arg in reversed(node.defaults):
 			self.process(arg)
@@ -777,36 +459,37 @@ class Collapser(StandardVisitor):
 		self.markPossible(*node.defaults)
 		#self.markPossible(*node.cells)
 
+	@dispatch(ast.Allocate)
 	def visitAllocate(self, node):
 		self.process(node.expr)
 		self.markPossible(node.expr)
 
+	@dispatch(ast.Load)
 	def visitLoad(self, node):
 		self.process(node.name)
 		self.process(node.expr)
 		self.markPossible(node.expr, node.name)
 
+	@dispatch(ast.Store)
 	def visitStore(self, node):
 		self.process(node.value)
 		self.process(node.name)
 		self.process(node.expr)
 		self.markPossible(node.expr, node.name, node.value)
 
+	@dispatch(ast.Check)
 	def visitCheck(self, node):
 		self.process(node.name)
 		self.process(node.expr)
 		self.markPossible(node.expr, node.name)
 
-def defuse(ast):
-	duv = DefUseVisitor()
-	visitor = traversal.DFS(duv, traversal.Identity())
-	visitor.setObjectModel(traversal.DefaultObjectModel())
 
-	visitor.visit(ast, ())
+	@dispatch(ast.Code)
+	def visitCode(self, node):
+		self.process(node.ast)
 
 
-	c = Collapser(duv.lcldef, duv.lcluse)
-	c.walk(ast)
-
-
-	return (duv.lcldef, duv.lcluse), (duv.globaldef, duv.globaluse), c.collapsable
+def evaluateCode(compiler, code, defs, uses):
+	c = Collapser(defs, uses)
+	c(code)
+	return c.collapsable

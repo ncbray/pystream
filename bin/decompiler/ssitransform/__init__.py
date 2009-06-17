@@ -4,7 +4,7 @@ from util.visitor import StandardVisitor
 
 from language.python.ast import *
 
-from common.defuse import defuse
+import analysis.defuse
 
 from . localframe import Merge, LoopMerge, Split, LocalFrame, mergeFrames, Inserter, HeadInserter, TailInserter, ExceptionMerge
 
@@ -531,11 +531,10 @@ class SSITransformer(StandardVisitor):
 		return node
 
 	def transform(self, node):
-		(defines, uses), (globaldefines, globaluses), collapsable = defuse(node)
+		(defines, uses), (globaldefines, globaluses) = analysis.defuse.evaluateCode(None, node)
 
 		self.localdefs = defines
 		self.localuses = uses
-		self.collapsable = collapsable
 
 		self.original = node # HACK for debugging
 

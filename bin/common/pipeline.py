@@ -110,6 +110,9 @@ def evaluate(compiler, name):
 			if False:
 				analysis.shape.evaluate(compiler)
 
+			if False:
+				analysis.fsdf.evaluate(compiler)
+
 			if True:
 				# Translate abstract shader programs into code.
 				translator.glsl.translate(compiler)

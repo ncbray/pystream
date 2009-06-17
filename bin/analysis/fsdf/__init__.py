@@ -207,8 +207,11 @@ class BuildDataflowNetwork(TypeDispatcher):
 
 		self.constraints += 1
 
+	@dispatch(str, ast.CodeParameters)
+	def visitLeaf(self, node):
+		pass
 
-	@dispatch(ast.Suite, list, ast.Switch, ast.Condition, ast.Assign, ast.Discard)
+	@dispatch(ast.Suite, list, tuple, ast.Switch, ast.Condition, ast.Assign, ast.Discard)
 	def visitOK(self, node):
 		visitAllChildren(self, node)
 
@@ -228,7 +231,9 @@ class BuildDataflowNetwork(TypeDispatcher):
 		else:
 			self.contextLUT[node] += 1
 
-		self(node.ast)
+		for child in node.children():
+			self(child)
+
 
 
 
@@ -291,7 +296,7 @@ class MarkUses(TypeDispatcher):
 	def visitJunk(self, node):
 		pass
 
-	@dispatch(list)
+	@dispatch(list, tuple)
 	def visitContainer(self, node):
 		visitAllChildren(self, node)
 
@@ -380,6 +385,14 @@ class BuildCorrelatedDataflow(TypeDispatcher):
 		self.markDefs(node, targets)
 		self.markHeapDefUse(node)
 
+
+	@dispatch(ast.Allocate)
+	def visitAllocate(self, node, targets):
+		self.defineOp(node, targets)
+		self.markUses.process(node)
+		self.markDefs(node, targets)
+		self.markHeapDefUse(node)
+
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		self(node.expr, node.lcls)
@@ -394,15 +407,22 @@ class BuildCorrelatedDataflow(TypeDispatcher):
 	def visitOK(self, node):
 		visitAllChildren(self, node)
 
+	@dispatch(str, ast.CodeParameters)
+	def visitLeaf(self, node):
+		pass
+
 	def processCode(self, node):
 		self.operations  = {}
 		self.slots = {}
 		self.returns = None
 
-		self(node.ast)
+		for child in node.children():
+			self(child)
+
+		print node
 
 		for op in self.operations.itervalues():
-			if not isinstance(op.op, ast.Load): continue
+			#if not isinstance(op.op, ast.Load): continue
 
 			print op.op
 			print op.targets
@@ -430,9 +450,12 @@ class BuildCorrelatedDataflow(TypeDispatcher):
 
 
 def checkRecursive(compiler):
-	liveFunctions, liveInvocations = programculler.findLiveCode(compiler.interface)
+	liveFunctions, liveInvocations = programculler.findLiveCode(compiler)
 	recursive = findRecursiveGroups(liveInvocations)
 	return recursive
+
+#def evaluateCode(compiler, code):
+#	pass
 
 def evaluate(compiler):
 	with compiler.console.scope('fsdf'):
@@ -441,30 +464,30 @@ def evaluate(compiler):
 			console.output('recursive call detected, cannot analyze')
 			return False
 
-#		bdfn = BuildDataflowNetwork()
+		bdfn = BuildDataflowNetwork()
 
-#		for ep in interface.entryPoint:
-#			bdfn.processCode(ep.code)
+		for code in compiler.interface.entryCode():
+			bdfn.processCode(code)
 
-#		for code, count in bdfn.contextLUT.iteritems():
-#			print '\t', code, count
-#		console.output('%d contexts' % bdfn.contexts)
-#		console.output('%d constraints' % bdfn.constraints)
+		for code, count in bdfn.contextLUT.iteritems():
+			print '\t', code, count
+		compiler.console.output('%d contexts' % bdfn.contexts)
+		compiler.console.output('%d constraints' % bdfn.constraints)
 
-#		print
-#		print "Loop Allocated"
-#		for obj in bdfn.loopAllocated:
-#			print '\t', obj
-#		print
+		print
+		print "Loop Allocated"
+		for obj in bdfn.loopAllocated:
+			print '\t', obj
+		print
 
-#		print
-#		print "Unique Allocated"
-#		for obj in bdfn.uniqueAllocated:
-#			print '\t', obj
+		print
+		print "Unique Allocated"
+		for obj in bdfn.uniqueAllocated:
+			print '\t', obj
 
 
-		bcd = BuildCorrelatedDataflow()
-		for ep in compiler.interface.entryPoint:
-			bcd.processCode(ep.code)
+#		bcd = BuildCorrelatedDataflow()
+#		for ep in compiler.interface.entryPoint:
+#			bcd.processCode(ep.code)
 
 		return True

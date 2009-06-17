@@ -5,8 +5,6 @@ from PADS.DFS import postorder
 # HACK
 from flowblocks import *
 
-from flowblockdump import FlowBlockDump
-
 class BlockWrapper(object):
 	def __getitem__(self, key):
 		return key.getNext()

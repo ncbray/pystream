@@ -7,7 +7,7 @@ from language.python import program
 from common import opnames
 
 
-class ConvertCalls(StrictTypeDispatcher):
+class ConvertCalls(TypeDispatcher):
 	def __init__(self, extractor, code):
 		self.extractor = extractor
 		self.code = code

@@ -2,7 +2,7 @@ from base import *
 
 from language.python.fold import existingConstant
 
-class ForwardFlowTraverse(StrictTypeDispatcher):
+class ForwardFlowTraverse(TypeDispatcher):
 	__slots__ = 'analyze', 'rewrite', 'flow', 'tryLevel', 'mayRaise', 'meetF'
 
 	def __init__(self, meetF, analyze, rewrite):

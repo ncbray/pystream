@@ -3,7 +3,7 @@ from language.python import ast
 
 import collections
 
-class ForwardDataflow(StrictTypeDispatcher):
+class ForwardDataflow(TypeDispatcher):
 	def makeSymbolic(self, node):
 		entry = (node, 'entry')
 		exit  = (node, 'exit')

@@ -19,7 +19,7 @@ class ReadModifyInfo(object):
 		self.fieldModify.update(other.fieldModify)
 
 
-class FindReadModify(StrictTypeDispatcher):
+class FindReadModify(TypeDispatcher):
 
 	def getInfo(self, node):
 		info = ReadModifyInfo()

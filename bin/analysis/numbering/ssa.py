@@ -1,7 +1,7 @@
 from util.typedispatch import *
 from language.python import ast
 
-class ForwardESSA(StrictTypeDispatcher):
+class ForwardESSA(TypeDispatcher):
 	def __init__(self, rm):
 		self.rm = rm
 		self.uid = 0

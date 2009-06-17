@@ -33,7 +33,7 @@ def meet(values):
 	return prototype
 
 
-class InputAnalysis(StrictTypeDispatcher):
+class InputAnalysis(TypeDispatcher):
 	def clearTargets(self, targets):
 		for lcl in targets:
 			self.flow.define(lcl, forward.top)
@@ -54,7 +54,7 @@ class InputAnalysis(StrictTypeDispatcher):
 	def visitReturn(self, node):
 		pass # TODO paths for return values?
 
-class InputTransform(StrictTypeDispatcher):
+class InputTransform(TypeDispatcher):
 	@dispatch(ast.Local)
 	def visitLocal(self, node, targets=None):
 		defn = self.flow.lookup(node)
@@ -107,7 +107,7 @@ def transformInputs(context, shader, code):
 	t(code)
 
 
-class OutputTransform(StrictTypeDispatcher):
+class OutputTransform(TypeDispatcher):
 	def __init__(self):
 		self.returns = None
 

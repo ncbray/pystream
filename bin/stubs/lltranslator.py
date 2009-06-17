@@ -13,7 +13,7 @@ def checkCallArgs(node, count):
 	assert not node.vargs, node
 	assert not node.kargs, node
 
-class LLTranslator(StrictTypeDispatcher):
+class LLTranslator(TypeDispatcher):
 	def __init__(self, compiler, func):
 		self.compiler = compiler
 		self.func = func

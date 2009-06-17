@@ -10,7 +10,7 @@ from constraints import *
 
 
 
-class ExtractDataflow(StrictTypeDispatcher):
+class ExtractDataflow(TypeDispatcher):
 	def __init__(self, system, context, folded):
 		self.system  = system
 		self.context = context

@@ -48,7 +48,7 @@ def makeCallRewrite(extractor):
 	return callRewrite
 
 
-class FoldRewrite(StrictTypeDispatcher):
+class FoldRewrite(TypeDispatcher):
 
 	def __init__(self, extractor, storeGraph, code):
 		self.extractor = extractor
@@ -250,7 +250,7 @@ class FoldRewrite(StrictTypeDispatcher):
 
 		return self.tryDirectCallRewrite(node)
 
-class FoldAnalysis(StrictTypeDispatcher):
+class FoldAnalysis(TypeDispatcher):
 	@defaultdispatch
 	def visitOK(self, node):
 		return node
@@ -285,7 +285,7 @@ class FoldAnalysis(StrictTypeDispatcher):
 
 
 # Restricted traversal, so not all locals are rewritten.
-class FoldTraverse(StrictTypeDispatcher):
+class FoldTraverse(TypeDispatcher):
 	def __init__(self, strategy, function):
 		self.strategy = strategy
 		self.code = function

@@ -8,7 +8,7 @@ from language.python import fold
 # No flow control after raise issues?
 
 
-class ReverseFlowTraverse(StrictTypeDispatcher):
+class ReverseFlowTraverse(TypeDispatcher):
 	__slots__ = 'strategy', 'meet', 'flow', 'mayRaise'
 
 	def __init__(self, meetF, strategy):

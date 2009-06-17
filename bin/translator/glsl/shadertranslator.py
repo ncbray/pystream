@@ -21,7 +21,7 @@ class TemporaryLimitation(TranslationError):
 	pass
 
 
-class GLSLTranslator(StrictTypeDispatcher):
+class GLSLTranslator(TypeDispatcher):
 	def __init__(self, intrinsicRewrite):
 		self.intrinsicRewrite = intrinsicRewrite
 

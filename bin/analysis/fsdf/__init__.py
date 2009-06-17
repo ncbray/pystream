@@ -37,7 +37,7 @@ class ReadModifyInfo(object):
 		self.heapRead.update(other.heapRead)
 		self.heapModify.update(other.heapModify)
 
-class FindMergeSplit(StrictTypeDispatcher):
+class FindMergeSplit(TypeDispatcher):
 	@dispatch(ast.Existing, type(None))
 	def visitJunk(self, node, info):
 		pass
@@ -149,7 +149,7 @@ class Enviornment(object):
 		self.defered = False
 
 
-class BuildDataflowNetwork(StrictTypeDispatcher):
+class BuildDataflowNetwork(TypeDispatcher):
 	def __init__(self):
 		self.fms = FindMergeSplit()
 
@@ -283,7 +283,7 @@ class HeapSlot(object):
 		return "HeapSlot(%r/%d)" % (self.name, id(self))
 
 
-class MarkUses(StrictTypeDispatcher):
+class MarkUses(TypeDispatcher):
 	def __init__(self, bcdf):
 		self.bcdf = bcdf
 
@@ -304,7 +304,7 @@ class MarkUses(StrictTypeDispatcher):
 		visitAllChildren(self, node)
 
 
-class BuildCorrelatedDataflow(StrictTypeDispatcher):
+class BuildCorrelatedDataflow(TypeDispatcher):
 	def __init__(self):
 		self.markUses = MarkUses(self)
 

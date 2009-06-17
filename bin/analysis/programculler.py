@@ -78,7 +78,7 @@ def findLiveContexts(interface):
 	return cgf.liveFuncContext
 
 
-class LiveHeapFinder(StrictTypeDispatcher):
+class LiveHeapFinder(TypeDispatcher):
 	def __init__(self):
 		self.live = set()
 

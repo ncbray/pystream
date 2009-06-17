@@ -3,7 +3,7 @@ from util.typedispatch import *
 from language.python import ast
 from language.python import program
 
-class GetOps(StrictTypeDispatcher):
+class GetOps(TypeDispatcher):
 	def __init__(self):
 		self.ops    = []
 		self.locals = set()

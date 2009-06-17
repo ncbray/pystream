@@ -489,7 +489,7 @@ class ProgramCloner(object):
 
 
 
-class FunctionCloner(StrictTypeDispatcher):
+class FunctionCloner(TypeDispatcher):
 	def __init__(self, newfuncLUT, groupLUT, code, group):
 		self.newfuncLUT     = newfuncLUT
 		self.groupLUT       = groupLUT

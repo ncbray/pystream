@@ -1,7 +1,7 @@
 from util.typedispatch import *
 from . import ast
 
-class TypeNameGen(StrictTypeDispatcher):
+class TypeNameGen(TypeDispatcher):
 	@dispatch(ast.BuiltinType)
 	def visitBuiltinType(self, node):
 		return node.name
@@ -15,7 +15,7 @@ class TypeNameGen(StrictTypeDispatcher):
 		return "%s[%d]" % (self(node.type), node.count)
 
 
-class FindLocals(StrictTypeDispatcher):
+class FindLocals(TypeDispatcher):
 	@defaultdispatch
 	def visitOK(self, node):
 		visitAllChildren(self, node)
@@ -50,7 +50,7 @@ class FindLocals(StrictTypeDispatcher):
 		self(node.body)
 		return self.locals-parameters
 
-class GLSLCodeGen(StrictTypeDispatcher):
+class GLSLCodeGen(TypeDispatcher):
 	precedenceLUT = {'*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6,
 		'<':7, '>':7, '>=':7, '<=':7, '==':8, '!=':8,
 		'&':9, '^':10, '|':11, '&&':12, '^^':13, '||':14}

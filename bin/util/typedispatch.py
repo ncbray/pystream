@@ -1,4 +1,4 @@
-__all__ = ['typedispatcher', 'TypeDispatcher', 'StrictTypeDispatcher',
+__all__ = ['TypeDispatcher',
            'defaultdispatch', 'dispatch',
            'allChildren', 'visitAllChildren']
 
@@ -56,10 +56,6 @@ def exceptionDefault(self, node, *args):
 	raise TypeDispatchError, "%r cannot handle %r\n%r" % (type(self), type(node), node)
 
 
-def nullDefault(self, node, *args):
-	return node
-
-
 def inlineAncestor(t, lut):
 	if hasattr(t, '__typeDispatchTable__'):
 		# Search for types that haven't been defined, yet.
@@ -95,7 +91,7 @@ class typedispatcher(type):
 				inlineAncestor(t, lut)
 
 		if 'default' not in lut:
-			lut['default'] = nullDefault
+			lut['default'] = exceptionDefault
 
 		d['__typeDispatchTable__'] = lut
 		d['__call__'] = dispatch__call__
@@ -104,7 +100,4 @@ class typedispatcher(type):
 
 class TypeDispatcher(object):
 	__metaclass__ = typedispatcher
-	nullDefault = defaultdispatch(nullDefault)
-
-class StrictTypeDispatcher(TypeDispatcher):
 	exceptionDefault = defaultdispatch(exceptionDefault)

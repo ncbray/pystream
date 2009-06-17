@@ -9,7 +9,7 @@ from language.python import ast
 class InternalError(Exception):
 	pass
 
-class ApplyToCode(StrictTypeDispatcher):
+class ApplyToCode(TypeDispatcher):
 	def __init__(self, strategy):
 		self.strategy = strategy
 
@@ -20,7 +20,7 @@ class ApplyToCode(StrictTypeDispatcher):
 			self.strategy(child)
 		return node
 
-class MutateCode(StrictTypeDispatcher):
+class MutateCode(TypeDispatcher):
 	def __init__(self, strategy):
 		self.strategy = strategy
 
@@ -242,7 +242,7 @@ class FlowDict(object):
 
 
 
-class MayRaise(StrictTypeDispatcher):
+class MayRaise(TypeDispatcher):
 	@defaultdispatch
 	def default(self, node):
 		return True

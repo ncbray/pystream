@@ -39,7 +39,7 @@ def opThatInvokes(func):
 	assert invokeOp
 	return invokeOp
 
-class MethodPatternFinder(StrictTypeDispatcher):
+class MethodPatternFinder(TypeDispatcher):
 	def findOriginals(self, extractor):
 		exports = extractor.stubs.exports
 		self.iget = exports['interpreter_getattribute']
@@ -182,7 +182,7 @@ class MethodPatternFinder(StrictTypeDispatcher):
 		else:
 			return False, None, None
 
-class MethodAnalysis(StrictTypeDispatcher):
+class MethodAnalysis(TypeDispatcher):
 	def __init__(self, pattern):
 		self.pattern = pattern
 
@@ -277,7 +277,7 @@ class MethodAnalysis(StrictTypeDispatcher):
 		self.target(node.expr)
 		return node
 
-class MethodRewrite(StrictTypeDispatcher):
+class MethodRewrite(TypeDispatcher):
 	def __init__(self, pattern):
 		self.pattern = pattern
 		self.rewritten = set()

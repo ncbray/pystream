@@ -2,7 +2,7 @@ from util.typedispatch import *
 from language.python import ast
 from language.python import annotations
 
-class ArgumentNormalizationAnalysis(StrictTypeDispatcher):
+class ArgumentNormalizationAnalysis(TypeDispatcher):
 	def __init__(self, storeGraph):
 		self.storeGraph = storeGraph
 		self.applicable = True
@@ -75,7 +75,7 @@ class ArgumentNormalizationAnalysis(StrictTypeDispatcher):
 			return False, 0
 
 
-class ArgumentNormalizationTransform(StrictTypeDispatcher):
+class ArgumentNormalizationTransform(TypeDispatcher):
 	def __init__(self, storeGraph):
 		self.storeGraph = storeGraph
 

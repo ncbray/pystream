@@ -6,7 +6,7 @@ import optimization.simplify
 from analysis.astcollector import getOps
 
 # Determines the technical feasability of inlining
-class CodeInliningAnalysis(StrictTypeDispatcher):
+class CodeInliningAnalysis(TypeDispatcher):
 	def __init__(self):
 		self.canInline   = {}
 		self.invokeCount = {}
@@ -93,7 +93,7 @@ class CodeInliningAnalysis(StrictTypeDispatcher):
 
 # Emulates calling convention assignments
 # Clones the code and translates the inlined contexts
-class OpInliningTransform(StrictTypeDispatcher):
+class OpInliningTransform(TypeDispatcher):
 	def __init__(self, analysis):
 		self.analysis  = analysis
 
@@ -178,7 +178,7 @@ class OpInliningTransform(StrictTypeDispatcher):
 
 # Performs depth-first traversal of call graph,
 # inlines code in reverse postorder.
-class CodeInliningTransform(StrictTypeDispatcher):
+class CodeInliningTransform(TypeDispatcher):
 	def __init__(self, analysis, compiler, intrinsics):
 		self.analysis  = analysis
 		self.compiler  = compiler

@@ -15,7 +15,7 @@ from language.python import ast
 
 
 def evaluateCode(compiler, node):
-	assert node.isAbstractCode(), type(node)
+	assert node.isCode(), type(node)
 
 	try:
 		fold.evaluateCode(compiler, node)

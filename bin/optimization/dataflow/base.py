@@ -15,7 +15,7 @@ class ApplyToCode(TypeDispatcher):
 
 	@defaultdispatch
 	def visitCode(self, node):
-		assert node.isAbstractCode(), type(node)
+		assert node.isCode(), type(node)
 		for child in node.children():
 			self.strategy(child)
 		return node
@@ -26,7 +26,7 @@ class MutateCode(TypeDispatcher):
 
 	@defaultdispatch
 	def visitCode(self, node):
-		assert node.isAbstractCode(), type(node)
+		assert node.isCode(), type(node)
 		xform.replaceAllChildren(self.strategy, node)
 		return node
 

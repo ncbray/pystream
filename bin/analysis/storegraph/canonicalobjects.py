@@ -21,7 +21,7 @@ class BaseSlotName(util.canonical.CanonicalObject):
 class LocalSlotName(BaseSlotName):
 	__slots__ = 'code', 'local', 'context'
 	def __init__(self, code, lcl, context):
-		assert code.isAbstractCode(), type(code)
+		assert code.isCode(), type(code)
 #		assert isinstance(lcl, ast.Local), type(lcl)
 #		assert context.isAnalysisContext(), type(context)
 
@@ -44,7 +44,7 @@ class ExistingSlotName(BaseSlotName):
 	__slots__ = 'code', 'object', 'context'
 
 	def __init__(self, code, object, context):
-		assert code.isAbstractCode(), type(code)
+		assert code.isCode(), type(code)
 #		assert isinstance(obj, program.AbstractObject), type(obj)
 #		assert context.isAnalysisContext(), type(context)
 
@@ -83,7 +83,7 @@ class FieldSlotName(BaseSlotName):
 class OpContext(util.canonical.CanonicalObject):
 	__slots__ ='code', 'op', 'context',
 	def __init__(self, code, op, context):
-		assert code.isAbstractCode(), type(code)
+		assert code.isCode(), type(code)
 		assert context.isAnalysisContext(), type(context)
 
 		self.setCanonical(code, op, context)
@@ -96,7 +96,7 @@ class OpContext(util.canonical.CanonicalObject):
 class CodeContext(util.canonical.CanonicalObject):
 	__slots__ = 'code', 'context',
 	def __init__(self, code, context):
-		assert code.isAbstractCode(), type(code)
+		assert code.isCode(), type(code)
 		assert context.isAnalysisContext(),type(context)
 
 		self.setCanonical(code, context)

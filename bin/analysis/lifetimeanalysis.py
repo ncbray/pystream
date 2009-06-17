@@ -17,7 +17,7 @@ from analysis.astcollector import getOps
 
 contextSchema   = structure.WildcardSchema()
 operationSchema = structure.TypeSchema((ast.Expression, ast.Statement))
-codeSchema      = structure.CallbackSchema(lambda code: code.isAbstractCode())
+codeSchema      = structure.CallbackSchema(lambda code: code.isCode())
 
 def wrapOpContext(schema):
 	schema = mapping.MappingSchema(contextSchema, schema)
@@ -52,7 +52,7 @@ def invertInvokes(invokes):
 	invokeSources = invokeSourcesSchema.instance()
 
 	for code, ops in invokes:
-		assert code.isAbstractCode(), type(code)
+		assert code.isCode(), type(code)
 		for op, contexts in ops:
 			for context, invs in contexts:
 				for dstCode, dstContext in invs:
@@ -408,7 +408,7 @@ class LifetimeAnalysis(object):
 
 	def processScope(self, current):
 		currentF, currentO, currentC = current
-		assert currentF.isAbstractCode(), type(currentF)
+		assert currentF.isCode(), type(currentF)
 
 		operationSchema.validate(currentO)
 
@@ -454,7 +454,7 @@ class LifetimeAnalysis(object):
 					self.entries.add((code, context))
 
 
-			assert code.isAbstractCode(), type(code)
+			assert code.isCode(), type(code)
 			ops, lcls = getOps(code)
 			for op in ops:
 				invokes = op.annotation.invokes
@@ -463,7 +463,7 @@ class LifetimeAnalysis(object):
 						opInvokes = invokes[1][cindex]
 
 						for dstF, dstC in opInvokes:
-							assert dstF.isAbstractCode(), type(dstF)
+							assert dstF.isCode(), type(dstF)
 							invokesDB[code][op][context].add(dstF, dstC)
 
 

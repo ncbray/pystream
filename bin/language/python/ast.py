@@ -162,7 +162,7 @@ class MethodCall(Expression):
 class DirectCall(Expression):
 	# TODO kwds type?
 	# HACK code is optional, as cloned "dead" direct calls may have no corresponding code.
-	__fields__ = 'code:Code? selfarg:Expression? args:Expression* kwds* vargs:Expression? kargs:Expression?'
+	__fields__ = 'code:BaseCode? selfarg:Expression? args:Expression* kwds* vargs:Expression? kargs:Expression?'
 
 	def __repr__(self):
 		if self.code is not None:
@@ -342,7 +342,7 @@ class CodeParameters(PythonASTNode):
 		return util.calling.CalleeParams(self.selfparam, self.params, self.paramnames, [], self.vparam, self.kparam, self.returnparams)
 
 
-class Code(CompoundStatement):
+class Code(BaseCode):
 	__fields__ = """name:str
 			codeparameters:CodeParameters
 			ast:Suite"""
@@ -354,9 +354,6 @@ class Code(CompoundStatement):
 		return "Code(%s/%d)" % (self.name, id(self))
 
 	### The abstract code interface ###
-	def isAbstractCode(self):
-		return True
-
 	def isStandardCode(self):
 		return True
 

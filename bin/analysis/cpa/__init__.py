@@ -155,7 +155,7 @@ class InterproceduralDataflow(object):
 		self.constraints.add(constraint)
 
 	def _signature(self, code, selfparam, params):
-		assert code.isAbstractCode(), type(code)
+		assert code.isCode(), type(code)
 		assert selfparam is None or selfparam is util.cpa.Any or isinstance(selfparam,  extendedtypes.ExtendedType), selfparam
 		for param in params:
 			assert param is util.cpa.Any or isinstance(param, extendedtypes.ExtendedType), param
@@ -164,7 +164,7 @@ class InterproceduralDataflow(object):
 
 	def canonicalContext(self, srcOp, code, selfparam, params):
 		assert isinstance(srcOp, canonicalobjects.OpContext), type(srcOp)
-		assert code.isAbstractCode(), type(code)
+		assert code.isCode(), type(code)
 
 		sig     = self._signature(code, selfparam, params)
 		opPath  = self.advanceOpPath(srcOp.context.opPath, srcOp.op)

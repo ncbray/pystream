@@ -321,7 +321,7 @@ def constMeet(values):
 	return prototype
 
 def evaluateCode(compiler, node):
-	assert node.isAbstractCode(), type(node)
+	assert node.isCode(), type(node)
 
 	if node.isStandardCode():
 		analyze  = FoldAnalysis()

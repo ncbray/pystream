@@ -52,7 +52,7 @@ class ExtractDataflow(TypeDispatcher):
 
 	def directCall(self, node, code, selfarg, args, vargs, kargs, targets):
 		if self.doOnce(node):
-			assert code.isAbstractCode(), (("Incorrect code parameter %r\n" % code)+annotations.originTraceString(node.annotation.origin))
+			assert code.isCode(), (("Incorrect code parameter %r\n" % code)+annotations.originTraceString(node.annotation.origin))
 			op   = self.contextOp(node)
 			kwds = [] # HACK
 			DirectCallConstraint(self.system, op, code, selfarg, args, kwds, vargs, kargs, targets)

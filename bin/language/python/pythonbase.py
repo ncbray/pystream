@@ -17,6 +17,9 @@ class PythonASTNode(ASTNode):
 	def isReference(self):
 		return False
 
+	def isCode(self):
+		return False
+
 class Expression(PythonASTNode):
 	__slots__ = ()
 
@@ -63,4 +66,41 @@ class CompoundStatement(Statement):
 	__slots__ = ()
 
 	def significant(self):
+		return True
+
+
+class BaseCode(PythonASTNode):
+	__slots__ = ()
+	__shared__ = True
+
+	def isCode(self):
+		return True
+
+	def isAbstractCode(self):
+		return False
+
+	def isStandardCode(self):
+		return False
+
+	def codeName(self):
+		raise NotImplementedError
+
+	def setCodeName(self, name):
+		raise NotImplementedError
+
+	def abstractReads(self):
+		return None
+
+	def abstractModifies(self):
+		return None
+
+	def abstractAllocates(self):
+		return None
+
+
+class AbstractCode(BaseCode):
+	__slots__ = ()
+	__shared__ = True
+
+	def isAbstractCode(self):
 		return True

@@ -321,7 +321,7 @@ class CodeInliningTransform(TypeDispatcher):
 
 	def process(self, node):
 		if node not in self.processed:
-			assert node.isAbstractCode(), type(node)
+			assert node.isCode(), type(node)
 
 			self.processed.add(node)
 			self.trace.add(node)

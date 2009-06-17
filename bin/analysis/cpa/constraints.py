@@ -359,7 +359,7 @@ class DirectCallConstraint(AbstractCallConstraint):
 	__slots__ = ('code',)
 
 	def __init__(self, sys, op, code, selfarg, args, kwds, vargs, kargs, target):
-		assert code.isAbstractCode(), type(code)
+		assert code.isCode(), type(code)
 		self.code = code
 
 		AbstractCallConstraint.__init__(self, sys, op, selfarg, args, kwds, vargs, kargs, target)
@@ -376,7 +376,7 @@ class SimpleCallConstraint(CachedConstraint):
 
 	def __init__(self, sys, op, code, selftype, slots, caller):
 		assert isinstance(op, canonicalobjects.OpContext), type(op)
-		assert code.isAbstractCode(), type(code)
+		assert code.isCode(), type(code)
 		assert selftype is None or isinstance(selftype, extendedtypes.ExtendedType), selftype
 
 		self.op       = op

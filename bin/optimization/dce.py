@@ -14,9 +14,7 @@ def liveMeet(values):
 		return undefined
 
 # Mark a locals in an AST subtree as used.
-class MarkLocals(object):
-	__metaclass__ = typedispatcher
-
+class MarkLocals(StrictTypeDispatcher):
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
 		self.flow.define(node, top)
@@ -28,9 +26,7 @@ class MarkLocals(object):
 
 nodesWithNoSideEffects = (ast.GetGlobal, ast.Existing, ast.Local, ast.Load, ast.Allocate, ast.BuildTuple, ast.BuildList, ast.BuildMap)
 
-class MarkLive(object):
-	__metaclass__ = typedispatcher
-
+class MarkLive(StrictTypeDispatcher):
 	def __init__(self, function):
 		self.function = function
 		self.marker = MarkLocals()

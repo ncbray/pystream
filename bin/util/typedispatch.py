@@ -33,6 +33,18 @@ def dispatch__call__(self, p, *args):
 	return table[t](self, p, *args)
 
 
+#def dispatch__call__(self, p, *args):
+#	try:
+#		t = type(p)
+#		table = self.__typeDispatchTable__
+
+#		if not t in table: t = 'default'
+
+#		return table[t](self, p, *args)
+#	except:
+#		print "TRACE", p
+#		raise
+
 class TypeDispatchError(Exception):
 	pass
 
@@ -41,7 +53,7 @@ class TypeDispatchDeclarationError(Exception):
 
 
 def exceptionDefault(self, node, *args):
-	raise TypeDispatchError, "%r cannot handle %r" % (type(self), type(node))
+	raise TypeDispatchError, "%r cannot handle %r\n%r" % (type(self), type(node), node)
 
 
 def nullDefault(self, node, *args):

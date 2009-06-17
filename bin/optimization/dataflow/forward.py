@@ -2,8 +2,7 @@ from base import *
 
 from language.python.fold import existingConstant
 
-class ForwardFlowTraverse(object):
-	__metaclass__ = typedispatcher
+class ForwardFlowTraverse(StrictTypeDispatcher):
 	__slots__ = 'analyze', 'rewrite', 'flow', 'tryLevel', 'mayRaise', 'meetF'
 
 	def __init__(self, meetF, analyze, rewrite):
@@ -16,10 +15,10 @@ class ForwardFlowTraverse(object):
 
 		self.meetF = meetF
 
-	@defaultdispatch
-	def default(self, node):
-		assert False, repr(node)
-		return self.processExpr(node)
+	# TODO expose CodeParameters to the strategies?
+	@dispatch(str, ast.CodeParameters)
+	def visitLeaf(self, node):
+		return node
 
 	def processExpr(self, node):
 		node = self.rewrite(node)
@@ -52,7 +51,7 @@ class ForwardFlowTraverse(object):
 		return node
 
 	@dispatch(ast.Suite)
-	def visitFlow(self, node):
+	def visitSuite(self, node):
 		newblocks = []
 		for block in node.blocks:
 			newblocks.append(self(block))

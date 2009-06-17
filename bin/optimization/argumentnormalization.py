@@ -75,9 +75,7 @@ class ArgumentNormalizationAnalysis(StrictTypeDispatcher):
 			return False, 0
 
 
-class ArgumentNormalizationTransform(object):
-	__metaclass__ = typedispatcher
-
+class ArgumentNormalizationTransform(StrictTypeDispatcher):
 	def __init__(self, storeGraph):
 		self.storeGraph = storeGraph
 

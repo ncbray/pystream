@@ -7,9 +7,7 @@ from analysis import programculler
 
 
 # Eliminates all unreferenced code from a given program
-class CodeContextCuller(object):
-	__metaclass__ = typedispatcher
-
+class CodeContextCuller(StrictTypeDispatcher):
 	@dispatch(ast.Code, type(None), int, float, str)
 	def visitLeaf(self, node):
 		pass

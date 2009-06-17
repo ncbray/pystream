@@ -11,9 +11,7 @@ class TestTypeDisbatch(unittest.TestCase):
 			return 'default'
 
 
-		class FooBar(object):
-			__metaclass__ = typedispatcher
-
+		class FooBar(StrictTypeDispatcher):
 			num = dispatch(int, long)(visitNumber)
 			default = defaultdispatch(visitDefault)
 

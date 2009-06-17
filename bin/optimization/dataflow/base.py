@@ -9,26 +9,25 @@ from language.python import ast
 class InternalError(Exception):
 	pass
 
-class ApplyToCode(object):
-	__metaclass__ = typedispatcher
-
+class ApplyToCode(StrictTypeDispatcher):
 	def __init__(self, strategy):
 		self.strategy = strategy
 
-	@dispatch(ast.Code)
+	@defaultdispatch
 	def visitCode(self, node):
-		self.strategy(node.ast)
+		assert node.isAbstractCode(), type(node)
+		for child in node.children():
+			self.strategy(child)
 		return node
 
-class MutateCode(object):
-	__metaclass__ = typedispatcher
-
+class MutateCode(StrictTypeDispatcher):
 	def __init__(self, strategy):
 		self.strategy = strategy
 
-	@dispatch(ast.Code)
+	@defaultdispatch
 	def visitCode(self, node):
-		node.ast = self.strategy(node.ast)
+		assert node.isAbstractCode(), type(node)
+		xform.replaceAllChildren(self.strategy, node)
 		return node
 
 class DynamicBase(object):
@@ -243,9 +242,7 @@ class FlowDict(object):
 
 
 
-class MayRaise(object):
-	__metaclass__ = typedispatcher
-
+class MayRaise(StrictTypeDispatcher):
 	@defaultdispatch
 	def default(self, node):
 		return True

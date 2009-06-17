@@ -39,9 +39,7 @@ def opThatInvokes(func):
 	assert invokeOp
 	return invokeOp
 
-class MethodPatternFinder(object):
-	__metaclass__ = typedispatcher
-
+class MethodPatternFinder(StrictTypeDispatcher):
 	def findOriginals(self, extractor):
 		exports = extractor.stubs.exports
 		self.iget = exports['interpreter_getattribute']
@@ -184,9 +182,7 @@ class MethodPatternFinder(object):
 		else:
 			return False, None, None
 
-class MethodAnalysis(object):
-	__metaclass__ = typedispatcher
-
+class MethodAnalysis(StrictTypeDispatcher):
 	def __init__(self, pattern):
 		self.pattern = pattern
 
@@ -229,11 +225,6 @@ class MethodAnalysis(object):
 		self.flow.undefine(('name', name))
 		self.flow.undefine(('meth', meth))
 
-
-	@defaultdispatch
-	def default(self, node):
-		assert False, type(node)
-
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
 		self.arg(node)
@@ -250,7 +241,7 @@ class MethodAnalysis(object):
 		  ast.Discard, ast.GetIter,
 		  ast.ConvertToBool, ast.Not,
 		  ast.BinaryOp, ast.UnaryPrefixOp,
-		  ast.BuildTuple, list, ast.Call, ast.DirectCall, ast.MethodCall, ast.GetAttr)
+		  ast.BuildTuple, list, tuple, ast.Call, ast.DirectCall, ast.MethodCall, ast.GetAttr)
 	def visitMayLeak(self, node):
 		visitAllChildren(self, node)
 		return node
@@ -286,9 +277,7 @@ class MethodAnalysis(object):
 		self.target(node.expr)
 		return node
 
-class MethodRewrite(object):
-	__metaclass__ = typedispatcher
-
+class MethodRewrite(StrictTypeDispatcher):
 	def __init__(self, pattern):
 		self.pattern = pattern
 		self.rewritten = set()

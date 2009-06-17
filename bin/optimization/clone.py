@@ -489,9 +489,7 @@ class ProgramCloner(object):
 
 
 
-class FunctionCloner(object):
-	__metaclass__ = typedispatcher
-
+class FunctionCloner(StrictTypeDispatcher):
 	def __init__(self, newfuncLUT, groupLUT, code, group):
 		self.newfuncLUT     = newfuncLUT
 		self.groupLUT       = groupLUT

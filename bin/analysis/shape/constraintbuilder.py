@@ -9,9 +9,7 @@ from . import constraints
 
 import util.calling
 
-class GetLocals(object):
-	__metaclass__ = typedispatcher
-
+class GetLocals(StrictTypeDispatcher):
 	def __init__(self):
 		self.locals = set()
 
@@ -36,9 +34,7 @@ class GetLocals(object):
 def getLocals(node):
 	return GetLocals().process(node)
 
-class ShapeConstraintBuilder(object):
-	__metaclass__ = typedispatcher
-
+class ShapeConstraintBuilder(StrictTypeDispatcher):
 	def __init__(self, sys, invokeCallback = (lambda code: code)):
 		self.sys = sys
 
@@ -215,10 +211,6 @@ class ShapeConstraintBuilder(object):
 			return params
 		else:
 			return self.functionParams[node]
-
-	@defaultdispatch
-	def default(self, node, *args):
-		assert False, node
 
 	@dispatch(ast.Suite)
 	def visitSuite(self, node):

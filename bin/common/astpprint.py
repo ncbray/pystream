@@ -3,9 +3,7 @@ import sys
 
 from language.python import ast
 
-class ASTPrettyPrinter(object):
-	__metaclass__ = typedispatcher
-
+class ASTPrettyPrinter(StrictTypeDispatcher):
 	@dispatch(ast.Local, ast.Existing, str, int, float, type(None))
 	def visitLeaf(self, node, label, tabs):
 		self.out.write("%s%s%r\n" % (tabs, label, node))

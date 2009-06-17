@@ -48,8 +48,7 @@ def makeCallRewrite(extractor):
 	return callRewrite
 
 
-class FoldRewrite(object):
-	__metaclass__ = typedispatcher
+class FoldRewrite(StrictTypeDispatcher):
 
 	def __init__(self, extractor, storeGraph, code):
 		self.extractor = extractor
@@ -62,6 +61,9 @@ class FoldRewrite(object):
 
 		self.annotationsExist = code.annotation.contexts is not None
 
+	@defaultdispatch
+	def visitOK(self, node):
+		return node
 
 	def logCreated(self, node):
 		if isinstance(node, ast.Existing):
@@ -248,8 +250,10 @@ class FoldRewrite(object):
 
 		return self.tryDirectCallRewrite(node)
 
-class FoldAnalysis(object):
-	__metaclass__ = typedispatcher
+class FoldAnalysis(StrictTypeDispatcher):
+	@defaultdispatch
+	def visitOK(self, node):
+		return node
 
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
@@ -281,9 +285,7 @@ class FoldAnalysis(object):
 
 
 # Restricted traversal, so not all locals are rewritten.
-class FoldTraverse(object):
-	__metaclass__ = typedispatcher
-
+class FoldTraverse(StrictTypeDispatcher):
 	def __init__(self, strategy, function):
 		self.strategy = strategy
 		self.code = function

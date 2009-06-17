@@ -10,9 +10,7 @@ from constraints import *
 
 
 
-class ExtractDataflow(object):
-	__metaclass__ = typedispatcher
-
+class ExtractDataflow(StrictTypeDispatcher):
 	def __init__(self, system, context, folded):
 		self.system  = system
 		self.context = context
@@ -108,10 +106,6 @@ class ExtractDataflow(object):
 	##################################
 	### Generic feature extraction ###
 	##################################
-
-	@defaultdispatch
-	def default(self, node, *args):
-		assert False, repr(node)
 
 	@dispatch(str, type(None))
 	def visitJunk(self, node):

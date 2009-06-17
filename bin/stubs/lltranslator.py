@@ -13,9 +13,7 @@ def checkCallArgs(node, count):
 	assert not node.vargs, node
 	assert not node.kargs, node
 
-class LLTranslator(object):
-	__metaclass__ = typedispatcher
-
+class LLTranslator(StrictTypeDispatcher):
 	def __init__(self, compiler, func):
 		self.compiler = compiler
 		self.func = func
@@ -42,10 +40,6 @@ class LLTranslator(object):
 		e = ast.Existing(obj)
 		self.defn[e] = e
 		return e
-
-	@defaultdispatch
-	def default(self, node):
-		assert False, repr(node)
 
 	@dispatch(type(None), str)
 	def visitLeaf(self, node):

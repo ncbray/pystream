@@ -3,16 +3,10 @@ from util.typedispatch import *
 from language.python import ast
 from language.python import program
 
-class GetOps(object):
-	__metaclass__ = typedispatcher
-
+class GetOps(StrictTypeDispatcher):
 	def __init__(self):
 		self.ops    = []
 		self.locals = set()
-
-	@defaultdispatch
-	def default(self, node):
-		assert False, repr(node)
 
 	@dispatch(str, type(None), ast.Break, ast.Continue, ast.Code)
 	def visitJunk(self, node):

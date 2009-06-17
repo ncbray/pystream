@@ -56,7 +56,7 @@ class Local(Reference):
 		return True
 
 
-class Cell(ASTNode):
+class Cell(PythonASTNode):
 	__slots__  = 'name'
 	__shared__ = True
 
@@ -271,7 +271,7 @@ class EndFinally(ControlFlow):
 ### CFG ###
 ###########
 
-class Suite(ASTNode):
+class Suite(PythonASTNode):
 	__fields__ = 'blocks:Statement*'
 	__mutable__ = True # HACK not really mutable, just need to be able to assign to blocks.
 
@@ -309,7 +309,7 @@ class Suite(ASTNode):
 		return bool(self.blocks)
 
 
-class ExceptionHandler(ASTNode):
+class ExceptionHandler(PythonASTNode):
 	__fields__ = 'preamble:Suite type:Expression value:Expression? body:Suite'
 
 class Condition(CompoundStatement):
@@ -331,7 +331,7 @@ class For(Loop):
 	__fields__ = 'iterator:Expression index:Local loopPreamble:Suite bodyPreamble:Suite body:Suite else_:Suite'
 	# TODO type of index?
 
-class CodeParameters(ASTNode):
+class CodeParameters(PythonASTNode):
 	# TODO support paramnames:str?* (different than paramnames:str*?)
 	__fields__ = """selfparam:Local?
 			params:Local* paramnames:(str,NoneType)*

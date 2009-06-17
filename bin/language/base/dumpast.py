@@ -1,11 +1,8 @@
-from util.visitor import StandardVisitor
+from util.typedispatch import *
+from language.python import ast
 
-# HACK
-from .. python.ast import Expression, Assign
-
-class DumpAST(StandardVisitor):
+class DumpAST(TypeDispatcher):
 	def __init__(self, f):
-		super(DumpAST, self).__init__()
 		self.f = f
 
 	def writeLine(self, s, tabs=0):
@@ -13,27 +10,31 @@ class DumpAST(StandardVisitor):
 		self.f.write(str(s))
 		self.f.write('\n')
 
-	def dumpList(self, node, tabs):
+	@dispatch(list, tuple)
+	def visitlist(self, node, tabs=0):
 		self.writeLine('[', tabs)
 		for child in node:
-			self.visit(child, tabs)
+			self(child, tabs)
 		self.writeLine(']', tabs)
 
-
-	def visitlist(self, node, tabs=0):
-		self.dumpList(node, tabs)
-
-	def visittuple(self, node, tabs=0):
-		self.dumpList(node, tabs)
-
-
+	@dispatch(ast.Assign)
 	def visitAssign(self, node, tabs):
-		self.writeLine("%r = %r" % (node.lcl, node.expr), tabs)
-		
+		if len(node.lcls) == 1:
+			target = repr(node.lcls[0])
+		else:
+			target = "<%s>" % (",".join([repr(lcl) for lcl in node.lcls]))
+
+		#self.writeLine("%s = %r" % (target, node.expr), tabs)
+		self.writeLine(repr(node.expr), tabs)
+		self.writeLine("=> %s" % (target), tabs+1)
+
+	@dispatch(int, float, str, type(None))
+	def visitConst(self, node, tabs):
+		self.writeLine(repr(node), tabs)
+
+	@defaultdispatch
 	def default(self, node, tabs=0):
-		if isinstance(node, (int, float, str)) or node==None:
-			self.writeLine(node, tabs)
-		elif isinstance(node, (Expression, Assign)) or node.isControlFlow():
+		if isinstance(node, (ast.Expression, ast.LLExpression, ast.LLStatement, ast.Assign)) or node.isControlFlow():
 			self.writeLine(repr(node), tabs)
 		else:
 			self.writeLine(type(node).__name__, tabs)
@@ -41,4 +42,4 @@ class DumpAST(StandardVisitor):
 			for name, child in node.fields():
 				if child:
 					self.writeLine('+%s' % name, tabs+1)
-					self.visit(child, tabs+1)
+					self(child, tabs+1)

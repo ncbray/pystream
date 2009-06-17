@@ -16,23 +16,23 @@ class ArrayType(Type):
 
 
 ### Data declarations ###
-class VariableDecl(ASTNode):
+class VariableDecl(GLSLASTNode):
 	__fields__    = 'type:Type name:str initializer:(Constant,Constructor)?'
 	__shared__    = True
 
-class ConstantDecl(ASTNode):
+class ConstantDecl(GLSLASTNode):
 	__fields__    = 'type:Type name:str initializer:(Constant,Constructor)?'
 	__shared__    = True
 
-class UniformDecl(ASTNode):
+class UniformDecl(GLSLASTNode):
 	__fields__    = 'type:Type name:str initializer:(Constant,Constructor)?'
 	__shared__    = True
 
-class InputDecl(ASTNode):
+class InputDecl(GLSLASTNode):
 	__fields__    = 'interpolation:str? centroid:bool type:Type name:str'
 	__shared__    = True
 
-class OutputDecl(ASTNode):
+class OutputDecl(GLSLASTNode):
 	__fields__    = 'interpolation:str? centroid:bool invariant:bool type:Type name:str'
 	__shared__    = True
 
@@ -116,7 +116,7 @@ class GetSubscript(Expression):
 class SetSubscript(Statement):
 	__fields__ = 'value:Expression expr:Expression subscript:Expression'
 
-class Suite(ASTNode):
+class Suite(GLSLASTNode):
 	__fields__ = 'statements:Statement*'
 
 	def __init__(self, statements=None):
@@ -148,8 +148,8 @@ class Suite(ASTNode):
 				assert isinstance(block, Statement), block
 				self.statements.append(block)
 
-class Parameter(ASTNode):
+class Parameter(GLSLASTNode):
 	__fields__ = 'lcl:Local paramIn:bool paramOut:bool'
 
-class Code(ASTNode):
+class Code(GLSLASTNode):
 	__fields__ = 'name:str params:Parameter* returnType:Type body:Suite'

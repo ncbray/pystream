@@ -36,14 +36,14 @@ def appendSuite(current, next):
 
 
 class DestackVisitor(StandardVisitor):
-	def __init__(self, code, mname, extractor, callback, trace=False):
+	def __init__(self, code, mname, compiler, callback, trace=False):
 		StandardVisitor.__init__(self)
 		self.ssa = ssa.SSADefinitions()
 		self.code = code
 		self.moduleName = mname
 		self.locals = {}
 		self.defns = collections.defaultdict(dict)
-		self.extractor = extractor
+		self.compiler = compiler
 		self.callback = callback
 		self.trace = trace
 
@@ -116,7 +116,7 @@ class DestackVisitor(StandardVisitor):
 		# Insurance, but probabally unessisary
 		stack = stack.duplicate()
 
-		t = instructiontranslator.InstructionTranslator(self.code, self.moduleName, self.ssa, self.locals, self.extractor, self.callback, self.trace)
+		t = instructiontranslator.InstructionTranslator(self.code, self.moduleName, self.ssa, self.locals, self.compiler, self.callback, self.trace)
 		inst, defn, stack = t.translate(block.instructions, stack)
 
 		outblock = Suite(inst)
@@ -620,7 +620,7 @@ class DestackVisitor(StandardVisitor):
 		if not isinstance(bodyBlock, Suite):
 			bodyBlock = Suite([bodyBlock])
 
-		getNext = GetAttr(iterlcl, Existing(self.extractor.getObject('next')))
+		getNext = GetAttr(iterlcl, Existing(self.compiler.extractor.getObject('next')))
 		getNext.rewriteAnnotation(origin=block.origin)
 
 		temp = Local()
@@ -656,7 +656,7 @@ class DestackVisitor(StandardVisitor):
 		else:
 			# Sometimes the condition is const-folded out.
 			lcl = Local()
-			condition = Condition(Suite([Assign(Existing(self.extractor.getObject(True)), [lcl])]), lcl)
+			condition = Condition(Suite([Assign(Existing(self.compiler.extractor.getObject(True)), [lcl])]), lcl)
 			tstack = stack.duplicate()
 			fstack = stack.duplicate()
 
@@ -688,8 +688,8 @@ class DestackVisitor(StandardVisitor):
 
 
 
-def destack(code, mname, fname, root, argnames, vargs, kargs, extractor, callback, trace=False):
-	dv = DestackVisitor(code, mname, extractor, callback, trace)
+def destack(code, mname, fname, root, argnames, vargs, kargs, compiler, callback, trace=False):
+	dv = DestackVisitor(code, mname, compiler, callback, trace)
 
 	# Create the locals for each parameter.
 	param = []

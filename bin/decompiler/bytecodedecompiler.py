@@ -33,6 +33,7 @@ import optimization.simplify
 
 from language.python.annotations import codeOrigin
 
+import common.compilercontext
 
 def decompile(compiler, func, trace=False, ssa=True):
 	# HACK can't find modules for "fake" globals.
@@ -44,6 +45,7 @@ def decompile(compiler, func, trace=False, ssa=True):
 	return decompileCode(compiler, func.func_code, mname, trace=trace, ssa=ssa)
 
 def decompileCode(compiler, code, mname, trace=False, ssa=True):
+	assert isinstance(compiler, common.compilercontext.CompilerContext), type(compiler)
 	return Decompiler(compiler).disassemble(code, mname, trace=trace, ssa=ssa)
 
 def getargs(co):
@@ -93,7 +95,7 @@ class Decompiler(object):
 			if trace and post:
 				FlowBlockDump().process(name+"_post", root)
 
-		root = destack(code, mname, name, root, argnames, vargs, kargs, self.compiler.extractor, decompileCode, trace)
+		root = destack(code, mname, name, root, argnames, vargs, kargs, self.compiler, decompileCode, trace)
 
 		if ssa:
 			root = ssitransform.ssiTransform(root)

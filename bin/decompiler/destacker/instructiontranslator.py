@@ -38,7 +38,7 @@ def getConstant(node):
 # Does flow-insensitive constant folding.
 # This will hopefully make later analysis slightly more efficient.
 class InstructionTranslator(object):
-	def __init__(self, code, moduleName, ssa, lcls, extractor, callback, trace=False):
+	def __init__(self, code, moduleName, ssa, lcls, compiler, callback, trace=False):
 		self.code = code
 		self.moduleName = moduleName
 		self.ssa = ssa
@@ -48,7 +48,7 @@ class InstructionTranslator(object):
 
 		self.emitStoreLocal = True
 
-		self.extractor = extractor
+		self.compiler = compiler
 		self.callback = callback
 		self.trace = trace
 
@@ -135,7 +135,7 @@ class InstructionTranslator(object):
 
 
 	def makeConstant(self, value):
-		return Existing(self.extractor.getObject(value))
+		return Existing(self.compiler.extractor.getObject(value))
 
 	def pushConstant(self, value):
 		#self.pushOp(self.makeConstant(value))
@@ -406,7 +406,7 @@ class InstructionTranslator(object):
 
 		args = self.getArgs(count)
 
-		func = self.callback(self.extractor, getConstant(defn), self.moduleName, self.trace)
+		func = self.callback(self.compiler, getConstant(defn), self.moduleName, self.trace)
 
 		code = func
 
@@ -439,7 +439,7 @@ class InstructionTranslator(object):
 
 		# TODO check cell names are correct?
 
-		func = self.callback(self.extractor, getConstant(defn), self.moduleName)
+		func = self.callback(self.compiler, getConstant(defn), self.moduleName)
 
 		code = func
 
@@ -457,7 +457,7 @@ class InstructionTranslator(object):
 	def op_BUILD_LIST(self, count):
 		args = self.getArgs(count)
 
-		self.pushOp(Allocate(Existing(self.extractor.getObject(list))))
+		self.pushOp(Allocate(Existing(self.compiler.extractor.getObject(list))))
 
 		# HACK Append the arguments
 		target = self.peek()
@@ -468,7 +468,7 @@ class InstructionTranslator(object):
 
 	def op_BUILD_MAP(self, count):
 		# TODO count is a size hint... we should preserve it?
-		self.pushOp(Allocate(Existing(self.extractor.getObject(dict))))
+		self.pushOp(Allocate(Existing(self.compiler.extractor.getObject(dict))))
 		#self.pushOp(BuildMap())
 
 	def op_STORE_MAP(self):
@@ -640,7 +640,7 @@ class InstructionTranslator(object):
 	def op_UNARY_NOT(self):
 		expr = self.getArg()
 		uop = Not(expr)
-		uop = foldCallAST(self.extractor, uop, operator.not_, (expr,))
+		uop = foldCallAST(self.compiler.extractor, uop, operator.not_, (expr,))
 		self.pushOp(uop)
 
 	def op_YIELD_VALUE(self):
@@ -702,7 +702,7 @@ class InstructionTranslator(object):
 	def emitUnaryPrefixOp(self, op):
 		expr = self.getArg()
 		uop = UnaryPrefixOp(op, expr)
-		uop = foldUnaryPrefixOpAST(self.extractor, uop)
+		uop = foldUnaryPrefixOpAST(self.compiler.extractor, uop)
 		self.pushOp(uop)
 
 	def emitBinaryOp(self, op):
@@ -710,7 +710,7 @@ class InstructionTranslator(object):
 		left  = self.getArg()
 
 		bop = BinaryOp(left, op, right)
-		bop = foldBinaryOpAST(self.extractor, bop)
+		bop = foldBinaryOpAST(self.compiler.extractor, bop)
 
 		if isinstance(bop, BinaryOp) and bop.op in opnames.inplaceOps:
 			self.pushAssign(bop.left, bop)

@@ -7,6 +7,7 @@ from util.filesystem import ensureDirectoryExists
 from decompiler.programextractor import extractProgram
 import common.pipeline
 from . import compilerconsole
+from . import compilercontext
 
 import cProfile
 
@@ -18,16 +19,6 @@ def importDeep(name):
 	for comp in components[1:]:
 		mod = getattr(mod, comp)
 	return mod
-
-class CompilerContext(object):
-	__slots__ = 'console', 'extractor', 'interface', 'storeGraph', 'liveCode'
-
-	def __init__(self, console):
-		self.console    = console
-		self.extractor  = None
-		self.interface  = None
-		self.storeGraph = None
-		self.liveCode   = None
 
 class Makefile(object):
 	def __init__(self, filename):
@@ -103,7 +94,7 @@ class Makefile(object):
 
 	def pystreamCompile(self):
 		console = compilerconsole.CompilerConsole()
-		compiler = CompilerContext(console)
+		compiler = compilercontext.CompilerContext(console)
 
 		with compiler.console.scope("makefile"):
 			compiler.console.output("Processing %s" % self.filename)

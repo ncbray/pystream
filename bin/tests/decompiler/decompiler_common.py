@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import unittest
 
+import common.compilercontext
 #from decompiler import decompile
 from decompiler.programextractor import Extractor
 
@@ -15,7 +16,10 @@ def compileF(s, g=None):
 	return l.values()[0]
 
 def generateCode(func, trace):
-	extractor = Extractor()
+	compiler = common.compilercontext.CompilerContext(None)
+	extractor = Extractor(compiler)
+	compiler.extractor = extractor
+
 	f = extractor.decompileFunction(func, trace)
 	#f = decompile(func, trace)
 
@@ -29,14 +33,14 @@ class TestDecompiler(unittest.TestCase):
 	s = ""
 	inputs = [[]]
 	trace = False
-	
-	
+
+
 	def setUp(self):
 		if self.s:
 			self.s = self.s.strip()
-			self.f = compileF(self.s)			
+			self.f = compileF(self.s)
 			self.decompCode = generateCode(self.f, self.trace)
-			
+
 			try:
 				self.df = compileF(self.decompCode)
 			except SyntaxError:

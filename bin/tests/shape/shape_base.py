@@ -11,6 +11,7 @@ import analysis.shape
 from language.python import ast
 from analysis.storegraph import storegraph, canonicalobjects, setmanager
 
+import common.compilercontext
 import decompiler.programextractor
 
 import util.compressedset
@@ -31,7 +32,10 @@ class MockInformationProvider(object):
 
 class TestConstraintBase(unittest.TestCase):
 	def setUp(self):
-		self.extractor = decompiler.programextractor.Extractor()
+		compiler = common.compilercontext.CompilerContext(None)
+		self.extractor = decompiler.programextractor.Extractor(compiler)
+		compiler.extractor = self.extractor
+
 		cpacanonical = canonicalobjects.CanonicalObjects()
 		self.sys  = analysis.shape.RegionBasedShapeAnalysis(self.extractor, cpacanonical, MockInformationProvider(self))
 		self.root = storegraph.StoreGraph(self.extractor, cpacanonical)

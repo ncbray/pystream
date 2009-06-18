@@ -89,6 +89,16 @@ class Material(object):
 	def __init__(self):
 		self.color = vec3(0.125, 0.125, 1.0)
 
+class LambertMaterial(Material):
+	def transfer(self, n, l, e):
+		return nldot(n, l)
+
+class PhongMaterial(Material):
+	def transfer(self, n, l, e):
+		h = (l+e).normalize()
+		return nldot(n, l)+nldot(n, h)**50
+
+
 class Shader(object):
 	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'lightPos', 'ambient', 'material'
 	def __init__(self):
@@ -126,9 +136,11 @@ class Shader(object):
 	def shadeFragment(self, context, pos, normal):
 		n = normal.normalize()
 
-		if True:
+		if False:
 			mainColor = n*0.5+vec3(0.5, 0.5, 0.5)
 		else:
+			e = -pos.normalize()
+
 			# Light into camera space
 			trans = self.worldToCamera
 			lightPos = trans*self.lightPos
@@ -138,7 +150,7 @@ class Shader(object):
 			lightDir  = lightDir/lightDist
 
 			lightAtten = 1.0/(0.01+lightDist*lightDist)
-			transfer = nldot(lightDir, n)
+			transfer = self.material.transfer(n, lightDir, e)
 			modulated = transfer*lightAtten
 
 			mainColor = self.material.color*(self.ambient+modulated)

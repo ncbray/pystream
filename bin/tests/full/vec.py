@@ -21,6 +21,18 @@ class vec2(object):
 		return self/self.length()
 
 
+	def __pos__(self):
+		return vec2(+self.x, +self.y)
+
+
+	def __neg__(self):
+		return vec2(-self.x, -self.y)
+
+
+	def __abs__(self):
+		return vec2(abs(self.x), abs(self.y))
+
+
 	def __add__(self, other):
 		if isinstance(other, vec2):
 			return vec2(self.x+other.x, self.y+other.y)
@@ -29,7 +41,7 @@ class vec2(object):
 		else:
 			return NotImplemented
 
-	def __iadd__(self, other):
+	def __radd__(self, other):
 		if isinstance(other, float):
 			return vec2(other+self.x, other+self.y)
 		else:
@@ -44,7 +56,7 @@ class vec2(object):
 		else:
 			return NotImplemented
 
-	def __isub__(self, other):
+	def __rsub__(self, other):
 		if isinstance(other, float):
 			return vec2(other-self.x, other-self.y)
 		else:
@@ -59,7 +71,7 @@ class vec2(object):
 		else:
 			return NotImplemented
 
-	def __imul__(self, other):
+	def __rmul__(self, other):
 		if isinstance(other, float):
 			return vec2(other*self.x, other*self.y)
 		else:
@@ -74,7 +86,7 @@ class vec2(object):
 		else:
 			return NotImplemented
 
-	def __idiv__(self, other):
+	def __rdiv__(self, other):
 		if isinstance(other, float):
 			return vec2(other/self.x, other/self.y)
 		else:
@@ -287,6 +299,18 @@ class vec3(object):
 		return vec3(x, y, z)
 
 
+	def __pos__(self):
+		return vec3(+self.x, +self.y, +self.z)
+
+
+	def __neg__(self):
+		return vec3(-self.x, -self.y, -self.z)
+
+
+	def __abs__(self):
+		return vec3(abs(self.x), abs(self.y), abs(self.z))
+
+
 	def __add__(self, other):
 		if isinstance(other, vec3):
 			return vec3(self.x+other.x, self.y+other.y, self.z+other.z)
@@ -295,7 +319,7 @@ class vec3(object):
 		else:
 			return NotImplemented
 
-	def __iadd__(self, other):
+	def __radd__(self, other):
 		if isinstance(other, float):
 			return vec3(other+self.x, other+self.y, other+self.z)
 		else:
@@ -310,7 +334,7 @@ class vec3(object):
 		else:
 			return NotImplemented
 
-	def __isub__(self, other):
+	def __rsub__(self, other):
 		if isinstance(other, float):
 			return vec3(other-self.x, other-self.y, other-self.z)
 		else:
@@ -325,7 +349,7 @@ class vec3(object):
 		else:
 			return NotImplemented
 
-	def __imul__(self, other):
+	def __rmul__(self, other):
 		if isinstance(other, float):
 			return vec3(other*self.x, other*self.y, other*self.z)
 		else:
@@ -340,7 +364,7 @@ class vec3(object):
 		else:
 			return NotImplemented
 
-	def __idiv__(self, other):
+	def __rdiv__(self, other):
 		if isinstance(other, float):
 			return vec3(other/self.x, other/self.y, other/self.z)
 		else:
@@ -1084,6 +1108,18 @@ class vec4(object):
 		return self/self.length()
 
 
+	def __pos__(self):
+		return vec4(+self.x, +self.y, +self.z, +self.w)
+
+
+	def __neg__(self):
+		return vec4(-self.x, -self.y, -self.z, -self.w)
+
+
+	def __abs__(self):
+		return vec4(abs(self.x), abs(self.y), abs(self.z), abs(self.w))
+
+
 	def __add__(self, other):
 		if isinstance(other, vec4):
 			return vec4(self.x+other.x, self.y+other.y, self.z+other.z, self.w+other.w)
@@ -1092,7 +1128,7 @@ class vec4(object):
 		else:
 			return NotImplemented
 
-	def __iadd__(self, other):
+	def __radd__(self, other):
 		if isinstance(other, float):
 			return vec4(other+self.x, other+self.y, other+self.z, other+self.w)
 		else:
@@ -1107,7 +1143,7 @@ class vec4(object):
 		else:
 			return NotImplemented
 
-	def __isub__(self, other):
+	def __rsub__(self, other):
 		if isinstance(other, float):
 			return vec4(other-self.x, other-self.y, other-self.z, other-self.w)
 		else:
@@ -1122,7 +1158,7 @@ class vec4(object):
 		else:
 			return NotImplemented
 
-	def __imul__(self, other):
+	def __rmul__(self, other):
 		if isinstance(other, float):
 			return vec4(other*self.x, other*self.y, other*self.z, other*self.w)
 		else:
@@ -1137,7 +1173,7 @@ class vec4(object):
 		else:
 			return NotImplemented
 
-	def __idiv__(self, other):
+	def __rdiv__(self, other):
 		if isinstance(other, float):
 			return vec4(other/self.x, other/self.y, other/self.z, other/self.w)
 		else:

@@ -44,7 +44,6 @@ attr(inst(vec.mat4), 'm33', inst(float))
 #vec3.method('normalize')
 
 #func(physics.simpleUpdate, inst(float), inst(int))
-#func(physics.harness, inst(vec.vec4), inst(vec.vec3))
 
 ### Declare the types of the shader attributes ###
 # HACK should declare methods instead?
@@ -56,7 +55,14 @@ attr(inst(physics.Shader), 'projection', inst(vec.mat4))
 attr(inst(physics.Shader), 'lightPos', inst(vec.vec4))
 attr(inst(physics.Shader), 'ambient',  inst(vec.vec3))
 #attr(inst(physics.Shader), 'color',    inst(vec.vec3))
-attr(inst(physics.Shader), 'material',    inst(physics.Material))
+#attr(inst(physics.Shader), 'material',    inst(physics.Material))
+
+#attr(inst(physics.Shader),          'material',  inst(physics.LambertMaterial))
+attr(inst(physics.Shader),          'material',  inst(physics.PhongMaterial))
+attr(inst(physics.LambertMaterial), 'color',     inst(vec.vec3))
+attr(inst(physics.PhongMaterial),   'color',     inst(vec.vec3))
+
+
 attr(inst(physics.Material), 'color',    inst(vec.vec3))
 
 

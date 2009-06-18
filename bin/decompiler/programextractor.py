@@ -232,13 +232,16 @@ class Extractor(object):
 		return fobj, code
 
 
-	# Returns the extacted object, plus the slot name for the attribute.
+	# Returns the slot name for the attribute.
 	def getObjectAttr(self, obj, name):
-		# TODO inherited slots?
-		d = obj.type.pyobj.__dict__
+		for t in inspect.getmro(obj.type.pyobj):
+			attr = t.__dict__.get(name)
+			if attr:
+				attrName = self.getObject(util.uniqueSlotName(attr))
+				return ('Attribute', attrName)
+
 		assert name in d, "%r does not have attribute %r" % (obj, name)
-		attrName = self.getObject(util.uniqueSlotName(d[name]))
-		return ('Attribute', attrName)
+
 
 
 	def __getObject(self, o, t=False):

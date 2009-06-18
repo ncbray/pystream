@@ -113,6 +113,36 @@ def makeOp(base, coords, opname, op):
 	declMethod('__%s__' % opname, ('%s%d' % (base, len(coords)), 'float'))
 	declMethod('__r%s__' % opname, 'float')
 
+def makePos(base, coords):
+	args = ", ".join(["+self.%s" % coord for coord in coords])
+	
+	print """	def __pos__(self):
+		return %(base)s%(len)s(%(args)s)
+
+""" % {'base':base, 'len':len(coords), 'args':args}
+	
+	declMethod('__pos__')
+
+def makeNeg(base, coords):
+	args = ", ".join(["-self.%s" % coord for coord in coords])
+	
+	print """	def __neg__(self):
+		return %(base)s%(len)s(%(args)s)
+
+""" % {'base':base, 'len':len(coords), 'args':args}
+	
+	declMethod('__neg__')
+
+def makeAbs(base, coords):
+	args = ", ".join(["abs(self.%s)" % coord for coord in coords])
+	
+	print """	def __abs__(self):
+		return %(base)s%(len)s(%(args)s)
+
+""" % {'base':base, 'len':len(coords), 'args':args}
+	
+	declMethod('__abs__')
+	
 def typeName(base, l):
 	if l < 1 or l > 4:
 		assert False
@@ -250,6 +280,9 @@ for l in range(2, 5):
 """
 		declMethod('cross', "%s%d" % (base, l))
 
+	makePos(base, coords)
+	makeNeg(base, coords)
+	makeAbs(base, coords)
 
 	makeOp(base, coords, "add", "+")
 	makeOp(base, coords, "sub", "-")

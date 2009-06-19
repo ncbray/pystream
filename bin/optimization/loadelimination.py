@@ -50,36 +50,40 @@ class RedundantLoadEliminator(object):
 
 		return loads, stores
 
-	def generateSignatures(self, code):
-		def makeReadSig(op, arg):
-			if isinstance(arg, ast.Existing):
-				(arg.object, 0)
-			else:
-				return (arg, self.readNumber(op, arg))
+	def makeReadSig(self, op, arg):
+		if isinstance(arg, ast.Existing):
+			sig = arg.object
+		elif isinstance(arg, ast.Local):
+			# Dropping the arg from the signature allows load elimination across must-aliases
+			#sig = (arg, self.readNumber(op, arg))
+			sig = self.readNumber(op, arg)
+		else:
+			assert False, arg
+		return sig
 
+
+	def generateSignature(self, op, node, signatures):
+		exprSig = self.makeReadSig(op, node.expr)
+		nameSig = self.makeReadSig(op, node.name)
+
+		if isinstance(node, ast.Load):
+			fields = [(field, self.readNumber(op, field)) for field in node.annotation.reads[0]]
+		elif isinstance(node, ast.Store):
+			fields = [(field, self.writeNumber(op, field)) for field in node.annotation.modifies[0]]
+		else:
+			assert False, node
+
+		sig = (exprSig, node.fieldtype, nameSig, frozenset(fields))
+
+		signatures[sig].append(op)
+
+
+	def generateSignatures(self, code):
 		loads, stores = self.findLoadStores()
 		signatures  = collections.defaultdict(list)
 
-		for op in loads:
-			load = op.expr
-
-			exprSig = makeReadSig(op, load.expr)
-			nameSig = makeReadSig(op, load.name)
-
-			fields = [(field, self.readNumber(op, field)) for field in load.annotation.reads[0]]
-			sig = (exprSig, load.fieldtype, nameSig, frozenset(fields))
-
-			signatures[sig].append(op)
-
-
-		for store in stores:
-			exprSig = makeReadSig(store, store.expr)
-			nameSig = makeReadSig(store, store.name)
-			fields = [(field, self.writeNumber(store, field)) for field in store.annotation.modifies[0]]
-			sig = (exprSig, store.fieldtype, nameSig, frozenset(fields))
-
-			signatures[sig].append(store)
-
+		for op in loads:  self.generateSignature(op, op.expr, signatures)
+		for op in stores: self.generateSignature(op, op, signatures)
 
 		return signatures
 

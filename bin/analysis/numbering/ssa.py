@@ -63,8 +63,18 @@ class ForwardESSA(TypeDispatcher):
 	def visitLeaf(self, node, parent):
 		pass
 
-	@dispatch(ast.Assign, ast.Discard, ast.Store)
+	@dispatch(ast.Assign)
 	def processAssign(self, node):
+		self.markRead(node)
+		if isinstance(node.expr, ast.Local) and len(node.lcls) == 1:
+			# Local copy
+			self._current[node.lcls[0]] = self._current[node.expr]
+		else:
+			self.updateWritten(node)
+		self.markWritten(node)
+
+	@dispatch(ast.Discard, ast.Store)
+	def processDiscard(self, node):
 		self.markRead(node)
 		self.updateWritten(node)
 		self.markWritten(node)
@@ -128,7 +138,6 @@ class ForwardESSA(TypeDispatcher):
 		fExit = self._current
 
 		if tExit is not None and fExit is not None:
-
 			self.updateWritten(node.t)
 			self.updateWritten(node.f)
 		elif tExit is not None:
@@ -147,16 +156,25 @@ class ForwardESSA(TypeDispatcher):
 
 		for case in node.cases:
 			if case.expr:
-				self._current[case.expr] = self.newUID()
+				if False:
+					# Give the expression the same number as the conditional - they are the same.
+					# WARNING if this is used, redundant load elimination may cause a precision loss.
+					# Basically, loads inside a type switch will likely be more precise that loads outside.
+					self._current[case.expr] = self._current[node.conditional]
+				else:
+					self._current[case.expr] = self.newUID()
 
 			self(case.body)
 
-			caseExit = self.restoreState(backup)
+			caseExit = self.restoreState(dict(backup))
 			if caseExit is not None:
 				exits.append(case)
 
-		for case in exits:
-			self.updateWritten(case.body)
+		if len(exits) == 1:
+			self._current = exits[0]
+		else:
+			for case in exits:
+				self.updateWritten(case.body)
 
 
 	@dispatch(ast.Suite, list)

@@ -104,25 +104,65 @@ class ForwardFlowTraverse(TypeDispatcher):
 
 		return result
 
+	def simplifyTypeSwitch(self, node):
+		cases   = node.cases
+		refs    = node.conditional.annotation.references
+		changed = False
+
+		# Filter out types and cases that are dead.
+		# Requires knowing what node.conditional may point to.
+		if refs is not None:
+			reftypes = frozenset([ref.xtype.obj.type for ref in refs.merged])
+
+			newcases = []
+			for case in cases:
+				# Filter out the existing nodes that point to types
+				# that are not pointed to by the conditional.
+				newtypes = [e for e in case.types if e.object in reftypes]
+				if len(newtypes) == len(case.types):
+					newcases.append(case)
+				else:
+					changed = True
+					if len(newtypes) > 0:
+						# Some, but not all of the types have been eliminated.
+						newcases.append(ast.TypeSwitchCase(newtypes, case.expr, case.body))
+			cases = newcases
+
+		# Filter out degenerate forms (less than 2 cases)
+		count = len(cases)
+		if count == 0:
+			# Null op
+			return ast.Suite([])
+		elif count == 1:
+			# One case, no need for a type switch
+			case = cases[0]
+			statements = []
+			if case.expr is not None:
+				statements.append(ast.Assign(conditional, [case.expr]))
+			statements.append(case.body)
+			return ast.Suite(statements)
+		elif changed:
+			# Types or cases have been filtered out, but it's still a type switch.
+			return ast.TypeSwitch(node.conditional, cases)
+		else:
+			# No simplifications can be applied.
+			return node
 
 	@dispatch(ast.TypeSwitch)
 	def visitTypeSwitch(self, node):
-		count = len(node.cases)
+		# Try to simplify the type switch, first.
+		node = self.simplifyTypeSwitch(node)
+		if not isinstance(node, ast.TypeSwitch):
+			return self(node)
 
 		conditional =  self.processExpr(node.conditional)
-
-		# Degenerate cases
-		if count == 0:
-			return ast.Suite([])
-		elif count == 1:
-			case = node.cases[0]
-			return ast.Suite([ast.Assign(conditional, [case.expr]), case.body])
-
+		cases = node.cases
+		count = len(cases)
 		newcases = []
 		newframes = []
 
 		frames = self.flow.popSplit(count)
-		for case, frame in zip(node.cases, frames):
+		for case, frame in zip(cases, frames):
 			self.flow.restore(frame)
 
 			# HACK the analysis doesn't know about the conditional -> expr transfer.

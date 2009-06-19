@@ -89,9 +89,15 @@ class Material(object):
 	def __init__(self):
 		self.color = vec3(0.125, 0.125, 1.0)
 
-class LambertMaterial(Material):
 	def transfer(self, n, l, e):
 		return nldot(n, l)
+
+
+class LambertMaterial(Material):
+	pass
+
+class DummyMaterial(Material):
+	pass
 
 class PhongMaterial(Material):
 	__slots__ = 'shinny'

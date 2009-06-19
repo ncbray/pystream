@@ -139,58 +139,76 @@ class FoldRewrite(TypeDispatcher):
 		else:
 			return None
 
-	def typeMatch(self, ref, t):
-		return ref.xtype.obj.type is t
+	def typeMatch(self, ref, group):
+		return ref.xtype.obj.type in group
 
 	# Filter out all the references that don't match the type.
-	def filterReferenceAnnotationByType(self, a, t):
-		filtered = [language.base.annotation.annotationSet([ref for ref in crefs if self.typeMatch(ref, t)])
+	def filterReferenceAnnotationByType(self, a, group):
+		filtered = [language.base.annotation.annotationSet([ref for ref in crefs if self.typeMatch(ref, group)])
 				for crefs in a.references.context]
 		filtered = language.base.annotation.makeContextualAnnotation(filtered)
 		return a.rewrite(references=filtered)
 
+	# If the argument at pos in the invocation context does not have a
+	# type in group, kill the invocation
+	def filterInvokesByType(self, invokes, group, pos):
+		newinvokes = []
+		for inv in invokes:
+			code, context = inv
+			if context.signature.params[pos].obj.type in group:
+				newinvokes.append(inv)
+		return tuple(newinvokes)
+
+
 	# It is obvious that some invocations will no longer occur, as they
 	# require the wrong type for the argument under consideration.
 	# Filter out these invocations.
-	def filterOpAnnotationByType(self, a, t, pos):
-		newcinvokes = []
-		for invokes in a.invokes.context:
-			newinvokes = []
-			for inv in invokes:
-				code, context = inv
-				if context.signature.params[pos].obj.type is t:
-					newinvokes.append(inv)
-			newinvokes = tuple(newinvokes)
-		newcinvokes.append(newinvokes)
-
-		invokes = language.base.annotation.makeContextualAnnotation(newcinvokes)
+	def filterOpAnnotationByType(self, a, group, pos):
+		newcinvokes = [self.filterInvokesByType(invokes, group, pos) for invokes in a.invokes.context]
+		invokes     = language.base.annotation.makeContextualAnnotation(newcinvokes)
 		return a.rewrite(invokes=invokes)
-
 
 	# Make a mask to kill contexts that have no references... they will never be evaluated.
 	def makeRemapMask(self, a):
 		return [i if crefs else -1 for i, crefs in enumerate(a.references.context)]
 
-
-	def methodCallToTypeSwitch(self, node, arg, pos, targets):
-		# Currently brute force: treat each concrete type seperately.
-		# TODO "conservative" type switch creation.
-		# TODO if mutable types are allowed, we should be looking at the LowLevel type slot?
-		# TODO localy rebuild read/modify/allocate information using filtered invokes.
-		# TODO Retarget the return value
-		# TODO Fix up return types
-
+	# This is the policy that determined how a node is split into a type switch.
+	# Currently, it groups the types by what code is called.  Similar invocation targets get grouped.
+	def groupTypes(self, node, arg, pos):
 		types = sorted(set([ref.xtype.obj.type for ref in arg.annotation.references.merged]))
 
-		# Don't create trivial type switches
+		# Trivial case, less that two types.
 		if len(types) <= 1: return None
 
+		groupLUT = {}
+		invmerged = node.annotation.invokes.merged
+		for type in types:
+			# Find the code that this type may call.
+			invfiltered = self.filterInvokesByType(invmerged, (type,), pos)
+			invtargets = tuple(sorted(set([code for code, context in invfiltered])))
+
+			if invtargets not in groupLUT:
+				groupLUT[invtargets] = [type]
+			else:
+				groupLUT[invtargets].append(type)
+
+		return sorted(groupLUT.itervalues())
+
+	def methodCallToTypeSwitch(self, node, arg, pos, targets):
+		# TODO if mutable types are allowed, we should be looking at the LowLevel type slot?
+		# TODO localy rebuild read/modify/allocate information using filtered invokes.
+		# TODO should the return value be SSAed?  This might interfere with nessled type switches.
+		# If so, retarget the return value and fix up return types
+
+		groups = self.groupTypes(node, arg, pos)
+		if groups is None or len(groups) <= 1: return None # Don't create trivial type switches
+
 		cases = []
-		for t in types:
+		for group in groups:
 			# Create a filtered version of the argument.
 			name  = arg.name if isinstance(arg, ast.Local) else None
 			expr  = ast.Local(name)
-			expr.annotation = self.filterReferenceAnnotationByType(arg.annotation, t)
+			expr.annotation = self.filterReferenceAnnotationByType(arg.annotation, group)
 
 			# Create the new op
 			opannotation = node.annotation
@@ -201,7 +219,7 @@ class FoldRewrite(TypeDispatcher):
 			if -1 in mask: opannotation = opannotation.contextSubset(mask)
 
 			# Filter out invocations that don't have the right type for the given parameter.
-			opannotation = self.filterOpAnnotationByType(opannotation, t, pos)
+			opannotation = self.filterOpAnnotationByType(opannotation, group, pos)
 
 			# Rewrite the op to use expr instead of the original arg.
 			newop = rewrite.rewriteTerm(node, {arg:expr})
@@ -220,7 +238,7 @@ class FoldRewrite(TypeDispatcher):
 				stmts.append(ast.Assign(newop, list(targets)))
 			suite = ast.Suite(stmts)
 
-			case  = ast.TypeSwitchCase([self.existingFromObj(t)], expr, suite)
+			case  = ast.TypeSwitchCase([self.existingFromObj(t) for t in group], expr, suite)
 			cases.append(case)
 
 		ts = ast.TypeSwitch(arg, cases)

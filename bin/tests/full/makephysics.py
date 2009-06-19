@@ -60,6 +60,9 @@ attr(inst(physics.Shader), 'ambient',  inst(vec.vec3))
 attr(inst(physics.Shader),          'material',  inst(physics.LambertMaterial))
 attr(inst(physics.LambertMaterial), 'color',     inst(vec.vec3))
 
+attr(inst(physics.Shader),          'material',  inst(physics.DummyMaterial))
+attr(inst(physics.DummyMaterial),   'color',     inst(vec.vec3))
+
 attr(inst(physics.Shader),          'material',  inst(physics.PhongMaterial))
 attr(inst(physics.PhongMaterial),   'color',     inst(vec.vec3))
 attr(inst(physics.PhongMaterial),   'shinny',     inst(float))

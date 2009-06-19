@@ -105,6 +105,36 @@ class ForwardFlowTraverse(TypeDispatcher):
 		return result
 
 
+	@dispatch(ast.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		count = len(node.cases)
+
+		conditional =  self.processExpr(node.conditional)
+
+		# Degenerate cases
+		if count == 0:
+			return ast.Suite([])
+		elif count == 1:
+			case = node.cases[0]
+			return ast.Suite([ast.Assign(conditional, [case.expr]), case.body])
+
+		newcases = []
+		newframes = []
+
+		frames = self.flow.popSplit(count)
+		for case, frame in zip(node.cases, frames):
+			self.flow.restore(frame)
+
+			# HACK the analysis doesn't know about the conditional -> expr transfer.
+			newcases.append(ast.TypeSwitchCase(case.types, case.expr, self(case.body)))
+			newframes.append(self.flow.pop())
+
+		merged, changed = meet(self.meetF, *newframes)
+		self.flow.restore(merged)
+
+		return ast.TypeSwitch(conditional, newcases)
+
+
 	@dispatch(ast.While)
 	def visitWhile(self, node):
 		conditionEntry = self.flow.pop()

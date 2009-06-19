@@ -3,6 +3,10 @@ import optimization.simplify
 
 
 class Rewriter(object):
+	def __init__(self, replacements):
+		self.replacements = replacements
+		self.replaced = set()
+
 	def __call__(self, node):
 		if isinstance(node, list):
 			# Unhashable, can't check for replacement
@@ -23,15 +27,17 @@ class Rewriter(object):
 
 		return node
 
-	def processCode(self, code, replacements):
-		if replacements:
-			self.replacements = replacements
-			self.replaced     = set()
-			replaceAllChildren(self, code)
+	def processCode(self, code):
+		replaceAllChildren(self, code)
 		return code
+
+def rewriteTerm(term, replace):
+	if replace:
+		term = Rewriter(replace)(term)
+	return term
 
 def rewriteAndSimplify(compiler, code, replace):
 	if replace:
-		Rewriter().processCode(code, replace)
+		Rewriter(replace).processCode(code)
 		optimization.simplify.evaluateCode(compiler, code)
 	return code

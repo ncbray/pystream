@@ -632,8 +632,10 @@ class DerivedData(object):
 
 	def handleReads(self, code, reads):
 		if reads is not None:
-			for cindex, context in enumerate(code.annotation.contexts):
-				creads = reads[1][cindex]
+			contexts = code.annotation.contexts
+			assert len(reads.context) == len(contexts), (reads, len(contexts))
+			for cindex, context in enumerate(contexts):
+				creads = reads.context[cindex]
 				self.funcReads[code][context].update(creads)
 
 	def handleOpModifies(self, code, op):
@@ -642,7 +644,9 @@ class DerivedData(object):
 
 	def handleModifies(self, code, modifies):
 		if modifies is not None:
-			for cindex, context in enumerate(code.annotation.contexts):
+			contexts = code.annotation.contexts
+			assert len(modifies.context) == len(contexts), (modifies, len(contexts))
+			for cindex, context in enumerate(contexts):
 				cmods = modifies[1][cindex]
 				self.funcModifies[code][context].update(cmods)
 

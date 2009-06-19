@@ -175,14 +175,16 @@ class FlowDict(object):
 		self._current = None
 		return old
 
-	def popSplit(self):
+	def popSplit(self, count=2):
+		assert count >= 2
+
 		old = self._current
 		self._current = None
 
 		if old is not None:
-			return old, old.split()
+			return [old] + [old.split() for i in range(count-1)]
 		else:
-			return None, None
+			return [None for i in range(count)]
 
 	def restore(self, dynamic):
 		assert self._current is None

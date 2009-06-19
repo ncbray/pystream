@@ -38,6 +38,11 @@ class InputAnalysis(TypeDispatcher):
 		for lcl in targets:
 			self.flow.define(lcl, forward.top)
 
+	# Called for switch conditionals
+	@dispatch(ast.Local)
+	def visitLocal(self, node):
+		pass
+
 	@dispatch(ast.Store)
 	def visitStore(self, node):
 		pass
@@ -110,6 +115,10 @@ def transformInputs(context, shader, code):
 class OutputTransform(TypeDispatcher):
 	def __init__(self):
 		self.returns = None
+
+	# HACK reverse dataflow calls, for DCE.  Should generalize.
+	def marker(self, node):
+		pass
 
 	@defaultdispatch
 	def visit(self, node, targets=None):

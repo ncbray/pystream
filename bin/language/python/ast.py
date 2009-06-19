@@ -331,6 +331,12 @@ class For(Loop):
 	__fields__ = 'iterator:Expression index:Local loopPreamble:Suite bodyPreamble:Suite body:Suite else_:Suite'
 	# TODO type of index?
 
+class TypeSwitchCase(PythonASTNode):
+	__fields__ = 'types:Existing* expr:Local? body:Suite'
+
+class TypeSwitch(CompoundStatement):
+	__fields__ = 'conditional:Reference cases:TypeSwitchCase*'
+
 class CodeParameters(PythonASTNode):
 	# TODO support paramnames:str?* (different than paramnames:str*?)
 	__fields__ = """selfparam:Local?

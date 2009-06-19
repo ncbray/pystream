@@ -12,7 +12,10 @@ class GetOps(TypeDispatcher):
 	def visitJunk(self, node):
 		pass
 
-	@dispatch(ast.Suite, ast.Condition, ast.Assign, ast.Switch, ast.Discard, ast.For, ast.While, ast.CodeParameters)
+	@dispatch(ast.Suite, ast.Condition, ast.Assign, ast.Switch, ast.Discard,
+		ast.For, ast.While,
+		ast.CodeParameters,
+		ast.TypeSwitch, ast.TypeSwitchCase)
 	def visitOK(self, node):
 		visitAllChildren(self, node)
 

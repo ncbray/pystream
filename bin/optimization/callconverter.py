@@ -34,7 +34,8 @@ class ConvertCalls(TypeDispatcher):
 	@dispatch(ast.Suite, ast.Condition, list, tuple,
 		  ast.Assign, ast.Discard, ast.Return,
 		  ast.Allocate, ast.Store, ast.Load, ast.Check,
-		  ast.Switch, ast.For, ast.While)
+		  ast.Switch, ast.For, ast.While,
+		  ast.TypeSwitch, ast.TypeSwitchCase)
 	def visitOK(self, node):
 		return allChildren(self, node)
 

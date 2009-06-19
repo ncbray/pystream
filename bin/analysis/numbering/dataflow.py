@@ -66,6 +66,17 @@ class ForwardDataflow(TypeDispatcher):
 		self._link(self.exit[node.t], exit)
 		self._link(self.exit[node.f], exit)
 
+	@dispatch(ast.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		entry, exit = self.makeSymbolic(node)
+
+		# TODO conditional?
+
+		for case in node.cases:
+			self(case.body)
+			self._link(entry, self.entry[case.body])
+			self._link(self.exit[case.body], exit)
+
 	@dispatch(ast.For)
 	def visitFor(self, node):
 		# HACKISH?

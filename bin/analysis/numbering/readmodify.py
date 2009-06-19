@@ -56,7 +56,7 @@ class FindReadModify(TypeDispatcher):
 		return info
 
 
-	@dispatch(ast.DirectCall, ast.Call)
+	@dispatch(ast.DirectCall, ast.Call, ast.MethodCall)
 	def visitDirectCall(self, node, info):
 		visitAllChildrenArgs(self, node, info)
 		info.fieldRead.update(node.annotation.reads[0])
@@ -133,6 +133,25 @@ class FindReadModify(TypeDispatcher):
 		info.update(self(node.condition))
 		info.update(self(node.t))
 		info.update(self(node.f))
+		self.lut[node] = info
+		return info
+
+	@dispatch(ast.TypeSwitchCase)
+	def visitTypeSwitchCase(self, node):
+		info = ReadModifyInfo()
+		info.localModify.add(node.expr)
+		info.update(self(node.body))
+		self.lut[node] = info
+		return info
+
+	@dispatch(ast.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		info = ReadModifyInfo()
+
+		info.localRead.add(node.conditional)
+		for case in node.cases:
+			info.update(self(case))
+
 		self.lut[node] = info
 		return info
 

@@ -136,6 +136,29 @@ class ForwardESSA(TypeDispatcher):
 		elif fExit is not None:
 			self._current = fExit
 
+
+	@dispatch(ast.TypeSwitch)
+	def processTypeSwitch(self, node):
+		# TODO conditional?
+
+		backup = self.copyState()
+
+		exits = []
+
+		for case in node.cases:
+			if case.expr:
+				self._current[case.expr] = self.newUID()
+
+			self(case.body)
+
+			caseExit = self.restoreState(backup)
+			if caseExit is not None:
+				exits.append(case)
+
+		for case in exits:
+			self.updateWritten(case.body)
+
+
 	@dispatch(ast.Suite, list)
 	def processOK(self, node):
 		visitAllChildren(self, node)

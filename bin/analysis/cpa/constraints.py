@@ -478,3 +478,66 @@ class DeferedSwitchConstraint(Constraint):
 
 	def writes(self):
 		return ()
+
+
+class DeferedTypeSwitchConstraint(Constraint):
+	def __init__(self, sys, op, extractor, cond, cases):
+		self.op = op
+		self.extractor = extractor
+		self.cond = cond
+
+		self.cases       = cases
+		self.switchSlots = [extractor.localSlot(case.expr) for case in cases]
+
+		self.caseLUT    = {}
+		self.deferedLUT = {}
+		for case in cases:
+			for t in case.types:
+				self.caseLUT[t.object] = case
+			self.deferedLUT[case] = True
+
+		self.cache = set()
+
+		Constraint.__init__(self, sys)
+
+	def update(self):
+		for ref in self.cond.refs:
+			# Only process a given xtype once.
+			if ref in self.cache: continue
+			self.cache.add(ref)
+
+			# Log that the type field has been read.
+			region   =  self.sys.storeGraph.regionHint
+			refObj   = region.object(ref)
+			slotName = self.sys.storeGraph.typeSlotName
+			field    = refObj.field(slotName, region)
+			self.sys.logRead(self.op, field)
+
+			# Setup
+			t = ref.obj.type
+			case = self.caseLUT[t]
+			slot = self.extractor.localSlot(case.expr)
+
+			# Transfer the (filtered) reference
+			# HACK this may poison regions?
+			slot.initializeType(ref)
+
+			# If the case has not be extracted yet, do it.
+			if self.deferedLUT[case]:
+				self.deferedLUT[case] = False
+				self.extractor(case.body)
+
+	def attach(self):
+		self.sys.constraint(self)
+		self.cond.dependsRead(self)
+		for slot in self.switchSlots:
+			slot.dependsWrite(self)
+
+	def name(self):
+		return "type switch %r" % self.cond
+
+	def reads(self):
+		return (self.cond,)
+
+	def writes(self):
+		return self.switchSlots

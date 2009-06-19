@@ -107,7 +107,7 @@ def posRewrite(self, node):
 	if self is None:
 		return True
 	else:
-		return glsl.UnaryPrefixOp('+', node.args[0])
+		return glsl.UnaryPrefixOp('+', self(node.args[0]))
 
 def negRewrite(self, node):
 	if not hasNumArgs(node, 1): return
@@ -115,7 +115,7 @@ def negRewrite(self, node):
 	if self is None:
 		return True
 	else:
-		return glsl.UnaryPrefixOp('-', node.args[0])
+		return glsl.UnaryPrefixOp('-', self(node.args[0]))
 
 def absRewrite(self, node):
 	if not hasNumArgs(node, 1): return

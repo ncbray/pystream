@@ -16,11 +16,11 @@ class CodeInliningAnalysis(TypeDispatcher):
 	def visitLeaf(self, node):
 		pass
 
-	@dispatch(ast.Suite, list, ast.Condition, ast.Assign, ast.Discard)
+	@dispatch(ast.Suite, list, ast.Condition, ast.Assign, ast.Discard, ast.TypeSwitchCase)
 	def visitOK(self, node):
 		visitAllChildren(self, node)
 
-	@dispatch(ast.Call, ast.DirectCall, ast.Allocate, ast.Load, ast.Store, ast.Check)
+	@dispatch(ast.Call, ast.DirectCall, ast.MethodCall, ast.Allocate, ast.Load, ast.Store, ast.Check)
 	def visitOp(self, node):
 		self.ops += 1
 
@@ -55,18 +55,26 @@ class CodeInliningAnalysis(TypeDispatcher):
 		# No more ops after return
 		self.terminal = True
 
+	def processSwitch(self, cases):
+		original = self.terminal
+		allterminal = original
+
+		for case in cases:
+			self.terminal = original
+			self(case)
+			allterminal |= self.terminal
+
+		self.terminal |= allterminal
 
 	@dispatch(ast.Switch)
 	def visitSwitch(self, node):
 		self(node.condition)
+		self.processSwitch((node.t, node.f))
 
-		original = self.terminal
-		self(node.t)
-		t = self.terminal
-
-		self.terminal = original
-		self(node.f)
-		self.terminal |= t
+	@dispatch(ast.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		self(node.conditional)
+		self.processSwitch(node.cases)
 
 	@dispatch(ast.For, ast.While)
 	def visitControlFlow(self, node):
@@ -193,7 +201,7 @@ class CodeInliningTransform(TypeDispatcher):
 		self.preserveContexts = not self.exhaustive
 
 	# May contain inlinable nodes
-	@dispatch(ast.Suite, list, ast.Condition, ast.Switch, ast.For, ast.While)
+	@dispatch(ast.Suite, list, ast.Condition, ast.Switch, ast.For, ast.While, ast.TypeSwitch, ast.TypeSwitchCase)
 	def visitOK(self, node):
 		return allChildren(self, node)
 
@@ -232,6 +240,14 @@ class CodeInliningTransform(TypeDispatcher):
 			return self.tryInline(node, node.expr, node.args, returnargs)
 		else:
 			return None
+
+	@dispatch(ast.MethodCall)
+	def visitMethodCall(self, node, returnargs):
+		self.processInvocations(node)
+
+		# TODO inline method calls?  This may require a bit of effort,
+		# primarily in finding the correct value(s) for selfarg...
+		return None
 
 	def tryInline(self, node, selfarg, args, returnargs):
 		# Don't inline anything into descriptive stubs

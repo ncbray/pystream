@@ -199,6 +199,12 @@ class ExtractDataflow(TypeDispatcher):
 		cond = self.localSlot(node.condition.conditional)
 		DeferedSwitchConstraint(self.system, self, cond, node.t, node.f)
 
+	@dispatch(ast.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		op   = self.contextOp(None) # HACK logs the read onto the code.
+		cond = self.localSlot(node.conditional)
+		DeferedTypeSwitchConstraint(self.system, op, self, cond, node.cases)
+
 	@dispatch(ast.Break)
 	def visitBreak(self, node):
 		pass # Flow insensitive

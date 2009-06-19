@@ -11,6 +11,8 @@ from analysis import tools
 
 from termrewrite import *
 
+from . import rewrite
+
 def floatMulRewrite(self, node):
 	if not hasNumArgs(node, 2): return
 
@@ -137,6 +139,94 @@ class FoldRewrite(TypeDispatcher):
 		else:
 			return None
 
+	def typeMatch(self, ref, t):
+		return ref.xtype.obj.type is t
+
+	# Filter out all the references that don't match the type.
+	def filterReferenceAnnotationByType(self, a, t):
+		filtered = [language.base.annotation.annotationSet([ref for ref in crefs if self.typeMatch(ref, t)])
+				for crefs in a.references.context]
+		filtered = language.base.annotation.makeContextualAnnotation(filtered)
+		return a.rewrite(references=filtered)
+
+	# It is obvious that some invocations will no longer occur, as they
+	# require the wrong type for the argument under consideration.
+	# Filter out these invocations.
+	def filterOpAnnotationByType(self, a, t, pos):
+		newcinvokes = []
+		for invokes in a.invokes.context:
+			newinvokes = []
+			for inv in invokes:
+				code, context = inv
+				if context.signature.params[pos].obj.type is t:
+					newinvokes.append(inv)
+			newinvokes = tuple(newinvokes)
+		newcinvokes.append(newinvokes)
+
+		invokes = language.base.annotation.makeContextualAnnotation(newcinvokes)
+		return a.rewrite(invokes=invokes)
+
+
+	# Make a mask to kill contexts that have no references... they will never be evaluated.
+	def makeRemapMask(self, a):
+		return [i if crefs else -1 for i, crefs in enumerate(a.references.context)]
+
+
+	def methodCallToTypeSwitch(self, node, arg, pos, targets):
+		# Currently brute force: treat each concrete type seperately.
+		# TODO "conservative" type switch creation.
+		# TODO if mutable types are allowed, we should be looking at the LowLevel type slot?
+		# TODO localy rebuild read/modify/allocate information using filtered invokes.
+		# TODO Retarget the return value
+		# TODO Fix up return types
+
+		types = sorted(set([ref.xtype.obj.type for ref in arg.annotation.references.merged]))
+
+		# Don't create trivial type switches
+		if len(types) <= 1: return None
+
+		cases = []
+		for t in types:
+			# Create a filtered version of the argument.
+			name  = arg.name if isinstance(arg, ast.Local) else None
+			expr  = ast.Local(name)
+			expr.annotation = self.filterReferenceAnnotationByType(arg.annotation, t)
+
+			# Create the new op
+			opannotation = node.annotation
+
+			# Kill contexts where the filtered expression has no references.
+			# (In these contexts, the new op will never be evaluated.)
+			mask = self.makeRemapMask(expr.annotation)
+			if -1 in mask: opannotation = opannotation.contextSubset(mask)
+
+			# Filter out invocations that don't have the right type for the given parameter.
+			opannotation = self.filterOpAnnotationByType(opannotation, t, pos)
+
+			# Rewrite the op to use expr instead of the original arg.
+			newop = rewrite.rewriteTerm(node, {arg:expr})
+			assert newop is not node
+			newop.annotation = opannotation
+
+			# Try to reduce it to a direct call
+			newop = self(newop)
+
+			# Create the suite for this case
+			stmts = []
+			if targets is None:
+				stmts.append(ast.Discard(newop))
+			else:
+				# HACK should SSA it?
+				stmts.append(ast.Assign(newop, list(targets)))
+			suite = ast.Suite(stmts)
+
+			case  = ast.TypeSwitchCase([self.existingFromObj(t)], expr, suite)
+			cases.append(case)
+
+		ts = ast.TypeSwitch(arg, cases)
+		return ts
+
+
 	@dispatch(ast.MethodCall)
 	def visitMethodCall(self, node):
 		func = tools.singleCall(node)
@@ -151,6 +241,24 @@ class FoldRewrite(TypeDispatcher):
 			result = ast.DirectCall(func, funcobj, newargs, node.kwds, node.vargs, node.kargs)
 			result.annotation = node.annotation
 			return self(result)
+		return node
+
+	@dispatch(ast.Assign)
+	def visitAssign(self, node):
+		if isinstance(node.expr, ast.MethodCall):
+			expr = node.expr
+			result = self.methodCallToTypeSwitch(expr, expr.expr, 0, node.lcls)
+			if result: return self(result)
+
+		return node
+
+	@dispatch(ast.Discard)
+	def visitDiscard(self, node):
+		if isinstance(node.expr, ast.MethodCall):
+			expr = node.expr
+			result = self.methodCallToTypeSwitch(expr, expr.expr, 0, None)
+			if result: return self(result)
+
 		return node
 
 	def localToExisting(self, lcl, obj):

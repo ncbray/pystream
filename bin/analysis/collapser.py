@@ -117,6 +117,18 @@ class Collapser(TypeDispatcher):
 		self.resetStack()
 		self.process(node.condition)
 
+	@dispatch(ast.TypeSwitchCase)
+	def visitTypeSwitchCase(self, node):
+		self.process(node.body)
+
+	@dispatch(ast.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		for case in reversed(node.cases):
+			self.resetStack()
+			self.process(case)
+		self.resetStack()
+		self.process(node.conditional)
+
 	@dispatch(ast.TryExceptFinally)
 	def visitTryExceptFinally(self, node):
 		if node.finally_:

@@ -90,6 +90,31 @@ class ReverseFlowTraverse(TypeDispatcher):
 
 		return ast.Switch(condition, t, f)
 
+	@dispatch(ast.TypeSwitchCase)
+	def visitTypeSwitchCase(self, node):
+		return ast.TypeSwitchCase(node.types, node.expr, self(node.body))
+
+	@dispatch(ast.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		count = len(node.cases)
+
+		# Split
+		frames = self.flow.popSplit(count)
+
+		newcases  = []
+		newframes = []
+		for case, frame in zip(node.cases, frames):
+			self.flow.restore(frame)
+			newcases.append(self(case))
+			newframes.append(self.flow.pop())
+
+		# Merge
+		merged, changed = meet(self.meet, *newframes)
+		self.flow.restore(merged)
+
+		self.strategy.marker(node.conditional)
+		return ast.TypeSwitch(node.conditional, newcases)
+
 
 	@dispatch(ast.While)
 	def visitWhile(self, node):

@@ -220,6 +220,14 @@ class DefUseVisitor(TypeDispatcher):
 	def visitCondition(self, node):
 		self.use(node, node.conditional)
 
+	@dispatch(ast.TypeSwitchCase)
+	def visitTypeSwitchCase(self, node):
+		self.define(node, node.expr)
+
+	@dispatch(ast.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		self.use(node, node.conditional)
+
 	@dispatch(ast.ExceptionHandler)
 	def visitExceptionHandler(self, node):
 		if node.type: self.use(node, node.type)

@@ -94,9 +94,15 @@ class LambertMaterial(Material):
 		return nldot(n, l)
 
 class PhongMaterial(Material):
+	__slots__ = 'shinny'
+
+	def __init__(self, shinny):
+		Material.__init__(self)
+		self.shinny = shinny
+
 	def transfer(self, n, l, e):
 		h = (l+e).normalize()
-		return nldot(n, l)+nldot(n, h)**50
+		return nldot(n, l)+nldot(n, h)**self.shinny
 
 
 class Shader(object):

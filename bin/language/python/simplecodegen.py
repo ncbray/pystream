@@ -603,6 +603,29 @@ class SimpleCodeGen(StandardVisitor):
 			self.process(node.f)
 			self.out.endBlock()
 
+	def visitTypeSwitchCase(self, node):
+		types = []
+		for t in node.types:
+			cond = self.seg.process(t)
+			types.append(cond)
+
+		if node.expr is not None:
+			expr = self.seg.process(node.expr)
+			self.out.startBlock("{case %s => %s}" % (", ".join(types), expr))
+		else:
+			self.out.startBlock("{case %s}" % (", ".join(types)))
+
+		self.process(node.body)
+		self.out.endBlock()
+
+
+	def visitTypeSwitch(self, node):
+		cond = self.seg.process(node.conditional)
+		self.out.startBlock("<type switch %s>" % cond)
+		for case in node.cases:
+			self.process(case)
+		self.out.endBlock()
+
 	def visitExceptionHandler(self, node):
 		self.processNoEmit(node.preamble)
 

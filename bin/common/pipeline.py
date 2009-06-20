@@ -70,38 +70,23 @@ def bruteForceSimplification(compiler):
 			optimization.simplify.evaluate(compiler)
 
 
-def cpaAnalyze(compiler, opPathLength=0, firstPass=True):
-	with compiler.console.scope('cpa analysis'):
-		result = analysis.cpa.evaluate(compiler, opPathLength, firstPass=firstPass)
-
-		console = compiler.console
-		console.output('')
-		console.output("Constraints:   %d" % len(result.constraints))
-		console.output("Contexts:      %d" % len(result.liveContexts))
-		console.output("Code:          %d" % len(result.liveCode))
-		console.output("Contexts/Code: %.1f" % (float(len(result.liveContexts))/max(len(result.liveCode), 1)))
-		console.output("Slot Memory:   %s" % util.memorySizeString(result.slotMemory()))
-		console.output('')
-		console.output("Decompile:     %s" % util.elapsedTimeString(result.decompileTime))
-		console.output("Solve:         %s" % util.elapsedTimeString(result.solveTime))
-	return result
-
-def cpaPass(compiler, opPathLength=0, firstPass=True):
+def depythonPass(compiler, opPathLength=0, firstPass=True):
 	with compiler.console.scope('depython'):
-		cpaAnalyze(compiler, opPathLength, firstPass=firstPass)
+		analysis.cpa.evaluate(compiler, opPathLength, firstPass=firstPass)
 		codeConditioning(compiler)
+
 
 def evaluate(compiler, name):
 	with compiler.console.scope('compile'):
 		try:
 			# First compiler pass
-			cpaPass(compiler)
+			depythonPass(compiler)
 
 			if True:
 				# Second compiler pass
 				# Intrinsics can prevent complete exhaustive inlining.
 				# Adding call-path sensitivity compensates.
-				cpaPass(compiler, 3, firstPass=False)
+				depythonPass(compiler, 3, firstPass=False)
 
 			if True:
 				# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.

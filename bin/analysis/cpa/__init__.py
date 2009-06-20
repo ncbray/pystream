@@ -59,7 +59,7 @@ class InterproceduralDataflow(object):
 		self.liveCode = set()
 
 		# Constraint information, for debugging
-		self.constraints = set()
+		self.constraints = []
 
 		# The worklist
 		self.dirty = collections.deque()
@@ -152,7 +152,7 @@ class InterproceduralDataflow(object):
 
 
 	def constraint(self, constraint):
-		self.constraints.add(constraint)
+		self.constraints.append(constraint)
 
 	def _signature(self, code, selfparam, params):
 		assert code.isCode(), type(code)
@@ -479,30 +479,44 @@ class InterproceduralDataflow(object):
 	def slotMemory(self):
 		return self.storeGraph.setManager.memory()
 
+	def dumpSolveInfo(self):
+		console = self.console
+		console.output("Constraints:   %d" % len(self.constraints))
+		console.output("Contexts:      %d" % len(self.liveContexts))
+		console.output("Code:          %d" % len(self.liveCode))
+		console.output("Contexts/Code: %.1f" % (float(len(self.liveContexts))/max(len(self.liveCode), 1)))
+		console.output("Slot Memory:   %s" % util.memorySizeString(self.slotMemory()))
+		console.output('')
+		console.output("Decompile:     %s" % util.elapsedTimeString(self.decompileTime))
+		console.output("Solve:         %s" % util.elapsedTimeString(self.solveTime))
+		console.output('')
+
 def evaluate(compiler, opPathLength=0, firstPass=True):
-	dataflow = InterproceduralDataflow(compiler.console, compiler.extractor, opPathLength)
-	dataflow.firstPass = firstPass # HACK for debugging
+	with compiler.console.scope('cpa analysis'):
+		dataflow = InterproceduralDataflow(compiler.console, compiler.extractor, opPathLength)
+		dataflow.firstPass = firstPass # HACK for debugging
 
-	for src, attrName, dst in compiler.interface.attr:
-		dataflow.addAttr(src, attrName, dst)
+		for src, attrName, dst in compiler.interface.attr:
+			dataflow.addAttr(src, attrName, dst)
 
-	for entryPoint in compiler.interface.entryPoint:
-		dataflow.addEntryPoint(entryPoint)
+		for entryPoint in compiler.interface.entryPoint:
+			dataflow.addEntryPoint(entryPoint)
 
-	try:
-		with compiler.console.scope('solve'):
-			dataflow.solve()
-			dataflow.checkConstraints()
-	finally:
-		# Helps free up memory.
-		with compiler.console.scope('cleanup'):
-			dataflow.constraints.clear()
-			dataflow.storeGraph.removeObservers()
+		try:
+			with compiler.console.scope('solve'):
+				dataflow.solve()
+				dataflow.checkConstraints()
+				dataflow.dumpSolveInfo()
+		finally:
+			# Helps free up memory.
+			with compiler.console.scope('cleanup'):
+				del dataflow.constraints
+				dataflow.storeGraph.removeObservers()
 
-		with compiler.console.scope('annotate'):
-			dataflow.annotate()
+			with compiler.console.scope('annotate'):
+				dataflow.annotate()
 
-		compiler.storeGraph = dataflow.storeGraph
-		compiler.liveCode   = dataflow.liveCode
+			compiler.storeGraph = dataflow.storeGraph
+			compiler.liveCode   = dataflow.liveCode
 
-	return dataflow
+		return dataflow

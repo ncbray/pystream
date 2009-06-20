@@ -38,20 +38,41 @@ class TestCanonicalTree(unittest.TestCase):
 		self.c0 = self.manager.condition(0)
 		self.c1 = self.manager.condition(1)
 
+		self.andFunc = canonicaltree.BinaryTreeFunction(self.manager, lambda l, r: l & r,
+			symmetric=True, stationary=True, identity=True, null=False)
+
+		self.orFunc  = canonicaltree.BinaryTreeFunction(self.manager, lambda l, r: l | r,
+			symmetric=True, stationary=True, identity=False, null=True)
+
+
+	def testSimpleAnd(self):
+		a = self.manager.tree(self.c0, (True, False, True))
+		b = self.manager.tree(self.c0, (True, False, False))
+		c = self.manager.tree(self.c0, (True, False, False))
+
+		result = self.andFunc.apply(a, b)
+		self.assert_(result is c)
+
+	def testSimpleOr(self):
+		a = self.manager.tree(self.c0, (True, False, True))
+		b = self.manager.tree(self.c0, (True, False, False))
+		c = self.manager.tree(self.c0, (True, False, True))
+
+		result = self.orFunc.apply(a, b)
+		self.assert_(result is c)
+
 	def testAnd(self):
-		a = self.manager.tree(self.c0, True, False)
-		b = self.manager.tree(self.c1, True, False)
-		c = self.manager.tree(self.c1, a, False)
+		a = self.manager.tree(self.c0, (True, False))
+		b = self.manager.tree(self.c1, (True, False))
+		c = self.manager.tree(self.c1, (a, False))
 
-		andresult = self.manager.apply(lambda l, r: l & r, a, b)
-
-		self.assert_(andresult is c)
+		result = self.andFunc.apply(a, b)
+		self.assert_(result is c)
 
 	def testOr(self):
-		a = self.manager.tree(self.c0, True, False)
-		b = self.manager.tree(self.c1, True, False)
-		d = self.manager.tree(self.c1, True, a)
+		a = self.manager.tree(self.c0, (True, False))
+		b = self.manager.tree(self.c1, (True, False))
+		c = self.manager.tree(self.c1, (True, a))
 
-		orresult  = self.manager.apply(lambda l, r: l | r, a, b)
-
-		self.assert_(orresult is d)
+		result = self.orFunc.apply(a, b)
+		self.assert_(result is c)

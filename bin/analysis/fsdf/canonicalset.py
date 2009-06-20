@@ -13,16 +13,19 @@ class CanonicalSetManager(object):
 		s = frozenset(iterable)
 		return self.cache.setdefault(s, s)
 
+	def _canonical(self, s):
+		return self.cache.setdefault(s, s)
+
 	def inplaceUnion(self, a, b):
-		return self.canonical(a.union(b))
+		return self._canonical(a.union(b))
 
 	def union(self, a, b):
-		return self.canonical(a.union(b))
+		return self._canonical(a.union(b))
 
 	def intersection(self, a, b):
-		return self.canonical(a.intersection(b))
+		return self._canonical(a.intersection(b))
 
-	def diff(self, a, b):
+	def uncachedDiff(self, a, b):
 		return a-b
 
 	def iter(self, s):

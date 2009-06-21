@@ -129,3 +129,64 @@ class TestCanonicalTree(unittest.TestCase):
 
 		result = self.manager.restrict(d, {self.c0:1})
 		self.assert_(result is c)
+
+
+	def testSimplify1(self):
+		a = self.manager.tree(self.c0, (True, False))
+		b = self.manager.tree(self.c0, (False, True))
+		d = self.manager.tree(self.c1, (a, b))
+
+		c = True
+
+		result = self.manager.simplify(d, d, False)
+		self.assert_(result, c)
+
+
+	def testSimplify2(self):
+		a = self.manager.tree(self.c0, (True, False))
+		b = self.manager.tree(self.c0, (False, True))
+		d = self.manager.tree(self.c1, (a, b))
+
+		domain = self.manager.tree(self.c0, (True, False))
+
+		c =  self.manager.tree(self.c1, (True, False))
+
+		result = self.manager.simplify(domain, d, False)
+		self.assert_(result, c)
+
+
+	def testSimplify3(self):
+		a = self.manager.tree(self.c0, (True, False))
+		b = self.manager.tree(self.c0, (False, True))
+		d = self.manager.tree(self.c1, (a, b))
+
+		domain = self.manager.tree(self.c1, (True, False))
+
+		c =  self.manager.tree(self.c0, (True, False))
+
+		result = self.manager.simplify(domain, d, False)
+		self.assert_(result, c)
+
+	def testSimplify4(self):
+		a      = self.manager.tree(self.c2, (True, False, True))
+		domain = self.manager.tree(self.c2, (True, True, False))
+		c      = self.manager.tree(self.c2, (True, False, False))
+
+		result = self.manager.simplify(domain, a, False)
+		self.assert_(result, c)
+
+	def testSimplify5(self):
+		a      = self.manager.tree(self.c2, (False, True, False))
+		domain = self.manager.tree(self.c2, (True, False, True))
+		c      =  False
+
+		result = self.manager.simplify(domain, a, False)
+		self.assert_(result, c)
+
+	def testSimplifyDefault(self):
+		a      = self.manager.tree(self.c2, (False, True, False))
+		domain = self.manager.tree(self.c2, (True,  True, False))
+		c      = self.manager.tree(self.c2, (False, True, True))
+
+		result = self.manager.simplify(domain, a, True)
+		self.assert_(result, c)

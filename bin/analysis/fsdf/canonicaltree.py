@@ -272,3 +272,58 @@ class CanonicalTreeManager(object):
 		result = self._restrict(a, d, bound)
 		self.cache.clear()
 		return result
+
+
+	def _simplify(self, domain, tree, default):
+		if domain is False:
+			return default
+		elif domain is True:
+			return tree
+
+		duid = self.uid(domain)
+		tuid = self.uid(tree)
+
+		if tuid == -1:
+			# Tree leaf, domain is not completely false.
+			return tree
+
+		key = (domain, tree)
+		if key in self.cache:
+			return self.cache[key]
+
+		if duid < tuid:
+			branches = tuple([self._simplify(domain, branch, default) for branch in tree.branches])
+			result   = self._tree(tree.cond, branches)
+		else:
+			if tuid == duid:
+				treeiter = tree.branches
+			else:
+				treeiter = (tree,)*domain.cond.size
+
+			interesting = set()
+			newbranches = []
+			for domainbranch, treebranch in zip(domain.branches, treeiter):
+				newbranches.append(self._simplify(domainbranch, treebranch, default))
+				if domainbranch is not False:
+					interesting.add(domainbranch)
+
+			if len(interesting) == 1:
+				result = interesting.pop()
+			else:
+				result = self._tree(domain.cond, tuple(newbranches))
+
+		self.cache[key] = result
+		return result
+
+	# Simplify discards information where the domain is False.
+	# Unlike ROBDD simplificaiton, tree simplification may discard only some
+	# of the branches in the node.  If the remaining (simplified) branches
+	# are not the same, the discarded branches are replaced with the default value.
+	# ROBDD simplificaiton does not need a default values, as if there are only two branches,
+	# discarding one will eliminate the node.
+	# TODO in the case there domain > tree, it might be possible to get better results
+	# where default comes into play?
+	def simplify(self, domain, tree, default):
+		result = self._simplify(domain, tree, default)
+		self.cache.clear()
+		return result

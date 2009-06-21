@@ -1,3 +1,5 @@
+import itertools
+
 class Condition(object):
 	__slots__ = 'value', 'uid', 'size', 'mask'
 	def __init__(self, value, uid, size):
@@ -8,8 +10,74 @@ class Condition(object):
 	def __repr__(self):
 		return 'cond(%d)' % self.uid
 
-class TreeNode(object):
-	__slots__ = 'cond', 'branches', '_hash'
+	def __eq__(self, other):
+		return self is other
+
+	def __lt__(self, other):
+		return self.uid < other.uid
+
+	def __le__(self, other):
+		return self.uid <= other.uid
+
+	def __gt__(self, other):
+		return self.uid > other.uid
+
+	def __ge__(self, other):
+		return self.uid >= other.uid
+
+class ConditionManager(object):
+	def __init__(self):
+		self.conditions = {}
+
+	def condition(self, value, size):
+		if value not in self.conditions:
+			cond = Condition(value, len(self.conditions), size)
+
+			# Helper nodes
+			cond.mask = [self.boolManager.tree(cond, tuple(self.boolManager.leaf(j==i) for j in range(size))) for i in range(size)]
+
+			self.conditions[value] = cond
+		else:
+			cond = self.conditions[value]
+			assert cond.size == size
+		return cond
+
+
+class AbstractNode(object):
+	__slots__ = '_hash'
+
+	def __hash__(self):
+		return self._hash
+
+	def leaf(self):
+		return False
+
+	def tree(self):
+		return False
+
+
+class LeafNode(AbstractNode):
+	cond = Condition(None, -1, 0)
+
+	__slots__ = 'value'
+	def __init__(self, value):
+		self.value = value
+		self._hash = hash(value)
+
+	def __eq__(self, other):
+		return self is other or (type(self) == type(other) and self.value == other.value)
+
+	def __repr__(self):
+		return 'leaf(%r, %d)' % (self.value, id(self))
+
+	def iter(self, cond):
+		return (self,)*cond.size
+
+	def leaf(self):
+		return True
+
+class TreeNode(AbstractNode):
+	__slots__ = 'cond', 'branches'
 
 	def __init__(self, cond, branches):
 		assert len(branches) == cond.size, "Expected %d branches, got %d." % (cond.size, len(branches))
@@ -17,14 +85,23 @@ class TreeNode(object):
 		self.branches = branches
 		self._hash    = hash((cond, branches))
 
-	def __hash__(self):
-		return self._hash
-
 	def __eq__(self, other):
 		return self is other or (type(self) == type(other) and self.cond == other.cond and self.branches == other.branches)
 
 	def __repr__(self):
 		return 'tree<%d>%r' % (self.cond.uid, self.branches)
+
+	def iter(self, cond):
+		if self.cond is cond:
+			return self.branches
+		else:
+			return (self,)*cond.size
+
+	def branch(self, index):
+		return self.branches[index]
+
+	def tree(self):
+		return True
 
 class NoValue(object):
 	__slots__ = ()
@@ -40,6 +117,15 @@ class BinaryTreeFunction(object):
 			identity=noValue, leftIdentity=noValue, rightIdentity=noValue,
 			null=noValue, leftNull=noValue, rightNull=noValue):
 
+		assert identity is noValue or isinstance(identity, LeafNode)
+		assert leftIdentity is noValue or isinstance(leftIdentity, LeafNode)
+		assert rightIdentity is noValue or isinstance(rightIdentity, LeafNode)
+
+		assert null is noValue or isinstance(null, LeafNode)
+		assert leftNull is noValue or isinstance(leftNull, LeafNode)
+		assert rightNull is noValue or isinstance(rightNull, LeafNode)
+
+
 		self.manager    = manager
 		self.func       = func
 		self.symmetric  = symmetric
@@ -49,7 +135,7 @@ class BinaryTreeFunction(object):
 			assert leftIdentity  is noValue
 			assert rightIdentity is noValue
 
-			self.leftIdentity = identity
+			self.leftIdentity  = identity
 			self.rightIdentity = identity
 		else:
 			self.leftIdentity  = leftIdentity
@@ -68,32 +154,18 @@ class BinaryTreeFunction(object):
 		self.cache     = {}
 
 	def compute(self, a, b):
-		auid = self.manager.uid(a)
-		buid = self.manager.uid(b)
+		if self.stationary and a is b:
+			# f(a, a) = a
+			return a
 
-		if auid == -1 and buid == -1:
+		maxcond = max(a.cond, b.cond)
+
+		if maxcond.uid == -1:
 			# leaf/leaf computation
-			result = self.func(a, b)
+			result = self.manager.leaf(self.func(a.value, b.value))
 		else:
-			if auid == buid:
-				# branch/branch computation
-				if self.stationary and a is b:
-					# f(a, a) = a
-					return a
-
-				# Branches equal, split both.
-				cond = a.cond
-				branches = tuple([self._apply(abranch, bbranch) for abranch, bbranch in zip(a.branches, b.branches)])
-			elif auid < buid:
-				# Split b.
-				cond = b.cond
-				branches = tuple([self._apply(a, branch) for branch in b.branches])
-			else:
-				# Split a.
-				cond = a.cond
-				branches = tuple([self._apply(branch, b) for branch in a.branches])
-			result = self.manager._tree(cond, branches)
-
+			branches = tuple([self._apply(*branches) for branches in itertools.izip(a.iter(maxcond), b.iter(maxcond))])
+			result = self.manager.tree(maxcond, branches)
 		return result
 
 	def _apply(self, a, b):
@@ -115,13 +187,13 @@ class BinaryTreeFunction(object):
 		# Use identities to bypass computation.
 		# This is not very helpful for leaf / leaf pairs, but provides
 		# an earily out for branch / leaf pairs.
-		if self.leftIdentity is not noValue and a == self.leftIdentity:
+		if a is self.leftIdentity:
 			result = b
-		elif self.leftNull is not noValue and a == self.leftNull:
+		elif a is self.leftNull:
 			result = self.leftNull
-		elif self.rightIdentity is not noValue and b == self.rightIdentity:
+		elif b is self.rightIdentity:
 			result = a
-		elif self.rightNull is not noValue and b == self.rightNull:
+		elif b is self.rightNull:
 			result = self.rightNull
 		else:
 			# Cache miss, no identities, must compute
@@ -129,7 +201,7 @@ class BinaryTreeFunction(object):
 
 		return self.cache.setdefault(key, result)
 
-	def apply(self, a, b):
+	def __call__(self, a, b):
 		self.cacheHit  = 0
 		self.cacheMiss = 0
 		result = self._apply(a, b)
@@ -139,36 +211,32 @@ class BinaryTreeFunction(object):
 
 
 class CanonicalTreeManager(object):
-	def __init__(self):
-		self.conditions = {}
+	def __init__(self, coerce):
+		self.coerce = coerce
+
 		self.trees      = {}
+		self.leaves     = {}
 
 		self.cache      = {}
 
-	def condition(self, value, size):
-		if value not in self.conditions:
-			cond = Condition(value, len(self.conditions), size)
-
-			# Helper nodes
-			cond.mask = [self._tree(cond, tuple(j==i for j in range(size))) for i in range(size)]
-
-			self.conditions[value] = cond
+	def leaf(self, value):
+		value = self.coerce(value)
+		if value not in self.leaves:
+			result = LeafNode(value)
+			self.leaves[value] = result
 		else:
-			cond = self.conditions[value]
-			assert cond.size == size
-		return cond
+			result = self.leaves[value]
+		return result
 
 	def tree(self, cond, branches):
-		return self._tree(cond, branches)
-
-	def _tree(self, cond, branches):
 		assert isinstance(branches, tuple), type(branches)
 		for branch in branches:
-			assert cond.uid > self.uid(branch)
+			assert isinstance(branch, AbstractNode), branch
+			assert cond > branch.cond, (cond.uid, branch.cond.uid, branches)
 
 		first = branches[0]
 		for branch in branches:
-			if branch != first:
+			if branch is not first:
 				break
 		else:
 			# They're all the same, don't make a tree.
@@ -177,57 +245,28 @@ class CanonicalTreeManager(object):
 		tree = TreeNode(cond, branches)
 		return self.trees.setdefault(tree, tree)
 
-	def uid(self, node):
-		if isinstance(node, TreeNode):
-			return node.cond.uid
-		else:
-			return -1
-
-
 	def _ite(self, f, a, b):
-		fuid = self.uid(f)
-		auid = self.uid(a)
-		buid = self.uid(b)
-
 		# If f is a constant, pick either a or b.
-		if fuid == -1:
-			if f:
+		if f.cond.uid == -1:
+			if f.value:
 				return a
 			else:
 				return b
 
 		# If a and b are equal, f does not matter.
-		if auid == -1 and buid == -1:
-			# HACK leaves may not be canonical.
-			if a == b:
-				return a
-		else:
-			if a is b:
-				return a
+		if a is b:
+			return a
 
 		# Check the cache.
 		key = (f, a, b)
 		if key in self.cache:
 			return self.cache[key]
 
-		# Because we know f is not a terminal node, at least f will have branches.
-		if fuid > auid:
-			maxid   = fuid
-			maxnode = f
-		else:
-			maxid   = auid
-			maxnode = a
-
-		if buid > maxid:
-			maxid   = buid
-			maxnode = b
-
 		# Iterate over the branches for all nodes that have uid == maxid
-		nodes = ((f, fuid), (a, auid), (b, buid))
-		iterator = zip(*[node.branches if uid == maxid else [node]*len(maxnode.branches) for node, uid in nodes])
+		maxcond = max(f.cond, a.cond, b.cond)
+		iterator = itertools.izip(f.iter(maxcond), a.iter(maxcond), b.iter(maxcond))
 		computed = tuple([self._ite(*args) for args in iterator])
-
-		result = self._tree(maxnode.cond, computed)
+		result = self.tree(maxcond, computed)
 
 		self.cache[key] = result
 		return result
@@ -238,8 +277,7 @@ class CanonicalTreeManager(object):
 		return result
 
 	def _restrict(self, a, d, bound):
-		uid = self.uid(a)
-		if uid < bound:
+		if a.cond < bound:
 			# Early out.
 			# Should also take care of leaf cases.
 			return a
@@ -248,13 +286,14 @@ class CanonicalTreeManager(object):
 		if a in self.cache:
 			return self.cache[a]
 
-		if a.cond in d:
+		index = d.get(a.cond)
+		if index is not None:
 			# Restrict this condition.
-			result = self._restrict(a.branches[d[a.cond]], d, bound)
+			result = self._restrict(a.branch(index), d, bound)
 		else:
 			# No restriction, keep the node.
 			branches = tuple([self._restrict(branch, d, bound) for branch in a.branches])
-			result = self._tree(a.cond, branches)
+			result = self.tree(a.cond, branches)
 
 		self.cache[a] = result
 		return result
@@ -267,7 +306,7 @@ class CanonicalTreeManager(object):
 		for cond, index in d.iteritems():
 			assert 0 <= index < cond.size, "Invalid restriction"
 
-		bound = max(cond.uid for cond in d.iterkeys())
+		bound = min(d.iterkeys())
 
 		result = self._restrict(a, d, bound)
 		self.cache.clear()
@@ -275,15 +314,14 @@ class CanonicalTreeManager(object):
 
 
 	def _simplify(self, domain, tree, default):
-		if domain is False:
-			return default
-		elif domain is True:
-			return tree
+		# If the domain is constant, select between the tree and the default.
+		if domain.leaf():
+			if domain.value:
+				return tree
+			else:
+				return default
 
-		duid = self.uid(domain)
-		tuid = self.uid(tree)
-
-		if tuid == -1:
+		if tree.leaf():
 			# Tree leaf, domain is not completely false.
 			return tree
 
@@ -291,26 +329,23 @@ class CanonicalTreeManager(object):
 		if key in self.cache:
 			return self.cache[key]
 
-		if duid < tuid:
+		if domain.cond < tree.cond:
 			branches = tuple([self._simplify(domain, branch, default) for branch in tree.branches])
-			result   = self._tree(tree.cond, branches)
+			result   = self.tree(tree.cond, branches)
 		else:
-			if tuid == duid:
-				treeiter = tree.branches
-			else:
-				treeiter = (tree,)*domain.cond.size
+			treeiter = tree.iter(domain.cond)
 
 			interesting = set()
 			newbranches = []
-			for domainbranch, treebranch in zip(domain.branches, treeiter):
+			for domainbranch, treebranch in itertools.izip(domain.branches, treeiter):
 				newbranches.append(self._simplify(domainbranch, treebranch, default))
-				if domainbranch is not False:
+				if not domainbranch.leaf() or domainbranch.value:
 					interesting.add(domainbranch)
 
 			if len(interesting) == 1:
 				result = interesting.pop()
 			else:
-				result = self._tree(domain.cond, tuple(newbranches))
+				result = self.tree(domain.cond, tuple(newbranches))
 
 		self.cache[key] = result
 		return result
@@ -327,3 +362,30 @@ class CanonicalTreeManager(object):
 		result = self._simplify(domain, tree, default)
 		self.cache.clear()
 		return result
+
+
+def BoolManager(conditions):
+	manager = CanonicalTreeManager(bool)
+	conditions.boolManager = manager
+
+	manager.true  = manager.leaf(True)
+	manager.false = manager.leaf(False)
+
+	manager.and_ = BinaryTreeFunction(manager, lambda l, r: l & r,
+		symmetric=True, stationary=True, identity=manager.true, null=manager.false)
+	manager.or_  = BinaryTreeFunction(manager, lambda l, r: l | r,
+		symmetric=True, stationary=True, identity=manager.false, null=manager.true)
+
+	return manager
+
+def SetManager():
+	manager = CanonicalTreeManager(frozenset)
+
+	manager.empty = manager.leaf(frozenset())
+
+	manager.intersect = BinaryTreeFunction(manager, lambda l, r: l & r,
+		symmetric=True, stationary=True, null=manager.empty)
+	manager.union = BinaryTreeFunction(manager, lambda l, r: l | r,
+		symmetric=True, stationary=True, identity=manager.empty)
+
+	return manager

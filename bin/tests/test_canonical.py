@@ -33,160 +33,179 @@ class TestCanonicalSet(unittest.TestCase):
 
 class TestCanonicalTree(unittest.TestCase):
 	def setUp(self):
-		self.manager = canonicaltree.CanonicalTreeManager()
+		self.conditions = canonicaltree.ConditionManager()
+		self.manager    = canonicaltree.BoolManager(self.conditions)
 
-		self.c0 = self.manager.condition(0, 2)
-		self.c1 = self.manager.condition(1, 2)
-		self.c2 = self.manager.condition(2, 3)
+		self.c0 = self.conditions.condition(0, 2)
+		self.c1 = self.conditions.condition(1, 2)
+		self.c2 = self.conditions.condition(2, 3)
 
+		self.t  = self.manager.true
+		self.f  = self.manager.false
 
-		self.andFunc = canonicaltree.BinaryTreeFunction(self.manager, lambda l, r: l & r,
-			symmetric=True, stationary=True, identity=True, null=False)
+		self.manager.and_ = canonicaltree.BinaryTreeFunction(self.manager, lambda l, r: l & r,
+			symmetric=True, stationary=True, identity=self.t, null=self.f)
 
-		self.orFunc  = canonicaltree.BinaryTreeFunction(self.manager, lambda l, r: l | r,
-			symmetric=True, stationary=True, identity=False, null=True)
+		self.manager.or_ = canonicaltree.BinaryTreeFunction(self.manager, lambda l, r: l | r,
+			symmetric=True, stationary=True, identity=self.f, null=self.t)
 
 
 	def testSimpleAnd(self):
-		a = self.manager.tree(self.c2, (True, False, True))
-		b = self.manager.tree(self.c2, (True, False, False))
-		c = self.manager.tree(self.c2, (True, False, False))
+		t, f = self.t, self.f
+		a = self.manager.tree(self.c2, (t, f, t))
+		b = self.manager.tree(self.c2, (t, f, f))
+		c = self.manager.tree(self.c2, (t, f, f))
 
-		result = self.andFunc.apply(a, b)
+		result = self.manager.and_(a, b)
 		self.assert_(result is c)
 
 	def testSimpleOr(self):
-		a = self.manager.tree(self.c2, (True, False, True))
-		b = self.manager.tree(self.c2, (True, False, False))
-		c = self.manager.tree(self.c2, (True, False, True))
+		t, f = self.t, self.f
+		a = self.manager.tree(self.c2, (t, f, t))
+		b = self.manager.tree(self.c2, (t, f, f))
+		c = self.manager.tree(self.c2, (t, f, t))
 
-		result = self.orFunc.apply(a, b)
+		result = self.manager.or_(a, b)
 		self.assert_(result is c)
 
 	def testAnd(self):
-		a = self.manager.tree(self.c0, (True, False))
-		b = self.manager.tree(self.c1, (True, False))
-		c = self.manager.tree(self.c1, (a, False))
+		t, f = self.t, self.f
+		a = self.manager.tree(self.c0, (t, f))
+		b = self.manager.tree(self.c1, (t, f))
+		c = self.manager.tree(self.c1, (a, f))
 
-		result = self.andFunc.apply(a, b)
-		self.assert_(result is c)
+		result = self.manager.and_(a, b)
+		self.assert_(result is c, (result, c))
 
 	def testOr(self):
-		a = self.manager.tree(self.c0, (True, False))
-		b = self.manager.tree(self.c1, (True, False))
-		c = self.manager.tree(self.c1, (True, a))
+		t, f = self.t, self.f
+		a = self.manager.tree(self.c0, (t, f))
+		b = self.manager.tree(self.c1, (t, f))
+		c = self.manager.tree(self.c1, (t, a))
 
-		result = self.orFunc.apply(a, b)
+		result = self.manager.or_(a, b)
 		self.assert_(result is c)
 
 
 	def testITE1(self):
-		f = self.manager.tree(self.c1, (True, False))
-		a = self.manager.tree(self.c0, (True, False))
-		b = self.manager.tree(self.c0, (False, True))
+		t, f = self.t, self.f
+
+		d = self.manager.tree(self.c1, (t, f))
+		a = self.manager.tree(self.c0, (t, f))
+		b = self.manager.tree(self.c0, (f, t))
 		c = self.manager.tree(self.c1, (a, b))
 
-		result = self.manager.ite(f, a, b)
+		result = self.manager.ite(d, a, b)
 		self.assert_(result is c)
 
 
 	def testITE2(self):
-		f = self.manager.tree(self.c0, (True, False))
-		a = self.manager.tree(self.c1, (True, False))
-		b = self.manager.tree(self.c1, (False, True))
-		c = self.manager.tree(self.c1, (self.manager.tree(self.c0, (True, False)),  self.manager.tree(self.c0, (False, True))))
+		t, f = self.t, self.f
+		d = self.manager.tree(self.c0, (t, f))
+		a = self.manager.tree(self.c1, (t, f))
+		b = self.manager.tree(self.c1, (f, t))
+		c = self.manager.tree(self.c1, (self.manager.tree(self.c0, (t, f)),  self.manager.tree(self.c0, (f, t))))
 
-		result = self.manager.ite(f, a, b)
+		result = self.manager.ite(d, a, b)
 		self.assert_(result is c)
 
 	def testITE3(self):
-		f = self.manager.tree(self.c0, (True, False))
-		a = False
-		b = True
-		c = self.manager.tree(self.c0, (False, True))
+		t, f = self.t, self.f
+		d = self.manager.tree(self.c0, (t, f))
+		a = f
+		b = t
+		c = self.manager.tree(self.c0, (f, t))
 
-		result = self.manager.ite(f, a, b)
+		result = self.manager.ite(d, a, b)
 		self.assert_(result is c)
 
 
 	def testRestrict1(self):
-		a = self.manager.tree(self.c0, (True, False))
-		b = self.manager.tree(self.c0, (False, True))
+		t, f = self.t, self.f
+		a = self.manager.tree(self.c0, (t, f))
+		b = self.manager.tree(self.c0, (f, t))
 		d = self.manager.tree(self.c1, (a, b))
 
-		c = self.manager.tree(self.c1, (True, False))
+		c = self.manager.tree(self.c1, (t, f))
 
 		result = self.manager.restrict(d, {self.c0:0})
 		self.assert_(result is c)
 
 
 	def testRestrict2(self):
-		a = self.manager.tree(self.c0, (True, False))
-		b = self.manager.tree(self.c0, (False, True))
+		t, f = self.t, self.f
+		a = self.manager.tree(self.c0, (t, f))
+		b = self.manager.tree(self.c0, (f, t))
 		d = self.manager.tree(self.c1, (a, b))
 
-		c = self.manager.tree(self.c1, (False, True))
+		c = self.manager.tree(self.c1, (f, t))
 
 		result = self.manager.restrict(d, {self.c0:1})
 		self.assert_(result is c)
 
 
 	def testSimplify1(self):
-		a = self.manager.tree(self.c0, (True, False))
-		b = self.manager.tree(self.c0, (False, True))
+		t, f = self.t, self.f
+		a = self.manager.tree(self.c0, (t, f))
+		b = self.manager.tree(self.c0, (f, t))
 		d = self.manager.tree(self.c1, (a, b))
 
-		c = True
+		c = t
 
-		result = self.manager.simplify(d, d, False)
+		result = self.manager.simplify(d, d, f)
 		self.assert_(result, c)
 
 
 	def testSimplify2(self):
-		a = self.manager.tree(self.c0, (True, False))
-		b = self.manager.tree(self.c0, (False, True))
+		t, f = self.t, self.f
+		a = self.manager.tree(self.c0, (t, f))
+		b = self.manager.tree(self.c0, (f, t))
 		d = self.manager.tree(self.c1, (a, b))
 
-		domain = self.manager.tree(self.c0, (True, False))
+		domain = self.manager.tree(self.c0, (t, f))
 
-		c =  self.manager.tree(self.c1, (True, False))
+		c =  self.manager.tree(self.c1, (t, f))
 
-		result = self.manager.simplify(domain, d, False)
+		result = self.manager.simplify(domain, d, f)
 		self.assert_(result, c)
 
 
 	def testSimplify3(self):
-		a = self.manager.tree(self.c0, (True, False))
-		b = self.manager.tree(self.c0, (False, True))
+		t, f = self.t, self.f
+		a = self.manager.tree(self.c0, (t, f))
+		b = self.manager.tree(self.c0, (f, t))
 		d = self.manager.tree(self.c1, (a, b))
 
-		domain = self.manager.tree(self.c1, (True, False))
+		domain = self.manager.tree(self.c1, (t, f))
 
-		c =  self.manager.tree(self.c0, (True, False))
+		c =  self.manager.tree(self.c0, (t, f))
 
-		result = self.manager.simplify(domain, d, False)
+		result = self.manager.simplify(domain, d, f)
 		self.assert_(result, c)
 
 	def testSimplify4(self):
-		a      = self.manager.tree(self.c2, (True, False, True))
-		domain = self.manager.tree(self.c2, (True, True, False))
-		c      = self.manager.tree(self.c2, (True, False, False))
+		t, f = self.t, self.f
+		a      = self.manager.tree(self.c2, (t, f, t))
+		domain = self.manager.tree(self.c2, (t, t, f))
+		c      = self.manager.tree(self.c2, (t, f, f))
 
-		result = self.manager.simplify(domain, a, False)
+		result = self.manager.simplify(domain, a, f)
 		self.assert_(result, c)
 
 	def testSimplify5(self):
-		a      = self.manager.tree(self.c2, (False, True, False))
-		domain = self.manager.tree(self.c2, (True, False, True))
-		c      =  False
+		t, f = self.t, self.f
+		a      = self.manager.tree(self.c2, (f, t, f))
+		domain = self.manager.tree(self.c2, (t, f, t))
+		c      =  f
 
-		result = self.manager.simplify(domain, a, False)
+		result = self.manager.simplify(domain, a, f)
 		self.assert_(result, c)
 
 	def testSimplifyDefault(self):
-		a      = self.manager.tree(self.c2, (False, True, False))
-		domain = self.manager.tree(self.c2, (True,  True, False))
-		c      = self.manager.tree(self.c2, (False, True, True))
+		t, f = self.t, self.f
+		a      = self.manager.tree(self.c2, (f, t, f))
+		domain = self.manager.tree(self.c2, (t,  t, f))
+		c      = self.manager.tree(self.c2, (f, t, t))
 
-		result = self.manager.simplify(domain, a, True)
+		result = self.manager.simplify(domain, a, t)
 		self.assert_(result, c)

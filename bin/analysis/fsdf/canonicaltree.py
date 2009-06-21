@@ -68,7 +68,7 @@ class LeafNode(AbstractNode):
 		return self is other or (type(self) == type(other) and self.value == other.value)
 
 	def __repr__(self):
-		return 'leaf(%r, %d)' % (self.value, id(self))
+		return 'leaf(%r)' % (self.value)
 
 	def iter(self, cond):
 		return (self,)*cond.size
@@ -340,7 +340,7 @@ class CanonicalTreeManager(object):
 			for domainbranch, treebranch in itertools.izip(domain.branches, treeiter):
 				newbranches.append(self._simplify(domainbranch, treebranch, default))
 				if not domainbranch.leaf() or domainbranch.value:
-					interesting.add(domainbranch)
+					interesting.add(treebranch)
 
 			if len(interesting) == 1:
 				result = interesting.pop()

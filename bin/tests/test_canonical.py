@@ -43,13 +43,6 @@ class TestCanonicalTree(unittest.TestCase):
 		self.t  = self.manager.true
 		self.f  = self.manager.false
 
-		self.manager.and_ = canonicaltree.BinaryTreeFunction(self.manager, lambda l, r: l & r,
-			symmetric=True, stationary=True, identity=self.t, null=self.f)
-
-		self.manager.or_ = canonicaltree.BinaryTreeFunction(self.manager, lambda l, r: l | r,
-			symmetric=True, stationary=True, identity=self.f, null=self.t)
-
-
 	def testSimpleAnd(self):
 		t, f = self.t, self.f
 		a = self.manager.tree(self.c2, (t, f, t))
@@ -209,3 +202,30 @@ class TestCanonicalTree(unittest.TestCase):
 
 		result = self.manager.simplify(domain, a, t)
 		self.assert_(result, c)
+
+
+class TestCanonicalSet(unittest.TestCase):
+	def setUp(self):
+		self.conditions  = canonicaltree.ConditionManager()
+		self.boolManager = canonicaltree.BoolManager(self.conditions)
+		self.setManager  = canonicaltree.SetManager()
+
+		self.c0 = self.conditions.condition(0, 2)
+		self.c1 = self.conditions.condition(1, 2)
+		self.c2 = self.conditions.condition(2, 3)
+
+	def testSimplify(self):
+		zero = self.setManager.empty
+		one  = self.setManager.leaf((1,))
+		two  = self.setManager.leaf((1,2))
+
+		true  = self.boolManager.true
+		false = self.boolManager.false
+
+		domain  = self.boolManager.tree(self.c2, (false, true, false))
+		tree     = self.setManager.tree(self.c2, (one, two, zero))
+		default  = zero
+		expected = two
+
+		result = self.setManager.simplify(domain, tree, default)
+		self.assert_(result is expected, (result, expected))

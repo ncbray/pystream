@@ -151,10 +151,10 @@ def evaluateCode(compiler, code):
 
 	dom = MakeForwardDominance().processCode(code)
 
-	analysis = ForwardESSA(rm)
-	analysis.processCode(code)
+	fessa = ForwardESSA(rm)
+	fessa.processCode(code)
 
-	rle = RedundantLoadEliminator(compiler, analysis.readLUT, analysis.writeLUT, dom)
+	rle = RedundantLoadEliminator(compiler, fessa.readLUT, fessa.writeLUT, dom)
 	eliminated = rle.processCode(code)
 	if eliminated:
 		print '\t', code, eliminated

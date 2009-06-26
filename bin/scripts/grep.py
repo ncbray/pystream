@@ -28,7 +28,8 @@ def buildParser():
 	parser.add_option_group(group)
 
 	group = optparse.OptionGroup(parser, "File Filters")
-	group.add_option('-f', dest='filefilters', action='append', default=['\.py$'], help="matches the file name", metavar="FILTER")
+	group.add_option('-t', dest='filetypes', action='append', default=[], help="matches the file type", metavar="TYPE")
+	group.add_option('-f', dest='filefilters', action='append', default=[], help="matches the file name", metavar="FILTER")
 	group.add_option('-g', dest='excludefilefilters', action='append', default=[], help="excludes file name", metavar="FILTER")
 	parser.add_option_group(group)
 
@@ -95,7 +96,8 @@ def splitLine(line):
 
 
 class StandardGrep(object):
-	def __init__(self):
+	def __init__(self, matchText):
+		self.matchText = matchText
 		self.files = 0
 		self.lines = 0
 		self.occurances = 0
@@ -150,23 +152,26 @@ class StandardGrep(object):
 
 
 	def handleFile(self, fn):
-		fh = open(fn)
-		lineno = 1
+		if self.matchText:
+			fh = open(fn)
+			lineno = 1
 
-		self.lineBuffer = []
-		self.changed    = False
+			self.lineBuffer = []
+			self.changed    = False
 
-		for line in fh:
-			self.handleLine(fn, lineno, line)
-			lineno += 1
-		fh.close()
-
-		if replaceActive() and self.changed and not options.dryrun:
-			text = "".join(self.lineBuffer)
-			fh = open(fn, 'w')
-			fh.write(text)
+			for line in fh:
+				self.handleLine(fn, lineno, line)
+				lineno += 1
 			fh.close()
-			self.filesChanged += 1
+
+			if replaceActive() and self.changed and not options.dryrun:
+				text = "".join(self.lineBuffer)
+				fh = open(fn, 'w')
+				fh.write(text)
+				fh.close()
+				self.filesChanged += 1
+		else:
+			print fn
 
 		self.files += 1
 
@@ -183,8 +188,9 @@ class StandardGrep(object):
 		if self.lastFile != None:
 			print
 
-		print "%7.1d occurances." % self.occurances
-		print "%7.1d lines." % self.lines
+		if self.matchText: 
+			print "%7.1d occurances." % self.occurances
+			print "%7.1d lines." % self.lines
 		print "%7.1d files." % self.files
 
 		if replaceActive():
@@ -213,10 +219,9 @@ if __name__ == '__main__':
 	for i in options.identifiers:
 		args.append('(?<![\w\d_])(%s)(?![\w\d_])' % i)
 
-
+	matchText = True
 	if len(args) < 1 and len(options.replaces) < 1:
-		parser.error("at least one text filter must be spesified")
-
+		matchText = False
 
 	parser.destroy()
 
@@ -229,25 +234,45 @@ if __name__ == '__main__':
 	print
 
 	fileFilters = []
+
+	# Match the filetype
+	if not options.filetypes:
+		# default filetype
+		options.filetypes.append('py') 
+
+	if len(options.filetypes) > 1:
+		tf = '\.(%s)$' % '|'.join(options.filetypes)
+	else:
+		tf = '\.%s$' % options.filetypes[0]
+
+	print "+file: %s" % tf
+	fileFilters.append(re.compile(tf, flags))
+
+
+	# Match the full file name
 	for ff in options.filefilters:
 		print "+file: %s" % ff
 		fileFilters.append(re.compile(ff, flags))
 
+	# Antimatch the full file name
 	excludeFileFilters = []
 	for ff in options.excludefilefilters:
 		print "-file: %s" % ff
 		excludeFileFilters.append(re.compile(ff, flags))
 
+	# Match the text
 	textFilters = []
 	for tf in args:
 		print "+text: %s" % tf
 		textFilters.append(re.compile(tf, flags))
 
+	# Antimatch the text
 	excludeFilters = []
 	for ef in options.excludes:
 		print "-text: %s" % ef
 		excludeFilters.append(re.compile(ef, flags))
 
+	# Replace the text
 	replaceFilters = []
 	for rf in options.replaces:
 		print "!repl: %s -> %s" % rf
@@ -259,5 +284,5 @@ if __name__ == '__main__':
 	directoryName = options.directory
 
 	# Search the files.
-	sg = StandardGrep()
+	sg = StandardGrep(matchText)
 	sg.walk(directoryName, sg.displayMatch)

@@ -43,6 +43,38 @@ class State(AbstractState):
 		assert not self.frozen
 		self.slots[slot] = value
 
+def gate(pred, value):
+	gate = graph.Gate()
+	gate.setPredicate(pred)
+	gate.addRead(value)
+
+	result = value.duplicate()
+	gate.addModify(result)
+	result = gate.modify
+
+	return result
+
+def gatedMerge(pairs):
+	if len(pairs) == 1:
+		pred, value = pairs[0]
+		result = gate(pred, value)
+	else:
+		m = graph.Merge()
+
+		result = pairs[0][1].duplicate()
+		m.modify = result.addDefn(m)
+
+		for pred, value in pairs:
+			# Create the gate
+			temp = gate(pred, value)
+
+			# Merge the gate
+			m.addRead(temp)
+
+		result = m.modify
+
+	return result
+
 class DeferedMerge(AbstractState):
 	def __init__(self, predicate, states):
 		AbstractState.__init__(self, predicate)
@@ -54,15 +86,8 @@ class DeferedMerge(AbstractState):
 		if len(unique) == 1:
 			return unique.pop()
 
-		result = slots[0].duplicate()
-		m = graph.Merge()
-		m.modify = result.addDefn(m)
-
-		for prev in slots:
-			m.addRead(prev)
-
-		return m.modify
-
+		pairs = [(state.predicate, state.get(slot)) for state in self.states]
+		return gatedMerge(pairs)
 
 class DeferedEntryPoint(AbstractState):
 	def __init__(self, predicate, code, dataflow):
@@ -99,10 +124,8 @@ class CodeToDataflow(TypeDispatcher):
 		self.code = code
 		self.dataflow = graph.DataflowGraph()
 
-		self.entryPredicate = None
-		self.entryState = DeferedEntryPoint(self.entryPredicate, self.code, self.dataflow)
-		self.current = State(self.entryPredicate, self.entryState)
-
+		self.entryState = DeferedEntryPoint(self.dataflow.entryPredicate, self.code, self.dataflow)
+		self.current    = State(self.dataflow.entryPredicate, self.entryState)
 
 		self.returns = []
 
@@ -123,9 +146,14 @@ class CodeToDataflow(TypeDispatcher):
 		return old
 
 	def mergeStates(self, states):
+		# TODO merge predicates?
 		states = [state for state in states if state is not None]
-		state = DeferedMerge(self.entryPredicate, states)
-		state = State(self.entryPredicate, state)
+
+		pairs = [(state.predicate, state.predicate) for state in states]
+		predicate = gatedMerge(pairs)
+
+		state = DeferedMerge(predicate, states)
+		state = State(predicate, state)
 		self.setState(state)
 		return state
 
@@ -137,6 +165,9 @@ class CodeToDataflow(TypeDispatcher):
 		value.addName(slot)
 		self.allModified.add(slot)
 		return self.current.set(slot, value)
+
+	def pred(self):
+		return self.current.predicate
 
 	def localTarget(self, lcl):
 		if isinstance(lcl, ast.Local):
@@ -173,6 +204,7 @@ class CodeToDataflow(TypeDispatcher):
 	@dispatch(ast.Allocate)
 	def processAllocate(self, node):
 		g = graph.GenericOp(node)
+		g.setPredicate(self.pred())
 
 		g.addLocalRead(node.expr, self.get(node.expr))
 
@@ -182,6 +214,7 @@ class CodeToDataflow(TypeDispatcher):
 	@dispatch(ast.Load)
 	def processLoad(self, node):
 		g = graph.GenericOp(node)
+		g.setPredicate(self.pred())
 
 		g.addLocalRead(node.expr, self.get(node.expr))
 		g.addLocalRead(node.name, self.get(node.name))
@@ -193,6 +226,7 @@ class CodeToDataflow(TypeDispatcher):
 	@dispatch(ast.DirectCall)
 	def processDirectCall(self, node):
 		g = graph.GenericOp(node)
+		g.setPredicate(self.pred())
 
 		if node.selfarg:
 			g.addLocalRead(node.selfarg, self.get(node.selfarg))
@@ -232,6 +266,7 @@ class CodeToDataflow(TypeDispatcher):
 	@dispatch(ast.Store)
 	def processStore(self, node):
 		g = graph.GenericOp(node)
+		g.setPredicate(self.pred())
 
 		g.addLocalRead(node.expr, self.get(node.expr))
 		g.addLocalRead(node.name, self.get(node.name))
@@ -250,9 +285,14 @@ class CodeToDataflow(TypeDispatcher):
 	def processTypeSwitch(self, node):
 
 		g = graph.GenericOp(node)
+		g.setPredicate(self.pred())
+
 		g.addLocalRead(node.conditional, self.get(node.conditional))
 
-		branches = self.branch(range(len(node.cases)))
+		for i in range(len(node.cases)):
+			p = graph.PredicateNode(i)
+			g.predicates.append(p.addDefn(g))
+		branches = self.branch(g.predicates)
 		exits = []
 
 		for case, branch in zip(node.cases, branches):

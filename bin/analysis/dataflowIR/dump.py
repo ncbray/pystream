@@ -24,6 +24,10 @@ class NodeStyle(TypeDispatcher):
 
 	splitColor = 'cyan'
 	mergeColor = 'magenta'
+	gateColor  = 'purple'
+
+	predicateColor = 'red'
+	predicateLineColor = 'darkred'
 
 	@dispatch(graph.Entry, graph.Exit)
 	def handleTerminal(self, node):
@@ -39,9 +43,15 @@ class NodeStyle(TypeDispatcher):
 		label = "\\n".join(repr(name) for name in node.names)
 		return dict(label=label, style='filled', fillcolor=self.localColor, fontsize=8)
 
+	@dispatch(graph.PredicateNode)
+	def handlePredicateNode(self, node):
+		label = str(node.name)
+		return dict(label=label, style='filled', fillcolor=self.predicateColor, fontsize=8)
+
+
 	@dispatch(graph.ExistingNode)
 	def handleExistingNode(self, node):
-		label = repr(node.name)
+		label = str(node.name)
 		return dict(label=label, style='filled', fillcolor=self.existingColor, fontsize=8)
 
 	@dispatch(graph.NullNode)
@@ -63,9 +73,14 @@ class NodeStyle(TypeDispatcher):
 	def handleSplit(self, node):
 		return dict(label='split', style='filled', fillcolor=self.splitColor, fontsize=8)
 
+	@dispatch(graph.Gate)
+	def handleGate(self, node):
+		return dict(label='gate', shape='invtriangle', style='filled', fillcolor=self.gateColor, fontsize=8)
+
+
 	@dispatch(graph.Merge)
 	def handleMerge(self, node):
-		return dict(label='merge', style='filled', fillcolor=self.mergeColor, fontsize=8)
+		return dict(label='merge', shape='triangle', style='filled', fillcolor=self.mergeColor, fontsize=8)
 
 
 class DataflowToDot(TypeDispatcher):
@@ -102,22 +117,44 @@ class DataflowToDot(TypeDispatcher):
 		self.g.add_edge(pydot.Edge(srcnode, dstnode, color=color, style=style))
 
 
-	@dispatch(graph.FieldNode, graph.LocalNode, graph.ExistingNode, graph.NullNode)
+	@dispatch(graph.FieldNode, graph.LocalNode, graph.ExistingNode, graph.NullNode, graph.PredicateNode)
 	def handleSlotNode(self, node):
 		for forward in node.forward():
 			self.mark(forward)
+
+	def lineColor(self, node):
+		if isinstance(node, graph.LocalNode):
+			return self.style.localLineColor
+		elif isinstance(node, graph.FieldNode):
+			return self.style.heapLineColor
+		elif isinstance(node, graph.PredicateNode):
+			return self.style.predicateLineColor
+		else:
+			return 'black'
 
 
 	@dispatch(graph.Merge, graph.Split)
 	def handleOpNode(self, node):
 		for reverse in node.reverse():
 			assert reverse.isUse(node)
-			self.edge(reverse, node)
+			self.edge(reverse, node, color=self.lineColor(reverse))
 
 		for forward in node.forward():
 			assert forward.isDefn(node)
-			self.edge(node, forward)
+			self.edge(node, forward, color=self.lineColor(forward))
 			self.mark(forward)
+
+	@dispatch(graph.Gate)
+	def handleGate(self, node):
+		for reverse in node.reverse():
+			assert reverse.isUse(node)
+			self.edge(reverse, node, color=self.lineColor(reverse))
+
+		for forward in node.forward():
+			assert forward.isDefn(node)
+			self.edge(node, forward, color=self.lineColor(forward))
+			self.mark(forward)
+
 
 	@dispatch(graph.GenericOp)
 	def handleGenericOp(self, node):
@@ -134,6 +171,10 @@ class DataflowToDot(TypeDispatcher):
 			assert slot.isUse(node)
 			self.edge(slot, node, color=self.style.heapLineColor, style='dotted')
 
+		slot = node.predicate
+		assert slot.isUse(node)
+		self.edge(slot, node, color=self.style.predicateLineColor)
+
 		# Out
 		for slot in node.localModifies:
 			assert slot.isDefn(node)
@@ -145,11 +186,17 @@ class DataflowToDot(TypeDispatcher):
 			self.edge(node, slot, color=self.style.heapLineColor)
 			self.mark(slot)
 
+		for slot in node.predicates:
+			assert slot.isDefn(node)
+			self.edge(node, slot, color=self.style.predicateLineColor)
+			self.mark(slot)
+
+
 	@dispatch(graph.Entry)
 	def handleEntry(self, node):
 		for forward in node.forward():
 			assert forward.isDefn(node)
-			self.edge(node, forward)
+			self.edge(node, forward, self.lineColor(forward))
 			self.mark(forward)
 
 
@@ -157,7 +204,7 @@ class DataflowToDot(TypeDispatcher):
 	def handleExit(self, node):
 		for reverse in node.reverse():
 			assert reverse.isUse(node)
-			self.edge(reverse, node)
+			self.edge(reverse, node, self.lineColor(reverse))
 
 
 	def mark(self, node):
@@ -167,15 +214,14 @@ class DataflowToDot(TypeDispatcher):
 			self.queue.append(node)
 
 	def process(self, dataflow):
+		# Mark the entry nodes
 		self.mark(dataflow.entry)
-
-		# HACK for finding independant entry points
 		for e in dataflow.existing.itervalues():
-			for forward in e.forward():
-				self.mark(forward)
-
+			self.mark(e)
 		self.mark(dataflow.null)
+		self.mark(dataflow.entryPredicate)
 
+		# Process
 		while self.queue:
 			current = self.queue.pop()
 			self(current)

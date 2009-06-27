@@ -7,7 +7,7 @@ class LivenessKiller(TypeDispatcher):
 		self.queue = []
 		self.processed  = set()
 
-	@dispatch(graph.LocalNode, graph.FieldNode)
+	@dispatch(graph.LocalNode, graph.FieldNode, graph.PredicateNode)
 	def handleSlot(self, node):
 		if self.dead(node.use):
 			node.use = None
@@ -43,6 +43,10 @@ class LivenessKiller(TypeDispatcher):
 		node.modifies = [m for m in node.modifies if not self.dead(m)]
 		node.optimize()
 
+	@dispatch(graph.Gate)
+	def handleGate(self, node):
+		pass
+
 	@dispatch(graph.Merge)
 	def handleMerge(self, node):
 		if self.dead(node.modify):
@@ -76,6 +80,7 @@ class LivenessKiller(TypeDispatcher):
 		dataflow.existing = existing
 
 		self.mark(dataflow.null)
+		self.mark(dataflow.entryPredicate)
 
 		# Process
 		while self.queue:

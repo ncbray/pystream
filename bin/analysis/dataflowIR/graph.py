@@ -40,6 +40,11 @@ class FlowSensitiveSlotNode(SlotNode):
 		if self.use is None:
 			self.use = op
 			return self
+		elif self.defn.isSplit():
+			# This slot is the product of a split, pass the use on
+			# to the original.  This prevents us from having more than
+			# one level of split.
+			return self.defn.read.addUse(op)
 		else:
 			if not self.use.isSplit():
 				# Redirect the current use
@@ -107,6 +112,20 @@ class LocalNode(FlowSensitiveSlotNode):
 
 	def __repr__(self):
 		return "lcl(%s)" % ", ".join([repr(name) for name in self.names])
+
+
+class PredicateNode(FlowSensitiveSlotNode):
+	__slots__ = 'name'
+	def __init__(self, name):
+		FlowSensitiveSlotNode.__init__(self)
+		self.name = name
+
+	def duplicate(self):
+		node = PredicateNode(self.name)
+		return node
+
+	def __repr__(self):
+		return "pred(%s)" % self.name
 
 
 class ExistingNode(SlotNode):
@@ -214,6 +233,13 @@ class OpNode(DataflowNode):
 	def isSplit(self):
 		return False
 
+	def setPredicate(self, p):
+		if self.predicate is not None:
+			self.predicate.removeUse(self)
+		self.predicate = p
+		if self.predicate is not None:
+			self.predicate = self.predicate.addUse(self)
+
 class Entry(OpNode):
 	__slots__ = 'modifies'
 
@@ -264,6 +290,52 @@ class Exit(OpNode):
 	def sanityCheck(self):
 		for slot in self.reads.itervalues():
 			assert slot.isUse(self)
+
+class Gate(OpNode):
+	__slots__ = 'predicate', 'read', 'modify'
+	def __init__(self):
+		self.predicate = None
+		self.read = None
+		self.modify = None
+
+	def isSplit(self):
+		return True
+
+	def addRead(self, slot):
+		assert self.read is None
+		slot = slot.addUse(self)
+		self.read = slot
+		#self.sanityCheck()
+
+	def addModify(self, slot):
+		assert self.modify is None
+		slot = slot.addDefn(self)
+		self.modify = slot
+		#self.sanityCheck()
+
+	def replaceUse(self, original, replacement):
+		if self.predicate is original:
+			self.predicate = replacement
+		else:
+			assert self.read is original
+			self.read = replacement
+		#self.sanityCheck()
+
+	def replaceDefn(self, original, replacement):
+		assert self.modify is original
+		self.modify = replacement
+		#self.sanityCheck()
+
+	def __repr__(self):
+		return "gate(%r, %r)" % (self.read, self.predicate)
+
+	def forward(self):
+		return (self.modify,)
+
+	def reverse(self):
+		assert self.read is not None
+		return (self.read, self.predicate)
+
 
 class Merge(OpNode):
 	__slots__ = 'reads', 'modify'
@@ -384,9 +456,10 @@ def replaceList(l, original, replacement):
 		return False
 
 class GenericOp(OpNode):
-	__slots__ = 'op', 'localReads', 'localModifies', 'heapReads', 'heapModifies', 'heapPsedoReads'
+	__slots__ = 'predicate', 'op', 'localReads', 'localModifies', 'heapReads', 'heapModifies', 'heapPsedoReads', 'predicates'
 	def __init__(self, op):
-		self.op          = op
+		self.predicate      = None
+		self.op             = op
 
 		self.localReads     = {}
 		self.localModifies  = []
@@ -395,9 +468,13 @@ class GenericOp(OpNode):
 		self.heapModifies   = {}
 		self.heapPsedoReads = {}
 
+		self.predicates     = []
 
 	def replaceUse(self, original, replacement):
-		if isinstance(original, LocalNode):
+		if isinstance(original, PredicateNode):
+			assert original is self.predicate
+			self.predicate = replacement
+		elif isinstance(original, (LocalNode, ExistingNode)):
 			assert isinstance(replacement, (LocalNode, ExistingNode)), replacement
 			for name in original.names:
 				if name in self.localReads and original is self.localReads[name]:
@@ -465,10 +542,10 @@ class GenericOp(OpNode):
 		return "op(%r)" % self.op
 
 	def forward(self):
-		return self.localModifies + self.heapModifies.values()
+		return self.localModifies + self.heapModifies.values() + self.predicates
 
 	def reverse(self):
-		return self.localReads.values() + self.heapReads.values() + self.heapPsedoReads.values()
+		return [self.predicate] + self.localReads.values() + self.heapReads.values() + self.heapPsedoReads.values()
 
 
 	def sanityCheck(self):
@@ -486,13 +563,16 @@ class GenericOp(OpNode):
 
 
 class DataflowGraph(object):
-	__slots__ = 'entry', 'exit', 'existing', 'null'
+	__slots__ = 'entry', 'exit', 'existing', 'null', 'entryPredicate'
 
 	def __init__(self):
 		self.entry    = Entry()
 		self.exit     = Exit()
 		self.existing = {}
 		self.null     = NullNode()
+
+		self.entryPredicate = PredicateNode('*')
+		self.entry.addEntry('*', self.entryPredicate)
 
 	def getExisting(self, node):
 		obj = node.object

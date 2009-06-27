@@ -539,7 +539,10 @@ class GenericOp(OpNode):
 		#self.sanityCheck()
 
 	def __repr__(self):
-		return "op(%r)" % self.op
+		if self.predicates:
+			return "op(%s)" % self.op.__class__.__name__
+		else:
+			return "op(%r)" % self.op
 
 	def forward(self):
 		return self.localModifies + self.heapModifies.values() + self.predicates

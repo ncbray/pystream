@@ -1,0 +1,114 @@
+from util.typedispatch import *
+import analysis.dataflowIR.graph as graph
+
+class LivenessKiller(TypeDispatcher):
+	def __init__(self, live):
+		self.live = live
+		self.queue = []
+		self.processed  = set()
+
+	@dispatch(graph.LocalNode, graph.FieldNode)
+	def handleSlot(self, node):
+		if self.dead(node.use):
+			node.use = None
+
+	@dispatch(graph.ExistingNode)
+	def handleExistingNode(self, node):
+		node.uses = [use for use in node.uses if not self.dead(use)]
+
+	@dispatch(graph.NullNode)
+	def handleNullNode(self, node):
+		node.uses = [use for use in node.uses if not self.dead(use)]
+
+	@dispatch(graph.GenericOp)
+	def handleGenericOp(self, node):
+		if all(self.dead(lcl) for lcl in node.localModifies):
+			node.localModifies = []
+
+		# TODO turn dead modifies (heap and locals) into don't cares?
+
+	@dispatch(graph.Entry)
+	def handleEntry(self, node):
+		modifies = {}
+		for name, next in node.modifies.iteritems():
+			if not self.dead(next): modifies[name] = next
+		node.modifies = modifies
+
+	@dispatch(graph.Exit)
+	def handleExit(self, node):
+		pass
+
+	@dispatch(graph.Split)
+	def handleSplit(self, node):
+		node.modifies = [m for m in node.modifies if not self.dead(m)]
+		node.optimize()
+
+	@dispatch(graph.Merge)
+	def handleMerge(self, node):
+		if self.dead(node.modify):
+			for read in node.reads:
+				read.removeUse(node)
+
+			if node.modify is not None:
+				node.modify.removeDefn(node)
+
+			node.reads = []
+			node.modify = None
+
+	def dead(self, node):
+		return node is None or node not in self.live
+
+	def mark(self, node):
+		assert isinstance(node, graph.DataflowNode), node
+		if node not in self.processed:
+			self.processed.add(node)
+			self.queue.append(node)
+
+	def process(self, dataflow):
+		self.mark(dataflow.entry)
+
+		# Filter existing
+		existing = {}
+		for name, node in dataflow.existing.iteritems():
+			if node in self.live:
+				existing[name] = node
+				self.mark(node)
+		dataflow.existing = existing
+
+		self.mark(dataflow.null)
+
+		# Process
+		while self.queue:
+			current = self.queue.pop()
+			self(current)
+			for next in current.forward():
+				# Note: dead slots may hang around if they're written to by an op.
+				# As such, we process dead slots to make sure any use they have is killed.
+				if not self.dead(next) or isinstance(next, graph.SlotNode):
+					self.mark(next)
+
+class LivenessSearcher(TypeDispatcher):
+	def __init__(self):
+		self.queue = []
+		self.live  = set()
+
+	def mark(self, node):
+		assert isinstance(node, graph.DataflowNode), node
+		if node not in self.live:
+			self.live.add(node)
+			self.queue.append(node)
+
+	def process(self, dataflow):
+		self.mark(dataflow.exit)
+
+		while self.queue:
+			current = self.queue.pop()
+			for prev in current.reverse():
+				self.mark(prev)
+
+		return self.live
+
+
+def evaluateDataflow(dataflow):
+	live = LivenessSearcher().process(dataflow)
+	LivenessKiller(live).process(dataflow)

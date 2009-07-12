@@ -1,3 +1,5 @@
+__all__ = ['XMLOutput']
+
 import re
 # Note: converting line breaks to break tags is a bit of a hack.
 xmlLUT = {'&':'&amp;', '<':'&lt;', '>':'&gt;', '\n':'<br/>'}
@@ -8,6 +10,19 @@ def convert(match):
 
 def content(s):
 	return xmlRE.sub(convert, str(s))
+
+class xmlscope(object):
+	__slots__ = 'out', 'name'
+
+	def __init__(self, out, name):
+		self.out  = out
+		self.name = name
+
+	def __enter__(self):
+		pass
+
+	def __exit__(self, type, value, tb):
+		self.out.end(self.name)
 
 
 class XMLOutput(object):
@@ -58,6 +73,9 @@ class XMLOutput(object):
 		self.__out('</%s>' % s)
 		return self
 
+	def scope(self, s, **kargs):
+		self.begin(s, **kargs)
+		return xmlscope(self, s)
 
 	def endl(self):
 		self.__out('\n')

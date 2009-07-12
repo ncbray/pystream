@@ -48,6 +48,22 @@ def findTests(base, only, exclude):
 	return names
 
 
+def getModule(name):
+	parts  = name.split('.')
+	module = __import__(name)
+
+	for part in parts[1:]:
+		module = getattr(module, part)
+
+	return module
+
+# NOTE unlike the builtin version, this does NOT catch import errors.  This helps debugging.
+# TODO turn import errors into test errors?
+def loadTestsFromNames(self, names):
+	suites = [self.loadTestsFromModule(getModule(name)) for name in names]
+	return self.suiteClass(suites)
+
+
 def runTests(path, only=set(), exclude=set()):
 	# If no tests are specified, find them.
 	if not os.path.isdir(path):
@@ -61,7 +77,7 @@ def runTests(path, only=set(), exclude=set()):
 	print "\\===========================/"
 	print
 
-	suite = unittest.defaultTestLoader.loadTestsFromNames(testList)
+	suite = loadTestsFromNames(unittest.defaultTestLoader, testList)
 
 	#unittest.TextTestRunner(verbosity=2).run(suite)
 	unittest.TextTestRunner().run(suite)

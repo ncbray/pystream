@@ -5,6 +5,8 @@ from . pythonshader import PythonShaderProgram
 
 from abstractcode.shaderprogram import ShaderProgram
 
+from . import dataflowtransform
+
 def makePathMatcher(interface):
 	root = {}
 	for path, name, input, output in interface.glsl.attr:
@@ -28,6 +30,12 @@ def translate(compiler):
 			if isinstance(code, ShaderProgram):
 				vs = code.vertexShaderCode()
 				fs = code.fragmentShaderCode()
+
+				with compiler.console.scope('vs'):
+					dataflowtransform.evaluateCode(compiler, vs)
+
+				with compiler.console.scope('fs'):
+					dataflowtransform.evaluateCode(compiler, fs)
 
 				shader = PythonShaderProgram(vs, fs, pathMatcher)
 				iotransform.evaluateShaderProgram(compiler, shader, pathMatcher)

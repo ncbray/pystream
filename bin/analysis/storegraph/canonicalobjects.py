@@ -66,8 +66,8 @@ class ExistingSlotName(BaseSlotName):
 class FieldSlotName(BaseSlotName):
 	__slots__ = 'type', 'name'
 	def __init__(self, ftype, name):
-#		assert isinstance(ftype, str), type(ftype)
-#		assert isinstance(name, program.AbstractObject), type(name)
+		assert isinstance(ftype, str), type(ftype)
+		assert isinstance(name, program.AbstractObject), type(name)
 
 		self.type = ftype
 		self.name = name

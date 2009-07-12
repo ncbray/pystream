@@ -1,11 +1,11 @@
 import itertools
 
 class Condition(object):
-	__slots__ = 'value', 'uid', 'size', 'mask'
-	def __init__(self, value, uid, size):
-		self.value = value
-		self.uid   = uid
-		self.size  = size
+	__slots__ = 'name', 'uid', 'values', 'mask'
+	def __init__(self, name, uid, values):
+		self.name   = name
+		self.uid    = uid
+		self.values = values
 
 	def __repr__(self):
 		return 'cond(%d)' % self.uid
@@ -25,21 +25,30 @@ class Condition(object):
 	def __ge__(self, other):
 		return self.uid >= other.uid
 
+	def validate(self, values):
+		for value in values:
+			assert value in self.values
+
+
 class ConditionManager(object):
 	def __init__(self):
 		self.conditions = {}
 
-	def condition(self, value, size):
-		if value not in self.conditions:
-			cond = Condition(value, len(self.conditions), size)
+	def condition(self, name, values):
+		if name not in self.conditions:
+			cond = Condition(name, len(self.conditions), list(values))
 
 			# Helper nodes
-			cond.mask = [self.boolManager.tree(cond, tuple(self.boolManager.leaf(j==i) for j in range(size))) for i in range(size)]
+			mask = {}
+			size = len(cond.values)
+			for i, value in enumerate(cond.values):
+				mask[value] = self.boolManager.tree(cond, tuple(self.boolManager.leaf(j==i) for j in range(size)))
+			cond.mask = mask
 
-			self.conditions[value] = cond
+			self.conditions[name] = cond
 		else:
-			cond = self.conditions[value]
-			assert cond.size == size
+			cond = self.conditions[name]
+			cond.validate(values)
 		return cond
 
 
@@ -68,10 +77,10 @@ class LeafNode(AbstractNode):
 		return self is other or (type(self) == type(other) and self.value == other.value)
 
 	def __repr__(self):
-		return 'leaf(%r)' % (self.value)
+		return 'leaf(%r)' % (self.value,)
 
 	def iter(self, cond):
-		return (self,)*cond.size
+		return (self,)*len(cond.values)
 
 	def leaf(self):
 		return True
@@ -80,7 +89,7 @@ class TreeNode(AbstractNode):
 	__slots__ = 'cond', 'branches'
 
 	def __init__(self, cond, branches):
-		assert len(branches) == cond.size, "Expected %d branches, got %d." % (cond.size, len(branches))
+		assert len(branches) == len(cond.values), "Expected %d branches, got %d." % (len(cond.values), len(branches))
 		self.cond     = cond
 		self.branches = branches
 		self._hash    = hash((cond, branches))
@@ -95,7 +104,7 @@ class TreeNode(AbstractNode):
 		if self.cond is cond:
 			return self.branches
 		else:
-			return (self,)*cond.size
+			return (self,)*len(cond.values)
 
 	def branch(self, index):
 		return self.branches[index]
@@ -166,6 +175,7 @@ class BinaryTreeFunction(object):
 		else:
 			branches = tuple([self._apply(*branches) for branches in itertools.izip(a.iter(maxcond), b.iter(maxcond))])
 			result = self.manager.tree(maxcond, branches)
+
 		return result
 
 	def _apply(self, a, b):
@@ -209,9 +219,60 @@ class BinaryTreeFunction(object):
 		self.cache.clear() # HACK don't retain cache between computations?
 		return result
 
+class TreeFunction(object):
+	def __init__(self, manager, func, multiout=False):
+		self.manager  = manager
+		self.func     = func
+		self.multiout = multiout
+		self.cache    = {}
+
+	def compute(self, args):
+		maxcond = max(arg.cond for arg in args)
+
+		if maxcond.uid == -1:
+			# leaf/leaf computation
+			unwrapped = self.func(*[arg.value for arg in args])
+
+			if self.multiout:
+				assert unwrapped is not None, (unwrapped, self.func)
+
+				result = tuple(self.manager.leaf(res) for res in unwrapped)
+			else:
+				result = self.manager.leaf(unwrapped)
+		else:
+			branches = tuple(self._apply(branches) for branches in itertools.izip(*[arg.iter(maxcond) for arg in args]))
+
+			if self.multiout:
+				result = tuple([self.manager.tree(maxcond, branches) for branches in zip(*branches)])
+			else:
+				result = self.manager.tree(maxcond, branches)
+		return result
+
+	def _apply(self, args):
+		# See if we've alread computed this.
+		key = args
+		if key in self.cache:
+			self.cacheHit += 1
+			return self.cache[key]
+		else:
+			self.cacheMiss += 1
+
+		result = self.compute(args)
+
+		return self.cache.setdefault(key, result)
+
+	def __call__(self, *args):
+		self.cacheHit  = 0
+		self.cacheMiss = 0
+		result = self._apply(args)
+		#print "%d/%d" % (self.cacheHit, self.cacheHit+self.cacheMiss)
+		self.cache.clear() # HACK don't retain cache between computations?
+		return result
+
 
 class CanonicalTreeManager(object):
-	def __init__(self, coerce):
+	def __init__(self, coerce=None):
+		if coerce is None: coerce = lambda x: x
 		self.coerce = coerce
 
 		self.trees      = {}
@@ -304,7 +365,7 @@ class CanonicalTreeManager(object):
 		if not d: return a
 
 		for cond, index in d.iteritems():
-			assert 0 <= index < cond.size, "Invalid restriction"
+			assert index in cond.values, "Invalid restriction"
 
 		bound = min(d.iterkeys())
 

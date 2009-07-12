@@ -141,7 +141,7 @@ class Shader(object):
 		newpos    = trans*pos
 		newnormal = trans*vec4(normal.x, normal.y, normal.z, 0.0)
 
-		#context.position = self.projection*newpos
+		context.position = self.projection*newpos
 
 		return newpos.xyz, newnormal.xyz
 
@@ -149,6 +149,7 @@ class Shader(object):
 		n = normal.normalize()
 
 		if False:
+			#mainColor = normal
 			mainColor = n*0.5+vec3(0.5, 0.5, 0.5)
 		else:
 			e = -pos.normalize()
@@ -167,18 +168,7 @@ class Shader(object):
 
 			mainColor = self.material.color*(self.ambient+modulated)
 
-		context = FSContext()
 		context.colors = (mainColor,)
-
-		return context # Keeps context live
 
 def nldot(a, b):
 	return max(a.dot(b), 0.0)
-
-
-
-def harness(pos, normal):
-	shader = Shader()
-	pos, normal, color = shader.shadeVertex(pos, normal)
-	finalColor = shader.shadeFragment(pos, normal, color)
-	return finalColor

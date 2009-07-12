@@ -36,9 +36,9 @@ class TestCanonicalTree(unittest.TestCase):
 		self.conditions = canonicaltree.ConditionManager()
 		self.manager    = canonicaltree.BoolManager(self.conditions)
 
-		self.c0 = self.conditions.condition(0, 2)
-		self.c1 = self.conditions.condition(1, 2)
-		self.c2 = self.conditions.condition(2, 3)
+		self.c0 = self.conditions.condition(0, [0, 1])
+		self.c1 = self.conditions.condition(1, [0, 1])
+		self.c2 = self.conditions.condition(2, [0, 1, 2])
 
 		self.t  = self.manager.true
 		self.f  = self.manager.false
@@ -210,9 +210,9 @@ class TestCanonicalSet(unittest.TestCase):
 		self.boolManager = canonicaltree.BoolManager(self.conditions)
 		self.setManager  = canonicaltree.SetManager()
 
-		self.c0 = self.conditions.condition(0, 2)
-		self.c1 = self.conditions.condition(1, 2)
-		self.c2 = self.conditions.condition(2, 3)
+		self.c0 = self.conditions.condition(0, [0, 1])
+		self.c1 = self.conditions.condition(1, [0, 1])
+		self.c2 = self.conditions.condition(2, [0, 1, 2])
 
 	def testSimplify(self):
 		zero = self.setManager.empty

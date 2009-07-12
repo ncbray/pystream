@@ -1,3 +1,5 @@
+from language.python import ast
+
 class DataflowNode(object):
 	__slots__ = ()
 
@@ -18,6 +20,9 @@ class SlotNode(DataflowNode):
 
 	def canonical(self):
 		return self
+
+	def mustBeUnique(self):
+		return True
 
 class FlowSensitiveSlotNode(SlotNode):
 	__slots__ = 'defn', 'use'
@@ -93,6 +98,8 @@ class FlowSensitiveSlotNode(SlotNode):
 	def isDefn(self, op):
 		return op is self.defn, (op, self.defn)
 
+	def isMutable(self):
+		return True
 
 class LocalNode(FlowSensitiveSlotNode):
 	__slots__ = 'names'
@@ -129,19 +136,21 @@ class PredicateNode(FlowSensitiveSlotNode):
 
 
 class ExistingNode(SlotNode):
-	__slots__ = 'name', 'uses'
-	def __init__(self, name=None):
+	__slots__ = 'name', 'ref', 'uses'
+	def __init__(self, name, ref):
 		SlotNode.__init__(self)
 		self.name = name
+		self.ref  = ref
 		self.uses = []
 
 	def addName(self, name):
-		#assert isinstance(name, ast.Existing), name
-		obj = name.object
-		if self.name is None:
-			self.name = obj
-		else:
-			assert self.name is obj
+		# May get called when an existing is copied to a local?
+		if isinstance(name, ast.Existing):
+			obj = name.object
+			if self.name is None:
+				self.name = obj
+			else:
+				assert self.name is obj
 
 	def addUse(self, op):
 		self.uses.append(op)
@@ -164,6 +173,9 @@ class ExistingNode(SlotNode):
 
 	def isUse(self, op):
 		return op in self.uses
+
+	def isMutable(self):
+		return False
 
 class NullNode(SlotNode):
 	__slots__ = 'defn', 'uses'
@@ -203,6 +215,10 @@ class NullNode(SlotNode):
 	def isUse(self, op):
 		return op in self.uses
 
+	def isMutable(self):
+		return False
+
+
 class FieldNode(FlowSensitiveSlotNode):
 	__slots__ = 'name'
 	def __init__(self, name=None):
@@ -222,6 +238,10 @@ class FieldNode(FlowSensitiveSlotNode):
 
 	def __repr__(self):
 		return "field(%r)" % self.name
+
+	def mustBeUnique(self):
+		return False
+
 
 
 class OpNode(DataflowNode):
@@ -462,12 +482,13 @@ class GenericOp(OpNode):
 		self.op             = op
 
 		self.localReads     = {}
-		self.localModifies  = []
 
 		self.heapReads      = {}
 		self.heapModifies   = {}
 		self.heapPsedoReads = {}
 
+		# Outputs
+		self.localModifies  = []
 		self.predicates     = []
 
 	def replaceUse(self, original, replacement):
@@ -564,6 +585,8 @@ class GenericOp(OpNode):
 		for slot in self.heapModifies.itervalues():
 			assert slot.isDefn(self)
 
+def refFromExisting(node):
+	return node.annotation.references.merged[0]
 
 class DataflowGraph(object):
 	__slots__ = 'entry', 'exit', 'existing', 'null', 'entryPredicate'
@@ -581,7 +604,7 @@ class DataflowGraph(object):
 		obj = node.object
 
 		if obj not in self.existing:
-			result = ExistingNode(obj)
+			result = ExistingNode(obj, refFromExisting(node))
 			self.existing[obj] = result
 		else:
 			result = self.existing[obj]

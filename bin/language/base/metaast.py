@@ -169,10 +169,14 @@ class ClassBuilder(object):
 		if not name in self.d:
 			self.d[name] = self.makeFunc(func, args)
 
-	def addDefaultMethods(self, paramnames, fields, types, optional):
+	def addDefaultMethods(self, paramnames, fields, types, optional, shared):
 		# Generate and attach methods.
 		self.defaultFunc('__init__', codegeneration.makeInit, (self.name, paramnames, fields, types, optional, self.repeated))
-		self.defaultFunc('__repr__', codegeneration.makeRepr, (self.name, fields))
+
+		if shared:
+			self.defaultFunc('__repr__', codegeneration.makeSharedRepr, (self.name, fields))
+		else:
+			self.defaultFunc('__repr__', codegeneration.makeRepr, (self.name, fields))
 		self.defaultFunc('accept',   codegeneration.makeAccept, (self.name,))
 		self.defaultFunc('children', codegeneration.makeGetChildren, (fields,))
 		self.defaultFunc('fields',   codegeneration.makeGetFields, (paramnames, fields,))
@@ -194,7 +198,7 @@ class ClassBuilder(object):
 		internalNames = list(slots)
 		slots = self.appendToExistingSlots(slots)
 
-		self.addDefaultMethods(fields, internalNames, types, optional)
+		self.addDefaultMethods(fields, internalNames, types, optional, shared)
 
 		return self
 
@@ -250,6 +254,7 @@ class ASTNode(object):
 	__slots__ = 'annotation'
 
 	__emptyAnnotation__ = None
+	__leaf__ = False # For pretty printing
 
 	def __init__(self):
 		self.annotation = self.__emptyAnnotation__

@@ -1,6 +1,6 @@
 from util.xmloutput  import XMLOutput
 from language.python import simplecodegen
-import common.astpprint
+from language.base import astpprint
 
 import config
 import os.path
@@ -140,7 +140,7 @@ def dumpFunctionInfo(func, compiler, derived, links, out, scg):
 	# Pretty printer for debugging
 	if False:
 		out.begin('pre')
-		common.astpprint.pprint(func, out)
+		astpprint.pprint(func, out)
 		out.end('pre')
 
 	printLabel(out, '%d contexts' % (len(code.annotation.contexts) if code.annotation.contexts is not None else 0))

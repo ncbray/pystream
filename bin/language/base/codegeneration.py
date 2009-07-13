@@ -95,6 +95,14 @@ def makeRepr(name, fields):
 
 	return code
 
+# To prevent possible recursion, shared node do NOT print their children.
+def makeSharedRepr(name, fields):
+	code = """def __repr__(self):
+	return "%s(%%d)" %% (id(self),)
+""" % (name)
+
+	return code
+
 
 def makeAccept(name):
 	code = """def accept(self, visitor, *args):

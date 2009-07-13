@@ -9,7 +9,6 @@ import analysis.defuse
 from . localframe import Merge, LoopMerge, Split, LocalFrame, mergeFrames, Inserter, HeadInserter, TailInserter, ExceptionMerge
 
 import sys
-from language.base.dumpast import DumpAST
 
 from . numbering import NumberAST, contains
 from . placeflow import PlaceFlowFunctions

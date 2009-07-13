@@ -17,6 +17,8 @@ NoneType = type(None)
 class Existing(Reference):
 	__slots__  = 'object'
 	__shared__ = True
+	__leaf__   = True
+
 
 	def __init__(self, o):
 		super(Existing, self).__init__()
@@ -38,6 +40,8 @@ class Existing(Reference):
 class Local(Reference):
 	__slots__  = 'name'
 	__shared__ = True
+	__leaf__   = True
+
 
 	def __init__(self, name=None):
 		super(Local, self).__init__()

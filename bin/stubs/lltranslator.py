@@ -2,8 +2,8 @@ from util.typedispatch import *
 from language.python import ast
 from language.python import program
 
-# HACK
-from common import astpprint
+# HACK for debugging
+from language.base import astpprint
 
 import optimization.simplify
 

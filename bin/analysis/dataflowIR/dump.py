@@ -4,7 +4,7 @@ from language.python import ast
 import os.path
 import pydot
 import util.filesystem
-import common.astpprint
+from language.base import astpprint
 
 import analysis.dataflowIR.graph as graph
 
@@ -65,7 +65,7 @@ class NodeStyle(TypeDispatcher):
 		if isinstance(op, ast.TypeSwitch):
 			label = op.__class__.__name__
 		else:
-			label = common.astpprint.toString(op, eol='\\n')
+			label = astpprint.toString(op, eol='\\n')
 
 		return dict(label=label, shape='box', style='filled', fillcolor=self.opColor, fontsize=8)
 

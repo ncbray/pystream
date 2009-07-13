@@ -1,5 +1,5 @@
 import argwrapper
-import abstractcode.shaderprogram
+import language.python.shaderprogram
 
 class PathDeclaration(object):
 	__slots__ = 'parent'
@@ -95,7 +95,7 @@ class GLSLDeclaration(object):
 				interface.createEntryPoint(fscode, fsobj, (shader,)+args)
 			else:
 				shaderargs = (vsobj, fsobj, shader,)+args
-				interface.createEntryPoint(abstractcode.shaderprogram.createShaderProgram(extractor), None, shaderargs)
+				interface.createEntryPoint(language.python.shaderprogram.createShaderProgram(extractor), None, shaderargs)
 
 	def __nonzero__(self):
 		return bool(self._shader)

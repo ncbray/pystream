@@ -3,7 +3,7 @@ from language.glsl import codegen
 
 from . pythonshader import PythonShaderProgram
 
-from abstractcode.shaderprogram import ShaderProgram
+from language.python.shaderprogram import ShaderProgram
 
 from . import dataflowtransform
 

@@ -82,8 +82,6 @@ def simpleUpdate(dt, iterations):
 	return swarm
 
 
-from abstractcode.shaderprogram import VSContext, FSContext
-
 class Material(object):
 	__slots__ = 'color'
 	def __init__(self):

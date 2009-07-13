@@ -1,7 +1,7 @@
 from util.typedispatch import *
 from language.python import ast
 import language.base.annotation
-from util import xform
+from util import traversal
 
 from dataflow.forward import *
 
@@ -466,7 +466,7 @@ def evaluateCode(compiler, node):
 		# HACK bypass dataflow analysis, as there's no real "flow"
 		rewrite  = FoldRewrite(compiler.extractor, compiler.storeGraph, node)
 		rewriteS = FoldTraverse(rewrite, node)
-		xform.replaceAllChildren(rewriteS, node)
+		traversal.replaceAllChildren(rewriteS, node)
 
 
 	existing = set(compiler.extractor.desc.objects)

@@ -2,12 +2,12 @@ from __future__ import absolute_import
 
 from util.typedispatch import *
 from language.python import ast
-from util import xform
+from util import traversal
 
 from . model import expressions
 from . import constraints
 
-import util.calling
+import language.python.calling
 
 class GetLocals(TypeDispatcher):
 	def __init__(self):
@@ -15,7 +15,7 @@ class GetLocals(TypeDispatcher):
 
 	@defaultdispatch
 	def default(self, node):
-		xform.visitAllChildren(self, node)
+		traversal.visitAllChildren(self, node)
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
@@ -183,7 +183,7 @@ class ShapeConstraintBuilder(TypeDispatcher):
 		else:
 			returnargs = None
 
-		callerargs = util.calling.CallerArgs(selfarg, args, kwds, vargs, kargs, returnargs)
+		callerargs = language.python.calling.CallerArgs(selfarg, args, kwds, vargs, kargs, returnargs)
 		return callerargs
 
 
@@ -200,7 +200,7 @@ class ShapeConstraintBuilder(TypeDispatcher):
 		kparam = self.localExpr(p.kparam)
 		returnparams = [self.localExpr(param) for param in p.returnparams]
 
-		calleeparams = util.calling.CalleeParams(selfparam, params, paramnames, defaults, vparam, kparam, returnparams)
+		calleeparams = language.python.calling.CalleeParams(selfparam, params, paramnames, defaults, vparam, kparam, returnparams)
 		return calleeparams
 
 
@@ -287,7 +287,7 @@ class ShapeConstraintBuilder(TypeDispatcher):
 		assert callerargs.kargs is None
 
 		numArgs  = len(callerargs.args)+numVArgs
-		info = util.calling.callStackToParamsInfo(calleeparams, selfArg, numArgs, vargsUncertain, callerargs.kwds.keys(), False)
+		info = language.python.calling.callStackToParamsInfo(calleeparams, selfArg, numArgs, vargsUncertain, callerargs.kwds.keys(), False)
 		return info
 
 	def indexExpr(self, expr, index):

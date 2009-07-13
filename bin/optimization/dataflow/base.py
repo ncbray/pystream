@@ -1,5 +1,5 @@
 import copy
-from util import xform
+from util import traversal
 from util.typedispatch import *
 
 from language.base.metaast import children, reconstruct
@@ -27,7 +27,7 @@ class MutateCode(TypeDispatcher):
 	@defaultdispatch
 	def visitCode(self, node):
 		assert node.isCode(), type(node)
-		xform.replaceAllChildren(self.strategy, node)
+		traversal.replaceAllChildren(self.strategy, node)
 		return node
 
 class DynamicBase(object):

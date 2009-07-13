@@ -1,8 +1,8 @@
 from language.python import program, ast
 
 import util
-import util.cpa
-import util.calling
+import analysis.cpasignature
+import language.python.calling
 import util.canonical
 CanonicalObject = util.canonical.CanonicalObject
 
@@ -33,7 +33,7 @@ def calleeSlotsFromContext(sys, context):
 	kparam      = localSlot(sys, code, callee.kparam, context)
 	returnparams = [localSlot(sys, code, param, context) for param in callee.returnparams]
 
-	return util.calling.CalleeParams(selfparam, parameters,
+	return language.python.calling.CalleeParams(selfparam, parameters,
 		callee.paramnames, defaults, vparam, kparam, returnparams)
 
 
@@ -73,7 +73,7 @@ class AnalysisContext(CanonicalObject):
 		callee = calleeSlotsFromContext(sys, self)
 
 		# info is not actually intrinsic to the context?
-		info = util.calling.callStackToParamsInfo(callee,
+		info = language.python.calling.callStackToParamsInfo(callee,
 			sig.selfparam is not None, sig.numParams(),
 			False, 0, False)
 
@@ -108,7 +108,7 @@ class AnalysisContext(CanonicalObject):
 		if param is None:
 			assert cpaType is None
 			assert arg is None
-		elif cpaType is util.cpa.Any:
+		elif cpaType is analysis.cpasignature.Any:
 			assert isinstance(param, storegraph.SlotNode)
 			assert isinstance(arg,   storegraph.SlotNode)
 			sys.createAssign(arg, param)

@@ -1,4 +1,4 @@
-from util.xform.traversal import allChildren, replaceAllChildren
+from util.traversal import allChildren, replaceAllChildren
 import optimization.simplify
 
 

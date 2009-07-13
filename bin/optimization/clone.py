@@ -6,7 +6,7 @@
 import collections
 from PADS.UnionFind import UnionFind
 from util.typedispatch import *
-from util.xform.traversal import replaceAllChildren
+from util.traversal import replaceAllChildren
 from language.python import ast
 import optimization.simplify
 from analysis import programculler

@@ -2,7 +2,7 @@ import types
 import sys
 
 from util.visitor import StandardVisitor
-from util.pythonoutput import PythonOutput
+from . pythonoutput import PythonOutput
 
 from analysis import defuse
 import analysis.collapser

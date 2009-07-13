@@ -47,7 +47,7 @@ class ForwardFlowTraverse(TypeDispatcher):
 
 	@dispatch(list, tuple, ast.ExceptionHandler, type(None))
 	def visitFlow(self, node):
-		node = xform.allChildren(self, node)
+		node = traversal.allChildren(self, node)
 		return node
 
 	@dispatch(ast.Suite)

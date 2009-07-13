@@ -5,6 +5,7 @@ import util
 import base
 
 from analysis.storegraph import storegraph, canonicalobjects, extendedtypes
+import analysis.cpasignature
 
 from constraintextractor import ExtractDataflow
 
@@ -156,11 +157,11 @@ class InterproceduralDataflow(object):
 
 	def _signature(self, code, selfparam, params):
 		assert code.isCode(), type(code)
-		assert selfparam is None or selfparam is util.cpa.Any or isinstance(selfparam,  extendedtypes.ExtendedType), selfparam
+		assert selfparam is None or selfparam is analysis.cpasignature.Any or isinstance(selfparam,  extendedtypes.ExtendedType), selfparam
 		for param in params:
-			assert param is util.cpa.Any or isinstance(param, extendedtypes.ExtendedType), param
+			assert param is analysis.cpasignature.Any or isinstance(param, extendedtypes.ExtendedType), param
 
-		return util.cpa.CPASignature(code, selfparam, params)
+		return analysis.cpasignature.CPASignature(code, selfparam, params)
 
 	def canonicalContext(self, srcOp, code, selfparam, params):
 		assert isinstance(srcOp, canonicalobjects.OpContext), type(srcOp)
@@ -206,7 +207,7 @@ class InterproceduralDataflow(object):
 
 	def fold(self, targetcontext):
 		def notConst(obj):
-			return obj is util.cpa.Any or (obj is not None and not obj.obj.isConstant())
+			return obj is analysis.cpasignature.Any or (obj is not None and not obj.obj.isConstant())
 
 		sig = targetcontext.signature
 		code = sig.code

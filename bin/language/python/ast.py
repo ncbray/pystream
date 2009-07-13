@@ -9,7 +9,7 @@ from pythonbase import *
 from . import program
 
 # For Code
-import util.calling
+import language.python.calling
 
 # HACK for CodeParameters.paramnames
 NoneType = type(None)
@@ -345,7 +345,7 @@ class CodeParameters(PythonASTNode):
 			returnparams:Local*"""
 
 	def codeParameters(self):
-		return util.calling.CalleeParams(self.selfparam, self.params, self.paramnames, [], self.vparam, self.kparam, self.returnparams)
+		return language.python.calling.CalleeParams(self.selfparam, self.params, self.paramnames, [], self.vparam, self.kparam, self.returnparams)
 
 
 class Code(BaseCode):

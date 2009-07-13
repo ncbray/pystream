@@ -1,7 +1,7 @@
 from util.typedispatch import *
 from language.python import ast
 from language.base.metaast import children
-from util.xform.traversal import visitAllChildrenArgs
+from util.traversal import visitAllChildrenArgs
 
 class ReadModifyInfo(object):
 	__slots__ = 'localRead', 'localModify', 'fieldRead', 'fieldModify'

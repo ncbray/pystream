@@ -1,5 +1,4 @@
-from util.typedispatch import *
-import util.traversal
+from asttools.transform import *
 
 from language.python import ast
 from language.python import program
@@ -128,5 +127,5 @@ class ConvertCalls(TypeDispatcher):
 
 def callConverter(extractor, node):
 	converter = ConvertCalls(extractor, node)
-	util.traversal.replaceAllChildren(converter, node)
+	replaceAllChildren(converter, node)
 	return node

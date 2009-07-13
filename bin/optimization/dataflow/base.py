@@ -1,9 +1,7 @@
 import copy
-from util import traversal
-from util.typedispatch import *
+from asttools.transform import *
 
-from asttools.metaast import children, reconstruct
-# HACK?
+# HACK should not be dependant on Python?
 from language.python import ast
 
 class InternalError(Exception):
@@ -27,7 +25,7 @@ class MutateCode(TypeDispatcher):
 	@defaultdispatch
 	def visitCode(self, node):
 		assert node.isCode(), type(node)
-		traversal.replaceAllChildren(self.strategy, node)
+		replaceAllChildren(self.strategy, node)
 		return node
 
 class DynamicBase(object):

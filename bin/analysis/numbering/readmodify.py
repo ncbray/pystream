@@ -1,7 +1,5 @@
-from util.typedispatch import *
+from asttools.transform import *
 from language.python import ast
-from asttools.metaast import children
-from util.traversal import visitAllChildrenArgs
 
 class ReadModifyInfo(object):
 	__slots__ = 'localRead', 'localModify', 'fieldRead', 'fieldModify'
@@ -21,9 +19,9 @@ class ReadModifyInfo(object):
 
 class FindReadModify(TypeDispatcher):
 
-	def getInfo(self, node):
+	def getListInfo(self, l):
 		info = ReadModifyInfo()
-		for child in children(node):
+		for child in l:
 			info.update(self(child))
 		return info
 
@@ -90,7 +88,7 @@ class FindReadModify(TypeDispatcher):
 
 	@dispatch(ast.Suite)
 	def visitSuite(self, node):
-		info = self.getInfo(node.blocks)
+		info = self.getListInfo(node.blocks)
 		self.lut[node] = info
 		return info
 

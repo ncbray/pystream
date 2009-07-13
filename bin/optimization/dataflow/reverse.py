@@ -39,7 +39,7 @@ class ReverseFlowTraverse(TypeDispatcher):
 
 	@dispatch(ast.Suite, list, tuple, type(None))
 	def visitFlow(self, node):
-		node = traversal.allChildrenReversed(self, node)
+		node = allChildrenReversed(self, node)
 		return node
 
 	@dispatch(ast.Condition)

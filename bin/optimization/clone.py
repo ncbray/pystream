@@ -5,8 +5,7 @@
 
 import collections
 from PADS.UnionFind import UnionFind
-from util.typedispatch import *
-from util.traversal import replaceAllChildren
+from asttools.transform import *
 from language.python import ast
 import optimization.simplify
 from analysis import programculler

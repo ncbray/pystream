@@ -1,6 +1,6 @@
-from analysis.astcollector import getOps
+from asttools.transform import *
 from language.python import ast
-from util.typedispatch import *
+from analysis.astcollector import getOps
 
 class Finder(object):
 	def __init__(self):

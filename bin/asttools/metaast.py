@@ -1,5 +1,4 @@
-__all__ = ['astnode', 'ASTNode', 'children',
-	   'reconstruct', 'makeASTManifest',]
+__all__ = ['ASTNode',]
 
 # A metaclass for generating AST node classes.
 
@@ -205,49 +204,10 @@ class ClassBuilder(object):
 	def build(self):
 		return self.mutate().finalize()
 
-# TODO grab fields from bases?
 
 class astnode(type):
 	def __new__(mcls, name, bases, d):
 		return ClassBuilder(mcls, name, bases, d).build()
-
-
-def makeASTManifest(glbls):
-	manifest = {}
-	for name, obj in glbls.iteritems():
-		if isinstance(obj, type) and hasattr(obj, '__metaclass__'):
-			if obj.__metaclass__ == astnode:
-				manifest[name] = obj
-	return manifest
-
-
-LeafTypes = (str, type(None), bool, int, long, float)
-ListTypes = (list, tuple)
-
-def children(node):
-	if isinstance(node, LeafTypes):
-		return ()
-	elif isinstance(node, ListTypes):
-		return node
-	else:
-		return node.children()
-
-def reconstruct(node, newchildren):
-	if isinstance(node, LeafTypes):
-		assert not newchildren, newchildren
-		return node
-	elif isinstance(node, ListTypes):
-		return type(node)(newchildren)
-	else:
-		try:
-			newnode = type(node)(*newchildren)
-			assert hasattr(node, 'annotation'), node
-			newnode.annotation = node.annotation
-			return newnode
-		except:
-			print "error", node
-			print newchildren
-			raise
 
 class ASTNode(object):
 	__metaclass__ = astnode
@@ -263,4 +223,6 @@ class ASTNode(object):
 		self.annotation = self.annotation.rewrite(**kwds)
 
 	def clone(self):
-		return reconstruct(self, self.children())
+		newnode = type(self)(*self.children())
+		newnode.annotation = self.annotation
+		return newnode

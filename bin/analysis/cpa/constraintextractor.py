@@ -1,4 +1,4 @@
-from util.typedispatch import *
+from asttools.transform import *
 
 from language.python import ast
 from language.python import program
@@ -113,9 +113,7 @@ class ExtractDataflow(TypeDispatcher):
 
 	@dispatch(ast.Suite, ast.Condition)
 	def visitOK(self, node):
-		for child in ast.children(node):
-			self(child)
-
+		visitAllChildren(self, node)
 
 	@dispatch(list)
 	def visitList(self, node):

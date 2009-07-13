@@ -1,8 +1,4 @@
-from util.typedispatch import *
-from language.python import ast
-
 import util.graphalgorithim.dominator
-
 from . dataflow import ForwardDataflow
 
 # For debugging

@@ -1,9 +1,7 @@
-from util.typedispatch import *
+from asttools.transform import *
 from language.python import ast
 
 from dataflow.reverse import *
-
-import util.traversal
 
 from analysis import tools
 
@@ -21,7 +19,7 @@ class MarkLocals(TypeDispatcher):
 
 	@defaultdispatch
 	def default(self, node):
-		util.traversal.visitAllChildren(self, node)
+		visitAllChildren(self, node)
 
 
 nodesWithNoSideEffects = (ast.GetGlobal, ast.Existing, ast.Local, ast.Load, ast.Allocate, ast.BuildTuple, ast.BuildList, ast.BuildMap)

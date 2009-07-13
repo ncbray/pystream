@@ -1,7 +1,7 @@
-from util.typedispatch import *
-from language.python import ast
+from asttools.transform import *
 import asttools.annotation
-from util import traversal
+
+from language.python import ast
 
 from dataflow.forward import *
 
@@ -466,7 +466,7 @@ def evaluateCode(compiler, node):
 		# HACK bypass dataflow analysis, as there's no real "flow"
 		rewrite  = FoldRewrite(compiler.extractor, compiler.storeGraph, node)
 		rewriteS = FoldTraverse(rewrite, node)
-		traversal.replaceAllChildren(rewriteS, node)
+		replaceAllChildren(rewriteS, node)
 
 
 	existing = set(compiler.extractor.desc.objects)

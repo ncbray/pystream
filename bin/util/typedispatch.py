@@ -1,11 +1,5 @@
-__all__ = ['TypeDispatcher',
-           'defaultdispatch', 'dispatch',
-           'allChildren', 'replaceAllChildren',
-           'visitAllChildren', 'visitAllChildrenArgs',
-           'allChildrenReversed', 'visitAllChildrenReversed']
-
-# Not used inside this module, only exported.
-from . traversal import *
+__all__ = ['TypeDispatcher', 'defaultdispatch', 'dispatch',
+           'TypeDispatchError', 'TypeDispatchDeclarationError']
 
 import inspect
 
@@ -23,14 +17,14 @@ def defaultdispatch(f):
 	def defaultWrap(*args, **kargs):
 		return f(*args, **kargs)
 	defaultWrap.__original__ = f
-	defaultWrap.__dispatch__ = ('default',)
+	defaultWrap.__dispatch__ = (None,)
 	return defaultWrap
 
 def dispatch__call__(self, p, *args):
 	t = type(p)
 	table = self.__typeDispatchTable__
 
-	if not t in table: t = 'default'
+	if not t in table: t = None
 
 	return table[t](self, p, *args)
 
@@ -40,7 +34,7 @@ def dispatch__call__(self, p, *args):
 #		t = type(p)
 #		table = self.__typeDispatchTable__
 
-#		if not t in table: t = 'default'
+#		if not t in table: t = None
 
 #		return table[t](self, p, *args)
 #	except:
@@ -92,14 +86,15 @@ class typedispatcher(type):
 			for t in inspect.getmro(base):
 				inlineAncestor(t, lut)
 
-		if 'default' not in lut:
-			lut['default'] = exceptionDefault
+		if None not in lut:
+			raise TypeDispatchDeclarationError, "%s has no default dispatch" % (name,)
 
 		d['__typeDispatchTable__'] = lut
-		d['__call__'] = dispatch__call__
 
 		return type.__new__(mcls, name, bases, d)
 
 class TypeDispatcher(object):
-	__metaclass__ = typedispatcher
+	__metaclass__    = typedispatcher
+	__dispatch__     = dispatch__call__
+	__call__         = dispatch__call__
 	exceptionDefault = defaultdispatch(exceptionDefault)

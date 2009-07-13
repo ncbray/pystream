@@ -1,4 +1,4 @@
-from util.traversal import allChildren, replaceAllChildren
+from asttools.traversal import allChildren, replaceAllChildren
 import optimization.simplify
 
 

@@ -1,4 +1,3 @@
-from asttools.metaast import *
 from glslbase import *
 
 ### Type declarations ###

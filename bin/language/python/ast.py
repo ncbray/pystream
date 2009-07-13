@@ -1,8 +1,6 @@
 ### Objects for representing decompiled code. ###
-
 # Fields should be in order of evaluation.
 
-from asttools.metaast import *
 from pythonbase import *
 
 # Allows Existing.object to be typed.
@@ -397,9 +395,3 @@ class Store(LLStatement):
 
 class Check(LLExpression):
 	__fields__ = 'expr:Reference fieldtype:str name:Reference'
-
-manifest = makeASTManifest(globals())
-
-
-
-

@@ -1,6 +1,6 @@
 import sys
 import cStringIO
-from . import metaast
+from . metaast import ASTNode
 
 class ASTPrettyPrinter(object):
 	def __init__(self, out=None, eol='\n'):
@@ -9,7 +9,10 @@ class ASTPrettyPrinter(object):
 		self.eol = eol
 
 	def isLeaf(self, node):
-		return not isinstance(node, (metaast.ASTNode, list, tuple)) or getattr(node, '__leaf__', False)
+		if isinstance(node, ASTNode):
+			return node.__leaf__
+		else:
+			return not isinstance(node, (list, tuple))
 
 	def handleContainer(self, node, label, tabs):
 		if isinstance(node, list):

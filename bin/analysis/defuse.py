@@ -1,4 +1,4 @@
-from util.typedispatch import *
+from asttools.transform import *
 from language.python import ast
 
 import collections
@@ -23,8 +23,7 @@ class DFS(object):
 		# HACK we must analyze the code inside MakeFunction
 		doForce = isinstance(node, ast.MakeFunction)
 		if force or doForce:
-			for child in ast.children(node):
-				self.visit(child, doForce)
+			visitAllChildrenForced(self.visit, node, doForce)
 		else:
 			visitAllChildren(self.visit, node)
 

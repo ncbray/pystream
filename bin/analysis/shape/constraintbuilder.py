@@ -1,8 +1,7 @@
 from __future__ import absolute_import
 
-from util.typedispatch import *
+from asttools.transform import *
 from language.python import ast
-from util import traversal
 
 from . model import expressions
 from . import constraints
@@ -15,7 +14,7 @@ class GetLocals(TypeDispatcher):
 
 	@defaultdispatch
 	def default(self, node):
-		traversal.visitAllChildren(self, node)
+		visitAllChildren(self, node)
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):

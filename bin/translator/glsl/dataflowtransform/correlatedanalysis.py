@@ -218,7 +218,6 @@ class GenericOpFunction(TypeDispatcher):
 		# Evaluate
 		result = self.func(*self.inputs)
 
-
 		# Unpack the outputs
 		for (node, index), value in zip(self.outputNodes, result):
 			analysis.setValue(node, index, value)
@@ -226,16 +225,11 @@ class GenericOpFunction(TypeDispatcher):
 		# Type switch fixup
 		# TODO functions can't inject new correlations, so we must fixup?
 		if isinstance(g.op, ast.TypeSwitch):
-			cond = analysis.cond.condition(g.op, range(len(g.op.cases)))
+			correlation = analysis.cond.condition(g.op, range(len(g.op.cases)))
 
-			for i, node in enumerate(g.predicates):
-				analysis.setValue(node, 0, result[self.outputlut[(i,0)]])
-				mask = cond.mask[i]
-				value = result[self.outputlut[(i, 0)]]
-
-				masked = analysis.set.ite(mask, value, analysis.set.empty)
-
-				analysis.setValue(node, 0, masked)
+			for mask, pnode, enode in zip(correlation.mask.itervalues(), g.predicates, g.localModifies):
+				analysis.maskSetValue(pnode, 0, mask)
+				if enode is not None: analysis.maskSetValue(enode, 0, mask)
 
 
 class DataflowIOAnalysis(TypeDispatcher):
@@ -258,7 +252,6 @@ class DataflowIOAnalysis(TypeDispatcher):
 		self.pathObjIndex       = {}
 		self.allocateFreshIndex = {}
 		self.allocateMergeIndex = {}
-
 
 		self.cond = canonicaltree.ConditionManager()
 		self.bool = canonicaltree.BoolManager(self.cond)
@@ -340,6 +333,11 @@ class DataflowIOAnalysis(TypeDispatcher):
 			assert count != 0, node
 
 			return count
+
+	def maskSetValue(self, node, index, mask):
+		value  = self.getValue(node, index)
+		masked = self.set.ite(mask, value, self.set.empty)
+		self.setValue(node, index, masked)
 
 	def getCount(self, obj):
 		assert isinstance(obj, storegraph.ObjectNode), obj

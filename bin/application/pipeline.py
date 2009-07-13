@@ -21,6 +21,7 @@ import analysis.fsdf
 import translator.glsl
 
 import config
+import threading
 
 def codeConditioning(compiler):
 	with compiler.console.scope('conditioning'):
@@ -108,3 +109,12 @@ def evaluate(compiler, name):
 				except Exception, e:
 					# HACK prevents it from masking any exception that was thrown before.
 					print "Exception dumping the report: ", e
+
+			if config.doThreadCleanup:
+				if threading.activeCount() > 1:
+					with compiler.console.scope('threading cleanup'):
+						compiler.console.output('Threads: %d' % (threading.activeCount()-1))
+						for t in threading.enumerate():
+							if t is not threading.currentThread():
+								compiler.console.output('.')
+								t.join()

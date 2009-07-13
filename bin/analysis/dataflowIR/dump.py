@@ -8,6 +8,7 @@ from asttools import astpprint
 
 import analysis.dataflowIR.graph as graph
 
+from util.async import *
 
 class NodeStyle(TypeDispatcher):
 	localColor     = 'lime'
@@ -227,18 +228,14 @@ class DataflowToDot(TypeDispatcher):
 			self(current)
 
 
-def dumpGraph(name, g, format='svg', prog='dot'):
+def dumpGraph(directory, name, format, g, prog='dot'):
 	s = g.create(prog=prog, format=format)
-	fn = name+('.'+format)
-	f = open(fn, 'wb')
-	f.write(s)
-	f.close()
-	return fn
+	util.filesystem.writeBinaryData(directory, name, format, s)
 
+@async_limited(2)
 def evaluateDataflow(dataflow, directory, name):
 	g = pydot.Dot(graph_type='digraph')
 	dtd = DataflowToDot(g)
 	dtd.process(dataflow)
 
-	util.filesystem.ensureDirectoryExists(directory)
-	dumpGraph(os.path.join(directory, name), g, prog='dot')
+	dumpGraph(directory, name, 'svg', g)

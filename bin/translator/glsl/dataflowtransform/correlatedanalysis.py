@@ -16,6 +16,9 @@ from util.xmloutput import XMLOutput
 import sys
 import os.path
 
+from util.async import *
+import util.filesystem
+
 class GenericOpFunction(TypeDispatcher):
 	def __init__(self, manager):
 		self.func = canonicaltree.TreeFunction(manager, self.concrete, True)
@@ -418,14 +421,14 @@ class DataflowIOAnalysis(TypeDispatcher):
 				out.endl()
 		out.endl()
 
-
+	@async_limited(2)
 	def debugDump(self):
 		# Dump output
-		name = self.name
-		filename = name + ".html"
-		fullname = os.path.join('summaries\\dataflow', filename)
 
-		f = open(fullname, 'w')
+		directory = 'summaries\\dataflow'
+		name = self.name
+
+		f   = util.filesystem.fileOutput(directory, name, 'html')
 		out = XMLOutput(f)
 
 		with out.scope('html'):
@@ -445,6 +448,7 @@ class DataflowIOAnalysis(TypeDispatcher):
 					self.dumpNodes(out, 'Inputs', op.reverse())
 					self.dumpNodes(out, 'Outputs', op.forward())
 		out.endl()
+		f.close()
 
 def evaluateDataflow(compiler, dataflow, name):
 	order = analysis.dataflowIR.ordering.evaluateDataflow(dataflow)

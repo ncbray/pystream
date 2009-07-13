@@ -22,6 +22,8 @@ import urllib
 from language.python import ast
 from language.python import annotations
 
+from util.async import *
+
 def outputCodeShortName(out, code, links=None, context=None):
 	link = links.codeRef(code, context) if links is not None else None
 
@@ -111,7 +113,12 @@ def tableRow(out, links, label, *args):
 	out.end('tr')
 	out.endl()
 
-def dumpFunctionInfo(func, compiler, derived, links, out, scg):
+#@async_limited(2)
+def dumpFunctionInfo(func, compiler, derived, links, reportDir):
+	out, scg = makeOutput(reportDir, links.functionFile[func])
+
+	dumpHeader(out)
+
 	code = func
 	out.begin('h3')
 	outputCodeShortName(out, func)
@@ -393,8 +400,15 @@ def dumpFunctionInfo(func, compiler, derived, links, out, scg):
 			out.end('p')
 		out.end('div')
 
+	out.endl()
+	out.close()
 
-def dumpHeapInfo(heap, compiler, heapContexts, links, out):
+#@async_limited(2)
+def dumpHeapInfo(heap, compiler, heapContexts, links, reportDir):
+	out, scg = makeOutput(reportDir, links.objectFile[heap])
+
+	dumpHeader(out)
+
 	out.begin('h3')
 	outputObjectShortName(out, heap)
 	out.end('h3')
@@ -444,6 +458,8 @@ def dumpHeapInfo(heap, compiler, heapContexts, links, out):
 		out.endl()
 
 	out.end('pre')
+	out.endl()
+	out.close()
 
 
 def makeHeapTree(liveHeap, heapContexts):
@@ -468,23 +484,18 @@ def dumpReport(name, compiler, derived, liveInvocations, liveHeap, heapContexts)
 
 	links = LinkManager()
 
-	heapToFile = {}
-	funcToFile = {}
-
 	# HACK for closure
 	uid = [0,0]
 
 	def makeHeapFile(heap):
 		fn = "h%07d.html" % uid[0]
 		links.objectFile[heap] = fn
-		heapToFile[heap] = fn
 		uid[0] += 1
 		return fn
 
 	def makeFunctionFile(func):
 		fn = "f%07d.html" % uid[1]
 		links.functionFile[func] = fn
-		funcToFile[func] = fn
 		uid[1] += 1
 		return fn
 
@@ -581,19 +592,11 @@ def dumpReport(name, compiler, derived, liveInvocations, liveHeap, heapContexts)
 	out.close()
 
 	for func in compiler.liveCode:
-		out, scg = makeOutput(reportDir, funcToFile[func])
-		dumpHeader(out)
-		dumpFunctionInfo(func, compiler, derived, links, out, scg)
-		out.endl()
-		out.close()
+		dumpFunctionInfo(func, compiler, derived, links, reportDir)
 
 
 	for heap in liveHeap:
-		out, scg = makeOutput(reportDir, heapToFile[heap])
-		dumpHeader(out)
-		dumpHeapInfo(heap, compiler, heapContexts, links, out)
-		out.endl()
-		out.close()
+		dumpHeapInfo(heap, compiler, heapContexts, links, reportDir)
 
 	dumpgraphs.dump(compiler, liveInvocations, links, reportDir)
 

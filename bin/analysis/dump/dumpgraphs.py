@@ -2,15 +2,14 @@ import os.path
 import pydot
 import util.graphalgorithim.dominator
 from . dumputil import *
+from util.async import *
+import util.filesystem
 
-def dumpGraph(name, g, format='svg', prog='dot'):
+def dumpGraph(directory, name, format, g, prog='dot'):
 	s = g.create(prog=prog, format=format)
-	fn = name+('.'+format)
-	f = open(fn, 'wb')
-	f.write(s)
-	f.close()
-	return fn
+	util.filesystem.writeBinaryData(directory, name, format, s)
 
+@async
 def dump(compiler, liveInvoke, links, reportDir):
 	# Filter out primitive nodes
 	def keepCode(code):
@@ -72,4 +71,4 @@ def dump(compiler, liveInvoke, links, reportDir):
 			g.add_edge(pydot.Edge(str(id(src)), str(id(dst)), weight=weight))
 
 	# Output
-	dumpGraph(os.path.join(reportDir, 'invocations'), g, prog='dot')
+	dumpGraph(reportDir, 'invocations', 'svg', g)

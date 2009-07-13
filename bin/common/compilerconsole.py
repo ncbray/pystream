@@ -1,6 +1,6 @@
 import sys
 import time
-import util
+import util.formatting
 
 class Scope(object):
 	def __init__(self, parent, name):
@@ -63,7 +63,7 @@ class CompilerConsole(object):
 
 	def end(self):
 		self.current.end()
-		self.output("end   %s %s" % (self.path(), util.elapsedTimeString(self.current.elapsed)), 0)
+		self.output("end   %s %s" % (self.path(), util.formatting.elapsedTime(self.current.elapsed)), 0)
 		self.current = self.current.parent
 
 	def scope(self, name):

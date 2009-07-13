@@ -1,19 +1,10 @@
-__all__ = ['numbits', 'replaceGlobals']
-
 import sys
-import math
 import types
 
 def replaceGlobals(f, g):
 	# HACK closure is lost
 	assert isinstance(f, types.FunctionType), type(f)
 	return types.FunctionType(f.func_code, g, f.func_name, f.func_defaults)
-
-def numbits(size):
-	if size <= 1:
-		return 0
-	else:
-		return int(math.ceil(math.log(size, 2)))
 
 def moduleForGlobalDict(glbls):
 	assert '__file__' in glbls, "Global dictionary does not come from a module?"
@@ -35,27 +26,6 @@ def itergroupings(iterable, key, value):
 			grouping[group].append(data)
 	return grouping.iteritems()
 
-def elapsedTimeString(t):
-	if t < 1.0:
-		return "%.1f ms" % (t*1000.0)
-	elif t < 60.0:
-		return "%.2f s" % (t)
-	elif t < 3600.0:
-		return "%.2f m" % (t/60.0)
-	else:
-		return "%.2f h" % (t/3600.0)
-
-def memorySizeString(sz):
-	sz = float(sz)
-	if sz < 1024:
-		return "%f B" % sz
-	elif sz < 1024**2:
-		return "%.1f kB" % (sz/(1024))
-	elif sz < 1024**3:
-		return "%.1f MB" % (sz/(1024**2))
-	else:
-		return "%.1f GB" % (sz/(1024**3))
-
 # Note that the unique name may change between runs, as it takes the id of a type.
 def uniqueSlotName(descriptor):
 	# HACK GetSetDescriptors are not really slots?
@@ -64,12 +34,4 @@ def uniqueSlotName(descriptor):
 	objClass = descriptor.__objclass__
 	return "%s#%s#%d" % (name, objClass.__name__, id(objClass))
 
-def _bijection(a, b):
-	c = a+b
-	return (c*(c+1))//2+a
 
-def bijection(a, b, *others):
-	result = _bijection(a, b)
-	for o in others:
-		result = _bijection(result, o)
-	return result

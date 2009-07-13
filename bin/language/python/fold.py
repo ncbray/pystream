@@ -1,5 +1,5 @@
 import ast
-from util import fold
+from util.python import apply
 
 
 def existingConstant(node):
@@ -30,10 +30,10 @@ def foldBinaryOpAST(extractor, bop):
 
 	if existingConstant(l) and existingConstant(r):
 		try:
-			value = fold.foldBinaryOp(op, l.object.pyobj, r.object.pyobj)
+			value = apply.applyBinaryOp(op, l.object.pyobj, r.object.pyobj)
 			obj = extractor.getObject(value)
 			return ast.Existing(obj)
-		except fold.FoldError:
+		except apply.ApplyError:
 			pass
 	return bop
 
@@ -43,10 +43,10 @@ def foldUnaryPrefixOpAST(extractor, uop):
 
 	if existingConstant(expr):
 		try:
-			value = fold.foldUnaryPrefixOp(op, expr.object.pyobj)
+			value = apply.applyUnaryPrefixOp(op, expr.object.pyobj)
 			obj = extractor.getObject(value)
 			return ast.Existing(obj)
-		except fold.FoldError:
+		except apply.ApplyError:
 			pass
 	return uop
 
@@ -55,10 +55,10 @@ def foldBoolAST(extractor, op):
 
 	if existingConstant(expr):
 		try:
-			value = fold.foldBool(expr.object.pyobj)
+			value = apply.applyBool(expr.object.pyobj)
 			obj = extractor.getObject(value)
 			return ast.Existing(obj)
-		except fold.FoldError:
+		except apply.ApplyError:
 			pass
 	return op
 
@@ -67,10 +67,10 @@ def foldNotAST(extractor, op):
 
 	if existingConstant(expr):
 		try:
-			value = fold.foldNot(expr.object.pyobj)
+			value = apply.applyNot(expr.object.pyobj)
 			obj = extractor.getObject(value)
 			return ast.Existing(obj)
-		except fold.FoldError:
+		except apply.ApplyError:
 			pass
 	return op
 
@@ -82,10 +82,10 @@ def foldCallAST(extractor, node, func, args=(), kargs={}):
 			return node
 	try:
 		args = [arg.object.pyobj for arg in args]
-		value = fold.foldFunction(func, args)
+		value = apply.applyFunction(func, args)
 		obj = extractor.getObject(value)
 		return ast.Existing(obj)
-	except fold.FoldError:
+	except apply.ApplyError:
 		pass
 
 	return node

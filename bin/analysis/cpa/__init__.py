@@ -18,7 +18,7 @@ from language.python import annotations
 
 from optimization.callconverter import callConverter
 
-from util.fold import foldFunction
+from util.python.apply import applyFunction
 
 from analysis.astcollector import getOps
 
@@ -40,7 +40,7 @@ def foldFunctionIR(extractor, func, vargs=(), kargs={}):
 	assert not kargs, kargs
 	newkargs = {}
 
-	result = foldFunction(func, newvargs, newkargs)
+	result = applyFunction(func, newvargs, newkargs)
 	return extractor.getObject(result)
 
 

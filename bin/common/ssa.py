@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import language.python.ast as ast
 
-from . import opnames
+from util.python import opnames
 
 class SSADefinitions(object):
 	def __init__(self):

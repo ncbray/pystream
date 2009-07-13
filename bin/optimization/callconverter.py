@@ -4,7 +4,7 @@ import util.traversal
 from language.python import ast
 from language.python import program
 
-from common import opnames
+from util.python import opnames
 
 
 class ConvertCalls(TypeDispatcher):

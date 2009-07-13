@@ -4,7 +4,7 @@ from language.python import ast
 from language.python import program
 from language.python import annotations
 
-from common import opnames
+from util.python import opnames
 
 from constraints import *
 

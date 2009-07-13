@@ -27,12 +27,12 @@ class TestTypeDisbatch(unittest.TestCase):
 		self.assertEqual(foo(1.0),   'default')
 
 
-import language.python.calling
+import util.python.calling
 from util.tvl import *
 class TestCallingUtility(unittest.TestCase):
 	def testExact(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 2, False, 0, False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 2, False, 0, False)
 
 
 		self.assertEqual(info.willSucceed, TVLTrue)
@@ -65,21 +65,21 @@ class TestCallingUtility(unittest.TestCase):
 
 
 	def testTooManyArgs(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 3, False, 0, False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 3, False, 0, False)
 		self.assertHardFail(info)
 
 	def testTooFewArgs(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 1, False, 0, False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 1, False, 0, False)
 		self.assertHardFail(info)
 
 
 	### Vargs ###
 
 	def testExactSpill(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], 2, None,[])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 4, False, 0, False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], 2, None,[])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 4, False, 0, False)
 
 		self.assertHardSucceed(info)
 
@@ -92,8 +92,8 @@ class TestCallingUtility(unittest.TestCase):
 
 
 	def testUncertainPullVargs(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], 2, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 1, True, 0, False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], 2, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 1, True, 0, False)
 
 		self.assertEqual(info.willSucceed, TVLMaybe)
 
@@ -107,8 +107,8 @@ class TestCallingUtility(unittest.TestCase):
 		self.assertEqual(info.uncertainVParam, True)
 
 	def testUncertainPull(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee, False, 1, True, 0, False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee, False, 1, True, 0, False)
 
 		self.assertEqual(info.willSucceed, TVLMaybe)
 
@@ -123,8 +123,8 @@ class TestCallingUtility(unittest.TestCase):
 	### Known keywords ###
 
 	def testSemiKeyword(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 1, False, ('b',), False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 1, False, ('b',), False)
 
 		self.assertHardSucceed(info)
 
@@ -138,8 +138,8 @@ class TestCallingUtility(unittest.TestCase):
 
 
 	def testAllKeyword(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 0, False, ('a', 'b',), False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 0, False, ('a', 'b',), False)
 
 		self.assertHardSucceed(info)
 
@@ -152,25 +152,25 @@ class TestCallingUtility(unittest.TestCase):
 		self.assert_(1 in info.certainKeywords)
 
 	def testRedundantKeyword(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 1, False, ('a',), False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 1, False, ('a',), False)
 		self.assertHardFail(info)
 
 	def testBogusKeyword(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 2, False, ('c',), False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [], None, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 2, False, ('c',), False)
 		self.assertHardFail(info)
 
 	### Deaults ###
 
 	def testIncompleteDefaults(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [2], None, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 0, False, (), False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [2], None, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 0, False, (), False)
 		self.assertHardFail(info)
 
 	def testUsedDefaults(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [2], None, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 1, False, (), False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [2], None, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 1, False, (), False)
 
 		self.assertEqual(info.willSucceed, TVLTrue)
 		self.assertTransfer(info.argParam, 0, 1, 0, 1, 1)
@@ -181,8 +181,8 @@ class TestCallingUtility(unittest.TestCase):
 		self.assert_(1 in info.defaults)
 
 	def testUnusedDefaults(self):
-		callee = language.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [2], None, None, [])
-		info = language.python.calling.callStackToParamsInfo(callee,  False, 2, False, (), False)
+		callee = util.python.calling.CalleeParams(None, [0, 1], ['a', 'b'], [2], None, None, [])
+		info = util.python.calling.callStackToParamsInfo(callee,  False, 2, False, (), False)
 
 		self.assertEqual(info.willSucceed, TVLTrue)
 		self.assertTransfer(info.argParam, 0, 2, 0, 2, 2)

@@ -7,7 +7,7 @@ from util import traversal
 from . model import expressions
 from . import constraints
 
-import language.python.calling
+import util.python.calling
 
 class GetLocals(TypeDispatcher):
 	def __init__(self):
@@ -183,7 +183,7 @@ class ShapeConstraintBuilder(TypeDispatcher):
 		else:
 			returnargs = None
 
-		callerargs = language.python.calling.CallerArgs(selfarg, args, kwds, vargs, kargs, returnargs)
+		callerargs = util.python.calling.CallerArgs(selfarg, args, kwds, vargs, kargs, returnargs)
 		return callerargs
 
 
@@ -200,7 +200,7 @@ class ShapeConstraintBuilder(TypeDispatcher):
 		kparam = self.localExpr(p.kparam)
 		returnparams = [self.localExpr(param) for param in p.returnparams]
 
-		calleeparams = language.python.calling.CalleeParams(selfparam, params, paramnames, defaults, vparam, kparam, returnparams)
+		calleeparams = util.python.calling.CalleeParams(selfparam, params, paramnames, defaults, vparam, kparam, returnparams)
 		return calleeparams
 
 
@@ -287,7 +287,7 @@ class ShapeConstraintBuilder(TypeDispatcher):
 		assert callerargs.kargs is None
 
 		numArgs  = len(callerargs.args)+numVArgs
-		info = language.python.calling.callStackToParamsInfo(calleeparams, selfArg, numArgs, vargsUncertain, callerargs.kwds.keys(), False)
+		info = util.python.calling.callStackToParamsInfo(calleeparams, selfArg, numArgs, vargsUncertain, callerargs.kwds.keys(), False)
 		return info
 
 	def indexExpr(self, expr, index):

@@ -6,7 +6,7 @@ from . pythonoutput import PythonOutput
 
 from analysis import defuse
 import analysis.collapser
-from common import opnames
+from util.python import opnames
 
 from language.python import ast, program
 

@@ -6,7 +6,7 @@ from opcode import opmap
 from language.python.ast import *
 import common.ssa as ssa
 
-from common import opnames
+from util.python import opnames
 
 from . import pythonstack
 

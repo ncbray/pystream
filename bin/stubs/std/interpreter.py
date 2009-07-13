@@ -208,7 +208,7 @@ def makeInterpreterStubs(collector):
 
 
 
-	from common import opnames
+	from util.python import opnames
 
 	for op in opnames.forward.itervalues():
 		f = export(llast(simpleAttrCall('interpreter%s' % op, op, ['self', 'other'])))

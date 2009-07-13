@@ -2,7 +2,7 @@ from language.python import program, ast
 
 import util
 import analysis.cpasignature
-import language.python.calling
+import util.python.calling
 import util.canonical
 CanonicalObject = util.canonical.CanonicalObject
 
@@ -33,7 +33,7 @@ def calleeSlotsFromContext(sys, context):
 	kparam      = localSlot(sys, code, callee.kparam, context)
 	returnparams = [localSlot(sys, code, param, context) for param in callee.returnparams]
 
-	return language.python.calling.CalleeParams(selfparam, parameters,
+	return util.python.calling.CalleeParams(selfparam, parameters,
 		callee.paramnames, defaults, vparam, kparam, returnparams)
 
 
@@ -73,7 +73,7 @@ class AnalysisContext(CanonicalObject):
 		callee = calleeSlotsFromContext(sys, self)
 
 		# info is not actually intrinsic to the context?
-		info = language.python.calling.callStackToParamsInfo(callee,
+		info = util.python.calling.callStackToParamsInfo(callee,
 			sig.selfparam is not None, sig.numParams(),
 			False, 0, False)
 

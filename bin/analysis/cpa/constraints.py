@@ -3,7 +3,7 @@ from analysis.storegraph import storegraph
 from analysis.storegraph import canonicalobjects
 from analysis.storegraph import extendedtypes
 
-import language.python.calling
+import util.python.calling
 
 # HACK to testing if a object is a bool True/False...
 from language.python import ast, program
@@ -321,7 +321,7 @@ class AbstractCallConstraint(CachedConstraint):
 
 		callee = code.codeParameters()
 		numArgs = len(self.args)+vlength
-		info = language.python.calling.callStackToParamsInfo(callee, expr is not None, numArgs, False, None, False)
+		info = util.python.calling.callStackToParamsInfo(callee, expr is not None, numArgs, False, None, False)
 
 		if info.willSucceed.maybeTrue():
 			allslots = list(self.args)
@@ -336,7 +336,7 @@ class AbstractCallConstraint(CachedConstraint):
 
 
 			# HACK this is actually somewhere between caller and callee...
-			caller = language.python.calling.CallerArgs(self.selfarg, allslots, [], None, None, self.targets)
+			caller = util.python.calling.CallerArgs(self.selfarg, allslots, [], None, None, self.targets)
 
 			SimpleCallConstraint(self.sys, self.op, code, expr, allslots, caller)
 

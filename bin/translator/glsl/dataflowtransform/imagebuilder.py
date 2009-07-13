@@ -1,6 +1,6 @@
 from language.python import ast
 from analysis.dataflowIR import graph
-
+from util import xcollections
 
 leafTypes = (float, int, bool)
 
@@ -26,7 +26,7 @@ def createIndex(analysis, ref):
 class InputMemoryImageBuilder(object):
 	def __init__(self, analysis):
 		self.analysis = analysis
-		self.pathRefs = {}
+		self.pathRefs = xcollections.defaultdict(set)
 		self.process()
 
 	def extendPath(self, path, slot):
@@ -35,8 +35,6 @@ class InputMemoryImageBuilder(object):
 		return newPath
 
 	def inspectPath(self, path, refs):
-		if not path in self.pathRefs: self.pathRefs[path] = set()
-
 		entrySlots = self.analysis.dataflow.entry.modifies
 
 		for ref in refs:
@@ -59,7 +57,7 @@ class InputMemoryImageBuilder(object):
 
 
 
-	def buildPath(self, node, index, path, refs):
+	def buildPath(self, node, index, path, refs, mask):
 		assert isinstance(node, graph.SlotNode), node
 		assert isinstance(index, int), index
 
@@ -67,14 +65,15 @@ class InputMemoryImageBuilder(object):
 
 		for ref in refs:
 			key = path, ref
-			# Prevent redundant checking?
-			# TODO remove this check when correlated?
-			if key in self.analysis.pathObjIndex: continue
 
+			# Create a new object, if we haven't.
+			if key not in self.analysis.pathObjIndex:
+				count = createIndex(self.analysis, ref)
+				self.analysis.pathObjIndex[key] = count
+			else:
+				count = self.analysis.pathObjIndex[key]
 
-			count = createIndex(self.analysis, ref)
-			self.analysis.pathObjIndex[key] = count
-
+			# Merge in the reference
 			old = self.analysis.getValue(node, index)
 			leaf = self.analysis.set.leaf([(ref, count)])
 			merged = self.analysis.set.union(old, leaf)
@@ -86,17 +85,19 @@ class InputMemoryImageBuilder(object):
 				# If it's not defined, it's not used.
 				if nextslot in entrySlots:
 					nextnode = entrySlots[nextslot]
-					self.buildPath(nextnode, count, self.extendPath(path, nextslot), nextslot)
+					self.buildPath(nextnode, count, self.extendPath(path, nextslot), nextslot, mask)
 
 	def buildImage(self):
 		for name, node in self.analysis.dataflow.entry.modifies.iteritems():
 			if isinstance(node, graph.LocalNode):
-				self.buildPath(node, 0, (name.name,), name.annotation.references.merged)
+				self.buildPath(node, 0, (name.name,), name.annotation.references.merged, self.analysis.bool.true)
 
 	def process(self):
 		self.findTypes()
 		self.buildImage()
 
+	def pathCondition(self, path):
+		return self.analysis.cond.condition(path, sorted(self.pathRefs[path]))
 
 class AllocationMemoryImageBuilder(object):
 	def __init__(self, analysis):

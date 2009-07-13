@@ -1,4 +1,5 @@
 import itertools
+from util import xcollections
 
 class Condition(object):
 	__slots__ = 'name', 'uid', 'values', 'mask'
@@ -53,7 +54,7 @@ class ConditionManager(object):
 
 
 class AbstractNode(object):
-	__slots__ = '_hash'
+	__slots__ = '_hash', '__weakref__'
 
 	def __hash__(self):
 		return self._hash
@@ -275,19 +276,13 @@ class CanonicalTreeManager(object):
 		if coerce is None: coerce = lambda x: x
 		self.coerce = coerce
 
-		self.trees      = {}
-		self.leaves     = {}
+		self.trees      = xcollections.weakcache()
+		self.leaves     = xcollections.weakcache()
 
 		self.cache      = {}
 
 	def leaf(self, value):
-		value = self.coerce(value)
-		if value not in self.leaves:
-			result = LeafNode(value)
-			self.leaves[value] = result
-		else:
-			result = self.leaves[value]
-		return result
+		return self.leaves[LeafNode(self.coerce(value))]
 
 	def tree(self, cond, branches):
 		assert isinstance(branches, tuple), type(branches)
@@ -303,8 +298,7 @@ class CanonicalTreeManager(object):
 			# They're all the same, don't make a tree.
 			return first
 
-		tree = TreeNode(cond, branches)
-		return self.trees.setdefault(tree, tree)
+		return self.trees[TreeNode(cond, branches)]
 
 	def _ite(self, f, a, b):
 		# If f is a constant, pick either a or b.

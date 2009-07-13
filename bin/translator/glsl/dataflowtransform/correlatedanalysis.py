@@ -117,8 +117,7 @@ class GenericOpFunction(TypeDispatcher):
 			result.update(self.get(slot, ei))
 
 		# Return value
-		result = frozenset(result)
-		self.set(self.g.localModifies[0].names[0], 0, result)
+		self.set(self.g.localModifies[0].names[0], 0, frozenset(result))
 
 	@dispatch(ast.Store)
 	def handleStore(self, node):

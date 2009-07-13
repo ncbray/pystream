@@ -1,26 +1,25 @@
 import sys
+from util import xcollections
 
 class CachedSetManager(object):
 	def __init__(self):
-		self.cache = {}
-		emptyset = frozenset()
-		self._emptyset = self.cache.setdefault(emptyset, emptyset)
+		self.cache = xcollections.weakcache()
+		self._emptyset = self.cache[frozenset()]
 
 	def empty(self):
 		return self._emptyset
 
 	def inplaceUnion(self, a, b):
-		c = a.union(b)
-		return self.cache.setdefault(c, c)
+		return self.cache[a.union(b)]
 
 	def diff(self, a, b):
-		return a-b
+		return self.cache[a-b]
 
 	def iter(self, s):
 		return iter(s)
 
 	def memory(self):
 		mem = sys.getsizeof(self.cache)
-		for s1, s2 in self.cache.iteritems():
-			mem += sys.getsizeof(s1)
+		for s in self.cache:
+			mem += sys.getsizeof(s)
 		return mem

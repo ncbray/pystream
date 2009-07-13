@@ -1,9 +1,10 @@
 import util.canonical
 from language.python import program, ast
 from . import extendedtypes
+from util import xcollections
 
 class BaseSlotName(util.canonical.CanonicalObject):
-	__slots__ =()
+	__slots__ = ()
 
 	def isRoot(self):
 		return False
@@ -112,46 +113,28 @@ class CanonicalObjects(object):
 	def __init__(self):
 		self.opContext   = util.canonical.CanonicalCache(OpContext)
 		self.codeContext = util.canonical.CanonicalCache(CodeContext)
-
-		self.cache = {}
+		self.cache       = xcollections.weakcache()
 
 	def localName(self, code, lcl, context):
-		name = LocalSlotName(code, lcl, context)
-		new = self.cache.setdefault(name, name)
-		return name
+		return self.cache[LocalSlotName(code, lcl, context)]
 
 	def existingName(self, code, obj, context):
-		name = ExistingSlotName(code, obj, context)
-		new = self.cache.setdefault(name, name)
-		return name
+		return self.cache[ExistingSlotName(code, obj, context)]
 
 	def fieldName(self, type, fname):
-		name = FieldSlotName(type, fname)
-		name = self.cache.setdefault(name, name)
-		return name
-
+		return self.cache[FieldSlotName(type, fname)]
 
 	def externalType(self, obj):
-		new = extendedtypes.ExternalObjectType(obj, None)
-		new = self.cache.setdefault(new, new)
-		return new
+		return self.cache[extendedtypes.ExternalObjectType(obj, None)]
 
 	def existingType(self, obj):
-		new = extendedtypes.ExistingObjectType(obj, None)
-		new = self.cache.setdefault(new, new)
-		return new
+		return self.cache[extendedtypes.ExistingObjectType(obj, None)]
 
 	def pathType(self, path, obj, op):
-		new = extendedtypes.PathObjectType(path, obj, op)
-		new = self.cache.setdefault(new, new)
-		return new
+		return self.cache[extendedtypes.PathObjectType(path, obj, op)]
 
 	def methodType(self, func, inst, obj, op):
-		new = extendedtypes.MethodObjectType(func, inst, obj, op)
-		new = self.cache.setdefault(new, new)
-		return new
+		return self.cache[extendedtypes.MethodObjectType(func, inst, obj, op)]
 
 	def contextType(self, sig, obj, op):
-		new = extendedtypes.ContextObjectType(sig, obj, op)
-		new = self.cache.setdefault(new, new)
-		return new
+		return self.cache[extendedtypes.ContextObjectType(sig, obj, op)]

@@ -1,3 +1,5 @@
+from util import xcollections
+
 class Sentinel(object):
 	__slots__ = 'name', '__weakref__'
 
@@ -10,7 +12,7 @@ class Sentinel(object):
 
 # An object that is equivalent if its "canonical values" are equivalent.
 class CanonicalObject(object):
-	__slots__ = 'canonical', 'hash'
+	__slots__ = 'canonical', 'hash', '__weakref__'
 
 	def __init__(self, *args):
 		self.setCanonical(*args)
@@ -29,23 +31,11 @@ class CanonicalObject(object):
 		canonicalStr = ", ".join([repr(obj) for obj in self.canonical])
 		return "%s(%s)" % (type(self).__name__, canonicalStr)
 
-# Assumes that the same arguments will create the same object,
-# and different arguments will create different objects.
+
 class CanonicalCache(object):
 	def __init__(self, create):
 		self.create = create
-		self.cache = {}
+		self.cache  = xcollections.weakcache()
 
 	def __call__(self, *args):
-		if args not in self.cache:
-			obj = self.create(*args)
-			self.cache[args] = obj
-			return obj
-		else:
-			return self.cache[args]
-
-	def get(self, *args):
-		return self(*args)
-
-	def exists(self, *args):
-		return args in self.cache
+		return self.cache[self.create(*args)]

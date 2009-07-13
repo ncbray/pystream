@@ -222,7 +222,10 @@ class ASTNode(object):
 	def rewriteAnnotation(self, **kwds):
 		self.annotation = self.annotation.rewrite(**kwds)
 
-	def clone(self):
-		newnode = type(self)(*self.children())
+	def reconstruct(self, *newchildren):
+		newnode = type(self)(*newchildren)
 		newnode.annotation = self.annotation
 		return newnode
+
+	def clone(self):
+		return self.reconstruct(*self.children())

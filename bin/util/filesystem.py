@@ -12,9 +12,9 @@ def fileInput(directory, name, format, binary=False):
 	f = open(fullname, 'rb' if binary else 'r')
 	return f
 
-def readData(directory, name, format, data, binary=False):
+def readData(directory, name, format, binary=False):
 	f = fileInput(directory, name, format, binary=binary)
-	result = f.read(data)
+	result = f.read()
 	f.close()
 	return result
 

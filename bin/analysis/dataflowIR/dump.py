@@ -4,7 +4,7 @@ from language.python import ast
 import os.path
 import pydot
 import util.filesystem
-from language.base import astpprint
+from asttools import astpprint
 
 import analysis.dataflowIR.graph as graph
 

@@ -1,4 +1,4 @@
-from language.base.metaast import *
+from asttools.metaast import *
 
 class GLSLASTNode(ASTNode):
 	__slots__ = ()

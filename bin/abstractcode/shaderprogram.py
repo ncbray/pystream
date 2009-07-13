@@ -1,5 +1,5 @@
 from language.python.ast import *
-import language.base.annotation as annotation
+import asttools.annotation as annotation
 
 ### BEGIN support code ###
 

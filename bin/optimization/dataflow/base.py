@@ -2,7 +2,7 @@ import copy
 from util import traversal
 from util.typedispatch import *
 
-from language.base.metaast import children, reconstruct
+from asttools.metaast import children, reconstruct
 # HACK?
 from language.python import ast
 

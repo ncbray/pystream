@@ -1,6 +1,6 @@
 from util.typedispatch import *
 from language.python import ast
-from language.base.metaast import children
+from asttools.metaast import children
 from util.traversal import visitAllChildrenArgs
 
 class ReadModifyInfo(object):

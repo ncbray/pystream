@@ -1,4 +1,4 @@
-from language.base.metaast import *
+from asttools.metaast import *
 from glslbase import *
 
 ### Type declarations ###

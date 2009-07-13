@@ -3,7 +3,7 @@ from language.python import ast
 from language.python import program
 
 # HACK for debugging
-from language.base import astpprint
+from asttools import astpprint
 
 import optimization.simplify
 

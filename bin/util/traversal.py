@@ -2,7 +2,7 @@ __all__ = ['allChildren', 'replaceAllChildren',
 	'visitAllChildren', 'visitAllChildrenArgs',
 	'allChildrenReversed', 'visitAllChildrenReversed']
 
-from language.base.metaast import children, reconstruct
+from asttools.metaast import children, reconstruct
 
 def identicalChildren(oldchildren, newchildren):
 	return len(oldchildren) == len(newchildren) and all(map(lambda (a,b): id(a) == id(b), zip(oldchildren, newchildren)))

@@ -2,7 +2,7 @@
 
 # Fields should be in order of evaluation.
 
-from language.base.metaast import *
+from asttools.metaast import *
 from pythonbase import *
 
 # Allows Existing.object to be typed.

@@ -1,5 +1,5 @@
 import collections
-from language.base.annotation import *
+from asttools.annotation import *
 
 Origin = collections.namedtuple('Origin', 'name filename lineno')
 

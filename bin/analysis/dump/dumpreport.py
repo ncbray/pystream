@@ -1,6 +1,6 @@
 from util.xmloutput  import XMLOutput
 from language.python import simplecodegen
-from language.base import astpprint
+from asttools import astpprint
 
 import config
 import os.path

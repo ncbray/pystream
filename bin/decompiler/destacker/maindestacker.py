@@ -13,7 +13,7 @@ from . import instructiontranslator
 
 from language.python.annotations import codeOrigin
 
-from common.errors import TemporaryLimitation
+from application.errors import TemporaryLimitation
 
 PythonStack = pythonstack.PythonStack
 

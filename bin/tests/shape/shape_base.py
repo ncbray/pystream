@@ -11,7 +11,7 @@ import analysis.shape
 from language.python import ast
 from analysis.storegraph import storegraph, canonicalobjects, setmanager
 
-import common.compilercontext
+import application.context
 import decompiler.programextractor
 
 import util.compressedset
@@ -32,7 +32,7 @@ class MockInformationProvider(object):
 
 class TestConstraintBase(unittest.TestCase):
 	def setUp(self):
-		compiler = common.compilercontext.CompilerContext(None)
+		compiler = application.context.CompilerContext(None)
 		self.extractor = decompiler.programextractor.Extractor(compiler)
 		compiler.extractor = self.extractor
 

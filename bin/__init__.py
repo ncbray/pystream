@@ -1,4 +1,4 @@
-from common.makefile import Makefile
+from application.makefile import Makefile
 
 def pystreamCompile(filename):
 	mf = Makefile(filename)

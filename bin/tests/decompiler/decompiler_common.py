@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import unittest
 
-import common.compilercontext
+import application.context
 #from decompiler import decompile
 from decompiler.programextractor import Extractor
 
@@ -16,7 +16,7 @@ def compileF(s, g=None):
 	return l.values()[0]
 
 def generateCode(func, trace):
-	compiler = common.compilercontext.CompilerContext(None)
+	compiler = application.context.CompilerContext(None)
 	extractor = Extractor(compiler)
 	compiler.extractor = extractor
 

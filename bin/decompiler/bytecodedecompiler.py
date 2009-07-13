@@ -12,8 +12,6 @@ from . disassembler import disassemble
 # HACK
 import language.python.ast as cfg
 
-#from common.ssa import DeadCodeEliminator
-
 import decompiler.errors
 
 from util import moduleForGlobalDict
@@ -33,8 +31,6 @@ import optimization.simplify
 
 from language.python.annotations import codeOrigin
 
-import common.compilercontext
-
 def decompile(compiler, func, trace=False, ssa=True):
 	# HACK can't find modules for "fake" globals.
 	try:
@@ -45,7 +41,6 @@ def decompile(compiler, func, trace=False, ssa=True):
 	return decompileCode(compiler, func.func_code, mname, trace=trace, ssa=ssa)
 
 def decompileCode(compiler, code, mname, trace=False, ssa=True):
-	assert isinstance(compiler, common.compilercontext.CompilerContext), type(compiler)
 	return Decompiler(compiler).disassemble(code, mname, trace=trace, ssa=ssa)
 
 def getargs(co):

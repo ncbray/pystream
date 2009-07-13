@@ -1,6 +1,6 @@
 import time
 import imp
-from common.makefile import Makefile
+from application.makefile import Makefile
 
 compileCache = {}
 loadCache    = {}

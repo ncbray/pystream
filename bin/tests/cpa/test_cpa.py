@@ -2,12 +2,12 @@ from __future__ import absolute_import
 import unittest
 
 import analysis.cpa
-import common.makefile
+import application.makefile
 from decompiler.programextractor import extractProgram
 
 
-from common.compilerconsole import CompilerConsole
-from common.compilercontext import CompilerContext
+from application.console import CompilerConsole
+from application.context import CompilerContext
 
 from decompiler.programextractor import Extractor
 from util import replaceGlobals
@@ -37,10 +37,10 @@ class TestCPA(unittest.TestCase):
 		# TODO mock console?
 		compiler = CompilerContext(CompilerConsole())
 
-		interface = common.makefile.InterfaceDeclaration()
+		interface = application.makefile.InterfaceDeclaration()
 
 		interface.func.append((func,
-			(common.makefile.ExistingWrapper(3), common.makefile.ExistingWrapper(5))
+			(application.makefile.ExistingWrapper(3), application.makefile.ExistingWrapper(5))
 			))
 
 		compiler.interface = interface

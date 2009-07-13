@@ -17,7 +17,7 @@ import sys
 import dis
 import util
 
-from common.errors import TemporaryLimitation, InternalError
+from application.errors import TemporaryLimitation, InternalError
 
 from util import xtypes
 
@@ -25,9 +25,6 @@ from _pystream import cfuncptr
 
 
 import util
-
-# For assertion.
-from common.compilercontext import CompilerContext
 
 class FieldNotFoundType(object):
 	pass
@@ -60,7 +57,6 @@ def flatTypeDict(t):
 
 class Extractor(object):
 	def __init__(self, compiler, verbose=True):
-		assert isinstance(compiler, CompilerContext), type(compiler)
 		self.compiler = compiler # Circular reference, ugly!
 
 		self.types 	= {}

@@ -13,7 +13,7 @@ import sys
 from . numbering import NumberAST, contains
 from . placeflow import PlaceFlowFunctions
 
-from common.errors import InternalError
+from application.errors import InternalError
 
 class HandlerStack(object):
 	def __init__(self):

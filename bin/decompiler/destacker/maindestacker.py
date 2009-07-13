@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import collections
 
 from language.python.ast import *
-import common.ssa as ssa
 
 from util.visitor import StandardVisitor
 
@@ -35,10 +34,40 @@ def appendSuite(current, next):
 	return current
 
 
+class SSADefinitions(object):
+	def __init__(self):
+		self.defn = {}
+
+	def define(self, local, defn, merge=False):
+		assert not local in self.defn, "Attempt to redefine %r" % local
+		assert local != defn
+
+		# Reach for the definition
+		while defn in self.defn:
+			assert defn != self.defn[defn]
+			defn = self.defn[defn]
+
+		self.defn[local] = defn
+
+		#print local, "->", defn
+		return local
+
+	def reachTrivial(self, expr):
+		defn = self.definition(expr)
+
+		if defn.isReference():
+			return defn
+		else:
+			return expr
+
+	def definition(self, local):
+		return self.defn.get(local, local)
+
+
 class DestackVisitor(StandardVisitor):
 	def __init__(self, code, mname, compiler, callback, trace=False):
 		StandardVisitor.__init__(self)
-		self.ssa = ssa.SSADefinitions()
+		self.ssa = SSADefinitions()
 		self.code = code
 		self.moduleName = mname
 		self.locals = {}

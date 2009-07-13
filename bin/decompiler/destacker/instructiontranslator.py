@@ -4,7 +4,6 @@ import types
 import inspect
 from opcode import opmap
 from language.python.ast import *
-import common.ssa as ssa
 
 from util.python import opnames
 
@@ -745,8 +744,8 @@ class InstructionTranslator(object):
 		else:
 			self.setOpOrigin(op)
 
-
-		ssa.emitInstruction(op, self.ops)
+		assert isinstance(op, SimpleStatement), op
+		self.ops.append(op)
 
 	def translate(self, instructions, stack):
 		self._stack = stack

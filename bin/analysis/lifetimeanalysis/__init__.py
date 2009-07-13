@@ -1,17 +1,17 @@
 import collections
 import time
 
-from cpa import base
+from analysis.cpa import base
 from analysis.storegraph import storegraph
 import language.python.ast as ast
 import language.python.annotations as annotations
 
 from PADS.StrongConnectivity import StronglyConnectedComponents
 
-from analysis.database import structure
-from analysis.database import tupleset
-from analysis.database import mapping
-from analysis.database import lattice
+from . database import structure
+from . database import tupleset
+from . database import mapping
+from . database import lattice
 
 from analysis.astcollector import getOps
 

@@ -19,8 +19,4 @@ if True:
 testExclude = [
 	# Known to be broken
 	('tests', 'decompiler', 'test_exception'),
-
-	# Not completely implemented
-	('tests', 'test_lattice'),
-	('tests', 'test_sese'),
 	]

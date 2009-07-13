@@ -3,10 +3,10 @@ from __future__ import absolute_import
 import unittest
 
 
-import analysis.database.structure as structure
-import analysis.database.tupleset as tupleset
-import analysis.database.mapping as mapping
-import analysis.database.lattice as lattice
+import analysis.lifetimeanalysis.database.structure as structure
+import analysis.lifetimeanalysis.database.tupleset as tupleset
+import analysis.lifetimeanalysis.database.mapping as mapping
+import analysis.lifetimeanalysis.database.lattice as lattice
 
 
 class TestSetIntersection(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestSetIntersection(unittest.TestCase):
 
 		c = lattice.setIntersectionSchema.merge(a, b)
 
-		self.assertEqual(a, set((1,2,5,6)))	
+		self.assertEqual(a, set((1,2,5,6)))
 		self.assertEqual(b, set((1,3,5,7)))
 		self.assertEqual(c, set((1,5)))
 
@@ -26,7 +26,7 @@ class TestSetIntersection(unittest.TestCase):
 
 		c, changed = lattice.setIntersectionSchema.inplaceMerge(a, b)
 
-		self.assertEqual(a, set((1,5)))	
+		self.assertEqual(a, set((1,5)))
 		self.assertEqual(b, set((1,3,5,7)))
 		self.assertEqual(c, set((1,5)))
 		self.assertEqual(changed, True)
@@ -39,7 +39,7 @@ class TestSetIntersection(unittest.TestCase):
 		c, changed = lattice.setIntersectionSchema.inplaceMerge(a, b)
 
 		self.assertEqual(a, set((1,5)))
-		self.assertEqual(b, set((1,2,5,6)))	
+		self.assertEqual(b, set((1,2,5,6)))
 		self.assertEqual(c, set((1,5)))
 		self.assertEqual(changed, False)
 
@@ -50,7 +50,7 @@ class TestSetUnion(unittest.TestCase):
 
 		c = lattice.setUnionSchema.merge(a, b)
 
-		self.assertEqual(a, set((1,2,5,6)))	
+		self.assertEqual(a, set((1,2,5,6)))
 		self.assertEqual(b, set((1,3,5,7)))
 		self.assertEqual(c, set((1,2,3,5,6,7)))
 
@@ -60,7 +60,7 @@ class TestSetUnion(unittest.TestCase):
 
 		c, changed = lattice.setUnionSchema.inplaceMerge(a, b)
 
-		self.assertEqual(a, set((1,2,3,5,6,7)))	
+		self.assertEqual(a, set((1,2,3,5,6,7)))
 		self.assertEqual(b, set((1,3,5,7)))
 		self.assertEqual(c, set((1,2,3,5,6,7)))
 		self.assertEqual(changed, True)
@@ -71,7 +71,7 @@ class TestSetUnion(unittest.TestCase):
 
 		c, changed = lattice.setUnionSchema.inplaceMerge(a, b)
 
-		self.assertEqual(a, set((1,2,5,6)))	
+		self.assertEqual(a, set((1,2,5,6)))
 		self.assertEqual(b, set((1,5)))
 		self.assertEqual(c, set((1,2,5,6)))
 		self.assertEqual(changed, False)
@@ -138,7 +138,7 @@ class TestStructure(unittest.TestCase):
 		s1 = (set((2,)), None)
 		s2 = (None, set((1,)))
 		s3 = (set((2,)), set((1,)))
-		      
+
 		s4, changed = self.schema.inplaceMerge(s1, (set((3,)),None))
 
 		self.assertEqual(s4, (set((2,3)), None))
@@ -181,10 +181,10 @@ class TestTupleSet(unittest.TestCase):
 class TestMapping(unittest.TestCase):
 	def setUp(self):
 		intSchema = structure.TypeSchema(int)
-		
+
 		s = structure.StructureSchema(('a', intSchema), ('b', intSchema))
 		v = lattice.setUnionSchema
-		
+
 		schema = mapping.MappingSchema(s, v)
 		self.schema = schema
 
@@ -222,7 +222,7 @@ class TestMapping(unittest.TestCase):
 class TestMapMapForget(unittest.TestCase):
 	def setUp(self):
 		intSchema = structure.TypeSchema(int)
-		
+
 		schema = mapping.MappingSchema(intSchema, lattice.setUnionSchema)
 		schema = mapping.MappingSchema(intSchema, schema)
 		self.schema = schema
@@ -236,4 +236,4 @@ class TestMapMapForget(unittest.TestCase):
 
 		f = m.forget().forget()
 		self.assertEqual(f, set((1, 2, 3, 4, 5)))
-		
+

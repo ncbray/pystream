@@ -14,7 +14,6 @@ from analysis.storegraph import storegraph, canonicalobjects, setmanager
 import application.context
 import decompiler.programextractor
 
-import util.compressedset
 from util.tvl import *
 
 class MockInformationProvider(object):
@@ -82,11 +81,11 @@ class TestConstraintBase(unittest.TestCase):
 		else:
 			current, hits, misses, unknowns = row
 
-		hits = util.compressedset.copy(hits)
-		misses = util.compressedset.copy(misses)
+		hits     = frozenset(hits if hits is not None else ())
+		misses   = frozenset(misses if misses is not None else ())
 		external = False
 
-		hits = util.compressedset.union(hits, self.hitsFromRC(current))
+		hits = hits.union(self.hitsFromRC(current))
 
 		externalReferences = False
 		allocated = False

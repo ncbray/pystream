@@ -43,7 +43,7 @@ def makeTypecheckStatement(name, field, tn, optional, repeated, tabs, output):
 		makeScalarTypecheckStatement(name, field, field, tn, optional, tabs, output)
 
 
-def makeInitStatements(clsname, paramnames, fields, types, optional, repeated):
+def makeInitStatements(clsname, paramnames, fields, types, optional, repeated, dopostinit):
 	inits = []
 	for name, field in zip(paramnames, fields):
 		if name in types:
@@ -53,6 +53,10 @@ def makeInitStatements(clsname, paramnames, fields, types, optional, repeated):
 			inits.append('\tassert %s is not None, "Field %s.%s is not optional."\n' % (name, clsname, name))
 
 		inits.append('\tself.%s = %s\n' % (field, name))
+
+	if dopostinit:
+		inits.append('\tself.__postinit__()\n')
+
 	return inits
 
 def argsFromParamNames(paramnames):
@@ -63,18 +67,20 @@ def argsFromParamNames(paramnames):
 		args = 'self'
 	return args
 
-def makeInit(name, paramnames, fields, types, optional, repeated):
-	inits = makeInitStatements(name, paramnames, fields, types, optional, repeated)
+def makeInit(name, paramnames, fields, types, optional, repeated, dopostinit):
+	inits = makeInitStatements(name, paramnames, fields, types, optional, repeated, dopostinit)
 	inits.append('\tself.annotation = self.__emptyAnnotation__')
 
 	args = argsFromParamNames(paramnames)
 
-	code = "def __init__(%s):\n\tsuper(%s, self).__init__()\n%s" % (args, name, ''.join(inits))
+	# NOTE super.__init__ should be a no-op, as we're initializing all the fields, anyways?
+	#code = "def __init__(%s):\n\tsuper(%s, self).__init__()\n%s" % (args, name, ''.join(inits))
+	code = "def __init__(%s):\n%s" % (args, ''.join(inits))
 	return code
 
 
-def makeReplaceChildren(name, paramnames, fields, types, optional, repeated):
-	inits = makeInitStatements(name, paramnames, fields, types, optional, repeated)
+def makeReplaceChildren(name, paramnames, fields, types, optional, repeated, dopostinit):
+	inits = makeInitStatements(name, paramnames, fields, types, optional, repeated, dopostinit)
 
 	args = argsFromParamNames(paramnames)
 

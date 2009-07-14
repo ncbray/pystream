@@ -6,7 +6,7 @@ import application.makefile
 from decompiler.programextractor import extractProgram
 
 
-from application.console import CompilerConsole
+from util.console import Console
 from application.context import CompilerContext
 
 from decompiler.programextractor import Extractor
@@ -35,7 +35,7 @@ class TestCPA(unittest.TestCase):
 		func = replaceGlobals(func, {})
 
 		# TODO mock console?
-		compiler = CompilerContext(CompilerConsole())
+		compiler = CompilerContext(Console())
 
 		interface = application.makefile.InterfaceDeclaration()
 

@@ -20,13 +20,33 @@ class ClassBuilder(object):
 		self.optional = set()
 		self.repeated = set()
 
+	def hasAttr(self, attr):
+		if attr in self.d:
+			return True
+
+		for base in self.bases:
+			if hasattr(base, attr):
+				return True
+
+		return False
+
+	def getAttr(self, attr, default):
+		if attr in self.d:
+			return self.d[attr]
+
+		for base in self.bases:
+			for cls in base.mro():
+				if attr in cls.__dict__:
+					return cls.__dict__[attr]
+		return default
+
 	def getShared(self):
-		shared = bool(self.d.get('__shared__', False))
+		shared = bool(self.getAttr('__shared__', False))
 		self.d['__shared__'] = shared
 		return shared
 
 	def getMutable(self, shared):
-		mutable = bool(self.d.get('__mutable__', shared))
+		mutable = True if shared else bool(self.getAttr('__mutable__', False))
 		self.d['__mutable__'] = mutable
 		return mutable
 
@@ -169,8 +189,10 @@ class ClassBuilder(object):
 			self.d[name] = self.makeFunc(func, args)
 
 	def addDefaultMethods(self, paramnames, fields, types, optional, shared):
+		dopostinit = self.hasAttr('__postinit__')
+
 		# Generate and attach methods.
-		self.defaultFunc('__init__', codegeneration.makeInit, (self.name, paramnames, fields, types, optional, self.repeated))
+		self.defaultFunc('__init__', codegeneration.makeInit, (self.name, paramnames, fields, types, optional, self.repeated, dopostinit))
 
 		if shared:
 			self.defaultFunc('__repr__', codegeneration.makeSharedRepr, (self.name, fields))
@@ -181,7 +203,7 @@ class ClassBuilder(object):
 		self.defaultFunc('fields',   codegeneration.makeGetFields, (paramnames, fields,))
 
 		if self.mutable:
-			self.defaultFunc('replaceChildren', codegeneration.makeReplaceChildren, (self.name, paramnames, fields, types, optional, self.repeated))
+			self.defaultFunc('replaceChildren', codegeneration.makeReplaceChildren, (self.name, paramnames, fields, types, optional, self.repeated, dopostinit))
 
 	def mutate(self):
 		self.g   = self.getGlobalDict()

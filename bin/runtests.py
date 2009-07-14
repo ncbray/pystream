@@ -12,7 +12,7 @@ import scriptsetup
 import config
 
 root = scriptsetup.scriptRoot(__file__)
-scriptsetup.libraryDirectory(root, os.path.join("..", "lib"))
+scriptsetup.libraryDirectory(root, '..', 'lib')
 if config.usePsyco: scriptsetup.initPsyco()
 
 

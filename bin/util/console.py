@@ -40,7 +40,7 @@ class ConsoleScopeManager(object):
 	def __exit__(self, type, value, tb):
 		self.console.end()
 
-class CompilerConsole(object):
+class Console(object):
 	def __init__(self, out=None):
 		if out is None:
 			out = sys.stdout

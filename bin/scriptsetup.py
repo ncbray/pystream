@@ -1,12 +1,12 @@
 from __future__ import absolute_import
 
-# Use an external directory for libraries
 import sys
 import os.path
-def libraryDirectory(root, path):
-	libdir = os.path.normpath(os.path.join(root, path))
-	sys.path.append(libdir)
 
+# Use an external directory for libraries
+def libraryDirectory(*path):
+	libdir = os.path.normpath(os.path.join(*path))
+	sys.path.append(libdir)
 
 def scriptRoot(fn):
 	path, fn = os.path.split(fn)

@@ -6,7 +6,7 @@ import os.path
 from util.filesystem import ensureDirectoryExists
 from decompiler.programextractor import extractProgram
 import application.pipeline
-from . import console
+from util import console
 from . import context
 
 import cProfile
@@ -93,7 +93,7 @@ class Makefile(object):
 		exec f in makeDSL
 
 	def pystreamCompile(self):
-		compiler = context.CompilerContext(console.CompilerConsole())
+		compiler = context.CompilerContext(console.Console())
 
 		with compiler.console.scope("makefile"):
 			compiler.console.output("Processing %s" % self.filename)

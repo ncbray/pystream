@@ -1,5 +1,6 @@
 from weakref import ref
 from collections import *
+from . xnamedtuple import namedtuple
 
 class lazydict(defaultdict):
 	__slots__ = ()

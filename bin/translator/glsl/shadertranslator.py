@@ -1,6 +1,6 @@
 from asttools.transform import *
 from language.python import ast
-from language.python.annotations import originString
+from asttools.origin import originString
 
 from language.glsl import ast as glsl
 

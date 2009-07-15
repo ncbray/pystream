@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from  language.python.ast import *
-from  language.python.annotations import Origin
+from  asttools.origin import Origin
 
 from .. stubcollector import stubgenerator
 
@@ -93,7 +93,7 @@ def makeInterpreterStubs(collector):
 			b.append(Return([retval]))
 
 			code = Code(name, CodeParameters(None, args, list(argnames), None, None, [retp]), b)
-			code.rewriteAnnotation(origin=Origin(name, __file__, 0))
+			code.rewriteAnnotation(origin=Origin(name, __file__, None, None))
 			return code
 
 		return simpleAttrCallBuilder

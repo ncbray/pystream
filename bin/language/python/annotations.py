@@ -1,28 +1,16 @@
 import collections
 from asttools.annotation import *
+from asttools.origin import Origin, originString
 
-Origin = collections.namedtuple('Origin', 'name filename lineno')
-
-def codeOrigin(code, line=None):
+def codeOrigin(code, line=None, col=None):
 	if line is None: line = code.co_firstlineno
-	return Origin(code.co_name, code.co_filename, line)
+	return Origin(code.co_name, code.co_filename, line, col)
 
-def functionOrigin(func, line=None):
-	return codeOrigin(func.func_code, line)
-
-def originString(origin):
-	if origin is not None:
-		#return "%20s - %s:%d" % origin
-		return "File \"%s\", line %d, in %s" % (origin.filename, origin.lineno, origin.name)
-	else:
-		return "<unknown origin>"
-
-def originTraceString(origin):
-	return "\n".join([originString(part) for part in origin])
+def functionOrigin(func, line=None, col=None):
+	return codeOrigin(func.func_code, line, col)
 
 class Annotation(object):
 	__slots__ = ()
-
 
 class CodeAnnotation(Annotation):
 	__slots__ = ['contexts',

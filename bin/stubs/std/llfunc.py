@@ -10,8 +10,7 @@ function = xtypes.FunctionType
 
 from .. stubcollector import stubgenerator
 
-# HACK for manually created functions
-from language.python.annotations import Origin
+from asttools.origin import Origin
 
 
 @stubgenerator
@@ -194,7 +193,7 @@ def makeLLFunc(collector):
 		name = 'method__call__'
 		code = Code(name, CodeParameters(internal_self, [self], ['self'], vargs, None, [retp]), b)
 
-		code.rewriteAnnotation(origin=Origin(name, __file__, 0))
+		code.rewriteAnnotation(origin=Origin(name, __file__, None, None))
 		return code
 
 

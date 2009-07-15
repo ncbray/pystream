@@ -1,4 +1,5 @@
 from asttools.transform import *
+from asttools.origin import originString
 
 from language.python import ast
 from language.python import program
@@ -52,7 +53,9 @@ class ExtractDataflow(TypeDispatcher):
 
 	def directCall(self, node, code, selfarg, args, vargs, kargs, targets):
 		if self.doOnce(node):
-			assert code.isCode(), (("Incorrect code parameter %r\n" % code)+annotations.originTraceString(node.annotation.origin))
+			if not code.isCode():
+				trace = "\n".join([originString(part) for part in node.annotation.origin])
+				assert False, (("Incorrect code parameter %r\n" % code)+trace)
 			op   = self.contextOp(node)
 			kwds = [] # HACK
 			DirectCallConstraint(self.system, op, code, selfarg, args, kwds, vargs, kargs, targets)

@@ -1,6 +1,7 @@
 from util.xmloutput  import XMLOutput
 from language.python import simplecodegen
 from asttools import astpprint
+from asttools.origin import originString
 
 import config
 import os.path
@@ -48,7 +49,7 @@ def outputOrigin(out, tabs, originTrace):
 	for origin in originTrace:
 		out << tabs
 		if origin: out.begin('a', href="file:%s"%(urllib.pathname2url(origin.filename),))
-		out << annotations.originString(origin)
+		out << originString(origin)
 		if origin: out.end('a')
 		out.endl()
 

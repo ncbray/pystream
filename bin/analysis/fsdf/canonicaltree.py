@@ -117,6 +117,44 @@ class NoValue(object):
 	__slots__ = ()
 noValue = NoValue()
 
+class UnaryTreeFunction(object):
+	__slots__ = ['manager', 'func', 'cache', 'cacheHit', 'cacheMiss']
+
+	def __init__(self, manager, func):
+		self.manager    = manager
+		self.func       = func
+		self.cache     = {}
+
+	def compute(self, a):
+		if a.cond.uid == -1:
+			# leaf computation
+			result = self.manager.leaf(self.func(a.value))
+		else:
+			branches = tuple([self._apply(branch) for branch in a.iter(a.cond)])
+			result = self.manager.tree(a.cond, branches)
+		return result
+
+	def _apply(self, a):
+		# See if we've alread computed this.
+		key = a
+		if key in self.cache:
+			self.cacheHit += 1
+			return self.cache[key]
+		else:
+			self.cacheMiss += 1
+
+		result = self.compute(a)
+
+		return self.cache.setdefault(key, result)
+
+	def __call__(self, a):
+		self.cacheHit  = 0
+		self.cacheMiss = 0
+		result = self._apply(a)
+		#print "%d/%d" % (self.cacheHit, self.cacheHit+self.cacheMiss)
+		self.cache.clear() # HACK don't retain cache between computations?
+		return result
+
 class BinaryTreeFunction(object):
 	__slots__ = ['manager', 'func', 'symmetric', 'stationary',
 			'leftIdentity', 'rightIdentity',
@@ -388,14 +426,15 @@ class CanonicalTreeManager(object):
 			branches = tuple([self._simplify(domain, branch, default) for branch in tree.branches])
 			result   = self.tree(tree.cond, branches)
 		else:
-			treeiter = tree.iter(domain.cond)
-
 			interesting = set()
 			newbranches = []
-			for domainbranch, treebranch in itertools.izip(domain.branches, treeiter):
-				newbranches.append(self._simplify(domainbranch, treebranch, default))
+			for domainbranch, treebranch in itertools.izip(domain.branches, tree.iter(domain.cond)):
+				newbranch = self._simplify(domainbranch, treebranch, default)
+				newbranches.append(newbranch)
+
+				# If the domain branch is not purely False, the data is interesting
 				if not domainbranch.leaf() or domainbranch.value:
-					interesting.add(treebranch)
+					interesting.add(newbranch)
 
 			if len(interesting) == 1:
 				result = interesting.pop()
@@ -430,6 +469,8 @@ def BoolManager(conditions):
 		symmetric=True, stationary=True, identity=manager.true, null=manager.false)
 	manager.or_  = BinaryTreeFunction(manager, lambda l, r: l | r,
 		symmetric=True, stationary=True, identity=manager.false, null=manager.true)
+
+	manager.maybeTrue = UnaryTreeFunction(manager, lambda s: True in s)
 
 	return manager
 

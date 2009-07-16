@@ -398,16 +398,17 @@ class DataflowIOAnalysis(TypeDispatcher):
 			with self.compiler.console.scope('debug dump'):
 				self.debugDump()
 
-	def dumpValues(self, out, node):
+	def dumpValues(self, out, node, mask):
 		with out.scope('ul'):
 			for i in range(self.numValues(node)):
 				with out.scope('li'):
 					values = self.getValue(node, i)
+					values = self.set.simplify(mask, values, self.set.empty)
 					out.write(values)
 				out.endl()
 		out.endl()
 
-	def dumpNodes(self, out, title, iterable):
+	def dumpNodes(self, out, title, iterable, mask):
 		if title:
 			with out.scope('h3'):
 				out.write(title)
@@ -417,7 +418,7 @@ class DataflowIOAnalysis(TypeDispatcher):
 			for node in iterable:
 				with out.scope('li'):
 					out.write(node)
-					self.dumpValues(out, node)
+					self.dumpValues(out, node, mask)
 				out.endl()
 		out.endl()
 
@@ -439,14 +440,24 @@ class DataflowIOAnalysis(TypeDispatcher):
 
 			with out.scope('body'):
 				for op in self.order:
+					if isinstance(op, (graph.Merge, graph.Split)): continue
+
 					out.tag('hr')
 					out.endl()
 
 					out.write(op)
 					out.endl()
 
-					self.dumpNodes(out, 'Inputs', op.reverse())
-					self.dumpNodes(out, 'Outputs', op.forward())
+					if hasattr(op, 'predicate'):
+						p = op.predicate
+						mask = self.bool.maybeTrue(self.getValue(p, 0))
+						with out.scope('p'):
+							out.write(mask)
+					else:
+						mask = self.bool.true
+
+					self.dumpNodes(out, 'Inputs', op.reverse(), mask)
+					self.dumpNodes(out, 'Outputs', op.forward(), mask)
 		out.endl()
 		f.close()
 

@@ -63,6 +63,8 @@ class InputMemoryImageBuilder(object):
 
 		entrySlots = self.analysis.dataflow.entry.modifies
 
+		cond = self.pathCondition(path)
+
 		for ref in refs:
 			key = path, ref
 
@@ -73,9 +75,18 @@ class InputMemoryImageBuilder(object):
 			else:
 				count = self.analysis.pathObjIndex[key]
 
+			if cond is not None:
+				refmask = self.analysis.bool.and_(cond.mask[ref], mask)
+			else:
+				refmask = mask
+
+
+			# Build the reference
+			leaf = self.analysis.set.leaf([(ref, count)])
+			leaf = self.analysis.set.ite(refmask, leaf, self.analysis.set.empty)
+
 			# Merge in the reference
 			old = self.analysis.getValue(node, index)
-			leaf = self.analysis.set.leaf([(ref, count)])
 			merged = self.analysis.set.union(old, leaf)
 			self.analysis.setValue(node, index, merged)
 
@@ -85,7 +96,7 @@ class InputMemoryImageBuilder(object):
 				# If it's not defined, it's not used.
 				if nextslot in entrySlots:
 					nextnode = entrySlots[nextslot]
-					self.buildPath(nextnode, count, self.extendPath(path, nextslot), nextslot, mask)
+					self.buildPath(nextnode, count, self.extendPath(path, nextslot), nextslot, refmask)
 
 	def buildImage(self):
 		for name, node in self.analysis.dataflow.entry.modifies.iteritems():
@@ -97,7 +108,10 @@ class InputMemoryImageBuilder(object):
 		self.buildImage()
 
 	def pathCondition(self, path):
-		return self.analysis.cond.condition(path, sorted(self.pathRefs[path]))
+		if len(self.pathRefs[path]) > 1:
+			return self.analysis.cond.condition(path, sorted(self.pathRefs[path]))
+		else:
+			return None
 
 class AllocationMemoryImageBuilder(object):
 	def __init__(self, analysis):

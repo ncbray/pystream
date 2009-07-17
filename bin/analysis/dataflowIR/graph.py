@@ -287,10 +287,11 @@ class Entry(OpNode):
 
 
 class Exit(OpNode):
-	__slots__ = 'reads'
+	__slots__ = 'predicate', 'reads'
 
 	def __init__(self):
-		self.reads = {}
+		self.predicate = None
+		self.reads     = {}
 
 	def addExit(self, name, slot):
 		assert name not in self.reads
@@ -305,7 +306,7 @@ class Exit(OpNode):
 		return ()
 
 	def reverse(self):
-		return self.reads.itervalues()
+		return [self.predicate] + self.reads.values()
 
 	def sanityCheck(self):
 		for slot in self.reads.itervalues():

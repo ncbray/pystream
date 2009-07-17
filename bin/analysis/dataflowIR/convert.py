@@ -146,14 +146,19 @@ class CodeToDataflow(TypeDispatcher):
 		return old
 
 	def mergeStates(self, states):
-		# TODO merge predicates?
+		# TODO predicated merge / mux?
 		states = [state for state in states if state is not None]
 
-		pairs = [(state.predicate, state.predicate) for state in states]
-		predicate = gatedMerge(pairs)
+		if len(states) == 1:
+			# TODO is this sound?  Does it interfere with hyperblock definition?
+			state = states.pop()
+		else:
+			pairs = [(state.predicate, state.predicate) for state in states]
+			predicate = gatedMerge(pairs)
 
-		state = DeferedMerge(predicate, states)
-		state = State(predicate, state)
+			state = DeferedMerge(predicate, states)
+			state = State(predicate, state)
+
 		self.setState(state)
 		return state
 
@@ -321,6 +326,8 @@ class CodeToDataflow(TypeDispatcher):
 		state = self.mergeStates(self.returns)
 
 		killed = self.code.annotation.killed.merged
+
+		self.dataflow.exit.setPredicate(self.pred())
 
 		for name in self.allModified:
 			if isinstance(name, ast.Local):

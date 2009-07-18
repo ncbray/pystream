@@ -4,6 +4,7 @@ from analysis.dataflowIR import graph
 from analysis.fsdf import canonicaltree
 
 import itertools
+import collections
 
 import analysis.dataflowIR.ordering
 
@@ -242,28 +243,42 @@ class DataflowIOAnalysis(TypeDispatcher):
 		self.name     = name
 
 		# Indexed slot
+		# (node, index) -> references
 		self._values    = {}
-		self.slotUnique = {}
 
-		# Indexed object
-		self.objUnique  = {}
+		# obj -> # indexes
+		self.objCount   = {}
 
-		# Unindexed object
-		self.objCount   = {} # How many different objects are there, for a given name?
-
+		# The index of various types of objects
 		self.pathObjIndex       = {}
 		self.allocateFreshIndex = {}
 		self.allocateMergeIndex = {}
 
+		# Managers for correlated trees
 		self.cond = canonicaltree.ConditionManager()
 		self.bool = canonicaltree.BoolManager(self.cond)
 		self.set  = canonicaltree.SetManager()
 
-		#self.path = PathManager()
-
 		self.opfunc = GenericOpFunction(self.set)
 
-		self.dead = self.set.leaf((False,))
+		# (node, index) -> slot unique?
+		# (object unique is nessisary but not sufficient)
+		self.slotUnique = {}
+
+		# (obj, index) -> unique?
+		self.objUnique  = {}
+
+		# A mask that indicates under what conditions the object will be allocated.
+		# (obj, index) -> tree(bool)
+		self.objectExistanceMask = collections.defaultdict(lambda: self.bool.false)
+
+		# Objects that exist before the shader is executed
+		self.objectPreexisting = set()
+
+	def accumulateObjectExists(self, obj, index, mask):
+		key = (obj, index)
+		current = self.objectExistanceMask[key]
+		self.objectExistanceMask[key] = self.bool.or_(current, mask)
 
 	@dispatch(graph.Entry)
 	def processEntry(self, node):
@@ -429,7 +444,8 @@ class DataflowIOAnalysis(TypeDispatcher):
 		directory = 'summaries\\dataflow'
 		name = self.name
 
-		f   = util.filesystem.fileOutput(directory, name, 'html')
+		# Dump information about ops
+		f   = util.filesystem.fileOutput(directory, name+'-ops', 'html')
 		out = XMLOutput(f)
 
 		with out.scope('html'):
@@ -458,6 +474,32 @@ class DataflowIOAnalysis(TypeDispatcher):
 
 					self.dumpNodes(out, 'Inputs', op.reverse(), mask)
 					self.dumpNodes(out, 'Outputs', op.forward(), mask)
+		out.endl()
+		f.close()
+
+		# Dump information about memory
+		f   = util.filesystem.fileOutput(directory, name+'-memory', 'html')
+		out = XMLOutput(f)
+
+		with out.scope('html'):
+			with out.scope('head'):
+				with out.scope('title'):
+					out.write(name)
+			out.endl()
+
+			with out.scope('body'):
+				for key, mask in self.objectExistanceMask .iteritems():
+					with out.scope('p'):
+						obj, index = key
+
+						out.write(obj)
+						out.write(' - ')
+						out.write(index)
+						out.tag('br')
+						out.write('preexisting' if key in self.objectPreexisting else 'allocated')
+						out.tag('br')
+						out.write(mask)
+
 		out.endl()
 		f.close()
 

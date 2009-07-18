@@ -90,6 +90,9 @@ class InputMemoryImageBuilder(object):
 			merged = self.analysis.set.union(old, leaf)
 			self.analysis.setValue(node, index, merged)
 
+			# Keep track of the conditions underwhich the object exists.
+			self.analysis.objectPreexisting.add((ref, count))
+			self.analysis.accumulateObjectExists(ref, count, refmask)
 
 			# Recurse
 			for nextslot in ref:

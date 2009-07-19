@@ -155,6 +155,41 @@ class UnaryTreeFunction(object):
 		self.cache.clear() # HACK don't retain cache between computations?
 		return result
 
+class UnaryTreeVisitor(object):
+	__slots__ = ['manager', 'func', 'cache', 'cacheHit', 'cacheMiss']
+
+	def __init__(self, manager, func):
+		self.manager    = manager
+		self.func       = func
+		self.cache      = set()
+
+	def compute(self, context, a):
+		if a.cond.uid == -1:
+			# leaf computation
+			self.func(context, a.value)
+		else:
+			for branch in a.iter(a.cond):
+				self._apply(context, branch)
+
+	def _apply(self, context, a):
+		# See if we've alread computed this.
+		key = a
+		if key in self.cache:
+			self.cacheHit += 1
+		else:
+			self.cacheMiss += 1
+
+		self.compute(context, a)
+		self.cache.add(key)
+
+	def __call__(self, context, a):
+		self.cacheHit  = 0
+		self.cacheMiss = 0
+		result = self._apply(context, a)
+		#print "%d/%d" % (self.cacheHit, self.cacheHit+self.cacheMiss)
+		self.cache.clear() # HACK don't retain cache between computations?
+		return result
+
 class BinaryTreeFunction(object):
 	__slots__ = ['manager', 'func', 'symmetric', 'stationary',
 			'leftIdentity', 'rightIdentity',
@@ -472,6 +507,9 @@ def BoolManager(conditions):
 
 	manager.maybeTrue = UnaryTreeFunction(manager, lambda s: True in s)
 
+	# HACK use set operations, so we don't need to create a manager for individual objects?
+	manager.in_       = BinaryTreeFunction(manager, lambda o, s: o.issubset(s))
+
 	return manager
 
 def SetManager():
@@ -483,5 +521,15 @@ def SetManager():
 		symmetric=True, stationary=True, null=manager.empty)
 	manager.union = BinaryTreeFunction(manager, lambda l, r: l | r,
 		symmetric=True, stationary=True, identity=manager.empty)
+
+	manager._flatten = UnaryTreeVisitor(manager, lambda context, s: context.update(s))
+
+	def flatten(t):
+		s = set()
+		manager._flatten(s, t)
+		return s
+
+	manager.flatten = flatten
+
 
 	return manager

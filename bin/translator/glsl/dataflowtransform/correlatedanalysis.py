@@ -283,7 +283,20 @@ class GenericOpFunction(TypeDispatcher):
 
 		analysis.opReads[g]     = result[self.readPosition]
 		analysis.opModifies[g]  = result[self.modifyPosition]
-		analysis.opAllocates[g] = result[self.allocatePosition]
+
+
+		allocates = result[self.allocatePosition]
+		analysis.opAllocates[g] = allocates
+
+		# Build existance mask for allocated objects.
+		# HACK This seems a little combersome, as it traverses the tree multiple times.
+		flatAllocates = analysis.set.flatten(allocates)
+		for key in flatAllocates:
+			leaf = analysis.set.leaf((key,))
+			mask = analysis.bool.in_(leaf, allocates)
+
+			obj, index = key
+			analysis.accumulateObjectExists(obj, index, mask)
 
 class DataflowIOAnalysis(TypeDispatcher):
 	def __init__(self, compiler, dataflow, order, name):

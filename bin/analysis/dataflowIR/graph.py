@@ -24,6 +24,9 @@ class SlotNode(DataflowNode):
 	def mustBeUnique(self):
 		return True
 
+	def isField(self):
+		return False
+
 class FlowSensitiveSlotNode(SlotNode):
 	__slots__ = 'defn', 'use'
 
@@ -242,6 +245,8 @@ class FieldNode(FlowSensitiveSlotNode):
 	def mustBeUnique(self):
 		return False
 
+	def isField(self):
+		return True
 
 
 class OpNode(DataflowNode):

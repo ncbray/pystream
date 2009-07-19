@@ -25,66 +25,127 @@ class GenericOpFunction(TypeDispatcher):
 		self.func = canonicaltree.TreeFunction(manager, self.concrete, True)
 
 	def init(self, analysis, g):
-		self.inputlut   = {} # maps (name, index) -> index in inputs
-		self.inputs     = []
-		self.inputNodes = []
+		self.numInputs   = 0
+		self.inputlut    = {} # maps (name, index) -> (position in inputValues, unique
+		self.inputValues = []
 
-		self.outputlut   = {} # maps (name, index) -> index in outputs
-		self.outputs     = []
-		self.outputNodes = []
+		self.numOutputs  = 0
+		self.outputlut   = {} # maps (name, index) -> position in outputValues
+		self.outputs     = [] # list of (node, index, position) to output.
 
 		self.g         = g
 		self.op        = g.op
 		self.analysis  = analysis
 		self.canonical = analysis.compiler.storeGraph.canonical
 
+		# The positions for returning correlated RMA information.
+		self.readPosition     = self.allocateOutput()
+		self.modifyPosition   = self.allocateOutput()
+		self.allocatePosition = self.allocateOutput()
+
+
+	def allocateInput(self):
+		temp = self.numInputs
+		self.numInputs += 1
+		return temp
+
+	def allocateOutput(self):
+		temp = self.numOutputs
+		self.numOutputs += 1
+		return temp
+
 	def registerInput(self, analysis, name, node):
 		if (name, 0) not in self.inputlut:
 			for index in range(self.analysis.numValues(node)):
-				self.inputlut[(name, index)] = len(self.inputs)
-				self.inputs.append(analysis.getValue(node, index))
-				self.inputNodes.append((node, index))
+				current = self.allocateInput()
+				self.inputlut[(name, index)] = (node, current)
+				self.inputValues.append(analysis.getValue(node, index))
 
 	def registerOutput(self, analysis, name, node):
 		if (name, 0) not in self.outputlut:
 			for index in range(self.analysis.numValues(node)):
-				self.outputlut[name, index] = len(self.outputs)
-				self.outputs.append((node, index)) # TODO?
-				self.outputNodes.append((node, index))
+				current = self.allocateOutput()
+				unique  = self.analysis.isUnique(node, index)
+				self.outputlut[name, index] = (node, current, unique)
+				self.outputs.append((node, index, current))
 
-	# Gets the concrete input
-	def get(self, name, index):
-		assert not isinstance(name, graph.SlotNode), name
-		assert isinstance(index, int), index
-		return self.args[self.inputlut[name, index]]
+	def registerIO(self, analysis, g):
+		# Pack the inputs
+		self.registerInput(analysis, 'predicate', g.predicate)
 
-	# Sets the concrete output.
-	def set(self, name, index, value, weak=False):
-		assert not isinstance(name, graph.SlotNode), name
-		assert isinstance(index, int), index
-		assert isinstance(value, frozenset), value
+		for name, node in g.localReads.iteritems():
+			self.registerInput(analysis, name, node)
+		for name, node in g.heapReads.iteritems():
+			self.registerInput(analysis, name, node)
+		for name, node in g.heapPsedoReads.iteritems():
+			self.registerInput(analysis, name, node)
 
+		# Declare the outputs
+		for node in g.localModifies:
+			self.registerOutput(analysis, node.names[0], node)
+		for name, node in g.heapModifies.iteritems():
+			self.registerOutput(analysis, name, node)
+		for i, node in enumerate(g.predicates):
+			self.registerOutput(analysis, i, node)
+
+
+	def assertConcreteValue(self, value):
+		assert isinstance(value, (frozenset, set)), value
 		for ref in value:
 			if isinstance(ref, bool): continue
 			obj, objindex = ref
 			assert isinstance(obj, storegraph.ObjectNode), obj
 			assert isinstance(objindex, int), objindex
 
-		outindex = self.outputlut[name, index]
-		node, nodeindex = self.outputNodes[outindex]
+	def logRead(self, node, index):
+		if node.isField():
+			self.results[self.readPosition]   |= set([(node, index)])
 
-		if weak or not self.analysis.isUnique(node, nodeindex):
+	def logModify(self, node, index):
+		if node.isField():
+			self.results[self.modifyPosition] |= set([(node, index)])
+
+	def logAllocate(self, obj, index):
+		self.results[self.allocatePosition] |= set([(obj, index)])
+
+
+	# Gets the concrete input
+	def get(self, name, index):
+		assert not isinstance(name, graph.SlotNode), name
+		assert isinstance(index, int), index
+
+		node, pos = self.inputlut[name, index]
+		self.logRead(node, index)
+		return self.args[pos]
+
+	# Sets the concrete output.
+	def set(self, name, index, value, weak=False):
+		assert not isinstance(name, graph.SlotNode), name
+		assert isinstance(index, int), index
+		self.assertConcreteValue(value)
+
+
+		node, pos, unique = self.outputlut[name, index]
+
+		self.logModify(node, index)
+
+		if weak or not unique:
 			# Merge with the existing value.
-			current = self.results[outindex]
-			value = current.union(value)
+			value = self.results[pos].union(value)
 
-		self.results[outindex] = value
+		self.results[pos] = value
 
+	# Used for initializing the results with pass-through values
 	def copy(self, name, node):
-		for i in range(self.analysis.numValues(node)):
-			self.set(name, i, self.get(name, i))
+		for index in range(self.analysis.numValues(node)):
+			# Don't use get/set as it will log as a read/write?
+			inode, inputpos = self.inputlut[name, index]
+			onode, outpos, unique = self.outputlut[name, index]
+			self.results[outpos] = self.args[inputpos]
 
 	def fresh(self, ref):
+		# The only case that ref will not be in the dictionary is when
+		# the ref is a constant, and in this case the index will be zero.
 		return self.analysis.allocateFreshIndex.get(ref, 0)
 
 	@dispatch(ast.DirectCall)
@@ -99,6 +160,8 @@ class GenericOpFunction(TypeDispatcher):
 				values = frozenset([(ref, self.fresh(ref)) for ref in name])
 				self.set(name, index, values)
 
+			for ref, index in values:
+				self.logAllocate(ref, index)
 
 	@dispatch(ast.Allocate)
 	def handleAllocate(self, node):
@@ -106,7 +169,15 @@ class GenericOpFunction(TypeDispatcher):
 		# Return value
 
 		allocated = [(ref, self.analysis.allocateFreshIndex[ref]) for ref in node.annotation.allocates.merged]
+
+		for ref, index in allocated:
+			self.logAllocate(ref, index)
+
 		self.set(self.g.localModifies[0].names[0], 0, frozenset(allocated))
+
+	def fieldSlot(self, expr, fieldtype, name):
+		field = self.canonical.fieldName(fieldtype, name.xtype.obj)
+		return expr.knownField(field)
 
 	@dispatch(ast.Load)
 	def handleLoad(self, node):
@@ -116,12 +187,12 @@ class GenericOpFunction(TypeDispatcher):
 
 		result = set()
 		for (expr, ei), (name, ni) in itertools.product(expr, name):
-			field = self.canonical.fieldName(fieldtype, name.xtype.obj)
-			slot  = expr.knownField(field)
+			slot = self.fieldSlot(expr, fieldtype, name)
 			result.update(self.get(slot, ei))
 
-		# Return value
-		self.set(self.g.localModifies[0].names[0], 0, frozenset(result))
+		# Output the loaded value
+		assert len(self.g.localModifies) == 1
+		self.set(self.g.localModifies[0].names[0], 0, result)
 
 	@dispatch(ast.Store)
 	def handleStore(self, node):
@@ -130,21 +201,18 @@ class GenericOpFunction(TypeDispatcher):
 		name      = self.get(node.name, 0)
 		value     = self.get(node.value, 0)
 
-
+		# Are there multiple slots that will be stored to?
+		# At runtime, only one of the slots will be updated, therefore
+		# it must be analyized as a weak update.
 		ambiguous = len(expr)*len(name) > 1
 
 		for (expr, ei), (name, ni) in itertools.product(expr, name):
-			field = self.canonical.fieldName(fieldtype, name.xtype.obj)
-			slot  = expr.knownField(field)
-
-			# TODO non-ambiguous unique?
+			slot = self.fieldSlot(expr, fieldtype, name)
 			self.set(slot, ei, value, weak=ambiguous)
-
-		# TODO uncovered fields?
 
 	@dispatch(ast.TypeSwitch)
 	def handleTypeSwitch(self, node):
-		# TODO need to inject new correlation?
+		# TODO could we inject the new correlation here, rather than later?  Make the cases a correlated input?
 
 		conditional = self.get(node.conditional, 0)
 		types = set([ref.xtype.obj.type for ref, ri in conditional])
@@ -152,22 +220,17 @@ class GenericOpFunction(TypeDispatcher):
 		for i, case in enumerate(node.cases):
 			casetypes = set([e.object for e in case.types])
 
-			# Calculate the predicate
-			t = not types.isdisjoint(casetypes)
-			f = not casetypes.issuperset(types)
+			# Calculate the predicate for this case
+			t = not types.isdisjoint(casetypes) # The case may be taken.
+			f = not casetypes.issuperset(types) # The case may not be taken.
 
-			if t:
-				if f:
-					# Uncertain if the branch will be taken
-					self.set(i, 0, frozenset((True, False)))
-				else:
-					# This branch must be taken
-					self.set(i, 0, frozenset((True,)))
-			elif f:
-				# The branch will not be taken.
-				self.set(i, 0, frozenset((False,)))
+			# The predicate may be (), (True), (False), or (True, False)
+			s = set()
+			if t: s.add(True)
+			if f: s.add(False)
+			self.set(i, 0, s)
 
-			# Calculate the filtered value
+			# Calculate the value output for this case.
 			if case.expr is not None:
 				filtered = frozenset([ref for ref in conditional if ref[0].xtype.obj.type in casetypes])
 				self.set(case.expr, 0, filtered)
@@ -179,7 +242,7 @@ class GenericOpFunction(TypeDispatcher):
 
 		# Init concrete outputs
 		empty = frozenset()
-		self.results = [empty for o in self.outputs]
+		self.results = [empty for o in range(self.numOutputs)]
 
 		# If predicate cannot be true, no point in evaluating?
 		if True in self.get('predicate', 0):
@@ -199,31 +262,14 @@ class GenericOpFunction(TypeDispatcher):
 
 	def dispatch(self, analysis, g):
 		self.init(analysis, g)
-
-		# Pack the inputs
-		self.registerInput(analysis, 'predicate', g.predicate)
-
-		for name, node in g.localReads.iteritems():
-			self.registerInput(analysis, name, node)
-		for name, node in g.heapReads.iteritems():
-			self.registerInput(analysis, name, node)
-		for name, node in g.heapPsedoReads.iteritems():
-			self.registerInput(analysis, name, node)
-
-		# Declare the outputs
-		for node in g.localModifies:
-			self.registerOutput(analysis, node.names[0], node)
-		for name, node in g.heapModifies.iteritems():
-			self.registerOutput(analysis, name, node)
-		for i, node in enumerate(g.predicates):
-			self.registerOutput(analysis, i, node)
+		self.registerIO(analysis, g)
 
 		# Evaluate
-		result = self.func(*self.inputs)
+		result = self.func(*self.inputValues)
 
 		# Unpack the outputs
-		for (node, index), value in zip(self.outputNodes, result):
-			analysis.setValue(node, index, value)
+		for node, index, position in self.outputs:
+			analysis.setValue(node, index, result[position])
 
 		# Type switch fixup
 		# TODO functions can't inject new correlations, so we must fixup?
@@ -234,6 +280,10 @@ class GenericOpFunction(TypeDispatcher):
 				analysis.maskSetValue(pnode, 0, mask)
 				if enode is not None: analysis.maskSetValue(enode, 0, mask)
 
+
+		analysis.opReads[g]     = result[self.readPosition]
+		analysis.opModifies[g]  = result[self.modifyPosition]
+		analysis.opAllocates[g] = result[self.allocatePosition]
 
 class DataflowIOAnalysis(TypeDispatcher):
 	def __init__(self, compiler, dataflow, order, name):
@@ -274,6 +324,11 @@ class DataflowIOAnalysis(TypeDispatcher):
 
 		# Objects that exist before the shader is executed
 		self.objectPreexisting = set()
+
+		self.opReads     = collections.defaultdict(lambda: self.set.empty)
+		self.opModifies  = collections.defaultdict(lambda: self.set.empty)
+		self.opAllocates = collections.defaultdict(lambda: self.set.empty)
+
 
 	def accumulateObjectExists(self, obj, index, mask):
 		key = (obj, index)
@@ -413,21 +468,21 @@ class DataflowIOAnalysis(TypeDispatcher):
 			with self.compiler.console.scope('debug dump'):
 				self.debugDump()
 
+	def dumpMasked(self, out, values, mask):
+		values = self.set.simplify(mask, values, self.set.empty)
+		out.write(values)
+
 	def dumpValues(self, out, node, mask):
 		with out.scope('ul'):
 			for i in range(self.numValues(node)):
 				with out.scope('li'):
-					values = self.getValue(node, i)
-					values = self.set.simplify(mask, values, self.set.empty)
-					out.write(values)
+					self.dumpMasked(out, self.getValue(node, i), mask)
 				out.endl()
 		out.endl()
 
 	def dumpNodes(self, out, title, iterable, mask):
 		if title:
-			with out.scope('h3'):
-				out.write(title)
-			out.endl()
+			self.dumpTitle(out, title)
 
 		with out.scope('ul'):
 			for node in iterable:
@@ -435,6 +490,11 @@ class DataflowIOAnalysis(TypeDispatcher):
 					out.write(node)
 					self.dumpValues(out, node, mask)
 				out.endl()
+		out.endl()
+
+	def dumpTitle(self, out, title):
+		with out.scope('h3'):
+			out.write(title)
 		out.endl()
 
 	@async_limited(2)
@@ -471,6 +531,18 @@ class DataflowIOAnalysis(TypeDispatcher):
 							out.write(mask)
 					else:
 						mask = self.bool.true
+
+					if self.opReads[op] is not self.set.empty:
+						self.dumpTitle(out, 'Read')
+						self.dumpMasked(out, self.opReads[op], mask)
+
+					if self.opModifies[op] is not self.set.empty:
+						self.dumpTitle(out, 'Modify')
+						self.dumpMasked(out, self.opModifies[op], mask)
+
+					if self.opAllocates[op] is not self.set.empty:
+						self.dumpTitle(out, 'Allocates')
+						self.dumpMasked(out, self.opAllocates[op], mask)
 
 					self.dumpNodes(out, 'Inputs', op.reverse(), mask)
 					self.dumpNodes(out, 'Outputs', op.forward(), mask)

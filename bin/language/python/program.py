@@ -108,6 +108,10 @@ class Object(AbstractObject):
 		else:
 			return "%s(%s)" % (type(self).__name__, r)
 
+	def pythonType(self):
+		# self.type may be uninitialized, so go directly to the pyobj.
+		return type(self.pyobj)
+
 
 class ImaginaryObject(AbstractObject):
 	__slots__ = 'name', 'preexisting'
@@ -125,6 +129,8 @@ class ImaginaryObject(AbstractObject):
 		# For example: hidden function stubs.
 		return self.preexisting
 
+	def pythonType(self):
+		return self.type.pyobj
 
 # TODO create unique ID for hashable objects.
 # Collect IDs from given type into abstract object.  (Should be a continguous range?)

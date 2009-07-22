@@ -16,9 +16,7 @@ def hasIntrinsicType(extractor, lcl):
 
 	for ref in lcl.annotation.references[0]:
 		obj = ref.xtype.obj
-		extractor.ensureLoaded(obj)
-		assert hasattr(obj, 'type'), obj
-		if obj.type.pyobj not in intrinsics.intrinsicTypes:
+		if obj.pythonType() not in intrinsics.intrinsicTypes:
 			return False
 	return True
 

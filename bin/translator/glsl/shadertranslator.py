@@ -31,8 +31,7 @@ class GLSLTranslator(TypeDispatcher):
 
 	def _getTypeFromRef(self, obj):
 		wobj = obj.xtype.obj
-		assert hasattr(wobj, 'type'), wobj
-		return wobj.type.pyobj
+		return wobj.pythonType()
 
 	def getType(self, node, references):
 		types = set([self._getTypeFromRef(ref) for ref in references])

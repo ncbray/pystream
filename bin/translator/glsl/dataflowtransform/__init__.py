@@ -7,7 +7,7 @@ def evaluateCode(compiler, code):
 		dataflow = analysis.dataflowIR.convert.evaluateCode(compiler, code)
 
 	with compiler.console.scope('analyize'):
-		translator.glsl.dataflowtransform.correlatedanalysis.evaluateDataflow(compiler, dataflow, code.codeName())
+		translator.glsl.dataflowtransform.correlatedanalysis.evaluateDataflow(compiler, dataflow, code.codeName(), code)
 
 	with compiler.console.scope('dump'):
 		analysis.dataflowIR.dump.evaluateDataflow(dataflow, 'summaries\dataflow', code.codeName())

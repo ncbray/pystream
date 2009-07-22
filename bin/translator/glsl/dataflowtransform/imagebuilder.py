@@ -8,10 +8,13 @@ def isLeaf(ref):
 	if ref.xtype.isExisting():
 		# Naturaly unique
 		return True
+	else:
+		# Constants don't need to be unique
+		return isConstantType(ref)
 
-	# Constants don't need to be unique
+def isConstantType(ref):
 	o = ref.xtype.obj
-	return issubclass(o.type.pyobj, leafTypes)
+	return issubclass(o.pythonType(), leafTypes)
 
 def createIndex(analysis, ref):
 	if isLeaf(ref):

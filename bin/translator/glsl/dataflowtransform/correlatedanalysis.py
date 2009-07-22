@@ -11,6 +11,8 @@ import analysis.dataflowIR.ordering
 from analysis.storegraph import storegraph
 
 from . import imagebuilder
+from . import poolanalysis
+
 
 # For dumping
 from util.xmloutput import XMLOutput
@@ -65,7 +67,7 @@ class GenericOpFunction(TypeDispatcher):
 		if (name, 0) not in self.outputlut:
 			for index in range(self.analysis.numValues(node)):
 				current = self.allocateOutput()
-				unique  = self.analysis.isUnique(node, index)
+				unique  = self.analysis.isUniqueSlot(node, index)
 				self.outputlut[name, index] = (node, current, unique)
 				self.outputs.append((node, index, current))
 
@@ -394,15 +396,16 @@ class DataflowIOAnalysis(TypeDispatcher):
 		assert isinstance(node, graph.SlotNode), type(node)
 		return self._values.get((node, index), self.set.empty)
 
-	def isUnique(self, node, index):
+	def isUniqueObject(self, obj, index):
+		return self.objUnique.get((obj, index), False)
+
+	def isUniqueSlot(self, node, index):
 		assert isinstance(node, graph.SlotNode), type(node)
 		if node.mustBeUnique():
 			result = True
 		else:
-			obj       = node.name.object
-			objUnique = self.objUnique.get((obj, index), False)
-			result = self.slotUnique.get(node, objUnique)
-
+			objUnique = self.isUniqueObject(node.name.object, index)
+			result    = self.slotUnique.get(node, objUnique)
 		return result
 
 	def numValues(self, node):
@@ -588,8 +591,10 @@ class DataflowIOAnalysis(TypeDispatcher):
 		out.endl()
 		f.close()
 
-def evaluateDataflow(compiler, dataflow, name):
+def evaluateDataflow(compiler, dataflow, name, code):
 	order = analysis.dataflowIR.ordering.evaluateDataflow(dataflow)
 
 	dioa = DataflowIOAnalysis(compiler, dataflow, order, name)
 	dioa.process()
+
+	poolinfo = poolanalysis.process(compiler, dataflow, dioa)

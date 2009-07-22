@@ -27,15 +27,8 @@ def isAnalysisInstance(node, type):
 
 		for ref in node.annotation.references[0]:
 			obj = ref.xtype.obj
-			if obj.isConstant():
-				if not isinstance(obj.pyobj, type):
-					return False
-			else:
-				if not hasattr(obj, 'type'):
-					return False
-
-				if not issubclass(obj.type.pyobj, type):
-					return False
+			if not issubclass(obj.pythonType(), type):
+				return False
 		return True
 
 	return False

@@ -10,11 +10,15 @@ class Hyperblock(object):
 		return "hyperblock(%s)" % str(self.name)
 
 class DataflowNode(object):
-	__slots__ = 'hyperblock'
+	__slots__ = 'hyperblock', 'canonicalpredicate'
 
-	def __init__(self, hyperblock):
-		assert isinstance(hyperblock, Hyperblock), hyperblock
+	def __init__(self, hyperblock, cp):
+		assert hyperblock is None or isinstance(hyperblock, Hyperblock), type(hyperblock)
+		assert cp is None or isinstance(cp, PredicateNode), type(cp)
+
 		self.hyperblock = hyperblock
+		self.canonicalpredicate = cp.canonical() if cp is not None else cp
+
 
 class SlotNode(DataflowNode):
 	__slots__ = ()
@@ -37,14 +41,24 @@ class SlotNode(DataflowNode):
 	def mustBeUnique(self):
 		return True
 
+	def isLocal(self):
+		return False
+
 	def isField(self):
 		return False
+
+	def isPredicate(self):
+		return False
+
+	def definingOp(self):
+		return None
+
 
 class FlowSensitiveSlotNode(SlotNode):
 	__slots__ = 'defn', 'use'
 
-	def __init__(self, hyperblock):
-		SlotNode.__init__(self, hyperblock)
+	def __init__(self, hyperblock, cp):
+		SlotNode.__init__(self, hyperblock, cp)
 		self.defn  = None
 		self.use   = None
 
@@ -118,10 +132,17 @@ class FlowSensitiveSlotNode(SlotNode):
 	def isMutable(self):
 		return True
 
+	def definingOp(self):
+		if isinstance(self.defn, Split):
+			return self.defn.read.definingOp()
+		else:
+			return self.defn
+
+
 class LocalNode(FlowSensitiveSlotNode):
 	__slots__ = 'names'
-	def __init__(self, hyperblock, names=()):
-		FlowSensitiveSlotNode.__init__(self, hyperblock)
+	def __init__(self, hyperblock, cp, names=()):
+		FlowSensitiveSlotNode.__init__(self, hyperblock, cp)
 		self.names = [name for name in names]
 
 	def addName(self, name):
@@ -130,32 +151,40 @@ class LocalNode(FlowSensitiveSlotNode):
 			self.names.append(name)
 
 	def duplicate(self):
-		node = LocalNode(self.hyperblock)
+		node = LocalNode(self.hyperblock, self.canonicalpredicate)
+		# HACK shares the names, so any updates will be seen by all versions of the node.
 		node.names = self.names
 		return node
 
 	def __repr__(self):
 		return "lcl(%s)" % ", ".join([repr(name) for name in self.names])
 
+	def isLocal(self):
+		return True
+
 
 class PredicateNode(FlowSensitiveSlotNode):
-	__slots__ = 'name'
-	def __init__(self, hyperblock, name):
-		FlowSensitiveSlotNode.__init__(self, hyperblock)
+	__slots__ = 'source', 'name'
+	def __init__(self, hyperblock, cp, source, name):
+		FlowSensitiveSlotNode.__init__(self, hyperblock, cp)
+		self.source = source
 		self.name = name
 
 	def duplicate(self):
-		node = PredicateNode(self.hyperblock, self.name)
+		node = PredicateNode(self.hyperblock, self.canonicalpredicate, self.source, self.name)
 		return node
 
 	def __repr__(self):
 		return "pred(%s)" % self.name
 
+	def isPredicate(self):
+		return True
+
 
 class ExistingNode(SlotNode):
 	__slots__ = 'name', 'ref', 'uses'
-	def __init__(self, hyperblock, name, ref):
-		SlotNode.__init__(self, hyperblock)
+	def __init__(self, name, ref):
+		SlotNode.__init__(self, None, None)
 		self.name = name
 		self.ref  = ref
 		self.uses = []
@@ -194,10 +223,11 @@ class ExistingNode(SlotNode):
 	def isMutable(self):
 		return False
 
+
 class NullNode(SlotNode):
 	__slots__ = 'defn', 'uses'
-	def __init__(self, hyperblock):
-		SlotNode.__init__(self, hyperblock)
+	def __init__(self):
+		SlotNode.__init__(self, None, None)
 		self.defn = None
 		self.uses = []
 
@@ -238,8 +268,8 @@ class NullNode(SlotNode):
 
 class FieldNode(FlowSensitiveSlotNode):
 	__slots__ = 'name'
-	def __init__(self, hyperblock, name=None):
-		FlowSensitiveSlotNode.__init__(self, hyperblock)
+	def __init__(self, hyperblock, cp, name):
+		FlowSensitiveSlotNode.__init__(self, hyperblock, cp)
 		self.name = name
 
 	def addName(self, name):
@@ -249,8 +279,7 @@ class FieldNode(FlowSensitiveSlotNode):
 			assert self.name is name, (self.name, name)
 
 	def duplicate(self):
-		node = FieldNode(self.hyperblock)
-		node.name = self.name
+		node = FieldNode(self.hyperblock, self.canonicalpredicate, self.name)
 		return node
 
 	def __repr__(self):
@@ -272,6 +301,9 @@ class OpNode(DataflowNode):
 	def isSplit(self):
 		return False
 
+	def isBranch(self):
+		return False
+
 	def setPredicate(self, p):
 		assert p.hyperblock is self.hyperblock,  (self.hyperblock, p.hyperblock)
 
@@ -285,7 +317,7 @@ class Entry(OpNode):
 	__slots__ = 'modifies'
 
 	def __init__(self, hyperblock):
-		OpNode.__init__(self, hyperblock)
+		OpNode.__init__(self, hyperblock, None)
 		self.modifies = {}
 
 	def addEntry(self, name, slot):
@@ -311,8 +343,8 @@ class Entry(OpNode):
 class Exit(OpNode):
 	__slots__ = 'predicate', 'reads'
 
-	def __init__(self, hyperblock):
-		OpNode.__init__(self, hyperblock)
+	def __init__(self, hyperblock, cp):
+		OpNode.__init__(self, hyperblock, cp)
 		self.predicate = None
 		self.reads     = {}
 
@@ -337,8 +369,8 @@ class Exit(OpNode):
 
 class Gate(OpNode):
 	__slots__ = 'predicate', 'read', 'modify'
-	def __init__(self, hyperblock):
-		OpNode.__init__(self, hyperblock)
+	def __init__(self, hyperblock, cp):
+		OpNode.__init__(self, hyperblock, cp)
 		self.predicate = None
 		self.read = None
 		self.modify = None
@@ -386,7 +418,7 @@ class Merge(OpNode):
 	__slots__ = 'reads', 'modify'
 
 	def __init__(self, hyperblock):
-		OpNode.__init__(self, hyperblock)
+		OpNode.__init__(self, hyperblock, None)
 		self.reads  = []
 		self.modify = None
 
@@ -437,7 +469,7 @@ class Merge(OpNode):
 class Split(OpNode):
 	__slots__ = 'read', 'modifies'
 	def __init__(self, hyperblock):
-		OpNode.__init__(self, hyperblock)
+		OpNode.__init__(self, hyperblock, None)
 		self.read = None
 		self.modifies = []
 
@@ -506,8 +538,8 @@ def replaceList(l, original, replacement):
 
 class GenericOp(OpNode):
 	__slots__ = 'predicate', 'op', 'localReads', 'localModifies', 'heapReads', 'heapModifies', 'heapPsedoReads', 'predicates'
-	def __init__(self, hyperblock, op):
-		OpNode.__init__(self, hyperblock)
+	def __init__(self, hyperblock, cp, op):
+		OpNode.__init__(self, hyperblock, cp)
 		self.predicate      = None
 		self.op             = op
 
@@ -520,6 +552,9 @@ class GenericOp(OpNode):
 		# Outputs
 		self.localModifies  = []
 		self.predicates     = []
+
+	def isBranch(self):
+		return isinstance(self.op, (ast.TypeSwitch, ast.Switch))
 
 	def replaceUse(self, original, replacement):
 		if isinstance(original, PredicateNode):
@@ -625,16 +660,16 @@ class DataflowGraph(object):
 		self.entry    = Entry(hyperblock)
 		self.exit     = None # Defer creation, as we don't know the hyperblock.
 		self.existing = {}
-		self.null     = NullNode(hyperblock)
+		self.null     = NullNode()
 
-		self.entryPredicate = PredicateNode(hyperblock, '*')
+		self.entryPredicate = PredicateNode(hyperblock, None, None, repr(hyperblock))
 		self.entry.addEntry('*', self.entryPredicate)
 
 	def getExisting(self, node):
 		obj = node.object
 
 		if obj not in self.existing:
-			result = ExistingNode(self.entry.hyperblock, obj, refFromExisting(node))
+			result = ExistingNode(obj, refFromExisting(node))
 			self.existing[obj] = result
 		else:
 			result = self.existing[obj]

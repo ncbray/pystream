@@ -48,7 +48,7 @@ class State(AbstractState):
 		self.slots[slot] = value
 
 def gate(pred, value):
-	gate = graph.Gate(pred.hyperblock)
+	gate = graph.Gate(pred.hyperblock, pred)
 	gate.setPredicate(pred)
 	gate.addRead(value)
 
@@ -115,8 +115,7 @@ class DeferedEntryPoint(AbstractState):
 			if slot.object in killed:
 				return self.dataflow.null
 			else:
-				field = graph.FieldNode(self.hyperblock)
-				field.name = slot
+				field = graph.FieldNode(self.hyperblock, self.predicate, slot)
 				self.dataflow.entry.addEntry(slot, field)
 				return field
 
@@ -172,6 +171,8 @@ class CodeToDataflow(TypeDispatcher):
 			hyperblock = self.newHyperblock()
 			pairs = [(state.predicate, state.predicate) for state in states]
 			predicate = gatedMerge(hyperblock, pairs)
+			predicate.source = predicate.defn
+			predicate.name = repr(hyperblock)
 
 			state = DeferedMerge(hyperblock, predicate, states)
 			state = State(hyperblock, predicate, state)
@@ -196,7 +197,7 @@ class CodeToDataflow(TypeDispatcher):
 
 	def localTarget(self, lcl):
 		if isinstance(lcl, ast.Local):
-			node = graph.LocalNode(self.hyperblock(), (lcl,))
+			node = graph.LocalNode(self.hyperblock(), self.pred(), (lcl,))
 		else:
 			assert False
 		return node
@@ -221,14 +222,14 @@ class CodeToDataflow(TypeDispatcher):
 
 		# Modifies
 		for modify in node.annotation.modifies.merged:
-			slot = graph.FieldNode(self.hyperblock(), modify)
+			slot = graph.FieldNode(self.hyperblock(), self.pred(), modify)
 			self.set(modify, slot)
 			g.addModify(modify, slot)
 
 
 	@dispatch(ast.Allocate)
 	def processAllocate(self, node):
-		g = graph.GenericOp(self.hyperblock(), node)
+		g = graph.GenericOp(self.hyperblock(), self.pred(), node)
 		g.setPredicate(self.pred())
 
 		g.addLocalRead(node.expr, self.get(node.expr))
@@ -238,7 +239,7 @@ class CodeToDataflow(TypeDispatcher):
 
 	@dispatch(ast.Load)
 	def processLoad(self, node):
-		g = graph.GenericOp(self.hyperblock(), node)
+		g = graph.GenericOp(self.hyperblock(), self.pred(), node)
 		g.setPredicate(self.pred())
 
 		g.addLocalRead(node.expr, self.get(node.expr))
@@ -250,7 +251,7 @@ class CodeToDataflow(TypeDispatcher):
 
 	@dispatch(ast.DirectCall)
 	def processDirectCall(self, node):
-		g = graph.GenericOp(self.hyperblock(), node)
+		g = graph.GenericOp(self.hyperblock(), self.pred(), node)
 		g.setPredicate(self.pred())
 
 		if node.selfarg:
@@ -290,7 +291,7 @@ class CodeToDataflow(TypeDispatcher):
 
 	@dispatch(ast.Store)
 	def processStore(self, node):
-		g = graph.GenericOp(self.hyperblock(), node)
+		g = graph.GenericOp(self.hyperblock(), self.pred(), node)
 		g.setPredicate(self.pred())
 
 		g.addLocalRead(node.expr, self.get(node.expr))
@@ -309,13 +310,13 @@ class CodeToDataflow(TypeDispatcher):
 	@dispatch(ast.TypeSwitch)
 	def processTypeSwitch(self, node):
 
-		g = graph.GenericOp(self.hyperblock(), node)
+		g = graph.GenericOp(self.hyperblock(), self.pred(), node)
 		g.setPredicate(self.pred())
 
 		g.addLocalRead(node.conditional, self.get(node.conditional))
 
 		for i in range(len(node.cases)):
-			p = graph.PredicateNode(self.hyperblock(), i)
+			p = graph.PredicateNode(self.hyperblock(), self.pred(), g, i)
 			g.predicates.append(p.addDefn(g))
 		branches = self.branch(g.predicates)
 		exits = []
@@ -347,8 +348,8 @@ class CodeToDataflow(TypeDispatcher):
 
 		killed = self.code.annotation.killed.merged
 
-		self.dataflow.exit = graph.Exit(state.hyperblock)
-		self.dataflow.exit.setPredicate(self.pred())
+		self.dataflow.exit = graph.Exit(state.hyperblock, state.predicate)
+		self.dataflow.exit.setPredicate(state.predicate)
 
 		for name in self.allModified:
 			if isinstance(name, ast.Local):

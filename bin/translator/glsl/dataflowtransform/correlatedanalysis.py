@@ -599,4 +599,4 @@ def evaluateDataflow(compiler, dataflow, name, code):
 	dioa.process()
 
 	poolinfo = poolanalysis.process(compiler, dataflow, dioa)
-	dataflowsynthesis.process(compiler, dataflow, order, dioa, poolinfo)
+	dataflowsynthesis.process(compiler, dataflow, order, dioa, poolinfo, name)

@@ -2,19 +2,9 @@ from util.typedispatch import *
 from util import xcollections
 from analysis.dataflowIR import graph
 
-class CFGBlock(object):
-	__slots__ = 'hyperblock', 'predicates', 'prev', 'next', 'ops'
+from . cfgir import *
+from . import dumpcfgir
 
-	def __init__(self, hyperblock, predicates):
-		self.hyperblock = hyperblock
-		self.predicates = predicates
-		self.prev       = []
-		self.next       = []
-		self.ops        = []
-
-	def addNext(self, other):
-		self.next.append(other)
-		other.prev.append(self)
 
 def shouldSchedule(node):
 	return isinstance(node, (graph.OpNode))
@@ -63,11 +53,14 @@ class CFGResynthesis(object):
 
 		for block in self.blocks:
 			if source.canonicalpredicate and source.canonicalpredicate in block.predicates:
+				branch = CFGBranch(source)
+				block.addNext(branch)
+
 				for sibling in source.predicates:
 					newkey = block.predicates.union((sibling.canonical(),))
 					newblock = CFGBlock(self.hyperblock, newkey)
 					newblocks.append(newblock)
-					block.addNext(newblock)
+					branch.addNext(newblock)
 			else:
 				# The split will not occur in this branch.
 				newblocks.append(block)
@@ -327,11 +320,11 @@ class HighLevelAnalysis(TypeDispatcher):
 
 # A hackish attempt at reverse-if conversion.
 # TODO improve, support loops.
-def process(compiler, dataflow, order, dioa, poolinfo):
+def process(compiler, dataflow, order, dioa, poolinfo, name):
 	assert len(order)
 
 	hla = HighLevelAnalysis()
 	cfg = hla.process(order)
 	#hla.dump()
 
-
+	dumpcfgir.process(compiler, cfg, 'summaries\dataflow', name)

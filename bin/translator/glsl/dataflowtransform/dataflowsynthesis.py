@@ -70,6 +70,9 @@ class CFGResynthesis(object):
 
 	# Clone the op into every block that has a matching predicate
 	def putOpInBlocks(self, op):
+		# Computations on predicates should not be present in the CFG
+		if op.isPredicateOp(): return
+
 		if op.canonicalpredicate and op.canonicalpredicate not in self.activePredicates:
 			self.split(op.canonicalpredicate.source)
 
@@ -79,6 +82,9 @@ class CFGResynthesis(object):
 
 	# Count the number of times the op will be duplicated
 	def countDuplication(self, op):
+		# Computations on predicates should not be present in the CFG
+		if op.isPredicateOp(): return 0
+
 		count = 0
 		for block in self.blocks:
 			if op.canonicalpredicate in block.predicates:

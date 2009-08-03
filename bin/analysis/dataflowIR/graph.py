@@ -304,6 +304,9 @@ class OpNode(DataflowNode):
 	def isBranch(self):
 		return False
 
+	def isPredicateOp(self):
+		return False
+
 	def setPredicate(self, p):
 		assert p.hyperblock is self.hyperblock,  (self.hyperblock, p.hyperblock)
 
@@ -312,6 +315,7 @@ class OpNode(DataflowNode):
 		self.predicate = p
 		if self.predicate is not None:
 			self.predicate = self.predicate.addUse(self)
+
 
 class Entry(OpNode):
 	__slots__ = 'modifies'
@@ -378,6 +382,9 @@ class Gate(OpNode):
 	def isSplit(self):
 		return True
 
+	def isPredicateOp(self):
+		return self.read.isPredicate()
+
 	def addRead(self, slot):
 		assert self.read is None
 		slot = slot.addUse(self)
@@ -424,6 +431,9 @@ class Merge(OpNode):
 
 	def isMerge(self):
 		return True
+
+	def isPredicateOp(self):
+		return self.reads[0].isPredicate()
 
 	def addRead(self, slot):
 		assert slot.hyperblock is not self.hyperblock
@@ -475,6 +485,9 @@ class Split(OpNode):
 
 	def isSplit(self):
 		return True
+
+	def isPredicateOp(self):
+		return self.read.isPredicate()
 
 	def addRead(self, slot):
 		assert self.read is None

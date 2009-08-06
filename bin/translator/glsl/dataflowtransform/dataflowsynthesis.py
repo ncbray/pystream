@@ -17,6 +17,7 @@ class CFGResynthesis(object):
 
 		self.blocks = []
 
+	# Collect information about the dataflwo graph to guide the next pass.
 	def gatherInfo(self, nodes, hyperblock, entryPredicate):
 		self.hyperblock = hyperblock
 		self.entryPredicate = entryPredicate
@@ -42,12 +43,9 @@ class CFGResynthesis(object):
 					if next.hyperblock is hyperblock:
 						self.pending.add(next)
 
-#		for pred, count in self.predicateCount.iteritems():
-#			print pred, count
-#		print
-
 		return self.schedule()
 
+	# Split the CFG blocks that branch at these predicates.
 	def split(self, source):
 		newblocks = []
 
@@ -146,17 +144,6 @@ class CFGResynthesis(object):
 
 			self.scheduleOp(current)
 
-#		pending = set([self.entryBlock])
-#		while pending:
-#			current = pending.pop()
-
-#			print current.predicates
-#			for op in current.ops:
-#				print op
-#			print
-
-#			pending.update(current.next)
-
 		return self.entryBlock, self.blocks
 
 
@@ -251,12 +238,27 @@ class HighLevelAnalysis(TypeDispatcher):
 		self.exitblock = node.hyperblock
 		self.returnPredicate = node.predicate
 
-	def process(self, ops):
-		for op in ops:
-			self(op)
+	def mark(self, node):
+		assert isinstance(node, graph.OpNode), node
+		if not node in self.processed:
+			self.processed.add(node)
+			self.queue.append(node)
 
-		return self.buildCFG()
+	# Collect information about each hyperblock
+	def collectInfo(self, dataflow):
+		self.processed = set()
+		self.queue = []
 
+		self.mark(dataflow.entry)
+
+		while self.queue:
+			current = self.queue.pop()
+			self(current)
+			for nextSlot in current.forward():
+				for nextOp in nextSlot.forward():
+					self.mark(nextOp)
+
+	# Build the CFG for each hyperblock, then link the hyperblocks together.
 	def buildCFG(self):
 		# Build the CFG for each hyperblock
 		for info in self.blockInfo.itervalues():
@@ -272,6 +274,11 @@ class HighLevelAnalysis(TypeDispatcher):
 						prevExit.addNext(entry)
 
 		return self.blockInfo[self.entryblock].entryCFG
+
+	def process(self, dataflow):
+		self.collectInfo(dataflow)
+		return self.buildCFG()
+
 
 	def dump(self):
 		print "ENTRY BLOCK", self.entryblock
@@ -326,11 +333,8 @@ class HighLevelAnalysis(TypeDispatcher):
 
 # A hackish attempt at reverse-if conversion.
 # TODO improve, support loops.
-def process(compiler, dataflow, order, dioa, poolinfo, name):
-	assert len(order)
-
+def process(compiler, dataflow, name, dump=False):
 	hla = HighLevelAnalysis()
-	cfg = hla.process(order)
-	#hla.dump()
-
-	dumpcfgir.process(compiler, cfg, 'summaries\dataflow', name)
+	cfg = hla.process(dataflow)
+	if dump: dumpcfgir.process(compiler, cfg, 'summaries\dataflow', name)
+	return cfg

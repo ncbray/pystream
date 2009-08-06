@@ -598,5 +598,7 @@ def evaluateDataflow(compiler, dataflow, name, code):
 	dioa = DataflowIOAnalysis(compiler, dataflow, order, name)
 	dioa.process()
 
+	cfg = dataflowsynthesis.process(compiler, dataflow, name, dump=True)
+
+
 	poolinfo = poolanalysis.process(compiler, dataflow, dioa)
-	dataflowsynthesis.process(compiler, dataflow, order, dioa, poolinfo, name)

@@ -2,7 +2,7 @@ import pydot
 import util.filesystem
 
 from util.typedispatch import *
-from cfgir import *
+from . cfg import *
 
 class CFGIRStyle(TypeDispatcher):
 	branchColor = 'cyan'

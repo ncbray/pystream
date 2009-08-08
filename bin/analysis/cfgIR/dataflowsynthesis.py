@@ -2,7 +2,7 @@ from util.typedispatch import *
 from util import xcollections
 from analysis.dataflowIR import graph
 
-from . cfgir import *
+from . cfg import *
 from . import dumpcfgir
 
 

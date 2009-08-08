@@ -12,7 +12,7 @@ from analysis.storegraph import storegraph
 
 from . import imagebuilder
 from . import poolanalysis
-from . import dataflowsynthesis
+from analysis.cfgIR import dataflowsynthesis
 
 
 # For dumping

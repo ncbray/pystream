@@ -4,6 +4,7 @@ from analysis.dataflowIR import graph
 
 from . cfg import *
 from . import dumpcfgir
+from . import structuralanalysis
 
 
 def shouldSchedule(node):
@@ -336,5 +337,7 @@ class HighLevelAnalysis(TypeDispatcher):
 def process(compiler, dataflow, name, dump=False):
 	hla = HighLevelAnalysis()
 	cfg = hla.process(dataflow)
+	cfg = structuralanalysis.processCFG(compiler, cfg)
+
 	if dump: dumpcfgir.process(compiler, cfg, 'summaries\dataflow', name)
 	return cfg

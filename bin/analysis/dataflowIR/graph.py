@@ -569,6 +569,9 @@ class GenericOp(OpNode):
 	def isBranch(self):
 		return isinstance(self.op, (ast.TypeSwitch, ast.Switch))
 
+	def isTypeSwitch(self):
+		return isinstance(self.op, ast.TypeSwitch)
+
 	def replaceUse(self, original, replacement):
 		if isinstance(original, PredicateNode):
 			assert original is self.predicate

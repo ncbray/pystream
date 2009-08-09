@@ -4,8 +4,6 @@ from stubs.stubcollector import stubgenerator
 
 @stubgenerator
 def makeInteger(collector):
-	descriptive   = collector.descriptive
-	primitive     = collector.primitive
 	llast         = collector.llast
 	llfunc        = collector.llfunc
 	export        = collector.export
@@ -21,81 +19,69 @@ def makeInteger(collector):
 	### Primitive integer operations ###
 	####################################
 
-	@primitive
 	@staticFold(lambda a, b: a+b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_add(a, b):
 		return allocate(int)
 
-	@primitive
 	@staticFold(lambda a, b: a-b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_sub(a, b):
 		return allocate(int)
 
-	@primitive
 	@staticFold(lambda a, b: a*b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_mul(a, b):
 		return allocate(int)
 
-	@primitive
 	@staticFold(lambda a, b: a/b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_div(a, b):
 		return allocate(int)
 
-	@primitive
 	@staticFold(lambda a, b: a%b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_mod(a, b):
 		return allocate(int)
 
-	@primitive
 	@staticFold(lambda a, b: a**b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_pow(a, b):
 		return allocate(int)
 
-	@primitive
 	@staticFold(lambda a, b: a==b)
 	@fold(lambda a, b: a==b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_eq(a, b):
 		return allocate(bool)
 
-	@primitive
 	@staticFold(lambda a, b: a!=b)
 	@fold(lambda a, b: a!=b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_ne(a, b):
 		return allocate(bool)
 
-	@primitive
 	@staticFold(lambda a, b: a<b)
 	@fold(lambda a, b: a<b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_lt(a, b):
 		return allocate(bool)
 
-	@primitive
 	@staticFold(lambda a, b: a<=b)
 	@fold(lambda a, b: a<=b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_le(a, b):
 		return allocate(bool)
 
-	@primitive
 	@staticFold(lambda a, b: a>b)
 	@fold(lambda a, b: a>b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_gt(a, b):
 		return allocate(bool)
 
-	@primitive
 	@staticFold(lambda a, b: a>=b)
 	@fold(lambda a, b: a>=b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_int_ge(a, b):
 		return allocate(bool)
 

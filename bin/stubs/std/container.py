@@ -16,13 +16,11 @@ def makeContainerStubs(collector):
 	llfunc        = collector.llfunc
 	export        = collector.export
 	fold          = collector.fold
-	descriptive   = collector.descriptive
 	attachPtr     = collector.attachPtr
 
 	### Tuple ###
 	@attachPtr(tuple, '__iter__')
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def tuple__iter__(self):
 		iterator = allocate(tupleiterator)
 		store(iterator, 'parent', self)
@@ -38,26 +36,22 @@ def makeContainerStubs(collector):
 
 	### List ###
 	@attachPtr(list, '__getitem__')
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def list__getitem__(self, index):
 		return loadArray(self, -1)
 
 	@attachPtr(list, '__setitem__')
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def list__setitem__(self, index, value):
 		storeArray(self, -1, value)
 
 	@attachPtr(list, 'append')
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def list_append(self, value):
 		storeArray(self, -1, value)
 
 	@attachPtr(list, '__iter__')
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def list__iter__(self):
 		iterator = allocate(listiterator)
 		store(iterator, 'parent', self)
@@ -65,16 +59,14 @@ def makeContainerStubs(collector):
 		return iterator
 
 	@attachPtr(xtypes.ListIteratorType, 'next')
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def listiterator_next(self):
 		store(self, 'iterCurrent', load(self, 'iterCurrent'))
 		return loadArray(load(self, 'parent'), -1)
 
 	### xrange ###
 	@attachPtr(xrange, '__iter__')
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def xrange__iter__(self):
 		iterator = allocate(xrangeiterator)
 		store(iterator, 'parent', self)
@@ -82,8 +74,7 @@ def makeContainerStubs(collector):
 		return iterator
 
 	@attachPtr(xrangeiterator, 'next')
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def xrangeiterator_next(self):
 		store(self, 'iterCurrent', load(self, 'iterCurrent'))
 		return allocate(int)

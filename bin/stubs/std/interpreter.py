@@ -20,7 +20,6 @@ func_globals_attr = util.uniqueSlotName(types.FunctionType.__dict__['func_global
 @stubgenerator
 def makeInterpreterStubs(collector):
 	attachAttrPtr = collector.attachAttrPtr
-	descriptive   = collector.descriptive
 	llast         = collector.llast
 	llfunc        = collector.llfunc
 	export        = collector.export
@@ -31,22 +30,27 @@ def makeInterpreterStubs(collector):
 	staticFold    = collector.staticFold
 	attachPtr     = collector.attachPtr
 
-	def interpfunc(f):
-		return export(noself(llfunc(f)))
+	def interpfunc(f=None, descriptive=False):
+		def wrapper(f):
+			return export(noself(llfunc(f, descriptive=descriptive)))
+
+		if f is not None:
+			return wrapper(f)
+		else:
+			return wrapper
+
 
 	# TODO should call:
 	# 	__nonzero__
 	# 	__len__
 	# 	True
 	@fold(bool)
-	@descriptive
-	@interpfunc
+	@interpfunc(descriptive=True)
 	def convertToBool(o):
 		return allocate(bool)
 
 	@fold(lambda o: not o)
-	@descriptive
-	@interpfunc
+	@interpfunc(descriptive=True)
 	def invertedConvertToBool(o):
 		return allocate(bool)
 
@@ -119,8 +123,7 @@ def makeInterpreterStubs(collector):
 
 	# Horrible hack, as vargs depend on creating a tuple,
 	# and creating a tuple depends on vargs.
-	@descriptive
-	@interpfunc
+	@interpfunc(descriptive=True)
 	def buildTuple(*vargs):
 		return vargs
 

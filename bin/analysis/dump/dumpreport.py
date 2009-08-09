@@ -127,6 +127,7 @@ def dumpFunctionInfo(func, compiler, derived, links, reportDir):
 
 	funcOps, funcLocals = tools.codeOpsLocals(func)
 
+	if code.annotation.primitive:   printLabel(out, 'primitive')
 	if code.annotation.descriptive: printLabel(out, 'descriptive')
 	if code.annotation.staticFold:  printLabel(out, 'static fold')
 	if code.annotation.dynamicFold: printLabel(out, 'dynamic fold')

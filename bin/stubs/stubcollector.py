@@ -112,11 +112,24 @@ class StubCollector(object):
 		self.compiler.extractor.desc.functions.append(code)
 		return code
 
-	def llfunc(self, func):
-		code = self.compiler.extractor.decompileFunction(func)
-		self.registerFunction(func, code)
-		code = lltranslator.translate(self.compiler, func, code)
-		return code
+	def llfunc(self, func=None, descriptive=False, primitive=False):
+		def wrapper(func):
+			code = self.compiler.extractor.decompileFunction(func, descriptive=(primitive or descriptive))
+			self.registerFunction(func, code)
+
+			if primitive:
+				code = self.primitive(code)
+			elif descriptive:
+				code = self.descriptive(code)
+
+			code = lltranslator.translate(self.compiler, func, code)
+
+			return code
+
+		if func is not None:
+			return wrapper(func)
+		else:
+			return wrapper
 
 	def cfuncptr(self, obj):
 		try:

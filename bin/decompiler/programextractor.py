@@ -541,11 +541,11 @@ class Extractor(object):
 				self.desc.bindCall(obj, function)
 
 
-	def decompileFunction(self, func, trace=False, ssa=True):
+	def decompileFunction(self, func, trace=False, ssa=True, descriptive=False):
 		function = None
 
 		try:
-			function = decompile(self.compiler, func, trace=trace, ssa=ssa)
+			function = decompile(self.compiler, func, trace=trace, ssa=ssa, descriptive=descriptive)
 		except IrreducibleGraphException:
 			raise Exception, ("Cannot reduce graph for %s" % repr(func))
 		except errors.UnsupportedOpcodeError, e:

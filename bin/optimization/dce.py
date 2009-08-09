@@ -30,12 +30,18 @@ class MarkLocals(TypeDispatcher):
 nodesWithNoSideEffects = (ast.GetGlobal, ast.Existing, ast.Local, ast.Load, ast.Allocate, ast.BuildTuple, ast.BuildList, ast.BuildMap)
 
 class MarkLive(TypeDispatcher):
-	def __init__(self, function):
-		self.function = function
+	def __init__(self, code):
+		self.code   = code
 		self.marker = MarkLocals()
 
 	def hasNoSideEffects(self, node):
-		return isinstance(node, nodesWithNoSideEffects) or not tools.mightHaveSideEffect(node)
+		if self.descriptive():
+			return isinstance(node, (ast.Local, ast.Existing))
+		else:
+			return isinstance(node, nodesWithNoSideEffects) or not tools.mightHaveSideEffect(node)
+
+	def descriptive(self):
+		return self.code.annotation.descriptive
 
 	@dispatch(ast.Condition)
 	def visitCondition(self, node):
@@ -93,13 +99,16 @@ class MarkLive(TypeDispatcher):
 
 	@dispatch(ast.CodeParameters)
 	def visitCodeParameters(self, node):
-		# Insert don't care for unused parameters.
-		selfparam = self.filterParam(node.selfparam)
-		params    = [self.filterParam(p) for p in node.params]
-		vparam = self.filterParam(node.vparam)
-		kparam = self.filterParam(node.kparam)
+		if self.descriptive():
+			return node
+		else:
+			# Insert don't care for unused parameters.
+			selfparam = self.filterParam(node.selfparam)
+			params    = [self.filterParam(p) for p in node.params]
+			vparam = self.filterParam(node.vparam)
+			kparam = self.filterParam(node.kparam)
 
-		return ast.CodeParameters(selfparam, params, node.paramnames, vparam, kparam, node.returnparams)
+			return ast.CodeParameters(selfparam, params, node.paramnames, vparam, kparam, node.returnparams)
 
 def evaluateCode(compiler, node, initialLive=None):
 	rewrite = MarkLive(node)

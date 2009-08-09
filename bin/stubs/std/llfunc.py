@@ -15,7 +15,6 @@ from asttools.origin import Origin
 
 @stubgenerator
 def makeLLFunc(collector):
-	descriptive   = collector.descriptive
 	llast         = collector.llast
 	llfunc        = collector.llfunc
 	export        = collector.export
@@ -31,8 +30,7 @@ def makeLLFunc(collector):
 	##############
 
 	@attachPtr(object, '__init__')
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def object__init__(self, *vargs):
 		pass
 
@@ -256,8 +254,7 @@ def makeLLFunc(collector):
 	# TODO full implementation requires loop unrolling?
 	@fold(issubclass)
 	@attachPtr(issubclass)
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def issubclass_stub(cls, clsinfo):
 		return allocate(bool)
 

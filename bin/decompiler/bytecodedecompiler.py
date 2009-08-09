@@ -31,17 +31,17 @@ import optimization.simplify
 
 from language.python.annotations import codeOrigin
 
-def decompile(compiler, func, trace=False, ssa=True):
+def decompile(compiler, func, trace=False, ssa=True, descriptive=False):
 	# HACK can't find modules for "fake" globals.
 	try:
 		mname, module = moduleForGlobalDict(func.func_globals)
 	except:
 		mname = 'unknown_module'
 
-	return decompileCode(compiler, func.func_code, mname, trace=trace, ssa=ssa)
+	return decompileCode(compiler, func.func_code, mname, trace=trace, ssa=ssa, descriptive=descriptive)
 
-def decompileCode(compiler, code, mname, trace=False, ssa=True):
-	return Decompiler(compiler).disassemble(code, mname, trace=trace, ssa=ssa)
+def decompileCode(compiler, code, mname, trace=False, ssa=True, descriptive=False):
+	return Decompiler(compiler).disassemble(code, mname, trace=trace, ssa=ssa, descriptive=descriptive)
 
 def getargs(co):
     nargs = co.co_argcount
@@ -62,7 +62,7 @@ class Decompiler(object):
 	def __init__(self, compiler):
 		self.compiler = compiler
 
-	def disassemble(self, code, mname, trace=False, ssa=True):
+	def disassemble(self, code, mname, trace=False, ssa=True, descriptive=False):
 		argnames, vargs, kargs = getargs(code)
 
 		inst, targets = disassemble(code)
@@ -96,6 +96,7 @@ class Decompiler(object):
 			root = ssitransform.ssiTransform(root)
 
 		# Flow sensitive, works without a ssa or ssi transform.
+		root.rewriteAnnotation(descriptive=descriptive)
 		optimization.simplify.evaluateCode(self.compiler, root)
 
 

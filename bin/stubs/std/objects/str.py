@@ -5,8 +5,6 @@ import operator
 
 @stubgenerator
 def makeString(collector):
-	descriptive   = collector.descriptive
-	primitive     = collector.primitive
 	llast         = collector.llast
 	llfunc        = collector.llfunc
 	export        = collector.export
@@ -22,63 +20,54 @@ def makeString(collector):
 	### Primitive str operations ###
 	################################
 
-	@primitive
 	@staticFold(lambda a, b: a+b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_str_add(a, b):
 		return allocate(str)
 
-	@primitive
 	@staticFold(lambda a, b: a*b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_str_mul(a, b):
 		return allocate(str)
 
-	@primitive
 	@staticFold(lambda a, b: a%b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_str_mod(a, b):
 		return allocate(str)
 
-	@primitive
 	@staticFold(lambda a, b: a==b)
 	@fold(lambda a, b: a==b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_str_eq(a, b):
 		return allocate(bool)
 
-	@primitive
 	@staticFold(lambda a, b: a!=b)
 	@fold(lambda a, b: a!=b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_str_ne(a, b):
 		return allocate(bool)
 
-	@primitive
 	@staticFold(lambda a, b: a<b)
 	@fold(lambda a, b: a<b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_str_lt(a, b):
 		return allocate(bool)
 
-	@primitive
 	@staticFold(lambda a, b: a<=b)
 	@fold(lambda a, b: a<=b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_str_le(a, b):
 		return allocate(bool)
 
-	@primitive
 	@staticFold(lambda a, b: a>b)
 	@fold(lambda a, b: a>b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_str_gt(a, b):
 		return allocate(bool)
 
-	@primitive
 	@staticFold(lambda a, b: a>=b)
 	@fold(lambda a, b: a>=b)
-	@llfunc
+	@llfunc(primitive=True)
 	def prim_str_ge(a, b):
 		return allocate(bool)
 
@@ -170,23 +159,20 @@ def makeString(collector):
 	@staticFold(chr)
 	@fold(chr)
 	@attachPtr(chr)
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def chr_stub(i):
 		return allocate(str)
 
 	@staticFold(ord)
 	@fold(ord)
 	@attachPtr(ord)
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def ord_stub(c):
 		return allocate(int)
 
 	@attachPtr(str, '__getitem__')
 	@staticFold(operator.getitem)
 	@fold(operator.getitem)
-	@descriptive
-	@llfunc
+	@llfunc(descriptive=True)
 	def str__getitem__(self, index):
 		return allocate(str)

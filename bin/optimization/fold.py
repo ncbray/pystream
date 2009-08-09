@@ -63,6 +63,9 @@ class FoldRewrite(TypeDispatcher):
 
 		self.annotationsExist = code.annotation.contexts is not None
 
+	def descriptive(self):
+		return self.code.annotation.descriptive
+
 	@defaultdispatch
 	def visitOK(self, node):
 		return node
@@ -333,24 +336,28 @@ class FoldRewrite(TypeDispatcher):
 
 	@dispatch(ast.BinaryOp)
 	def visitBinaryOp(self, node):
+		if self.descriptive(): return node
 		result = self.annotateFolded(fold.foldBinaryOpAST(self.extractor, node))
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.UnaryPrefixOp)
 	def visitUnaryPrefixOp(self, node):
+		if self.descriptive(): return node
 		result = self.annotateFolded(fold.foldUnaryPrefixOpAST(self.extractor, node))
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
+		if self.descriptive(): return node
 		result = self.annotateFolded(fold.foldBoolAST(self.extractor, node))
 		self.logCreated(result)
 		return result
 
 	@dispatch(ast.Not)
 	def visitNot(self, node):
+		if self.descriptive(): return node
 		result = self.annotateFolded(fold.foldNotAST(self.extractor, node))
 		self.logCreated(result)
 		return result
@@ -364,6 +371,8 @@ class FoldRewrite(TypeDispatcher):
 
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node):
+		if self.descriptive(): return node
+
 		if node.code is None:
 			return node
 

@@ -1,4 +1,5 @@
-__all__ = ['allChildren', 'allChildrenReversed', 'replaceAllChildren',
+__all__ = ['allChildren', 'allChildrenReversed',
+	'replaceAllChildren', 'replaceAllChildrenReversed',
 	'visitAllChildren', 'visitAllChildrenForced', 'visitAllChildrenArgs',
 	'visitAllChildrenReversed']
 
@@ -148,6 +149,16 @@ def replaceAllChildren(s, node):
 	if isinstance(node, ASTNode):
 		assert node.__shared__, node
 		node.replaceChildren(*[s(child) for child in node.children()])
+		return node
+	else:
+		assert False, node
+
+def replaceAllChildrenReversed(s, node):
+	if isinstance(node, ASTNode):
+		assert node.__shared__, node
+		newchildren = [s(child) for child in reversed(node.children())]
+		newchildren.reverse()
+		node.replaceChildren(*newchildren)
 		return node
 	else:
 		assert False, node

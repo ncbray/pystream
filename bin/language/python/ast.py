@@ -57,6 +57,19 @@ class Local(Reference):
 	def isPure(self):
 		return True
 
+class DoNotCare(Reference):
+	__slots__  = ()
+	__leaf__   = True
+
+
+	def __repr__(self):
+		return "-"
+
+	def isPure(self):
+		return True
+
+	def isDoNotCare(self):
+		return True
 
 class Cell(PythonASTNode):
 	__slots__  = 'name'
@@ -339,12 +352,14 @@ class TypeSwitchCase(PythonASTNode):
 class TypeSwitch(CompoundStatement):
 	__fields__ = 'conditional:Reference cases:TypeSwitchCase*'
 
+ParameterDecl = (Local, DoNotCare)
+
 class CodeParameters(PythonASTNode):
 	# TODO support paramnames:str?* (different than paramnames:str*?)
-	__fields__ = """selfparam:Local?
-			params:Local* paramnames:(str,NoneType)*
-			vparam:Local? kparam:Local?
-			returnparams:Local*"""
+	__fields__ = """selfparam:ParameterDecl?
+			params:ParameterDecl* paramnames:(str,NoneType)*
+			vparam:ParameterDecl? kparam:ParameterDecl?
+			returnparams:ParameterDecl*"""
 
 	def codeParameters(self):
 		return util.python.calling.CalleeParams(self.selfparam, self.params, self.paramnames, [], self.vparam, self.kparam, self.returnparams)

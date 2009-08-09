@@ -42,6 +42,9 @@ class Reference(Expression):
 	def isReference(self):
 		return True
 
+	def isDoNotCare(self):
+		return False
+
 class Statement(PythonASTNode):
 	__slots__ = ()
 

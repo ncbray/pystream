@@ -360,9 +360,9 @@ class CodeToDataflow(TypeDispatcher):
 					self.dataflow.exit.addExit(name, state.get(name))
 
 	def setParameter(self, param):
-		if param is None: return
-		g = self.localTarget(param)
-		self.entryState.set(param, g)
+		if isinstance(param, ast.Local):
+			g = self.localTarget(param)
+			self.entryState.set(param, g)
 
 	def processCode(self):
 		# Init the parameters

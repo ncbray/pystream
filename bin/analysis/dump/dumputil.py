@@ -46,6 +46,15 @@ class LinkManager(object):
 
 		return link
 
+def paramName(p, noName=False):
+	if p is None:
+		return None
+	elif p.isDoNotCare():
+		return '-'
+	elif noName:
+		return '!'
+	else:
+		return p.name
 
 def codeShortName(code):
 	if isinstance(code, str):
@@ -62,9 +71,9 @@ def codeShortName(code):
 		name = code.codeName()
 		callee = code.codeParameters()
 
-		args = [p if p is not None else '!' for p in callee.paramnames]
-		vargs = None if callee.vparam is None else callee.vparam.name
-		kargs = None if callee.kparam is None else callee.kparam.name
+		args = [paramName(p, n is None) for p, n in zip(callee.params, callee.paramnames)]
+		vargs = paramName(callee.vparam)
+		kargs = paramName(callee.kparam)
 
 	if vargs is not None: args.append("*"+vargs)
 	if kargs is not None: args.append("**"+kargs)

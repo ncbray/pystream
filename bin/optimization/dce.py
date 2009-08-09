@@ -17,6 +17,11 @@ class MarkLocals(TypeDispatcher):
 	def visitLocal(self, node):
 		self.flow.define(node, top)
 
+	@dispatch(ast.GetGlobal, ast.SetGlobal)
+	def visitGlobalOp(self, node):
+		self.flow.define(self.selfparam, top)
+		visitAllChildren(self, node)
+
 	@defaultdispatch
 	def default(self, node):
 		visitAllChildren(self, node)
@@ -78,6 +83,23 @@ class MarkLive(TypeDispatcher):
 		self.marker(node)
 		return node
 
+	def filterParam(self, p):
+		if p is None:
+			return None
+		elif self.flow.lookup(p) is undefined:
+			return ast.DoNotCare()
+		else:
+			return p
+
+	@dispatch(ast.CodeParameters)
+	def visitCodeParameters(self, node):
+		# Insert don't care for unused parameters.
+		selfparam = self.filterParam(node.selfparam)
+		params    = [self.filterParam(p) for p in node.params]
+		vparam = self.filterParam(node.vparam)
+		kparam = self.filterParam(node.kparam)
+
+		return ast.CodeParameters(selfparam, params, node.paramnames, vparam, kparam, node.returnparams)
 
 def evaluateCode(compiler, node, initialLive=None):
 	rewrite = MarkLive(node)
@@ -86,8 +108,9 @@ def evaluateCode(compiler, node, initialLive=None):
 	# HACK
 	rewrite.flow = traverse.flow
 	rewrite.marker.flow = traverse.flow
+	rewrite.marker.selfparam = node.codeparameters.selfparam
 
-	t = MutateCode(traverse)
+	t = MutateCodeReversed(traverse)
 
 	# For shader translation, locals may be used as outputs.
 	# We need to retain these locals.

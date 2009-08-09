@@ -91,7 +91,7 @@ class CodeInliningAnalysis(TypeDispatcher):
 
 		# Inital value
 		callee = node.codeParameters()
-		self.inlinable = node.isStandardCode() and not callee.vparam and not callee.kparam and not node.annotation.descriptive
+		self.inlinable = node.isStandardCode() and not isinstance(callee.vparam, ast.Local) and not isinstance(callee.kparam, ast.Local) and not node.annotation.descriptive
 
 		if self.inlinable:
 			self(node.ast)
@@ -138,6 +138,10 @@ class OpInliningTransform(TypeDispatcher):
 	def visitLocal(self, node):
 		return self.translateLocal(node)
 
+	@dispatch(ast.DoNotCare)
+	def visitDoNotCare(self, node):
+		return ast.DoNotCare()
+
 	# Has internal slots, so as a hack it is "shared", so we must manually rewrite
 	@dispatch(ast.Existing)
 	def visitExisting(self, node):
@@ -172,12 +176,15 @@ class OpInliningTransform(TypeDispatcher):
 		p = code.codeparameters
 
 		# Do argument transfer
-		if selfarg:
+		if isinstance(p.selfparam, ast.Local):
 			outp.append(ast.Assign(selfarg, [self(p.selfparam)]))
 
-		assert len(args) == len(p.params), "TODO: default arguments."
 		for arg, param in zip(args, p.params):
-			outp.append(ast.Assign(arg, [self(param)]))
+			if isinstance(param, ast.Local):
+				outp.append(ast.Assign(arg, [self(param)]))
+
+		assert not isinstance(p.vparam, ast.Local), p.vparam
+		#assert len(args) == len(p.params), "TODO: default arguments."
 
 		outp.append(self(code.ast))
 

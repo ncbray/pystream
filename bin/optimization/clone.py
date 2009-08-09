@@ -525,6 +525,10 @@ class FunctionCloner(TypeDispatcher):
 	def visitLocal(self, node):
 		return self.translateLocal(node)
 
+	@dispatch(ast.DoNotCare)
+	def visitDoNotCare(self, node):
+		return ast.DoNotCare()
+
 	# Has internal slots, so as a hack it is "shared", so we must manually rewrite
 	@dispatch(ast.Existing)
 	def visitExisting(self, node):
@@ -573,8 +577,8 @@ class FunctionCloner(TypeDispatcher):
 		if not isinstance(original, (ast.Expression, ast.Statement)):    return
 		if not isinstance(replacement, (ast.Expression, ast.Statement)): return
 
+		# TODO this is dead code?
 		assert original is not replacement, original
-
 		replacement.annotation = original.annotation.contextSubset(self.contextRemap, self.annotationMapper)
 
 

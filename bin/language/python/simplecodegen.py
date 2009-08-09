@@ -87,6 +87,9 @@ class SimpleExprGen(StandardVisitor):
 	def visitLocal(self, node):
 		return self.getLocalName(node), -1
 
+	def visitDoNotCare(self, node):
+		return '-', -1
+
 	def visitExisting(self, node):
 		s = getExistingStr(node)
 		return s, -1

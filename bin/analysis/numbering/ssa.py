@@ -342,6 +342,10 @@ class ForwardESSA(TypeDispatcher):
 	def processOK(self, node):
 		visitAllChildren(self, node)
 
+	def renameParam(self, p):
+		if isinstance(p, ast.Local):
+			self.rename(p)
+
 	def processCode(self, code):
 		self.code = code
 
@@ -351,12 +355,12 @@ class ForwardESSA(TypeDispatcher):
 		self.returnparams = params.returnparams
 
 		# Init the parameters
-		self.rename(params.selfparam)
+		self.renameParam(params.selfparam)
 		for p in (params.params):
-			self.rename(p)
+			self.renameParam(p)
 		assert not hasattr(params, 'kwds')
-		self.rename(params.vparam)
-		self.rename(params.kparam)
+		self.renameParam(params.vparam)
+		self.renameParam(params.kparam)
 		# TODO vparam/kparam fields?
 
 		self.logEntry()

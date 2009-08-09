@@ -8,7 +8,7 @@ class GetOps(TypeDispatcher):
 		self.ops    = []
 		self.locals = set()
 
-	@dispatch(str, type(None), ast.Break, ast.Continue, ast.Code)
+	@dispatch(str, type(None), ast.Break, ast.Continue, ast.Code, ast.DoNotCare)
 	def visitJunk(self, node):
 		pass
 

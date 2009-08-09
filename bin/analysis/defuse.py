@@ -48,6 +48,8 @@ class DefUseVisitor(TypeDispatcher):
 	def define(self, location, lcl):
 		if isinstance(lcl, ast.Local):
 			self.lcldef[lcl].append(location)
+		elif isinstance(lcl, ast.DoNotCare):
+			pass
 		elif isinstance(lcl, ast.Cell):
 			self.celldef[lcl].append(location)
 		else:
@@ -57,6 +59,8 @@ class DefUseVisitor(TypeDispatcher):
 	def use(self, location, lcl):
 		if isinstance(lcl, ast.Local):
 			self.lcluse[lcl].append(location)
+		elif isinstance(lcl, ast.DoNotCare):
+			pass
 		elif isinstance(lcl, ast.Cell):
 			self.celluse[lcl].append(location)
 		elif lcl==None:
@@ -234,7 +238,7 @@ class DefUseVisitor(TypeDispatcher):
 
 	@dispatch(ast.Break, ast.Continue, ast.For, ast.While, ast.TryExceptFinally,
 		ast.ShortCircutAnd, ast.ShortCircutOr,
-		ast.Local, ast.Existing, ast.Cell, ast.Import, ast.Suite,
+		ast.Local, ast.DoNotCare, ast.Existing, ast.Cell, ast.Import, ast.Suite,
 		ast.Code, ast.BuildMap,
 		str, int, float, type(None), list, tuple)
 	def visitLeaf(self, node):

@@ -28,6 +28,16 @@ class MutateCode(TypeDispatcher):
 		replaceAllChildren(self.strategy, node)
 		return node
 
+class MutateCodeReversed(TypeDispatcher):
+	def __init__(self, strategy):
+		self.strategy = strategy
+
+	@defaultdispatch
+	def visitCode(self, node):
+		assert node.isCode(), type(node)
+		replaceAllChildrenReversed(self.strategy, node)
+		return node
+
 class DynamicBase(object):
 	__slots__ = 'lut', 'shared'
 

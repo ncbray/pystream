@@ -200,6 +200,10 @@ class ForwardESSA(TypeDispatcher):
 	def visitLocalRead(self, node):
 		self.logRead(self.parent, node)
 
+	@dispatch(ast.DoNotCare)
+	def visitDoNotCare(self, node):
+		pass
+
 	@dispatch(ast.Assign)
 	def processAssign(self, node):
 		self.logReadLocals(node, node.expr)

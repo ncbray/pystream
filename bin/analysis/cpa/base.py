@@ -13,16 +13,13 @@ from analysis.storegraph import storegraph
 ### Evaluation Contexts ###
 ###########################
 
-DoNotCare  = util.canonical.Sentinel('<DoNotCare>')
-
-
 def localSlot(sys, code, lcl, context):
 	if isinstance(lcl, ast.Local):
 		assert isinstance(lcl, ast.Local), type(lcl)
 		name = sys.canonical.localName(code, lcl, context)
 		return context.group.root(name)
 	elif isinstance(lcl, ast.DoNotCare):
-		return DoNotCare
+		return analysis.cpasignature.DoNotCare
 	elif lcl is None:
 		return None
 	else:
@@ -115,7 +112,7 @@ class AnalysisContext(CanonicalObject):
 		if param is None:
 			assert cpaType is None
 			assert arg is None
-		elif param is DoNotCare:
+		elif param is analysis.cpasignature.DoNotCare:
 			pass
 		elif cpaType is analysis.cpasignature.Any:
 			assert isinstance(param, storegraph.SlotNode)
@@ -146,7 +143,7 @@ class AnalysisContext(CanonicalObject):
 		cop = sys.canonical.opContext(sig.code, None, self)
 
 		# Bind the vparams
-		if callee.vparam is not None and callee.vparam is not DoNotCare:
+		if callee.vparam is not None and callee.vparam is not analysis.cpasignature.DoNotCare:
 			vparamObj = self.initializeVParam(sys, cop, callee.vparam, numArgs-numParam)
 
 			# Bind the vargs

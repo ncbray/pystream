@@ -9,7 +9,7 @@ from util.python import opnames
 
 from constraints import *
 
-
+import analysis.cpasignature
 
 class ExtractDataflow(TypeDispatcher):
 	def __init__(self, system, context, folded):
@@ -166,6 +166,10 @@ class ExtractDataflow(TypeDispatcher):
 			self.assign(value, targets[0])
 		else:
 			return value
+
+	@dispatch(ast.DoNotCare)
+	def visitDoNotCare(self, node):
+		return analysis.cpasignature.DoNotCare
 
 	@dispatch(ast.Existing)
 	def visitExisting(self, node, targets=None):

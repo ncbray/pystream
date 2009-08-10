@@ -25,7 +25,7 @@ class FindReadModify(TypeDispatcher):
 			info.update(self(child))
 		return info
 
-	@dispatch(ast.Existing, ast.Code, type(None), str)
+	@dispatch(ast.Existing, ast.Code, type(None), str, ast.DoNotCare)
 	def visitLeaf(self, node, info):
 		pass
 

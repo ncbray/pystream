@@ -26,7 +26,7 @@ class ConvertCalls(TypeDispatcher):
 	def default(self, node):
 		assert False, repr(type(node))
 
-	@dispatch(str, type(None), ast.Local, ast.Existing, ast.Code, ast.Break, ast.Continue, ast.CodeParameters)
+	@dispatch(str, type(None), ast.Local, ast.Existing, ast.Code, ast.Break, ast.Continue, ast.CodeParameters, ast.DoNotCare)
 	def visitLeaf(self, node):
 		return node
 

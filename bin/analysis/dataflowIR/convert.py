@@ -226,13 +226,16 @@ class CodeToDataflow(TypeDispatcher):
 			self.set(modify, slot)
 			g.addModify(modify, slot)
 
+	def localRead(self, g, lcl):
+		if isinstance(lcl, (ast.Local, ast.Existing)):
+			g.addLocalRead(lcl, self.get(lcl))
 
 	@dispatch(ast.Allocate)
 	def processAllocate(self, node):
 		g = graph.GenericOp(self.hyperblock(), self.pred(), node)
 		g.setPredicate(self.pred())
 
-		g.addLocalRead(node.expr, self.get(node.expr))
+		self.localRead(g, node.expr)
 
 		self.handleMemory(node, g)
 		return g
@@ -242,8 +245,8 @@ class CodeToDataflow(TypeDispatcher):
 		g = graph.GenericOp(self.hyperblock(), self.pred(), node)
 		g.setPredicate(self.pred())
 
-		g.addLocalRead(node.expr, self.get(node.expr))
-		g.addLocalRead(node.name, self.get(node.name))
+		self.localRead(g, node.expr)
+		self.localRead(g, node.name)
 
 		self.handleMemory(node, g)
 		return g
@@ -254,17 +257,14 @@ class CodeToDataflow(TypeDispatcher):
 		g = graph.GenericOp(self.hyperblock(), self.pred(), node)
 		g.setPredicate(self.pred())
 
-		if node.selfarg:
-			g.addLocalRead(node.selfarg, self.get(node.selfarg))
+		self.localRead(g, node.selfarg)
 
 		for arg in node.args:
-			g.addLocalRead(arg, self.get(arg))
+			self.localRead(g, arg)
 
-		if node.vargs:
-			g.addLocalRead(node.vargs, self.get(node.vargs))
+		self.localRead(g, node.vargs)
+		self.localRead(g, node.kargs)
 
-		if node.kargs:
-			g.addLocalRead(node.kargs, self.get(node.kargs))
 
 		self.handleMemory(node, g)
 		return g
@@ -294,9 +294,9 @@ class CodeToDataflow(TypeDispatcher):
 		g = graph.GenericOp(self.hyperblock(), self.pred(), node)
 		g.setPredicate(self.pred())
 
-		g.addLocalRead(node.expr, self.get(node.expr))
-		g.addLocalRead(node.name, self.get(node.name))
-		g.addLocalRead(node.value, self.get(node.value))
+		self.localRead(g, node.expr)
+		self.localRead(g, node.name)
+		self.localRead(g, node.value)
 
 		self.handleMemory(node, g)
 		return g
@@ -313,7 +313,7 @@ class CodeToDataflow(TypeDispatcher):
 		g = graph.GenericOp(self.hyperblock(), self.pred(), node)
 		g.setPredicate(self.pred())
 
-		g.addLocalRead(node.conditional, self.get(node.conditional))
+		self.localRead(g, node.conditional)
 
 		for i in range(len(node.cases)):
 			p = graph.PredicateNode(self.hyperblock(), self.pred(), g, i)

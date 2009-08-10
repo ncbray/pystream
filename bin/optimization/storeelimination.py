@@ -40,7 +40,7 @@ def evaluate(compiler):
 
 			# Rewrite the code without the dead stores
 			if replace:
-				console.output('%r %d' % (code, eliminated))
+				compiler.console.output('%r %d' % (code, eliminated))
 				rewriteAndSimplify(compiler, code, replace)
 
 			totalEliminated += eliminated

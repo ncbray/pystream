@@ -99,16 +99,20 @@ class MarkLive(TypeDispatcher):
 
 	@dispatch(ast.CodeParameters)
 	def visitCodeParameters(self, node):
+		# Insert don't care for unused parameters.
+		# selfparam is a special case, it's OK if it disapears in descriptive stubs.
+		selfparam = self.filterParam(node.selfparam)
+
 		if self.descriptive():
-			return node
+			params = node.params
+			vparam = node.vparam
+			kparam = node.kparam
 		else:
-			# Insert don't care for unused parameters.
-			selfparam = self.filterParam(node.selfparam)
-			params    = [self.filterParam(p) for p in node.params]
+			params = [self.filterParam(p) for p in node.params]
 			vparam = self.filterParam(node.vparam)
 			kparam = self.filterParam(node.kparam)
 
-			return ast.CodeParameters(selfparam, params, node.paramnames, vparam, kparam, node.returnparams)
+		return ast.CodeParameters(selfparam, params, node.paramnames, vparam, kparam, node.returnparams)
 
 def evaluateCode(compiler, node, initialLive=None):
 	rewrite = MarkLive(node)

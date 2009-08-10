@@ -232,7 +232,7 @@ class MethodAnalysis(TypeDispatcher):
 	# ast.Code is a leaf due to direct calls.
 	@dispatch(ast.Existing, str, ast.BuildList, ast.Allocate,
 			ast.GetGlobal, type(None), ast.Code,
-			ast.Break, ast.Continue,)
+			ast.Break, ast.Continue, ast.DoNotCare)
 	def visitLeaf(self, node):
 		return node
 

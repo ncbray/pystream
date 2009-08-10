@@ -369,6 +369,14 @@ class FoldRewrite(TypeDispatcher):
 			return self(result)
 		return node
 
+	def eliminateDeadArguments(self, node):
+		if isinstance(node, ast.DirectCall):
+			if node.code and isinstance(node.code.codeparameters.selfparam, ast.DoNotCare) and not isinstance(node.selfarg, ast.DoNotCare):
+				result = ast.DirectCall(node.code, ast.DoNotCare(), node.args, node.kwds, node.vargs, node.kargs)
+				result.annotation = node.annotation
+				return result
+		return node
+
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node):
 		if self.descriptive(): return node
@@ -383,7 +391,9 @@ class FoldRewrite(TypeDispatcher):
 				self.logCreated(result)
 				return result
 
-		return self.tryDirectCallRewrite(node)
+		node = self.tryDirectCallRewrite(node)
+		node = self.eliminateDeadArguments(node)
+		return node
 
 class FoldAnalysis(TypeDispatcher):
 	@defaultdispatch

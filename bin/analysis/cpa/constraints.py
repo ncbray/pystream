@@ -12,6 +12,16 @@ import util.tvl
 
 import analysis.cpasignature
 
+def slotRefs(slot):
+	if slot is None:
+		# Not collected.
+		return (None,)
+	elif slot is analysis.cpasignature.DoNotCare:
+		# Automatically megamorphic.
+		return (analysis.cpasignature.Any,)
+	else:
+		return slot.refs
+
 class Constraint(object):
 	__slots__ = 'sys', 'dirty'
 
@@ -34,7 +44,7 @@ class Constraint(object):
 			self.sys.dirty.append(self)
 
 	def getBad(self):
-		return [slot for slot in self.reads() if slot is not None and not slot.refs]
+		return [slot for slot in self.reads() if slot is not None and not slotRefs(slot)]
 
 	def check(self, console):
 		bad = self.getBad()
@@ -54,7 +64,7 @@ class CachedConstraint(Constraint):
 		Constraint.__init__(self, sys)
 
 	def update(self):
-		values = [(None,) if slot is None else slot.refs for slot in self.observing]
+		values = [slotRefs(slot) for slot in self.observing]
 
 		for args in itertools.product(*values):
 			if not args in self.cache:
@@ -66,7 +76,7 @@ class CachedConstraint(Constraint):
 
 		depends = False
 		for slot in self.observing:
-			if slot is not None:
+			if slot is not None and slot is not analysis.cpasignature.DoNotCare:
 				slot.dependsRead(self)
 				depends = True
 
@@ -379,7 +389,7 @@ class SimpleCallConstraint(CachedConstraint):
 	def __init__(self, sys, op, code, selftype, slots, caller):
 		assert isinstance(op, canonicalobjects.OpContext), type(op)
 		assert code.isCode(), type(code)
-		assert selftype is None or isinstance(selftype, extendedtypes.ExtendedType), selftype
+		assert selftype is None or selftype is analysis.cpasignature.Any or isinstance(selftype, extendedtypes.ExtendedType), selftype
 
 		self.op       = op
 		self.code     = code
@@ -417,7 +427,7 @@ class SimpleCallConstraint(CachedConstraint):
 		return changed
 
 	def update(self):
-		values = [(None,) if slot is None else slot.refs for slot in self.observing]
+		values = [slotRefs(slot) for slot in self.observing]
 
 		changed = self.processMegamorphic(values)
 

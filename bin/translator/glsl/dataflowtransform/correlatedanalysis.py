@@ -13,7 +13,7 @@ from analysis.storegraph import storegraph
 from . import imagebuilder
 from . import poolanalysis
 from analysis.cfgIR import dataflowsynthesis
-
+from . import glsltranslator
 
 # For dumping
 from util.xmloutput import XMLOutput
@@ -147,6 +147,8 @@ class GenericOpFunction(TypeDispatcher):
 			self.results[outpos] = self.args[inputpos]
 
 	def fresh(self, ref):
+		assert ref.isObjectContext(), ref
+
 		# The only case that ref will not be in the dictionary is when
 		# the ref is a constant, and in this case the index will be zero.
 		return self.analysis.allocateFreshIndex.get(ref, 0)
@@ -155,13 +157,20 @@ class GenericOpFunction(TypeDispatcher):
 	def handleDirectCall(self, node):
 		# HACK currently, these will only be primitive operations, so fake it.
 		# Also relies on primitive types being immutable.
+
+
+
 		for name, index in self.outputlut.iterkeys():
 			if isinstance(name, ast.Local):
 				values = frozenset([(ref, self.fresh(ref)) for ref in name.annotation.references.merged])
 				self.set(name, index, values)
 			else:
-				values = frozenset([(ref, self.fresh(ref)) for ref in name])
-				self.set(name, index, values)
+				# Only set fields of the fresh object.
+				if self.fresh(name.object) == index:
+					values = frozenset([(ref, self.fresh(ref)) for ref in name])
+					self.set(name, index, values)
+				else:
+					values = ()
 
 			for ref, index in values:
 				self.logAllocate(ref, index)
@@ -602,3 +611,5 @@ def evaluateDataflow(compiler, dataflow, name, code):
 
 
 	poolinfo = poolanalysis.process(compiler, dataflow, dioa)
+
+	glsltranslator.process(compiler, code, cfg, dioa, poolinfo)

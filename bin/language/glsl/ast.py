@@ -5,6 +5,9 @@ class BuiltinType(Type):
 	__fields__    = 'name:str'
 	__shared__    = True
 
+	def __repr__(self):
+		return "BuiltinType(%s)" % (self.name)
+
 class StructureType(Type):
 	__fields__    = 'name:str fieldDecl:tuple*'
 	__shared__    = True
@@ -74,10 +77,18 @@ class IntrinsicOp(Expression):
 class Load(Expression):
 	__fields__    = 'expr:Expression name:str'
 
+class Store(Statement):
+	__fields__    = 'value:Expression expr:Expression name:str'
 
 class Local(Expression):
 	__fields__ = 'type:Type name:str?'
 	__shared__ = True
+
+	def __repr__(self):
+		if self.name:
+			return "Local(%r, %s/%d)" % (self.type, self.name, id(self))
+		else:
+			return "Local(%r/%d)" % (self.type, id(self))
 
 class Uniform(Expression):
 	__fields__ = 'decl:UniformDecl'

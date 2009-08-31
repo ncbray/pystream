@@ -38,10 +38,10 @@ def translate(compiler):
 					dataflowtransform.evaluateCode(compiler, fs)
 
 				shader = PythonShaderProgram(vs, fs, pathMatcher)
-				iotransform.evaluateShaderProgram(compiler, shader, pathMatcher)
-				codes = translator.processShaderProgram(shader)
+#				iotransform.evaluateShaderProgram(compiler, shader, pathMatcher)
+#				codes = translator.processShaderProgram(shader)
 
-				for code in codes:
-					print codegen.GLSLCodeGen()(code)
-					print
-					print
+#				for code in codes:
+#					print codegen.GLSLCodeGen()(code)
+#					print
+#					print

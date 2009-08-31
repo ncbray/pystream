@@ -23,6 +23,9 @@ class MergableNode(object):
 		assert other.forward is None
 		self.forward = other
 
+	def isObjectContext(self):
+		return False
+
 # This corresponds to a group of nodes, such as in a function or in a program,
 # depending on how the analysis works.
 class StoreGraph(MergableNode):
@@ -233,6 +236,9 @@ class ObjectNode(MergableNode):
 
 			for ref in self:
 				ref.removeObservers(processed)
+
+	def isObjectContext(self):
+		return True
 
 class SlotNode(MergableNode):
 	__slots__ = 'object', 'slotName', 'region', 'refs', 'null', 'observers'

@@ -107,6 +107,15 @@ class GLSLCodeGen(TypeDispatcher):
 		return self.wrap("%s.%s" % (self(node.expr, 1), node.name), 2, prec)
 
 
+	@dispatch(ast.GetSubscript)
+	def visitGetSubscript(self, node, prec=17):
+		return self.wrap("%s[%s]" % (self(node.expr, 1), self(node.subscript, 2)), 2, prec)
+
+	@dispatch(ast.SetSubscript)
+	def visitSetSubscript(self, node, prec=17):
+		return self.wrap("%s[%s] = %s" % (self(node.expr, 15), self(node.subscript, 16), self(node.value, 16)), 16, prec)
+
+
 	@dispatch(ast.BinaryOp)
 	def visitBinaryOp(self, node, prec=17):
 		opPrec = self.precedenceLUT[node.op]

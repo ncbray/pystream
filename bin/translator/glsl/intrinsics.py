@@ -4,7 +4,16 @@ from language.glsl import ast as glsl
 from tests.full import vec
 import random
 
+constantTypes = frozenset([float, int, bool])
 intrinsicTypes = frozenset([float, int, bool, vec.vec2, vec.vec3, vec.vec4, vec.mat2, vec.mat3, vec.mat4])
+
+constantTypeNodes = {}
+intrinsicTypeNodes = {}
+
+for t in intrinsicTypes:
+	intrinsicTypeNodes[t] = glsl.BuiltinType(t.__name__)
+for t in constantTypes:
+	constantTypeNodes[t] = intrinsicTypeNodes[t]
 
 import util
 def uniqueAttrName(type, name):
@@ -28,13 +37,16 @@ addName(vec.vec4, 'z', fields)
 addName(vec.vec4, 'w', fields)
 
 
+def isIntrinsicMemoryOp(node):
+	return node.fieldtype == 'Attribute' and isinstance(node.name, ast.Existing) and node.name.object.pyobj in fields
+
 def typeCallRewrite(self, node):
 	if isSimpleCall(node) and isAnalysis(node.args[0], intrinsicTypes):
 		if self is None:
 			return True
 		else:
-			name = node.args[0].object.pyobj.__name__
-			return glsl.Constructor(glsl.BuiltinType(name), self(node.args[1:]))
+			t = node.args[0].object.pyobj
+			return glsl.Constructor(intrinsicTypeNodes[t], self(node.args[1:]))
 	return None
 
 def maxRewrite(self, node):

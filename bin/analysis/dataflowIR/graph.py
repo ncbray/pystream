@@ -50,6 +50,12 @@ class SlotNode(DataflowNode):
 	def isPredicate(self):
 		return False
 
+	def isNull(self):
+		return False
+
+	def isExisting(self):
+		return False
+
 	def definingOp(self):
 		return None
 
@@ -223,6 +229,9 @@ class ExistingNode(SlotNode):
 	def isMutable(self):
 		return False
 
+	def isExisting(self):
+		return True
+
 
 class NullNode(SlotNode):
 	__slots__ = 'defn', 'uses'
@@ -265,6 +274,8 @@ class NullNode(SlotNode):
 	def isMutable(self):
 		return False
 
+	def isNull(self):
+		return True
 
 class FieldNode(FlowSensitiveSlotNode):
 	__slots__ = 'name'

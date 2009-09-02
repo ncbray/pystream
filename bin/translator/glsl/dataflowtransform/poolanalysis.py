@@ -32,20 +32,25 @@ class PoolInfo(Mergable):
 		self.intrinsics = set()
 		self.constants  = set()
 
-		self.nonfinal   = False
+		self.types      = set()
+
+		self.nonfinal    = False
+		self.preexisting = False
+		self.allocated   = False
+
 
 		# Derived
-		self.types          = None
 		self.coloring       = None
 		self.uniqueCount    = 0
 		self.nonuniqueCount = 0
-		self.preexisting    = False
-		self.allocated      = False
 
 
 
 	def canUnbox(self):
-		return len(self.types) == 1 and all([t in intrinsics.constantTypes for t in self.types])
+		return self.hasSingleType() and self.constant()
+
+	def constant(self):
+		return not self.objects and not self.nonfinal
 
 	def isSingleUnique(self):
 		return self.uniqueCount == 1 and self.nonuniqueCount == 0
@@ -54,7 +59,7 @@ class PoolInfo(Mergable):
 		return len(self.types) == 1
 
 	def singleType(self):
-		if len(self.types) == 1:
+		if self.hasSingleType():
 			return tuple(self.types)[0]
 		else:
 			return None
@@ -71,12 +76,38 @@ class PoolInfo(Mergable):
 		other._forward = self
 
 		self.objects.update(other.objects)
-		self.intrinsics.update(other.intrinsics)
-		self.constants.update(other.constants)
+		del other.objects
 
-		self.nonfinal |= other.nonfinal
+		self.intrinsics.update(other.intrinsics)
+		del other.intrinsics
+
+		self.constants.update(other.constants)
+		del other.constants
+
+
+		self.types.update(other.types)
+		del other.types
+
+		self.nonfinal    |= other.nonfinal
+		self.preexisting |= other.preexisting
+		self.allocated   |= other.allocated
 
 		return self
+
+	def accumulateType(self, obj, pre):
+		self.types.add(obj[0].xtype.obj.pythonType())
+
+		if pre:
+			self.preexisting = True
+		else:
+			self.allocated   = True
+
+
+	def allObjects(self):
+		s = set(self.objects)
+		s.update(self.intrinsics)
+		s.update(self.constants)
+		return s
 
 class SlotInfo(Mergable):
 	def __init__(self):
@@ -123,7 +154,10 @@ class PoolAnalysis(TypeDispatcher):
 		const, intrinsic, user = self.partitionObjects(values)
 
 		poolinfo = slotinfo.getPoolInfo()
-		poolinfo.constants.update(const)
+
+		for c in const:
+			poolinfo.constants.add(c)
+			poolinfo.accumulateType(c, c in self.analysis.objectPreexisting)
 
 		for subgroup in (intrinsic, user):
 			for obj in subgroup:
@@ -131,6 +165,8 @@ class PoolAnalysis(TypeDispatcher):
 				poolinfo = poolinfo.merge(objinfo)
 
 	def getSlotInfo(self, slot):
+		slot = (slot[0].canonical(), slot[1])
+
 		if slot not in self.info:
 			info = SlotInfo()
 			info.slots.add(slot)
@@ -156,19 +192,11 @@ class PoolAnalysis(TypeDispatcher):
 		for slot in self.analysis._values.iterkeys():
 			if not slot[0].isPredicate() and not slot[0].isExisting() and not slot[0].isNull():
 				self.getSlotInfo(slot)
-		print
 
-		self.slots = PADS.UnionFind.UnionFind()
 		analysis.dataflowIR.traverse.dfs(self.dataflow, self)
-
-		inv = collections.defaultdict(set)
-		for slot in self.slots:
-			inv[self.slots[slot]].add(slot)
 
 	def unionSlots(self, *slots):
 		canonical = [(slot.canonical(), index) for slot, index in slots]
-		self.slots.union(*canonical)
-
 
 		info = SlotInfo()
 		for slot in canonical:
@@ -266,6 +294,8 @@ class PoolAnalysis(TypeDispatcher):
 			else:
 				info.objects.add(obj)
 
+			info.accumulateType(obj, obj in self.analysis.objectPreexisting)
+
 			self.info[obj] = info
 		else:
 			info = self.info[obj].forward()
@@ -309,31 +339,11 @@ class PoolAnalysis(TypeDispatcher):
 
 	def infoList(self):
 		infos = set()
-		for obj, info in self.info.iteritems():
-			infos.add(info.forward())
+		for slotinfo in self.slot.itervalues():
+			infos.add(slotinfo.forward().getPoolInfo())
 
 		return list(infos)
 
-	def buildGroups(self):
-		uf = PADS.UnionFind.UnionFind()
-
-		# TODO a none reference will cause problems with the union... special case it?
-		# Constants also cause problems?
-		for (node, index), values in self.analysis._values.iteritems():
-			if node.isPredicate(): continue
-
-			flat = self.flatten(values)
-			if flat:
-				uf.union(*flat)
-
-		# Invert the union find.
-		index = collections.defaultdict(set)
-		for ref in uf:
-			# Predicates are scattered amoung the values.
-			if isinstance(ref, tuple):
-				index[uf[ref]].add(ref)
-
-		return index
 
 	def objectsInterfere(self, a, b):
 		maskA = self.analysis.objectExistanceMask[a]
@@ -361,71 +371,38 @@ class PoolAnalysis(TypeDispatcher):
 		coloring, grouping, numColors = colorGraph(interference)
 		return coloring, grouping
 
+	def postProcess(self):
+		for pool in self.infoList():
+			pool.uniqueCount    = 0
+			pool.nonuniqueCount = 0
 
-	def processGroup(self, group):
-		info = PoolInfo()
-		info.objects.update(group)
+			objs = pool.allObjects()
 
-		info.types = set([obj.xtype.obj.pythonType() for obj, index in group])
-		info.polymorphic = len(info.types) > 1
-		info.immutable   = all([t in intrinsics.constantTypes for t in info.types])
-		assert not info.polymorphic or not info.immutable, group
+			assert objs, objs
 
-		if info.immutable:
-			return info
+			pool.coloring, grouping = self.colorGroup(objs)
 
+			assert grouping, objs
+			for subgroup in grouping:
+				assert subgroup, objs
 
-		info.coloring, grouping = self.colorGroup(group)
-		for subgroup in grouping:
-			unique = False
-			nonunique = False
-			for key in subgroup:
-				if self.analysis.isUniqueObject(*key):
-					unique = True
-				else:
-					nonunique = True
+				unique    = False
+				nonunique = False
 
-				if key in self.analysis.objectPreexisting:
-					info.preexisting = True
-				else:
-					info.allocated   = True
+				for obj in subgroup:
+					if self.analysis.isUniqueObject(*obj):
+						unique = True
+					else:
+						nonunique = True
 
-			if unique:    info.uniqueCount += 1
-			if nonunique: info.nonuniqueCount += 1
+				assert unique or nonunique, subgroup
 
-		# These assumptions make synthesis easier.
-		#assert nonuniqueCount == 0, group # Temporary until loops are added.
-		assert (info.uniqueCount == 0) ^ (info.nonuniqueCount == 0), group
-		assert info.preexisting ^ info.allocated, group
-
-		if False:
-			print group
-			print info.types
-			print "U", info.uniqueCount, "N", info.nonuniqueCount, "PRE", info.preexisting, "ALLOC", info.allocated
-			print
-
-		return info
-
-
+				if unique:    pool.uniqueCount += 1
+				if nonunique: pool.nonuniqueCount += 1
 
 	def process(self):
 		self.handleSlots()
-
-		index = self.buildGroups()
-
-		lut = {}
-		for group in index.itervalues():
-			info = self.processGroup(group)
-			for obj in info.objects:
-				lut[obj] = info
-
-		if True:
-			print
-			print "=== Nonfinal ==="
-			for obj in sorted(self.nonfinal):
-				print obj
-			print
-
+		self.postProcess()
 
 		if True:
 			print
@@ -435,16 +412,19 @@ class PoolAnalysis(TypeDispatcher):
 					print slot
 
 				poolinfo = info.getPoolInfo()
-				print poolinfo.nonfinal
+				print "Nonfinal", poolinfo.nonfinal
+				print "Unbox", poolinfo.canUnbox()
+				print "Pre/Alloc", poolinfo.preexisting, "/", poolinfo.allocated
+				print "U/N", poolinfo.uniqueCount, "/", poolinfo.nonuniqueCount
+				print "Types", sorted(poolinfo.types)
 				print sorted(poolinfo.objects)
 				print sorted(poolinfo.intrinsics)
 				print sorted(poolinfo.constants)
 				print
 			print
 
-		return lut
 
 def process(compiler, dataflow, analysis):
 	pa = PoolAnalysis(compiler, dataflow, analysis)
-	return pa.process()
-
+	pa.process()
+	return pa

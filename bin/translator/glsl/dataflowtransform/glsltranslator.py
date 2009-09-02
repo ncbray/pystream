@@ -32,10 +32,10 @@ class SlotGroup(object):
 		self.poolinfo    = None
 
 class GLSLTranslator(TypeDispatcher):
-	def __init__(self, code, analysis, poolinfo, intrinsicRewrite):
-		self.code     = code
-		self.analysis = analysis
-		self.poolinfo = poolinfo
+	def __init__(self, code, analysis, poolanalysis, intrinsicRewrite):
+		self.code         = code
+		self.analysis     = analysis
+		self.poolanalysis = poolanalysis
 
 		self.intrinsicRewrite = intrinsicRewrite
 
@@ -56,10 +56,7 @@ class GLSLTranslator(TypeDispatcher):
 		return self.getPoolInfoForSlot(g.localReads[ref], 0)
 
 	def getPoolInfoForSlot(self, node, index):
-		value = self.analysis.getValue(node, index)
-		flat = self.analysis.set.flatten(value)
-		example = flat.pop()
-		return self.poolinfo[example]
+		return self.poolanalysis.getSlotInfo((node, index)).getPoolInfo()
 
 	def getPoolName(self, info):
 		if not info in self.poolname:
@@ -355,10 +352,10 @@ class GLSLTranslator(TypeDispatcher):
 
 from language.glsl import codegen
 
-def process(compiler, code, cfg, dioa, poolinfo):
+def process(compiler, code, cfg, dioa, poolanalysis):
 	rewriter = intrinsics.makeIntrinsicRewriter(compiler.extractor)
 
-	gt = GLSLTranslator(code, dioa, poolinfo, rewriter)
+	gt = GLSLTranslator(code, dioa, poolanalysis, rewriter)
 	result = gt.process(cfg)
 
 

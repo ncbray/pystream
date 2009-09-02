@@ -610,6 +610,5 @@ def evaluateDataflow(compiler, dataflow, name, code):
 	cfg = dataflowsynthesis.process(compiler, dataflow, name, dump=True)
 
 
-	poolinfo = poolanalysis.process(compiler, dataflow, dioa)
-
-	glsltranslator.process(compiler, code, cfg, dioa, poolinfo)
+	pa = poolanalysis.process(compiler, dataflow, dioa)
+	glsltranslator.process(compiler, code, cfg, dioa, pa)

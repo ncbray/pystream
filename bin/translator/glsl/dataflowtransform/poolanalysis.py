@@ -38,6 +38,7 @@ class PoolInfo(Mergable):
 		self.preexisting = False
 		self.allocated   = False
 
+		self.contains    = set()
 
 		# Derived
 		self.coloring       = None
@@ -91,6 +92,9 @@ class PoolInfo(Mergable):
 		self.nonfinal    |= other.nonfinal
 		self.preexisting |= other.preexisting
 		self.allocated   |= other.allocated
+
+		self.contains.update(other.contains)
+		del other.contains
 
 		return self
 
@@ -195,13 +199,21 @@ class PoolAnalysis(TypeDispatcher):
 
 		analysis.dataflowIR.traverse.dfs(self.dataflow, self)
 
+	def makeCanonical(self, slots):
+		return [(slot.canonical(), index) for slot, index in slots]
+
 	def unionSlots(self, *slots):
-		canonical = [(slot.canonical(), index) for slot, index in slots]
+		canonical = self.makeCanonical(slots)
 
 		info = SlotInfo()
 		for slot in canonical:
 			if not slot[0].isPredicate():
 				info = info.merge(self.getSlotInfo(slot))
+
+	def logContains(self, expr, slots):
+		slots = self.makeCanonical(slots)
+		exprPool = self.getSlotInfo(expr).getPoolInfo()
+		exprPool.contains.update(slots)
 
 	def linkHeap(self, g):
 		# union modifies with their psedo-reads
@@ -236,17 +248,29 @@ class PoolAnalysis(TypeDispatcher):
 	def visitLoad(self, node, g):
 		if not intrinsics.isIntrinsicMemoryOp(node):
 			reads = self.flatten(self.analysis.opReads[g])
-			self.unionSlots((g.localModifies[0], 0), *reads)
+
+			target = (g.localModifies[0], 0)
+			self.unionSlots(target, *reads)
+
+			expr = (g.localReads[node.expr], 0)
+			self.logContains(expr, reads)
+
 
 	@dispatch(ast.Store)
 	def visitStore(self, node, g):
 		if not intrinsics.isIntrinsicMemoryOp(node):
-			read = g.localReads[node.value]
-
-			if read.isExisting(): return
-
 			modifies = self.flatten(self.analysis.opModifies[g])
-			self.unionSlots((read, 0), *modifies)
+
+			read = g.localReads[node.value]
+			if read.isExisting():
+				self.unionSlots(*modifies)
+			else:
+				value = (read, 0)
+				self.unionSlots(value, *modifies)
+
+			expr = (g.localReads[node.expr], 0)
+			self.logContains(expr, modifies)
+
 
 	@dispatch(ast.TypeSwitch)
 	def visitTypeSwitch(self, node, g):
@@ -417,6 +441,7 @@ class PoolAnalysis(TypeDispatcher):
 				print "Pre/Alloc", poolinfo.preexisting, "/", poolinfo.allocated
 				print "U/N", poolinfo.uniqueCount, "/", poolinfo.nonuniqueCount
 				print "Types", sorted(poolinfo.types)
+				print "Contains", sorted(poolinfo.contains)
 				print sorted(poolinfo.objects)
 				print sorted(poolinfo.intrinsics)
 				print sorted(poolinfo.constants)

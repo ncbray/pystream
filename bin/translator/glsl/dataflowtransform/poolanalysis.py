@@ -113,6 +113,18 @@ class PoolInfo(Mergable):
 		s.update(self.constants)
 		return s
 
+	def dump(self):
+			print "Nonfinal", self.nonfinal
+			print "Unbox", self.canUnbox()
+			print "Pre/Alloc", self.preexisting, "/", self.allocated
+			print "U/N", self.uniqueCount, "/", self.nonuniqueCount
+			print "Types", sorted(self.types)
+			print "Contains", sorted(self.contains)
+			print sorted(self.objects)
+			print sorted(self.intrinsics)
+			print sorted(self.constants)
+			print
+
 class SlotInfo(Mergable):
 	def __init__(self):
 		Mergable.__init__(self)
@@ -123,6 +135,9 @@ class SlotInfo(Mergable):
 		info = self.poolinfo.forward()
 		self.poolinfo = info
 		return info
+
+	def canUnbox(self):
+		return self.getPoolInfo().canUnbox()
 
 	def merge(self, other):
 		if self is other:
@@ -428,7 +443,7 @@ class PoolAnalysis(TypeDispatcher):
 		self.handleSlots()
 		self.postProcess()
 
-		if True:
+		if False:
 			print
 			print "=== Slot Groups ==="
 			for info in self.slotList():
@@ -436,16 +451,7 @@ class PoolAnalysis(TypeDispatcher):
 					print slot
 
 				poolinfo = info.getPoolInfo()
-				print "Nonfinal", poolinfo.nonfinal
-				print "Unbox", poolinfo.canUnbox()
-				print "Pre/Alloc", poolinfo.preexisting, "/", poolinfo.allocated
-				print "U/N", poolinfo.uniqueCount, "/", poolinfo.nonuniqueCount
-				print "Types", sorted(poolinfo.types)
-				print "Contains", sorted(poolinfo.contains)
-				print sorted(poolinfo.objects)
-				print sorted(poolinfo.intrinsics)
-				print sorted(poolinfo.constants)
-				print
+				poolinfo.dump()
 			print
 
 

@@ -17,8 +17,6 @@ from . import glsltranslator
 
 # For dumping
 from util.xmloutput import XMLOutput
-import sys
-import os.path
 
 from util.async import *
 import util.filesystem

@@ -10,6 +10,14 @@ intrinsicTypes = frozenset([float, int, bool, vec.vec2, vec.vec3, vec.vec4, vec.
 constantTypeNodes = {}
 intrinsicTypeNodes = {}
 
+typeComponents = {}
+componentTypes = {}
+componentTypeNodes = {}
+
+fields = {}
+
+referenceType = glsl.BuiltinType('ref')
+
 for t in intrinsicTypes:
 	intrinsicTypeNodes[t] = glsl.BuiltinType(t.__name__)
 for t in constantTypes:
@@ -23,19 +31,38 @@ def addName(type, name, fields):
 	un = uniqueAttrName(type, name)
 	fields[un] = name
 
-fields = {}
+def components(cls, ctype, cnum):
+	key = ctype, cnum
+	
+	# HACK (float, 4) -> vec4 and mat2?  
+	if key not in componentTypes:
+		typeComponents[cls] = key
+		componentTypes[key] = cls
+		componentTypeNodes[key] = intrinsicTypeNodes[cls]
+
+components(float, float, 1)
+
+components(vec.vec2, float, 2)
 addName(vec.vec2, 'x', fields)
 addName(vec.vec2, 'y', fields)
 
+components(vec.vec3, float, 3)
 addName(vec.vec3, 'x', fields)
 addName(vec.vec3, 'y', fields)
 addName(vec.vec3, 'z', fields)
 
+components(vec.vec4, float, 4)
 addName(vec.vec4, 'x', fields)
 addName(vec.vec4, 'y', fields)
 addName(vec.vec4, 'z', fields)
 addName(vec.vec4, 'w', fields)
 
+components(vec.mat2, float, 4)
+components(vec.mat3, float, 9)
+components(vec.mat4, float, 16)
+
+components(int, int, 1)
+components(bool, bool, 1)
 
 def isIntrinsicMemoryOp(node):
 	return node.fieldtype == 'Attribute' and isinstance(node.name, ast.Existing) and node.name.object.pyobj in fields

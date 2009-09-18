@@ -7,6 +7,8 @@ from language.python.shaderprogram import ShaderProgram
 
 from . import dataflowtransform
 
+from . import intrinsics
+
 def makePathMatcher(interface):
 	root = {}
 	for path, name, input, output in interface.glsl.attr:

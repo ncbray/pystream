@@ -35,3 +35,9 @@ def uniqueSlotName(descriptor):
 	return "%s#%s#%d" % (name, objClass.__name__, id(objClass))
 
 
+import re
+_invalidNameChar = re.compile('[^\w\d_]')
+
+# HACK does not ensure the first character is not a digit.
+def ensureValidName(name):
+	return re.sub(_invalidNameChar, '_', name)

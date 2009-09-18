@@ -84,6 +84,18 @@ class GLSLCodeGen(TypeDispatcher):
 		initialize = '' if node.initializer is None else (" = " +self(node.initializer))
 		return "uniform %s %s%s" % (self.typename(node.type), node.name, initialize)
 
+	@dispatch(ast.StructureType)
+	def visitStructureType(self, node):
+		oldIndent = self.indent
+		self.indent += '\t'
+		statements = ["%s%s;\n" % (self.indent, self(field)) for field in node.fieldDecl]
+		self.indent = oldIndent
+		body = "".join(statements)
+		return "{indent}struct {name}\n{indent}{{\n{body}{indent}}};\n".format(indent=self.indent, name=node.name, body=body)
+
+	@dispatch(ast.BuiltinType)
+	def visitBuiltinType(self, node):
+		return "{indent}{name};\n".format(indent=self.indent, name=node.name)
 
 	@dispatch(ast.Constant)
 	def visitConstant(self, node, prec=17):

@@ -9,7 +9,7 @@ class BuiltinType(Type):
 		return "BuiltinType(%s)" % (self.name)
 
 class StructureType(Type):
-	__fields__    = 'name:str fieldDecl:tuple*'
+	__fields__    = 'name:str fieldDecl:VariableDecl*'
 	__shared__    = True
 
 class ArrayType(Type):

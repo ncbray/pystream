@@ -87,17 +87,14 @@ class GLSLTranslator(TypeDispatcher):
 
 		self.valuePools = {}
 
-	def getPoolInfo(self, ref, g):
-		return self.getPoolInfoForSlot(g.localReads[ref], 0)
-
-	def getPoolInfoForSlot(self, node, index):
-		return self.getSlotInfo((node, index)).getPoolInfo()
+	def getPoolInfoForSlot(self, slot):
+		return self.getSlotInfo(slot).getPoolInfo()
 
 	def getSlotInfo(self, slot):
-			return self.poolanalysis.getSlotInfo(slot)
+		return self.poolanalysis.getSlotInfo(slot)
 
 	# Generate a unique name for each object pool.
-	def getPoolImpl(self, info):
+	def getPoolImplForInfo(self, info):
 		if not info in self.poolname:
 			base = 'p%d' % self.uid
 			self.uid += 1
@@ -108,6 +105,10 @@ class GLSLTranslator(TypeDispatcher):
 			impl = self.poolname[info]
 			
 		return impl
+
+	def getPoolImpl(self, slot):
+		info = self.getPoolInfoForSlot(slot)
+		return self.getPoolImplForInfo(info)
 
 	def uniqueName(self, suggestion=None):
 		if suggestion is None:
@@ -127,31 +128,11 @@ class GLSLTranslator(TypeDispatcher):
 
 		return name
 
-	def poolType(self, info, value=False):
-		gt = intrinsics.referenceType
-
-		pt = info.singleType()
-
-		if value:
-			lut = intrinsics.intrinsicTypeNodes
-		else:
-			lut = intrinsics.constantTypeNodes
-
-		if pt in lut:
-			gt = lut[pt]
-
-		return gt
-
 	def makeLocalForSlot(self, slot, suggestion=None):
-			slotinfo = self.getSlotInfo((slot, 0))
+			slotinfo = self.getSlotInfo((slot.canonical(), 0))
 			poolinfo = slotinfo.getPoolInfo()
 
-			if poolinfo.canUnbox():
-				gt = intrinsics.intrinsicTypeNodes[poolinfo.singleType()]
-			else:
-				gt = intrinsics.referenceType
-
-			poolimpl = self.getPoolImpl(poolinfo)
+			poolimpl = self.getPoolImplForInfo(poolinfo)
 			gt = poolimpl.struct.ast
 
 			if suggestion is None and slot.names:
@@ -193,8 +174,8 @@ class GLSLTranslator(TypeDispatcher):
 		elif len(g.localModifies) == 1:
 			target = g.localModifies[0]
 			
-			poolInfo = self.getPoolInfoForSlot(target, 0)
-			poolImpl = self.getPoolImpl(poolInfo)
+			slot     = (target.canonical(), 0)
+			poolImpl = self.getPoolImpl(slot)
 
 			suggestion = target.names[0].name if target.names else None
 			index = self.uniqueLocalForSlot(target, suggestion)
@@ -220,24 +201,22 @@ class GLSLTranslator(TypeDispatcher):
 		return (slot[0].canonical(), slot[1])
 
 	def slotStruct(self, slot):
-		slotInfo = self.getPoolInfoForSlot(*slot)
-		slotImpl = self.getPoolImpl(slotInfo)
-		return slotImpl.struct
+		return self.getPoolImpl(slot).struct
 
 	def slotRef(self, op, slot):
 		return SlotRef(op, self.slotStruct(slot))
 
 	def fieldRef(self, node, slot, g):
+		exprSlot = (g.localReads[node.expr].canonical(), 0)
+		
 		expr     = self.localRef(node.expr, g)
-		exprInfo = self.getPoolInfo(node.expr, g)
-		exprImpl = self.getPoolImpl(exprInfo)
+		exprImpl = self.getPoolImpl(exprSlot)
 		
-		field = slot[0].name.slotName
-		
+		field    = slot[0].name.slotName
 		slotinfo = self.getSlotInfo(slot)
-		
+			
 		# Force creation.
-		self.getPoolImpl(slotinfo.getPoolInfo())
+		self.getPoolImpl(slot)
 		
 		fieldOp  = exprImpl.getField(expr, field, slotinfo)
 		
@@ -245,14 +224,14 @@ class GLSLTranslator(TypeDispatcher):
 
 	def valueRef(self, lcl, g):
 		node     = g.localReads[lcl]
+		slot     = (node.canonical(), 0)
 		expr     = self.localNodeRef(node)	
-		exprInfo = self.getPoolInfo(lcl, g)
-		exprImpl = self.getPoolImpl(exprInfo)
+		exprImpl = self.getPoolImpl(slot)
 		
 		# HACK no type
 		op = exprImpl.getValue(expr, None)
 		
-		return self.slotRef(op, (node, 0))
+		return self.slotRef(op, (node.canonical(), 0))
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, g):
@@ -260,7 +239,7 @@ class GLSLTranslator(TypeDispatcher):
 			expr   = self.valueRef(node.expr, g)
 			field  = intrinsics.fields[node.name.object.pyobj]
 			slot   = self.getSingleSlot(self.analysis.opReads[g])
-			src  = self.slotRef(glsl.Load(expr.ast(), field), slot)			
+			src    = self.slotRef(glsl.Load(expr.ast(), field), slot)			
 		else:
 			slot = self.getSingleSlot(self.analysis.opReads[g])		
 			src  = self.fieldRef(node, slot, g)	
@@ -289,31 +268,30 @@ class GLSLTranslator(TypeDispatcher):
 	def visitAllocate(self, node, g):
 		assert len(g.localModifies) == 1
 
-		info = self.getPoolInfoForSlot(g.localModifies[0], 0)
+		slot = (g.localModifies[0].canonical(), 0)
+		info = self.getPoolInfoForSlot(slot)
 		assert info.isSingleUnique()
 		
-		src = self.slotRef(self.makeConstant(0), (g.localModifies[0], 0))
-		return 	self.assignmentTransfer(src, g)
+		impl = self.getPoolImpl(slot)
+		return impl.allocate(self, slot, g)
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node, g):
-		slot = (g.localReads[node], 0)
-		
-		lcl = self.localRef(node, g)
-				
+		slot = (g.localReads[node].canonical(), 0)
+		lcl  = self.localRef(node, g)				
 		return SlotRef(lcl, self.slotStruct(slot))
 
 	@dispatch(ast.Existing)
 	def visitExisting(self, node, g):
 		value    = self.makeConstant(node.object.pyobj)
-		poolinfo = self.getPoolInfo(node, g)
-		poolimpl = self.getPoolImpl(poolinfo)
+		slot     = (g.localReads[node].canonical(), 0)
+		poolimpl = self.getPoolImpl(slot)
 		ref      = SlotRef(value, poolimpl.struct)
 		return ref
 
 	@dispatch(list, tuple)
-	def visitContainer(self, node, *args):
-		return allChildrenArgs(self, node, *args)
+	def visitContainer(self, node):
+		return allChildren(self, node)
 
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node, g):
@@ -330,13 +308,13 @@ class GLSLTranslator(TypeDispatcher):
 			
 		# HACK use assignment target slot.
 		target = g.localModifies[0]
-		poolInfo = self.getPoolInfoForSlot(target, 0)
-		poolImpl = self.getPoolImpl(poolInfo)
+		slot = (target.canonical(), 0)
+		poolimpl = self.getPoolImpl(slot)
 		
-		targetInfo = self.getSlotInfo((target, 0))
+		targetInfo = self.getSlotInfo(slot)
 		assert targetInfo.canUnbox()
 
-		src = SlotRef(translated, poolImpl.struct)
+		src = SlotRef(translated, poolimpl.struct)
 
 		return self.assignmentTransfer(src, g)
 

@@ -46,6 +46,7 @@ class PoolImplementation(object):
 			return glsl.GetSubscript(ref, index)
 	
 	def getField(self, index, field, slotinfo):
+		assert slotinfo.isSlotInfo(), slotinfo
 		ref = self._getFieldRef(field, slotinfo)
 		return self._deref(ref, index)
 	
@@ -53,5 +54,9 @@ class PoolImplementation(object):
 		assert self.struct.inlined
 		return index
 		
-	def allocate(self, type):
-		assert False
+	def allocate(self, translator, slot, g):
+		if self.poolinfo.isSingleUnique():
+			return []
+		else:
+			src = translator.slotRef(translator.makeConstant(0), slot)		
+			return translator.assignmentTransfer(src, g)

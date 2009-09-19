@@ -20,9 +20,16 @@ class Mergable(object):
 	def forward(self):
 		if self._forward:
 			self._forward = self._forward.forward()
+			assert self._forward._forward is None
 			return self._forward
 		else:
 			return self
+
+	def isPoolInfo(self):
+		return False
+
+	def isSlotInfo(self):
+		return False
 
 class PoolInfo(Mergable):
 	def __init__(self):
@@ -125,6 +132,9 @@ class PoolInfo(Mergable):
 			print sorted(self.constants)
 			print
 
+	def isPoolInfo(self):
+		return True
+
 class SlotInfo(Mergable):
 	def __init__(self):
 		Mergable.__init__(self)
@@ -156,6 +166,10 @@ class SlotInfo(Mergable):
 
 		return self
 
+	def isSlotInfo(self):
+		return True
+
+
 class PoolAnalysis(TypeDispatcher):
 	def __init__(self, compiler, dataflow, analysis):
 		self.compiler = compiler
@@ -186,15 +200,15 @@ class PoolAnalysis(TypeDispatcher):
 	def getSlotInfo(self, slot):
 		slot = (slot[0].canonical(), slot[1])
 
-		if slot not in self.info:
+		if slot not in self.slot:
 			info = SlotInfo()
 			info.slots.add(slot)
 			self._initSlotInfo(slot, info)
-			self.slot[slot] = info
 		else:
-			info = self.slot[slot].forward()
-			self.info[slot] = info
-
+			info = self.slot[slot]
+		
+		info = info.forward()
+		self.slot[slot] = info
 		return info
 
 	def slotList(self):
@@ -334,12 +348,11 @@ class PoolAnalysis(TypeDispatcher):
 				info.objects.add(obj)
 
 			info.accumulateType(obj, obj in self.analysis.objectPreexisting)
-
-			self.info[obj] = info
 		else:
-			info = self.info[obj].forward()
-			self.info[obj] = info
-
+			info = self.info[obj]
+			
+		info = info.forward()
+		self.info[obj] = info
 		return info
 
 	def objectType(self, obj):

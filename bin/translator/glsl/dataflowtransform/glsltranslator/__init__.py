@@ -4,6 +4,7 @@ from analysis.cfgIR import cfg
 
 from language.python import ast
 from language.glsl import ast as glsl
+import language.glsl.tools
 
 from translator.glsl import intrinsics
 from translator.glsl.exceptions import TemporaryLimitation
@@ -31,29 +32,6 @@ class SlotRef(object):
 		# HACK
 		assert self.struct.inline, self.struct
 		return self.ref
-
-class MakeAssign(TypeDispatcher):
-	@dispatch(glsl.Local)
-	def visitLocal(self, dst, src):
-		return glsl.Assign(src, dst)
-
-	@dispatch(glsl.GetSubscript)
-	def visitSetSubscript(self, dst, src):
-		return glsl.SetSubscript(src, dst.expr, dst.subscript)
-	
-	@dispatch(glsl.GetAttr)
-	def visitGetAttr(self, dst, src):
-		return glsl.SetAttr(src, dst.expr, dst.name)
-
-	@dispatch(glsl.Load)
-	def visitLoad(self, dst, src):
-		return glsl.Store(src, dst.expr, dst.name)
-
-_makeAssign = MakeAssign()
-
-def assign(src, dst):
-	return _makeAssign(dst, src)
-
 
 class RewriterWrapper(TypeDispatcher):
 	def __init__(self, translator):
@@ -191,7 +169,7 @@ class GLSLTranslator(TypeDispatcher):
 		assert isinstance(dst, SlotRef), dst
 
 		# HACK?
-		return assign(src.ast(), dst.ast())
+		return language.glsl.tools.assign(src.ast(), dst.ast())
 
 
 	def getSingleSlot(self, tree):

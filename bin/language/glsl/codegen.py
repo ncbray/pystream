@@ -74,15 +74,18 @@ class GLSLCodeGen(TypeDispatcher):
 		else:
 			return s
 
+	def wrapSimpleStatement(self, s, prec=None, container=None):
+		return "%s%s;\n" % (self.indent, s)
+
 	@dispatch(ast.VariableDecl)
 	def visitVariableDecl(self, node):
 		initialize = '' if node.initializer is None else (" = " +self(node.initializer))
-		return "%s %s%s" % (self.typename(node.type), node.name, initialize)
+		return self.wrapSimpleStatement("%s %s%s" % (self.typename(node.type), node.name, initialize))
 
 	@dispatch(ast.UniformDecl)
 	def visitUniformDecl(self, node):
 		initialize = '' if node.initializer is None else (" = " +self(node.initializer))
-		return "uniform %s %s%s" % (self.typename(node.type), node.name, initialize)
+		return self.wrapSimpleStatement("uniform %s %s%s" % (self.typename(node.type), node.name, initialize))
 
 	@dispatch(ast.StructureType)
 	def visitStructureType(self, node):
@@ -125,7 +128,7 @@ class GLSLCodeGen(TypeDispatcher):
 
 	@dispatch(ast.SetSubscript)
 	def visitSetSubscript(self, node, prec=17):
-		return self.wrap("%s[%s] = %s" % (self(node.expr, 15), self(node.subscript, 16), self(node.value, 16)), 16, prec)
+		return self.wrapSimpleStatement("%s[%s] = %s" % (self(node.expr, 15), self(node.subscript, 16), self(node.value, 16)), 16, prec)
 
 
 	@dispatch(ast.BinaryOp)
@@ -133,13 +136,17 @@ class GLSLCodeGen(TypeDispatcher):
 		opPrec = self.precedenceLUT[node.op]
 		return self.wrap("%s%s%s" % (self(node.left, opPrec), node.op, self(node.right, opPrec-1)), opPrec, prec)
 
+	@dispatch(ast.UnaryPrefixOp)
+	def visitUnaryPrefixOp(self, node, prec=17):
+		return self.wrap("%s%s" % (node.op, self(node.expr, 2)), 2, prec)
+
 	@dispatch(ast.Assign)
 	def visitAssign(self, node, prec=17):
-		return self.wrap("%s = %s" % (self(node.lcl, 15), self(node.expr, 16)), 16, prec)
+		return self.wrapSimpleStatement("%s = %s" % (self(node.lcl, 15), self(node.expr, 16)), 16, prec)
 
 	@dispatch(ast.Discard)
 	def visitDiscard(self, node, prec=17):
-		return self.wrap(self(node.expr, 16), 16, prec)
+		return self.wrapSimpleStatement(self(node.expr, 16), 16, prec)
 
 	def newLocalName(self, base):
 		name = '%s_%d' % (base, self.uid)
@@ -185,15 +192,25 @@ class GLSLCodeGen(TypeDispatcher):
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
 		if node.expr is None:
-			return "return"
+			return self.wrapSimpleStatement("return")
 		else:
-			return "return %s" % self(node.expr)
+			return self.wrapSimpleStatement("return %s" % self(node.expr))
+
+	@dispatch(ast.Switch)
+	def visitSwitch(self, node):
+		condition = self(node.condition)
+		
+		t = self(node.t)
+		f = self(node.f)
+		
+		return "%sif(%s)\n%s{\n%s%s}\n%selse\n%s{\n%s%s}\n" % (self.indent, condition, self.indent, t, self.indent, self.indent, self.indent, f, self.indent)
 
 	@dispatch(ast.Suite)
 	def visitSuite(self, node):
 		oldIndent = self.indent
 		self.indent += '\t'
-		statements = ["%s%s;\n" % (self.indent, self(stmt)) for stmt in node.statements]
+		#statements = ["%s%s;\n" % (self.indent, self(stmt)) for stmt in node.statements]
+		statements = [self(stmt) for stmt in node.statements]
 		self.indent = oldIndent
 		return "".join(statements)
 
@@ -214,11 +231,6 @@ class GLSLCodeGen(TypeDispatcher):
 	@dispatch(ast.OutputDecl)
 	def visitOutputDecl(self, node):
 		return "out %s %s" % (self.typename(node.type), self.visitLocal(node))
-
-	@dispatch(ast.UniformDecl)
-	def visitUniformDecl(self, node):
-		return "uniform %s %s" % (self.typename(node.type), self.visitLocal(node))
-
 
 	def makeLocalDecl(self, lcls):
 		decl = "".join(["\t%s %s;\n" % (self.typename(lcl.type), self(lcl)) for lcl in lcls])

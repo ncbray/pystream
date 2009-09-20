@@ -174,7 +174,8 @@ class GLSLTranslator(TypeDispatcher):
 
 	def getSingleSlot(self, tree):
 		slots = self.analysis.set.flatten(tree)
-		assert len(slots) == 1, slots
+		# HACK ugly, ignores cases with more than one slot!
+		#assert len(slots) == 1, slots
 		slot = tuple(slots)[0]
 		return (slot[0].canonical(), slot[1])
 
@@ -248,7 +249,13 @@ class GLSLTranslator(TypeDispatcher):
 
 		slot = (g.localModifies[0].canonical(), 0)
 		info = self.getPoolInfoForSlot(slot)
-		assert info.isSingleUnique()
+		
+		
+		if False:
+			if not info.isSingleUnique():
+				info.dump()
+				
+			assert info.isSingleUnique(), node
 		
 		impl = self.getPoolImpl(slot)
 		return impl.allocate(self, slot, g)
@@ -296,15 +303,49 @@ class GLSLTranslator(TypeDispatcher):
 
 		return self.assignmentTransfer(src, g)
 
+	# HACK remains in CFG, null it out.
+	@dispatch(ast.TypeSwitch)
+	def visitTypeSwitch(self, node, g):
+		return []
+
 	@dispatch(graph.GenericOp)
 	def visitGenericOp(self, node):
 		stmt = self(node.op, node)
-		print stmt
 		return stmt
+
+	@dispatch(graph.Gate)
+	def visitGate(self, node):
+		
+		srcSlot = (node.read.canonical(), 0)
+		lcl  = self.localNodeRef(srcSlot[0])				
+		src = SlotRef(lcl, self.slotStruct(srcSlot))	
+
+		dstSlot = (node.modify.canonical(), 0)
+		lcl  = self.localNodeRef(dstSlot[0])				
+		dst = SlotRef(lcl, self.slotStruct(dstSlot))	
+
+		return self.transfer(src, dst)
 
 	@dispatch(graph.Exit)
 	def visitExit(self, node):
 		return glsl.Return(None)
+
+	@dispatch(cfg.CFGTypeSwitch)
+	def visitCFGTypeSwitch(self, node):
+		op = node.switch.op
+		
+		cases = [self(case) for case in node.cases]
+
+		current = cases.pop()
+		
+		while cases:
+			case = cases.pop()
+			condition = glsl.Local(intrinsics.intrinsicTypeNodes[bool], 'bogus')
+			current = glsl.Switch(condition, case, current)
+
+		#node.merge
+		
+		return current
 
 	@dispatch(cfg.CFGBlock)
 	def visitCFGBlock(self, node):

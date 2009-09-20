@@ -126,6 +126,9 @@ class GetSubscript(Expression):
 class SetSubscript(Statement):
 	__fields__ = 'value:Expression expr:Expression subscript:Expression'
 
+class Switch(Statement):
+	__fields__ = 'condition:Expression t:Suite f:Suite'
+
 class Suite(GLSLASTNode):
 	__fields__ = 'statements:Statement*'
 

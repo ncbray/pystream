@@ -11,9 +11,6 @@ import analysis.dataflowIR.ordering
 from analysis.storegraph import storegraph
 
 from . import imagebuilder
-from . import poolanalysis
-from analysis.cfgIR import dataflowsynthesis
-from . import glsltranslator
 
 # For dumping
 from util.xmloutput import XMLOutput
@@ -309,11 +306,10 @@ class GenericOpFunction(TypeDispatcher):
 			analysis.accumulateObjectExists(obj, index, mask)
 
 class DataflowIOAnalysis(TypeDispatcher):
-	def __init__(self, compiler, dataflow, order, name):
+	def __init__(self, compiler, dataflow, order):
 		self.compiler = compiler
 		self.dataflow = dataflow
 		self.order    = order
-		self.name     = name
 
 		# Indexed slot
 		# (node, index) -> references
@@ -488,10 +484,6 @@ class DataflowIOAnalysis(TypeDispatcher):
 			for op in self.order:
 				self(op)
 
-		if True:
-			with self.compiler.console.scope('debug dump'):
-				self.debugDump()
-
 	def dumpMasked(self, out, values, mask):
 		values = self.set.simplify(mask, values, self.set.empty)
 		out.write(values)
@@ -522,11 +514,10 @@ class DataflowIOAnalysis(TypeDispatcher):
 		out.endl()
 
 	@async_limited(2)
-	def debugDump(self):
+	def debugDump(self, name):
 		# Dump output
 
 		directory = 'summaries\\dataflow'
-		name = self.name
 
 		# Dump information about ops
 		f   = util.filesystem.fileOutput(directory, name+'-ops', 'html')
@@ -599,14 +590,13 @@ class DataflowIOAnalysis(TypeDispatcher):
 		out.endl()
 		f.close()
 
-def evaluateDataflow(compiler, dataflow, name, code):
+def evaluateDataflow(compiler, dataflow):
+	# Find a linear order to evaluate the dataflow nodes in
 	order = analysis.dataflowIR.ordering.evaluateDataflow(dataflow)
 
-	dioa = DataflowIOAnalysis(compiler, dataflow, order, name)
+	# Do a very flow-sensitive analysis to resolve points-to relations as
+	# precisely as possible.
+	dioa = DataflowIOAnalysis(compiler, dataflow, order)
 	dioa.process()
 
-	cfg = dataflowsynthesis.process(compiler, dataflow, name, dump=True)
-
-
-	pa = poolanalysis.process(compiler, dataflow, dioa)
-	glsltranslator.process(compiler, code, cfg, dioa, pa)
+	return dioa

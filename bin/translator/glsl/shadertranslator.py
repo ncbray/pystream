@@ -5,7 +5,6 @@ from asttools.origin import originString
 from language.glsl import ast as glsl
 
 from . import intrinsics
-from . import iotransform
 
 from . exceptions import *
 

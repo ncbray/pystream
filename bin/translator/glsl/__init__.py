@@ -1,14 +1,7 @@
-from . shadertranslator import GLSLTranslator
-from language.glsl import codegen
-
-from . pythonshader import PythonShaderProgram
-
 from language.python.shaderprogram import ShaderProgram
-
 from . import dataflowtransform
 
-from . import intrinsics
-
+# interface is compiler.iterface
 def makePathMatcher(interface):
 	root = {}
 	for path, name, input, output in interface.glsl.attr:
@@ -24,10 +17,6 @@ def makePathMatcher(interface):
 
 def translate(compiler):
 	with compiler.console.scope('translate to glsl'):
-		pathMatcher = makePathMatcher(compiler.interface)
-
-		translator = GLSLTranslator(intrinsics.makeIntrinsicRewriter(compiler.extractor))
-
 		for code in compiler.interface.entryCode():
 			if isinstance(code, ShaderProgram):
 				vs = code.vertexShaderCode()
@@ -38,12 +27,3 @@ def translate(compiler):
 
 				with compiler.console.scope('fs'):
 					dataflowtransform.evaluateCode(compiler, fs)
-
-				shader = PythonShaderProgram(vs, fs, pathMatcher)
-#				iotransform.evaluateShaderProgram(compiler, shader, pathMatcher)
-#				codes = translator.processShaderProgram(shader)
-
-#				for code in codes:
-#					print codegen.GLSLCodeGen()(code)
-#					print
-#					print

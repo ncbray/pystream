@@ -6,6 +6,7 @@ from . import poolanalysis
 from analysis.cfgIR import dataflowsynthesis
 from . import glsltranslator
 
+from . import iotree
 
 def evaluateCode(compiler, code):
 	with compiler.console.scope('convert'):
@@ -13,6 +14,8 @@ def evaluateCode(compiler, code):
 
 	with compiler.console.scope('analyze'):
 		dioa = translator.glsl.dataflowtransform.correlatedanalysis.evaluateDataflow(compiler, dataflow)
+
+		trees = [iotree.evaluateLocal(dioa, p) for p in code.codeparameters.params]
 
 		# Reconstruct the CFG from the dataflow graph
 		cfg = dataflowsynthesis.process(compiler, dataflow, code.codeName(), dump=True)

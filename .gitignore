@@ -11,6 +11,9 @@
 *.bak
 *.tmp
 
+# Eclipse files
+.project
+.pydevproject
+
 # Project spesific
 summaries/
-wiki/

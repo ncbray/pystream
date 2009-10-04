@@ -245,14 +245,21 @@ class GLSLCodeGen(TypeDispatcher):
 		finder = FindLocals()
 		finder.processCode(node)
 
-		version = "#version 130"
+		# Generate header declarations
+		parts = ["#version 130\n"]
 
 		uniformdecl = self.makeDecl(finder.uniforms)
+		if uniformdecl: parts.append(uniformdecl)
+
 		inputdecl   = self.makeDecl(finder.inputs)
+		if inputdecl: parts.append(inputdecl)
+		
 		outputdecl  = self.makeDecl(finder.outputs)
+		if outputdecl: parts.append(outputdecl)
 
-		header = "%s\n%s\n%s\n" % (uniformdecl, inputdecl, outputdecl)
+		header = "\n".join(parts)
 
+		# Generate local declarations
 		localdecl = self.makeLocalDecl(finder.locals)
 
-		return "%s\n\n%s\n%s %s(%s)\n{\n%s\n%s}\n" % (version, header, self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.params]), localdecl, self(node.body))
+		return "%s\n%s %s(%s)\n{\n%s\n%s}\n" % (header, self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.params]), localdecl, self(node.body))

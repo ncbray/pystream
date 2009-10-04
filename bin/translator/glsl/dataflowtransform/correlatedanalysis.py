@@ -261,7 +261,7 @@ class GenericOpFunction(TypeDispatcher):
 				assert name in self.g.heapModifies, name
 				self.copy(name, node)
 
-			# evaluate this spesific op
+			# evaluate this specific op
 			self(self.op)
 
 		# Note that if the predicate cannot be true, the results are undefined.
@@ -295,8 +295,8 @@ class GenericOpFunction(TypeDispatcher):
 		allocates = result[self.allocatePosition]
 		analysis.opAllocates[g] = allocates
 
-		# Build existance mask for allocated objects.
-		# HACK This seems a little combersome, as it traverses the tree multiple times.
+		# Build existence mask for allocated objects.
+		# HACK This seems a little cumbersome, as it traverses the tree multiple times.
 		flatAllocates = analysis.set.flatten(allocates)
 		for key in flatAllocates:
 			leaf = analysis.set.leaf((key,))
@@ -331,7 +331,7 @@ class DataflowIOAnalysis(TypeDispatcher):
 		self.opfunc = GenericOpFunction(self.set)
 
 		# (node, index) -> slot unique?
-		# (object unique is nessisary but not sufficient)
+		# (object unique is necessary but not sufficient)
 		self.slotUnique = {}
 
 		# (obj, index) -> unique?

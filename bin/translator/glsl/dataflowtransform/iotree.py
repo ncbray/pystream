@@ -1,20 +1,38 @@
 from .. import intrinsics
 
 class IOTreeObj(object):
-	def __init__(self, path, parent=None):
+	def __init__(self, path, treetype, parent=None):
 		self.parent   = parent
 		self.path     = path
+		self.treetype = treetype
 		self.objMasks = {}
 		self.fields   = {}
 
+		self.builtin  = None
+
 	def getField(self, field):
 		if not field in self.fields:
-			slot = IOTreeObj(self.path + (field,), self)
+			slot = IOTreeObj(self.path + (field,), self.treetype, self)
 			self.fields[field] = slot
 		else:
 			slot = self.fields[field]
 		return slot
+
+	def match(self, matcher):
+		if isinstance(matcher, dict):
+			for field, child in self.fields.iteritems():
+				key = field.type, field.name
 				
+				if key in matcher:
+					child.match(matcher[key])
+		else:
+			self.builtin = matcher
+			
+			print self.path
+			print self.treetype
+			print matcher
+			print
+	
 def handleObj(dioa, obj, lut, exist, mask, tobj):
 	# Does this field actually exist?
 	if mask is dioa.bool.false: return
@@ -59,6 +77,13 @@ def printNode(tobj):
 	for field, next in tobj.fields.iteritems():
 		printNode(next)
 
+def dump(name, tobj):
+	print
+	print name
+	print tobj.treetype		
+	printNode(tobj)
+	print
+		
 # Used for getting the context object.
 def getSingleObject(dioa, lut, lcl):
 	node = lut[lcl]
@@ -67,20 +92,16 @@ def getSingleObject(dioa, lut, lcl):
 	assert len(flat) == 1
 	return flat.pop()
 
-def evaluateContextObject(dioa, lut, exist, obj):
-	tobj = IOTreeObj(('context',))
+def evaluateContextObject(dioa, lut, exist, obj, treetype):
+	tobj = IOTreeObj(('context',), treetype)
 	mask = dioa.bool.true
 	handleObj(dioa, obj, lut, exist, mask, tobj)
 
-	if True:
-		print
-		print 'context'
-		printNode(tobj)
-		print	
-	
+	if True: dump('context', tobj)
+
 	return tobj
 
-def evaluateLocal(dioa, lut, exist, lcl):
+def evaluateLocal(dioa, lut, exist, lcl, treetype):
 	if lcl is None: return None
 		
 	node = lut[lcl]
@@ -88,14 +109,10 @@ def evaluateLocal(dioa, lut, exist, lcl):
 	# The correlated tree
 	ctree = dioa.getValue(node, 0)
 
-	tobj = IOTreeObj((lcl,))
+	tobj = IOTreeObj((lcl,), treetype)
 
 	handleCTree(dioa, ctree, lut, exist, dioa.bool.true, tobj)
 	
-	if True:
-		print
-		print lcl
-		printNode(tobj)
-		print
+	if True: dump(lcl, tobj)
 	
 	return tobj

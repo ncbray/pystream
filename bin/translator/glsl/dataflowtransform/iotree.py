@@ -1,14 +1,15 @@
 from .. import intrinsics
 
 class IOTreeObj(object):
-	def __init__(self, path):
+	def __init__(self, path, parent=None):
+		self.parent   = parent
 		self.path     = path
 		self.objMasks = {}
 		self.fields   = {}
 
 	def getField(self, field):
 		if not field in self.fields:
-			slot = IOTreeObj(self.path + (field,))
+			slot = IOTreeObj(self.path + (field,), self)
 			self.fields[field] = slot
 		else:
 			slot = self.fields[field]
@@ -17,6 +18,10 @@ class IOTreeObj(object):
 def handleObj(dioa, obj, lut, mask, tobj):
 	# Does this field actually exist?
 	if mask is dioa.bool.false: return
+	
+	# Accumulate the mask
+	oldmask = tobj.objMasks.get(obj, dioa.bool.false)
+	tobj.objMasks[obj] = dioa.bool.or_(oldmask, mask)
 	
 	# Recurse into each of the object's fields
 	fieldLUT = obj[0].slots
@@ -42,11 +47,7 @@ def handleCTree(dioa, ctree, lut, mask, tobj):
 		objleaf = dioa.set.leaf((obj,))
 		omask = dioa.bool.in_(objleaf, ctree)
 		omask = dioa.bool.and_(mask, omask)
-		
-		# Accumulate the mask
-		oldmask = tobj.objMasks.get(obj, dioa.bool.false)
-		tobj.objMasks[obj] = dioa.bool.or_(oldmask, omask)
-		
+				
 		# Recurse
 		handleObj(dioa, obj, lut, omask, tobj)
 
@@ -57,11 +58,30 @@ def printNode(tobj):
 	for field, next in tobj.fields.iteritems():
 		printNode(next)
 
-def evaluateLocal(dioa, lcl):
+# Used for getting the context object.
+def getSingleObject(dioa, lut, lcl):
+	node = lut[lcl]
+	ctree = dioa.getValue(node, 0)
+	flat  = dioa.set.flatten(ctree)
+	assert len(flat) == 1
+	return flat.pop()
+
+def evaluateContextObject(dioa, lut, obj):
+	tobj = IOTreeObj(('context',))
+	mask = dioa.bool.true
+	handleObj(dioa, obj, lut, mask, tobj)
+
+	if True:
+		print
+		print 'context'
+		printNode(tobj)
+		print	
+	
+	return tobj
+
+def evaluateLocal(dioa, lut, lcl):
 	if lcl is None: return None
 		
-	dataflow = dioa.dataflow
-	lut = dataflow.entry.modifies
 	node = lut[lcl]
 	
 	# The correlated tree

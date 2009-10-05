@@ -575,7 +575,7 @@ class DataflowIOAnalysis(TypeDispatcher):
 			out.endl()
 
 			with out.scope('body'):
-				for key, mask in self.objectExistanceMask .iteritems():
+				for key, mask in self.objectExistanceMask.iteritems():
 					with out.scope('p'):
 						obj, index = key
 

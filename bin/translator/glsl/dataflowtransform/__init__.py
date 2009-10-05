@@ -15,7 +15,21 @@ def evaluateCode(compiler, code):
 	with compiler.console.scope('analyze'):
 		dioa = translator.glsl.dataflowtransform.correlatedanalysis.evaluateDataflow(compiler, dataflow)
 
-		trees = [iotree.evaluateLocal(dioa, p) for p in code.codeparameters.params]
+		# Find the inputs / uniforms
+		# param 0  -> uniforms
+		# param 1  -> context object
+		# param 2+ -> inputs
+		params = code.codeparameters.params		
+		lut      = dataflow.entry.modifies
+		contextObj = iotree.getSingleObject(dioa, lut, params[1])
+
+		uniforms = iotree.evaluateLocal(dioa, lut, params[0])
+		cin      = iotree.evaluateContextObject(dioa, lut, contextObj)
+		inputs   = [iotree.evaluateLocal(dioa, lut, p) for p in params[2:]]
+
+		# Find the outputs
+		lut  = dataflow.exit.reads
+		cout = iotree.evaluateContextObject(dioa, lut, contextObj)
 
 		# Reconstruct the CFG from the dataflow graph
 		cfg = dataflowsynthesis.process(compiler, dataflow, code.codeName(), dump=True)

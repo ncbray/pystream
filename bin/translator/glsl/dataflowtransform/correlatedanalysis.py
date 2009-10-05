@@ -484,6 +484,15 @@ class DataflowIOAnalysis(TypeDispatcher):
 			for op in self.order:
 				self(op)
 
+	def opMask(self, op):
+		if hasattr(op, 'predicate'):
+			p = op.predicate
+			mask = self.bool.maybeTrue(self.getValue(p, 0))
+		else:
+			mask = self.bool.true
+		
+		return mask
+
 	def dumpMasked(self, out, values, mask):
 		values = self.set.simplify(mask, values, self.set.empty)
 		out.write(values)
@@ -539,13 +548,11 @@ class DataflowIOAnalysis(TypeDispatcher):
 					out.write(op)
 					out.endl()
 
-					if hasattr(op, 'predicate'):
-						p = op.predicate
-						mask = self.bool.maybeTrue(self.getValue(p, 0))
+					mask = self.opMask(op)
+
+					if mask is not self.bool.true:
 						with out.scope('p'):
 							out.write(mask)
-					else:
-						mask = self.bool.true
 
 					if self.opReads[op] is not self.set.empty:
 						self.dumpTitle(out, 'Read')

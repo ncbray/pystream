@@ -15,13 +15,14 @@ class IOTreeObj(object):
 			slot = self.fields[field]
 		return slot
 				
-def handleObj(dioa, obj, lut, mask, tobj):
+def handleObj(dioa, obj, lut, exist, mask, tobj):
 	# Does this field actually exist?
 	if mask is dioa.bool.false: return
 	
 	# Accumulate the mask
 	oldmask = tobj.objMasks.get(obj, dioa.bool.false)
-	tobj.objMasks[obj] = dioa.bool.or_(oldmask, mask)
+	objmask = dioa.bool.or_(oldmask, mask)
+	tobj.objMasks[obj] = dioa.set.simplify(exist, objmask, dioa.set.empty)
 	
 	# Recurse into each of the object's fields
 	fieldLUT = obj[0].slots
@@ -36,9 +37,9 @@ def handleObj(dioa, obj, lut, mask, tobj):
 		
 		# Handle the contents of the field.
 		ctree = dioa.getValue(lut[field], index)
-		handleCTree(dioa, ctree, lut, mask, tobj.getField(name))
+		handleCTree(dioa, ctree, lut, exist, mask, tobj.getField(name))
 
-def handleCTree(dioa, ctree, lut, mask, tobj):
+def handleCTree(dioa, ctree, lut, exist, mask, tobj):
 	ctree = dioa.set.simplify(mask, ctree, dioa.set.empty)
 	flat  = dioa.set.flatten(ctree)
 	
@@ -49,7 +50,7 @@ def handleCTree(dioa, ctree, lut, mask, tobj):
 		omask = dioa.bool.and_(mask, omask)
 				
 		# Recurse
-		handleObj(dioa, obj, lut, omask, tobj)
+		handleObj(dioa, obj, lut, exist, omask, tobj)
 
 def printNode(tobj):
 	print tobj.path
@@ -66,10 +67,10 @@ def getSingleObject(dioa, lut, lcl):
 	assert len(flat) == 1
 	return flat.pop()
 
-def evaluateContextObject(dioa, lut, obj):
+def evaluateContextObject(dioa, lut, exist, obj):
 	tobj = IOTreeObj(('context',))
 	mask = dioa.bool.true
-	handleObj(dioa, obj, lut, mask, tobj)
+	handleObj(dioa, obj, lut, exist, mask, tobj)
 
 	if True:
 		print
@@ -79,7 +80,7 @@ def evaluateContextObject(dioa, lut, obj):
 	
 	return tobj
 
-def evaluateLocal(dioa, lut, lcl):
+def evaluateLocal(dioa, lut, exist, lcl):
 	if lcl is None: return None
 		
 	node = lut[lcl]
@@ -89,7 +90,7 @@ def evaluateLocal(dioa, lut, lcl):
 
 	tobj = IOTreeObj((lcl,))
 
-	handleCTree(dioa, ctree, lut, dioa.bool.true, tobj)
+	handleCTree(dioa, ctree, lut, exist, dioa.bool.true, tobj)
 	
 	if True:
 		print

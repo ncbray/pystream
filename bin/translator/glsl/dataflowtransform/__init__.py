@@ -21,15 +21,18 @@ def evaluateCode(compiler, code):
 		# param 2+ -> inputs
 		params = code.codeparameters.params		
 		lut      = dataflow.entry.modifies
+		exist    = dioa.opMask(dataflow.entry)
 		contextObj = iotree.getSingleObject(dioa, lut, params[1])
 
-		uniforms = iotree.evaluateLocal(dioa, lut, params[0])
-		cin      = iotree.evaluateContextObject(dioa, lut, contextObj)
-		inputs   = [iotree.evaluateLocal(dioa, lut, p) for p in params[2:]]
+		uniforms = iotree.evaluateLocal(dioa, lut, exist, params[0])
+		cin      = iotree.evaluateContextObject(dioa, lut, exist, contextObj)
+		inputs   = [iotree.evaluateLocal(dioa, lut, exist, p) for p in params[2:]]
 
 		# Find the outputs
 		lut  = dataflow.exit.reads
-		cout = iotree.evaluateContextObject(dioa, lut, contextObj)
+		exist = dioa.opMask(dataflow.exit)
+
+		cout = iotree.evaluateContextObject(dioa, lut, exist, contextObj)
 
 		# Reconstruct the CFG from the dataflow graph
 		cfg = dataflowsynthesis.process(compiler, dataflow, code.codeName(), dump=True)

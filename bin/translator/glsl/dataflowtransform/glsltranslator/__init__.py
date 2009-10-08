@@ -315,7 +315,6 @@ class GLSLTranslator(TypeDispatcher):
 
 	@dispatch(graph.Gate)
 	def visitGate(self, node):
-		
 		srcSlot = (node.read.canonical(), 0)
 		lcl  = self.localNodeRef(srcSlot[0])				
 		src = SlotRef(lcl, self.slotStruct(srcSlot))	

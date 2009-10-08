@@ -11,6 +11,7 @@ import analysis.dataflowIR.ordering
 from analysis.storegraph import storegraph
 
 from . import imagebuilder
+from . import flattendataflow
 
 # For dumping
 from util.xmloutput import XMLOutput
@@ -605,5 +606,7 @@ def evaluateDataflow(compiler, dataflow):
 	# precisely as possible.
 	dioa = DataflowIOAnalysis(compiler, dataflow, order)
 	dioa.process()
+
+	flattendataflow.evaluateDataflow(compiler, dataflow, order, dioa)
 
 	return dioa

@@ -115,6 +115,8 @@ class CanonicalObjects(object):
 		self.codeContext = util.canonical.CanonicalCache(CodeContext)
 		self.cache       = xcollections.weakcache()
 
+		self.index = 0
+
 	def localName(self, code, lcl, context):
 		return self.cache[LocalSlotName(code, lcl, context)]
 
@@ -138,3 +140,9 @@ class CanonicalObjects(object):
 
 	def contextType(self, sig, obj, op):
 		return self.cache[extendedtypes.ContextObjectType(sig, obj, op)]
+
+	def indexedType(self, obj, index=None):
+		if index is None:
+			index = self.index
+			self.index += 1
+		return self.cache[extendedtypes.IndexedObjectType(obj, index)] 

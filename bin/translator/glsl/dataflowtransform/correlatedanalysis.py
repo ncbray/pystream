@@ -607,6 +607,8 @@ def evaluateDataflow(compiler, dataflow):
 	dioa = DataflowIOAnalysis(compiler, dataflow, order)
 	dioa.process()
 
-	flattendataflow.evaluateDataflow(compiler, dataflow, order, dioa)
+	# HACK store on dioa
+	# TODO do not return dioa, just the dataflow
+	dioa.flat = flattendataflow.evaluateDataflow(compiler, dataflow, order, dioa)
 
 	return dioa

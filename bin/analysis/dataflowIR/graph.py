@@ -100,8 +100,11 @@ class FlowSensitiveSlotNode(SlotNode):
 				split.addModify(dup)
 				self.use = split
 
+			# Use is a split
+
 			# Redirect to the output of the split.
 			dup = self.duplicate().addUse(op)
+			assert self.use.isSplit()
 			self.use.addModify(dup)
 
 			#self.use.sanityCheck()
@@ -336,7 +339,7 @@ class Entry(OpNode):
 		self.modifies = {}
 
 	def addEntry(self, name, slot):
-		assert name not in self.modifies
+		assert name not in self.modifies, name
 		slot = slot.addDefn(self)
 		self.modifies[name] = slot
 		#self.sanityCheck()
@@ -390,23 +393,20 @@ class Gate(OpNode):
 		self.read = None
 		self.modify = None
 
-	def isSplit(self):
-		return True
-
 	def isPredicateOp(self):
 		return self.read.isPredicate()
 
 	def addRead(self, slot):
 		assert self.read is None
 		slot = slot.addUse(self)
+		assert self.read is None
 		self.read = slot
-		#self.sanityCheck()
 
 	def addModify(self, slot):
 		assert self.modify is None
 		slot = slot.addDefn(self)
-		self.modify = slot
-		#self.sanityCheck()
+		assert self.modify is None
+		self.modify = slot	
 
 	def replaceUse(self, original, replacement):
 		if self.predicate is original:
@@ -414,12 +414,10 @@ class Gate(OpNode):
 		else:
 			assert self.read is original
 			self.read = replacement
-		#self.sanityCheck()
 
 	def replaceDefn(self, original, replacement):
 		assert self.modify is original
 		self.modify = replacement
-		#self.sanityCheck()
 
 	def __repr__(self):
 		return "gate(%r, %r)" % (self.read, self.predicate)

@@ -68,3 +68,4 @@ def evaluateCode(compiler, code):
 	with compiler.console.scope('dump'):
 		dioa.debugDump(code.codeName())
 		analysis.dataflowIR.dump.evaluateDataflow(dataflow, 'summaries\dataflow', code.codeName())
+		analysis.dataflowIR.dump.evaluateDataflow(dioa.flat, 'summaries\dataflow', code.codeName()+'-flat')

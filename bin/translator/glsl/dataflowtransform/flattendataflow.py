@@ -42,7 +42,19 @@ class DataflowFlattener(TypeDispatcher):
 
 	def iterIndexes(self, node):
 		return range(self.dioa.numValues(node))
-		
+	
+	def connect(self, name, src, dst, index):
+		assert isinstance(src, graph.FieldNode), src
+		assert isinstance(dst, graph.FieldNode), dst
+
+		srcName, srcNode = self(src, index, name)
+		dstName, dstNode = self(dst, index, name)
+	
+		# Modify the cache
+		self.nodes[(dst, index)] = srcNode
+	
+		dstNode.canonical().redirect(srcNode)
+	
 	@dispatch(type(None))
 	def visitNone(self, node, index, name=None):
 		if name is not None:
@@ -83,6 +95,7 @@ class DataflowFlattener(TypeDispatcher):
 		key = (node, index)		
 		
 		if key not in self.nodes:
+			assert name is not None
 			newfieldslot = self.replacementFieldSlot(name, index)
 			pred = self(node.canonicalpredicate, 0)
 			result = graph.FieldNode(node.hyperblock, pred, newfieldslot)
@@ -117,7 +130,7 @@ class DataflowFlattener(TypeDispatcher):
 		node = node.canonical()
 		key = (node, index)		
 		
-		if node not in self.nodes:
+		if key not in self.nodes:
 			result = graph.ExistingNode(node.name, node.ref)
 			self.nodes[key] = result
 		else:
@@ -208,6 +221,10 @@ class DataflowFlattener(TypeDispatcher):
 
 		result.setPredicate(pred)
 
+		trace = True
+
+		if trace: print "!!!!", g.op
+
 		for p in g.predicates:
 			result.predicates.append(self(p, 0).addDefn(result))
 
@@ -217,21 +234,48 @@ class DataflowFlattener(TypeDispatcher):
 		for node in g.localModifies:
 			result.addLocalModify(None, self(node, 0))
 
+		reads    = self.dioa.set.flatten(self.dioa.opReads[g])
+		modifies = self.dioa.set.flatten(self.dioa.opModifies[g])
+
+		print "READ  ", reads
+		print "MODIFY", modifies
+
 		for name, node in g.heapReads.iteritems():
+			node = node.canonical()
 			for index in self.iterIndexes(node):
-				newname, newnode = self(node, index, name)
-				result.addRead(newname, newnode)
+				if (node, index) in reads:
+				
+					newname, newnode = self(node, index, name)
+					
+					result.addRead(newname, newnode)
+				else:
+					print "kill read", node, index
 
 		for name, node in g.heapPsedoReads.iteritems():
+			node = node.canonical()
+			modnode = g.heapModifies[name].canonical()
 			for index in self.iterIndexes(node):
-				newname, newnode = self(node, index, name)
-				result.addPsedoRead(newname, newnode)
+				if (modnode, index) in modifies:
+					newname, newnode = self(node, index, name)
+					
+					result.addPsedoRead(newname, newnode)
+				else:
+					self.connect(name, node, modnode, index)
+					# TODO byass
+					print "bypass", node, index
 
 		for name, node in g.heapModifies.iteritems():
+			node = node.canonical()
 			for index in self.iterIndexes(node):
-				newname, newnode = self(node, index, name)
-				result.addModify(newname, newnode)
+				if (node, index) in modifies:				
+					newname, newnode = self(node, index, name)
+					
+					result.addModify(newname, newnode)
+				else:
+					print "kill mod", node, index
 
+
+		if trace: print
 
 	def process(self):
 		epn, ep = self(self.dataflow.entryPredicate, 0, '*')

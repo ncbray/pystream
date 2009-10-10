@@ -107,13 +107,27 @@ class FlowSensitiveSlotNode(SlotNode):
 			assert self.use.isSplit()
 			self.use.addModify(dup)
 
-			#self.use.sanityCheck()
-
 			return dup
 
 	def removeUse(self, op):
 		assert self.use is op
 		self.use = None
+
+	def redirect(self, other):
+		other = other.canonical()
+		
+		if self.use is not None and self.use.isSplit():
+			# Reach past the split
+			# Copy, just in case
+			nodes = tuple(self.use.modifies)
+		else:
+			nodes = (self,)
+
+		for node in nodes:
+			if node.use:
+				node.use.replaceUse(node, other.addUse(node.use))
+				node.use = None
+
 
 	def forward(self):
 		if self.use is not None:

@@ -97,7 +97,7 @@ def evaluateContextObject(dioa, lut, exist, obj, treetype):
 	mask = dioa.bool.true
 	handleObj(dioa, obj, lut, exist, mask, tobj)
 
-	if True: dump('context', tobj)
+	if False: dump('context', tobj)
 
 	return tobj
 
@@ -113,6 +113,6 @@ def evaluateLocal(dioa, lut, exist, lcl, treetype):
 
 	handleCTree(dioa, ctree, lut, exist, dioa.bool.true, tobj)
 	
-	if True: dump(lcl, tobj)
+	if False: dump(lcl, tobj)
 	
 	return tobj

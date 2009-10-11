@@ -226,7 +226,9 @@ class DataflowFlattener(TypeDispatcher):
 		if trace: print "!!!!", g.op
 
 		for p in g.predicates:
-			result.predicates.append(self(p, 0).addDefn(result))
+			newp = self(p, 0)
+			newp.source = result
+			result.predicates.append(newp.addDefn(result))
 
 		for name, node in g.localReads.iteritems():
 			result.addLocalRead(name, self(node, 0))

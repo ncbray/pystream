@@ -152,10 +152,22 @@ class GenericOpFunction(TypeDispatcher):
 	@dispatch(ast.DirectCall)
 	def handleDirectCall(self, node):
 		# HACK currently, these will only be primitive operations, so fake it.
-		# Also relies on primitive types being immutable.
 
-
-
+		# Read all fields from all input objects
+		for name, index in self.inputlut.iterkeys():
+			if isinstance(name, ast.Local):
+				# It's an argument, check all possible objects
+				values = self.get(name, index)
+				for obj, index in values:
+					# Check all possible fields
+					for slot in obj.slots.itervalues():
+						# If it's an input, read it
+						key = (slot, index)
+						if key in self.inputlut:
+							self.get(slot, index)
+					
+			
+		# Write all fields on output objects
 		for name, index in self.outputlut.iterkeys():
 			if isinstance(name, ast.Local):
 				values = frozenset([(ref, self.fresh(ref)) for ref in name.annotation.references.merged])
@@ -168,8 +180,8 @@ class GenericOpFunction(TypeDispatcher):
 				else:
 					values = ()
 
-			for ref, index in values:
-				self.logAllocate(ref, index)
+			for ref, rindex in values:
+				self.logAllocate(ref, rindex)
 
 	@dispatch(ast.Allocate)
 	def handleAllocate(self, node):

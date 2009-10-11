@@ -242,11 +242,9 @@ class DataflowFlattener(TypeDispatcher):
 
 		for name, node in g.heapReads.iteritems():
 			node = node.canonical()
-			for index in self.iterIndexes(node):
+			for index in self.iterIndexes(node):				
 				if (node, index) in reads:
-				
 					newname, newnode = self(node, index, name)
-					
 					result.addRead(newname, newnode)
 				else:
 					print "kill read", node, index
@@ -257,7 +255,6 @@ class DataflowFlattener(TypeDispatcher):
 			for index in self.iterIndexes(node):
 				if (modnode, index) in modifies:
 					newname, newnode = self(node, index, name)
-					
 					result.addPsedoRead(newname, newnode)
 				else:
 					self.connect(name, node, modnode, index)

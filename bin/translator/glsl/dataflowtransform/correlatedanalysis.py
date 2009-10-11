@@ -98,11 +98,11 @@ class GenericOpFunction(TypeDispatcher):
 
 	def logRead(self, node, index):
 		if node.isField():
-			self.results[self.readPosition]   |= set([(node, index)])
+			self.results[self.readPosition]   |= set([(node.canonical(), index)])
 
 	def logModify(self, node, index):
 		if node.isField():
-			self.results[self.modifyPosition] |= set([(node, index)])
+			self.results[self.modifyPosition] |= set([(node.canonical(), index)])
 
 	def logAllocate(self, obj, index):
 		self.results[self.allocatePosition] |= set([(obj, index)])

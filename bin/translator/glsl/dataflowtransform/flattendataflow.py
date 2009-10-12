@@ -68,11 +68,9 @@ class DataflowFlattener(TypeDispatcher):
 		key = (node, index)
 		
 		if key not in self.nodes:
-			pred = self(node.canonicalpredicate, 0)
-			
 			print "SOURCE", node.source
 			
-			result = graph.PredicateNode(node.hyperblock, pred, None, node.name)
+			result = graph.PredicateNode(node.hyperblock, None, node.name)
 			self.nodes[key] = result
 			
 			
@@ -97,8 +95,7 @@ class DataflowFlattener(TypeDispatcher):
 		if key not in self.nodes:
 			assert name is not None
 			newfieldslot = self.replacementFieldSlot(name, index)
-			pred = self(node.canonicalpredicate, 0)
-			result = graph.FieldNode(node.hyperblock, pred, newfieldslot)
+			result = graph.FieldNode(node.hyperblock, newfieldslot)
 			self.nodes[key] = result
 		else:
 			result = self.nodes[key]
@@ -114,8 +111,7 @@ class DataflowFlattener(TypeDispatcher):
 		key = (node, index)		
 		
 		if key not in self.nodes:
-			pred = self(node.canonicalpredicate, 0)
-			result = graph.LocalNode(node.hyperblock, pred, node.names)
+			result = graph.LocalNode(node.hyperblock, node.names)
 			self.nodes[key] = result
 		else:
 			result = self.nodes[key]
@@ -159,10 +155,10 @@ class DataflowFlattener(TypeDispatcher):
 				result.addEntry(newname, newnode)
 				
 	@dispatch(graph.Exit)
-	def processExit(self, node):
-		pred = self(node.canonicalpredicate, 0)
+	def processExit(self, node):		
+		result = graph.Exit(node.hyperblock)
 		
-		result = graph.Exit(node.hyperblock, pred)
+		pred = self(node.predicate, 0)
 		result.setPredicate(pred)
 			
 		for name, childnode in node.reads.iteritems():
@@ -179,9 +175,9 @@ class DataflowFlattener(TypeDispatcher):
 
 	@dispatch(graph.Gate)
 	def processGate(self, node):
-		pred = self(node.canonicalpredicate, 0)
+		pred = self(node.predicate, 0)
 		for index in self.iterIndexes(node.read):
-			result = graph.Gate(node.hyperblock, pred)
+			result = graph.Gate(node.hyperblock)
 
 			result.setPredicate(pred)
 
@@ -216,9 +212,9 @@ class DataflowFlattener(TypeDispatcher):
 
 	@dispatch(graph.GenericOp)
 	def processGenericOp(self, g):
-		pred = self(g.canonicalpredicate, 0)
-		result = graph.GenericOp(g.hyperblock, pred, g.op)
+		result = graph.GenericOp(g.hyperblock, g.op)
 
+		pred = self(g.predicate, 0)
 		result.setPredicate(pred)
 
 		trace = True

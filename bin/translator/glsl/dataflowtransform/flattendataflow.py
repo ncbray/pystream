@@ -42,6 +42,9 @@ class DataflowFlattener(TypeDispatcher):
 
 	def iterIndexes(self, node):
 		return range(self.dioa.numValues(node))
+
+	def iterFieldIndexes(self, name):
+		return range(self.dioa.getCount(name.object))
 	
 	def connect(self, name, src, dst, index):
 		assert isinstance(src, graph.FieldNode), src
@@ -238,7 +241,7 @@ class DataflowFlattener(TypeDispatcher):
 
 		for name, node in g.heapReads.iteritems():
 			node = node.canonical()
-			for index in self.iterIndexes(node):				
+			for index in self.iterFieldIndexes(name):				
 				if (node, index) in reads:
 					newname, newnode = self(node, index, name)
 					result.addRead(newname, newnode)
@@ -248,7 +251,7 @@ class DataflowFlattener(TypeDispatcher):
 		for name, node in g.heapPsedoReads.iteritems():
 			node = node.canonical()
 			modnode = g.heapModifies[name].canonical()
-			for index in self.iterIndexes(node):
+			for index in self.iterFieldIndexes(name):
 				if (modnode, index) in modifies:
 					newname, newnode = self(node, index, name)
 					result.addPsedoRead(newname, newnode)
@@ -259,7 +262,7 @@ class DataflowFlattener(TypeDispatcher):
 
 		for name, node in g.heapModifies.iteritems():
 			node = node.canonical()
-			for index in self.iterIndexes(node):
+			for index in self.iterFieldIndexes(name):
 				if (node, index) in modifies:				
 					newname, newnode = self(node, index, name)
 					

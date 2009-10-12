@@ -188,14 +188,13 @@ class LocalNode(FlowSensitiveSlotNode):
 
 
 class PredicateNode(FlowSensitiveSlotNode):
-	__slots__ = 'source', 'name'
-	def __init__(self, hyperblock, source, name):
+	__slots__ = 'name'
+	def __init__(self, hyperblock, name):
 		FlowSensitiveSlotNode.__init__(self, hyperblock)
-		self.source = source
 		self.name = name
 
 	def duplicate(self):
-		node = PredicateNode(self.hyperblock, self.source, self.name)
+		node = PredicateNode(self.hyperblock, self.name)
 		return node
 
 	def __repr__(self):
@@ -204,6 +203,9 @@ class PredicateNode(FlowSensitiveSlotNode):
 	def isPredicate(self):
 		return True
 
+	@property
+	def source(self):
+		return self.canonical().defn
 
 class ExistingNode(SlotNode):
 	__slots__ = 'name', 'ref', 'uses'
@@ -718,7 +720,7 @@ class DataflowGraph(object):
 		self.existing = {}
 		self.null     = NullNode()
 
-		self.entryPredicate = PredicateNode(hyperblock, None, repr(hyperblock))
+		self.entryPredicate = PredicateNode(hyperblock, repr(hyperblock))
 		self.entry.addEntry('*', self.entryPredicate)
 
 	def getExisting(self, node):

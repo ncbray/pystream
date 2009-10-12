@@ -171,7 +171,6 @@ class CodeToDataflow(TypeDispatcher):
 			hyperblock = self.newHyperblock()
 			pairs = [(state.predicate, state.predicate) for state in states]
 			predicate = gatedMerge(hyperblock, pairs)
-			predicate.source = predicate.defn
 			predicate.name = repr(hyperblock)
 
 			state = DeferedMerge(hyperblock, predicate, states)
@@ -316,7 +315,7 @@ class CodeToDataflow(TypeDispatcher):
 		self.localRead(g, node.conditional)
 
 		for i in range(len(node.cases)):
-			p = graph.PredicateNode(self.hyperblock(), g, i)
+			p = graph.PredicateNode(self.hyperblock(), i)
 			g.predicates.append(p.addDefn(g))
 		branches = self.branch(g.predicates)
 		exits = []

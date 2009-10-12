@@ -70,9 +70,8 @@ class DataflowFlattener(TypeDispatcher):
 		if key not in self.nodes:
 			print "SOURCE", node.source
 			
-			result = graph.PredicateNode(node.hyperblock, None, node.name)
+			result = graph.PredicateNode(node.hyperblock, node.name)
 			self.nodes[key] = result
-			
 			
 			print node
 			print result
@@ -223,7 +222,6 @@ class DataflowFlattener(TypeDispatcher):
 
 		for p in g.predicates:
 			newp = self(p, 0)
-			newp.source = result
 			result.predicates.append(newp.addDefn(result))
 
 		for name, node in g.localReads.iteritems():

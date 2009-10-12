@@ -439,6 +439,9 @@ class DataflowIOAnalysis(TypeDispatcher):
 
 			return count
 
+	def objectIsPreexisting(self, obj, index):
+		return (obj, index) in self.objectPreexisting
+
 	def maskSetValue(self, node, index, mask):
 		value  = self.getValue(node, index)
 		masked = self.set.ite(mask, value, self.set.empty)
@@ -603,7 +606,7 @@ class DataflowIOAnalysis(TypeDispatcher):
 						out.write(' - ')
 						out.write(index)
 						out.tag('br')
-						out.write('preexisting' if key in self.objectPreexisting else 'allocated')
+						out.write('preexisting' if self.objectIsPreexisting(obj, index) else 'allocated')
 						out.tag('br')
 						out.write(mask)
 

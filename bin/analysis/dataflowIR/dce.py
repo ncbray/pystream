@@ -36,7 +36,12 @@ class LivenessKiller(TypeDispatcher):
 
 	@dispatch(graph.Exit)
 	def handleExit(self, node):
-		pass
+		# A field that exists at the output may be dead for a number of reasons.
+		# For example, if the field simply bridges the entry to the exit, it will be dead.
+		reads = {}
+		for name, prev in node.reads.iteritems():
+			if not self.dead(prev): reads[name] = prev
+		node.reads = reads
 
 	@dispatch(graph.Split)
 	def handleSplit(self, node):
@@ -108,8 +113,15 @@ class LivenessSearcher(TypeDispatcher):
 
 		while self.queue:
 			current = self.queue.pop()
-			for prev in current.reverse():
-				self.mark(prev)
+			if current.isOp() and current.isExit():
+				for prev in current.reverse():
+					if prev.isField() and prev.defn.isEntry():
+						pass # The field is simply passed through.
+					else:
+						self.mark(prev)
+			else:
+				for prev in current.reverse():
+					self.mark(prev)
 
 		return self.live
 

@@ -190,7 +190,7 @@ class PoolAnalysis(TypeDispatcher):
 
 		for c in const:
 			poolinfo.constants.add(c)
-			poolinfo.accumulateType(c, c in self.analysis.objectPreexisting)
+			poolinfo.accumulateType(c, self.analysis.objectIsPreexisting(*c))
 
 		for subgroup in (intrinsic, user):
 			for obj in subgroup:
@@ -347,7 +347,7 @@ class PoolAnalysis(TypeDispatcher):
 			else:
 				info.objects.add(obj)
 
-			info.accumulateType(obj, obj in self.analysis.objectPreexisting)
+			info.accumulateType(obj, self.analysis.objectIsPreexisting(*obj))
 		else:
 			info = self.info[obj]
 			

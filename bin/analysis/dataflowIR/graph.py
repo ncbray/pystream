@@ -9,6 +9,7 @@ class Hyperblock(object):
 	def __repr__(self):
 		return "hyperblock(%s)" % str(self.name)
 
+
 class DataflowNode(object):
 	__slots__ = 'hyperblock'
 
@@ -19,6 +20,12 @@ class DataflowNode(object):
 	@property
 	def canonicalpredicate(self):
 		raise NotImplementedError, type(self)
+
+	def isOp(self):
+		return False
+
+	def isSlot(self):
+		return False
 
 
 class SlotNode(DataflowNode):
@@ -59,6 +66,12 @@ class SlotNode(DataflowNode):
 
 	def definingOp(self):
 		return None
+
+	def isEntryNode(self):
+		return False
+
+	def isSlot(self):
+		return True
 
 
 class FlowSensitiveSlotNode(SlotNode):
@@ -162,6 +175,9 @@ class FlowSensitiveSlotNode(SlotNode):
 		else:
 			return self.defn
 
+	def isEntryNode(self):
+		return self.canonical().defn.isEntry()
+
 
 class LocalNode(FlowSensitiveSlotNode):
 	__slots__ = 'names'
@@ -264,7 +280,7 @@ class NullNode(SlotNode):
 		pass
 
 	def addDefn(self, op):
-		assert isinstance(op, Entry), op
+		assert op.isEntry(), op
 		assert self.defn is None
 		self.defn = op
 		return self
@@ -338,9 +354,18 @@ class OpNode(DataflowNode):
 	def isPredicateOp(self):
 		return False
 
+	def isEntry(self):
+		return False
+
+	def isExit(self):
+		return False
+
 	@property
 	def canonicalpredicate(self):
 		return None
+
+	def isOp(self):
+		return True
 
 
 class PredicatedOpNode(OpNode):
@@ -392,6 +417,9 @@ class Entry(OpNode):
 		for slot in self.modifies.itervalues():
 			assert slot.isDefn(self)
 
+	def isEntry(self):
+		return True
+
 
 class Exit(PredicatedOpNode):
 	__slots__ = 'reads'
@@ -418,6 +446,10 @@ class Exit(PredicatedOpNode):
 	def sanityCheck(self):
 		for slot in self.reads.itervalues():
 			assert slot.isUse(self)
+
+	def isExit(self):
+		return True
+
 
 class Gate(PredicatedOpNode):
 	__slots__ = 'read', 'modify'

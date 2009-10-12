@@ -1,6 +1,7 @@
 from util.typedispatch import *
 from language.python import ast
 from analysis.dataflowIR import graph
+from analysis.dataflowIR import dce
 
 class DataflowFlattener(TypeDispatcher):
 	def __init__(self, compiler, dataflow, order, dioa):
@@ -232,6 +233,15 @@ class DataflowFlattener(TypeDispatcher):
 			for index in self.iterFieldIndexes(name):
 				if (modnode, index) in modifies:
 					newname, newnode = self(node, index, name)
+					
+					# HACK a psedo read for field on a unique, allocated object can be eliminated if it resolves to the entry.
+					if newnode.isEntryNode():
+						obj = node.name.object
+						unique = self.dioa.isUniqueObject(obj, index)
+						allocated = not self.dioa.objectIsPreexisting(obj, index)
+						if unique and allocated:
+							newnode = self.dout.null
+					
 					result.addPsedoRead(newname, newnode)
 				else:
 					self.connect(name, node, modnode, index)
@@ -264,4 +274,6 @@ class DataflowFlattener(TypeDispatcher):
 # Flattening also ads annotations
 def evaluateDataflow(compiler, dataflow, order, dioa):
 	flattener = DataflowFlattener(compiler, dataflow, order, dioa)
-	return flattener.process()
+	dataflow = flattener.process()
+	dce.evaluateDataflow(dataflow)
+	return dataflow

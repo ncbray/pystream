@@ -132,6 +132,7 @@ class CodeToDataflow(TypeDispatcher):
 
 		self.code = code
 		self.dataflow = graph.DataflowGraph(hyperblock)
+		self.dataflow.initPredicate()
 
 		self.entryState = DeferedEntryPoint(hyperblock, self.dataflow.entryPredicate, self.code, self.dataflow)
 		self.current    = State(hyperblock, self.dataflow.entryPredicate, self.entryState)

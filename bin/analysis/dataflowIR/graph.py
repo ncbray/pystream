@@ -719,8 +719,12 @@ class DataflowGraph(object):
 		self.exit     = None # Defer creation, as we don't know the hyperblock.
 		self.existing = {}
 		self.null     = NullNode()
+		
+		self.entryPredicate = None
 
-		self.entryPredicate = PredicateNode(hyperblock, repr(hyperblock))
+	# Separated from __init__ method, as transformation passes may want to do this manually.
+	def initPredicate(self):
+		self.entryPredicate = PredicateNode(self.entry.hyperblock, repr(self.entry.hyperblock))
 		self.entry.addEntry('*', self.entryPredicate)
 
 	def getExisting(self, node):

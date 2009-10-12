@@ -1,5 +1,6 @@
 from .. import intrinsics
 
+
 class IOTreeObj(object):
 	def __init__(self, path, treetype, parent=None):
 		self.parent   = parent
@@ -27,11 +28,7 @@ class IOTreeObj(object):
 					child.match(matcher[key])
 		else:
 			self.builtin = matcher
-			
-			print self.path
-			print self.treetype
-			print matcher
-			print
+
 	
 def handleObj(dioa, obj, lut, exist, mask, tobj):
 	# Does this field actually exist?
@@ -57,6 +54,7 @@ def handleObj(dioa, obj, lut, exist, mask, tobj):
 		ctree = dioa.getValue(lut[field], index)
 		handleCTree(dioa, ctree, lut, exist, mask, tobj.getField(name))
 
+
 def handleCTree(dioa, ctree, lut, exist, mask, tobj):
 	ctree = dioa.set.simplify(mask, ctree, dioa.set.empty)
 	flat  = dioa.set.flatten(ctree)
@@ -70,6 +68,7 @@ def handleCTree(dioa, ctree, lut, exist, mask, tobj):
 		# Recurse
 		handleObj(dioa, obj, lut, exist, omask, tobj)
 
+
 def printNode(tobj):
 	print tobj.path
 	print tobj.objMasks
@@ -77,13 +76,15 @@ def printNode(tobj):
 	for field, next in tobj.fields.iteritems():
 		printNode(next)
 
+
 def dump(name, tobj):
 	print
 	print name
 	print tobj.treetype		
 	printNode(tobj)
 	print
-		
+
+
 # Used for getting the context object.
 def getSingleObject(dioa, lut, lcl):
 	node = lut[lcl]
@@ -91,6 +92,7 @@ def getSingleObject(dioa, lut, lcl):
 	flat  = dioa.set.flatten(ctree)
 	assert len(flat) == 1
 	return flat.pop()
+
 
 def evaluateContextObject(dioa, lut, exist, obj, treetype):
 	tobj = IOTreeObj(('context',), treetype)
@@ -100,6 +102,7 @@ def evaluateContextObject(dioa, lut, exist, obj, treetype):
 	if False: dump('context', tobj)
 
 	return tobj
+
 
 def evaluateLocal(dioa, lut, exist, lcl, treetype):
 	if lcl is None: return None

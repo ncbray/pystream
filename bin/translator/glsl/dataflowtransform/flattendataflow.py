@@ -71,15 +71,8 @@ class DataflowFlattener(TypeDispatcher):
 		key = (node, index)
 		
 		if key not in self.nodes:
-			print "SOURCE", node.source
-			
 			result = graph.PredicateNode(node.hyperblock, node.name)
 			self.nodes[key] = result
-			
-			print node
-			print result
-			print
-			
 		else:
 			result = self.nodes[key]
 		
@@ -125,14 +118,15 @@ class DataflowFlattener(TypeDispatcher):
 
 	@dispatch(graph.ExistingNode)
 	def visitExistingNode(self, node, index, name=None):
-		node = node.canonical()
-		key = (node, index)		
+		node  = node.canonical()
+		key   = node.name
+		cache = self.dout.existing
 		
-		if key not in self.nodes:
+		if key not in cache:
 			result = graph.ExistingNode(node.name, node.ref)
-			self.nodes[key] = result
+			cache[key] = result
 		else:
-			result = self.nodes[key]
+			result = cache[key]
 				
 		if name is not None:
 			return name, result
@@ -182,18 +176,8 @@ class DataflowFlattener(TypeDispatcher):
 			result = graph.Gate(node.hyperblock)
 
 			result.setPredicate(pred)
-
-			read = self(node.read, index)
-			result.addRead(read)
-
-
-			modify = self(node.modify, index)
-			result.addModify(modify)
-						
-			print index
-			print node
-			print result
-			print
+			result.addRead(self(node.read, index))
+			result.addModify(self(node.modify, index))
 
 	@dispatch(graph.Merge)
 	def processMerge(self, node):
@@ -201,16 +185,9 @@ class DataflowFlattener(TypeDispatcher):
 			result = graph.Merge(node.hyperblock) 
 			
 			for read in node.reads:
-				read = self(read, index)
-				result.addRead(read)
+				result.addRead(self(read, index))
 			
-			modify = self(node.modify, index)
-			result.addModify(modify)
-			
-			print index
-			print node
-			print result
-			print
+			result.addModify(self(node.modify, index))
 
 	@dispatch(graph.GenericOp)
 	def processGenericOp(self, g):
@@ -219,7 +196,7 @@ class DataflowFlattener(TypeDispatcher):
 		pred = self(g.predicate, 0)
 		result.setPredicate(pred)
 
-		trace = True
+		trace = False
 
 		if trace: print "!!!!", g.op
 
@@ -236,8 +213,9 @@ class DataflowFlattener(TypeDispatcher):
 		reads    = self.dioa.set.flatten(self.dioa.opReads[g])
 		modifies = self.dioa.set.flatten(self.dioa.opModifies[g])
 
-		print "READ  ", reads
-		print "MODIFY", modifies
+		if trace: 
+			print "READ  ", reads
+			print "MODIFY", modifies
 
 		for name, node in g.heapReads.iteritems():
 			node = node.canonical()
@@ -246,7 +224,7 @@ class DataflowFlattener(TypeDispatcher):
 					newname, newnode = self(node, index, name)
 					result.addRead(newname, newnode)
 				else:
-					print "kill read", node, index
+					if trace: print "kill read", node, index
 
 		for name, node in g.heapPsedoReads.iteritems():
 			node = node.canonical()
@@ -257,18 +235,16 @@ class DataflowFlattener(TypeDispatcher):
 					result.addPsedoRead(newname, newnode)
 				else:
 					self.connect(name, node, modnode, index)
-					# TODO byass
-					print "bypass", node, index
+					if trace: print "bypass", node, index
 
 		for name, node in g.heapModifies.iteritems():
 			node = node.canonical()
 			for index in self.iterFieldIndexes(name):
 				if (node, index) in modifies:				
 					newname, newnode = self(node, index, name)
-					
 					result.addModify(newname, newnode)
 				else:
-					print "kill mod", node, index
+					if trace: print "kill mod", node, index
 
 
 		if trace: print
@@ -276,13 +252,6 @@ class DataflowFlattener(TypeDispatcher):
 	def process(self):
 		epn, ep = self(self.dataflow.entryPredicate, 0, '*')
 		self.dout.entryPredicate = ep
-		
-		# HACK, entryPredicate automatically added... remove it.
-		self.dout.entry.modifies = {}
-
-		
-		# TODO existing
-		# TODO null
 		
 		for op in self.order:
 			self(op)

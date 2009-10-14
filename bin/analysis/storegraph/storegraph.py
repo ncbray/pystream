@@ -166,7 +166,7 @@ class RegionNode(MergableNode):
 
 
 class ObjectNode(MergableNode):
-	__slots__ = 'region', 'xtype', 'slots', 'leaks'
+	__slots__ = 'region', 'xtype', 'slots', 'leaks', 'annotation'
 	def __init__(self, region, xtype):
 		MergableNode.__init__(self)
 

@@ -11,11 +11,12 @@ class Hyperblock(object):
 
 
 class DataflowNode(object):
-	__slots__ = 'hyperblock'
+	__slots__ = 'hyperblock', '_annotation'
 
 	def __init__(self, hyperblock):
 		assert hyperblock is None or isinstance(hyperblock, Hyperblock), type(hyperblock)
 		self.hyperblock = hyperblock
+		self._annotation = None
 
 	@property
 	def canonicalpredicate(self):
@@ -27,6 +28,13 @@ class DataflowNode(object):
 	def isSlot(self):
 		return False
 
+	def getAnnotation(self):
+		return self._annotation
+	
+	def setAnnotation(self, value):
+		self._annotation = value
+
+	annotation = property(getAnnotation, setAnnotation)
 
 class SlotNode(DataflowNode):
 	__slots__ = ()
@@ -178,6 +186,13 @@ class FlowSensitiveSlotNode(SlotNode):
 	def isEntryNode(self):
 		return self.canonical().defn.isEntry()
 
+	def getAnnotation(self):
+		return self.canonical()._annotation
+	
+	def setAnnotation(self, value):
+		self.canonical()._annotation = value
+
+	annotation = property(getAnnotation, setAnnotation)
 
 class LocalNode(FlowSensitiveSlotNode):
 	__slots__ = 'names'

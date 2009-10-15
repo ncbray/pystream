@@ -465,6 +465,21 @@ class Exit(PredicatedOpNode):
 	def isExit(self):
 		return True
 
+	def replaceUse(self, original, replacement):
+		assert original is not None
+		assert replacement is not None
+		
+		if self.predicate is original:
+			self.predicate = replacement
+		else:
+			name = None
+			for k, v in self.reads.iteritems():
+				if v is original:
+					name = k
+					break
+			assert name is not None, name
+			self.reads[name] = replacement
+
 
 class Gate(PredicatedOpNode):
 	__slots__ = 'read', 'modify'

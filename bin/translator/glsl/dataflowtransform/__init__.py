@@ -7,6 +7,7 @@ from analysis.cfgIR import dataflowsynthesis
 from . import glsltranslator
 
 from . import iotree
+from . import iotransform
 
 def makePathMatcher(compiler):
 	root = {}
@@ -49,6 +50,9 @@ def findIOTrees(compiler, dioa, code, dataflow):
 		# Find the builtin fields
 		cin.match(matcher)
 		cout.match(matcher)
+		
+		coutNode = dataflow.entry.modifies[params[1]]
+		iotransform.transformOutput(compiler, dioa, dataflow, cout, coutNode)
 		
 		return uniforms, inputs, cin, cout
 

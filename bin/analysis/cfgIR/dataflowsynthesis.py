@@ -36,6 +36,7 @@ class CFGResynthesis(object):
 			self.processed.add(current)
 
 			if shouldSchedule(current):
+				assert all([node is not None for node in current.reverse()]), (current, current.reverse())
 				self.depends[current] = frozenset(node.defn for node in current.reverse() if node.isMutable() and (node.hyperblock is hyperblock))
 				self.predicateCount[current.canonicalpredicate] += 1
 

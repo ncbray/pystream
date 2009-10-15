@@ -40,8 +40,7 @@ def handleObj(dioa, obj, lut, exist, mask, tobj):
 	tobj.objMasks[obj] = dioa.set.simplify(exist, objmask, dioa.set.empty)
 	
 	# Recurse into each of the object's fields
-	fieldLUT = obj[0].slots
-	index = obj[1]
+	fieldLUT = obj.slots
 
 	for name, field in fieldLUT.iteritems():
 		# Don't ad intrinsic fields to the tree
@@ -51,7 +50,7 @@ def handleObj(dioa, obj, lut, exist, mask, tobj):
 		if field not in lut: continue
 		
 		# Handle the contents of the field.
-		ctree = dioa.getValue(lut[field], index)
+		ctree = lut[field].annotation.values.correlated
 		handleCTree(dioa, ctree, lut, exist, mask, tobj.getField(name))
 
 
@@ -88,10 +87,9 @@ def dump(name, tobj):
 # Used for getting the context object.
 def getSingleObject(dioa, lut, lcl):
 	node = lut[lcl]
-	ctree = dioa.getValue(node, 0)
-	flat  = dioa.set.flatten(ctree)
+	flat  = node.annotation.values.flat
 	assert len(flat) == 1
-	return flat.pop()
+	return tuple(flat)[0]
 
 
 def evaluateContextObject(dioa, lut, exist, obj, treetype):
@@ -110,7 +108,7 @@ def evaluateLocal(dioa, lut, exist, lcl, treetype):
 	node = lut[lcl]
 	
 	# The correlated tree
-	ctree = dioa.getValue(node, 0)
+	ctree = node.annotation.values.correlated
 
 	tobj = IOTreeObj((lcl,), treetype)
 

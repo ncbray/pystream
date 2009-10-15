@@ -13,6 +13,11 @@ from language.python import ast
 
 leafTypes = (float, int, bool)
 
+
+def objectType(obj):
+	return obj.xtype.obj.pythonType()
+
+
 class Mergable(object):
 	def __init__(self):
 		self._forward = None
@@ -106,7 +111,7 @@ class PoolInfo(Mergable):
 		return self
 
 	def accumulateType(self, obj, pre):
-		self.types.add(obj[0].xtype.obj.pythonType())
+		self.types.add(objectType(obj))
 
 		if pre:
 			self.preexisting = True
@@ -182,7 +187,8 @@ class PoolAnalysis(TypeDispatcher):
 		self.nonfinal = set()
 
 	def _initSlotInfo(self, slot, slotinfo):
-		values = self.flatten(self.analysis.getValue(slot[0], slot[1]))
+		assert slot.annotation, slot
+		values = slot.annotation.values.flat
 
 		const, intrinsic, user = self.partitionObjects(values)
 
@@ -190,7 +196,7 @@ class PoolAnalysis(TypeDispatcher):
 
 		for c in const:
 			poolinfo.constants.add(c)
-			poolinfo.accumulateType(c, self.analysis.objectIsPreexisting(*c))
+			poolinfo.accumulateType(c, c.annotation.preexisting)
 
 		for subgroup in (intrinsic, user):
 			for obj in subgroup:
@@ -198,7 +204,8 @@ class PoolAnalysis(TypeDispatcher):
 				poolinfo = poolinfo.merge(objinfo)
 
 	def getSlotInfo(self, slot):
-		slot = (slot[0].canonical(), slot[1])
+		assert not isinstance(slot, tuple), slot
+		slot = slot.canonical()
 
 		if slot not in self.slot:
 			info = SlotInfo()
@@ -217,26 +224,26 @@ class PoolAnalysis(TypeDispatcher):
 			infos.add(info.forward())
 		return list(infos)
 
-	def flatten(self, tree):
-		return self.analysis.set.flatten(tree)
-
 	def handleSlots(self):
 		# Initialize all slots
-		for slot in self.analysis._values.iterkeys():
-			if not slot[0].isPredicate() and not slot[0].isExisting() and not slot[0].isNull():
-				self.getSlotInfo(slot)
+#		for slot in self.analysis._values.iterkeys():
+#			if not slot[0].isPredicate() and not slot[0].isExisting() and not slot[0].isNull():
+#				self.getSlotInfo(slot)
 
 		analysis.dataflowIR.traverse.dfs(self.dataflow, self)
 
 	def makeCanonical(self, slots):
-		return [(slot.canonical(), index) for slot, index in slots]
+		for slot in slots:
+			assert not isinstance(slot, tuple), slot
+			
+		return [slot.canonical() for slot in slots]
 
 	def unionSlots(self, *slots):
 		canonical = self.makeCanonical(slots)
 
 		info = SlotInfo()
 		for slot in canonical:
-			if not slot[0].isPredicate():
+			if not slot.isPredicate():
 				info = info.merge(self.getSlotInfo(slot))
 
 	def logContains(self, expr, slots):
@@ -252,19 +259,18 @@ class PoolAnalysis(TypeDispatcher):
 			if name in g.heapPsedoReads:
 				rnode = g.heapPsedoReads[name]
 				if not rnode.isNull():
-					for i in range(self.analysis.numValues(mnode)):
-						self.unionSlots((rnode, i), (mnode, i))
+						self.unionSlots(rnode, mnode)
 
 	def markNonfinal(self, obj):
 		self.nonfinal.add(obj)
 		self.getPoolInfo(obj).nonfinal = True
 
 	def findNonfinal(self, g):
-		alloc = self.flatten(self.analysis.opAllocates[g])
-		mod   = self.flatten(self.analysis.opModifies[g])
+		alloc = g.annotation.allocate.flat
+		mod   = g.annotation.modify.flat
 
-		for slot, index in mod:
-			obj = (slot.name.object, index)
+		for slot in mod:
+			obj = slot.name.object
 			nonfinal = obj not in alloc
 			if nonfinal:
 				self.markNonfinal(obj)
@@ -276,28 +282,28 @@ class PoolAnalysis(TypeDispatcher):
 	@dispatch(ast.Load)
 	def visitLoad(self, node, g):
 		if not intrinsics.isIntrinsicMemoryOp(node):
-			reads = self.flatten(self.analysis.opReads[g])
+			reads = g.annotation.read.flat
 
-			target = (g.localModifies[0], 0)
+			target = g.localModifies[0]
 			self.unionSlots(target, *reads)
 
-			expr = (g.localReads[node.expr], 0)
+			expr = g.localReads[node.expr]
 			self.logContains(expr, reads)
 
 
 	@dispatch(ast.Store)
 	def visitStore(self, node, g):
 		if not intrinsics.isIntrinsicMemoryOp(node):
-			modifies = self.flatten(self.analysis.opModifies[g])
+			modifies = g.annotation.modify.flat
 
 			read = g.localReads[node.value]
 			if read.isExisting():
 				self.unionSlots(*modifies)
 			else:
-				value = (read, 0)
+				value = read
 				self.unionSlots(value, *modifies)
 
-			expr = (g.localReads[node.expr], 0)
+			expr = g.localReads[node.expr]
 			self.logContains(expr, modifies)
 
 
@@ -307,7 +313,7 @@ class PoolAnalysis(TypeDispatcher):
 
 		read = g.localReads[node.conditional]
 		modifies = g.localModifies
-		self.unionSlots((read, 0), *[(m, 0) for m in modifies])
+		self.unionSlots(read, *modifies)
 
 
 	@dispatch(graph.Entry, graph.Exit,
@@ -327,15 +333,15 @@ class PoolAnalysis(TypeDispatcher):
 
 	@dispatch(graph.Gate)
 	def visitGate(self, node):
-		self.unionSlots((node.read, 0), (node.modify, 0))
+		self.unionSlots(node.read, node.modify)
 
 	@dispatch(graph.Merge)
 	def visitMerge(self, node):
-		self.unionSlots((node.modify, 0), *[(r, 0) for r in node.reads])
+		self.unionSlots(node.modify, *node.reads)
 
 
 	def getPoolInfo(self, obj):
-		t = self.objectType(obj)
+		t = objectType(obj)
 
 		assert t not in intrinsics.constantTypes, t
 
@@ -347,7 +353,8 @@ class PoolAnalysis(TypeDispatcher):
 			else:
 				info.objects.add(obj)
 
-			info.accumulateType(obj, self.analysis.objectIsPreexisting(*obj))
+			preexisting = obj.annotation.preexisting
+			info.accumulateType(obj, preexisting)
 		else:
 			info = self.info[obj]
 			
@@ -355,16 +362,13 @@ class PoolAnalysis(TypeDispatcher):
 		self.info[obj] = info
 		return info
 
-	def objectType(self, obj):
-		return obj[0].xtype.obj.pythonType()
-
 	def partitionObjects(self, group):
 		const     = []
 		intrinsic = []
 		user      = []
 
 		for obj in group:
-			t = self.objectType(obj)
+			t = objectType(obj)
 			if t in intrinsics.constantTypes:
 				const.append(obj)
 			elif t in intrinsics.intrinsicTypes:
@@ -398,8 +402,8 @@ class PoolAnalysis(TypeDispatcher):
 
 
 	def objectsInterfere(self, a, b):
-		maskA = self.analysis.objectExistanceMask[a]
-		maskB = self.analysis.objectExistanceMask[b]
+		maskA = a.annotation.mask
+		maskB = b.annotation.mask
 		intersect = self.analysis.bool.and_(maskA, maskB)
 		return intersect is not self.analysis.bool.false
 
@@ -442,7 +446,7 @@ class PoolAnalysis(TypeDispatcher):
 				nonunique = False
 
 				for obj in subgroup:
-					if self.analysis.isUniqueObject(*obj):
+					if obj.annotation.unique:
 						unique = True
 					else:
 						nonunique = True

@@ -31,7 +31,7 @@ class SlotStruct(object):
 		
 		for group in (objs.intrinsics, objs.constants):
 			for obj in group:
-				t = obj[0].xtype.obj.pythonType()
+				t = obj.xtype.obj.pythonType()
 				if intrinsicType is None:
 					intrinsicType = t
 				elif intrinsicType is not t:

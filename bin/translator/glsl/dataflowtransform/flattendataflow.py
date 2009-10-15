@@ -135,6 +135,7 @@ class DataflowFlattener(TypeDispatcher):
 		
 		if key not in cache:
 			result = graph.ExistingNode(node.name, node.ref)
+			self.translateSlotAnnotations((node, index), result)
 			cache[key] = result
 		else:
 			result = cache[key]

@@ -600,8 +600,10 @@ class DataflowIOAnalysis(TypeDispatcher):
 			with out.scope('body'):
 				for key, mask in self.objectExistanceMask.iteritems():
 					with out.scope('p'):
+						assert isinstance(key, tuple), key
+						
 						obj, index = key
-
+						
 						out.write(obj)
 						out.write(' - ')
 						out.write(index)

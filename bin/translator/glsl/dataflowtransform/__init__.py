@@ -1,5 +1,8 @@
 import analysis.dataflowIR.dump
 import analysis.dataflowIR.convert
+from analysis.dataflowIR.transform import loadelimination
+from analysis.dataflowIR.transform import dce
+
 import translator.glsl.dataflowtransform.correlatedanalysis
 
 from . import poolanalysis
@@ -53,6 +56,9 @@ def findIOTrees(compiler, dioa, code, dataflow):
 		
 		coutNode = dataflow.entry.modifies[params[1]]
 		iotransform.transformOutput(compiler, dioa, dataflow, cout, coutNode)
+		
+		loadelimination.evaluateDataflow(dataflow)
+		dce.evaluateDataflow(dataflow)
 		
 		return uniforms, inputs, cin, cout
 

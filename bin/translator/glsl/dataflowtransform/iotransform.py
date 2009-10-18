@@ -9,8 +9,9 @@ def makeCorrelatedAnnotation(dioa, data):
 def transformSubtree(compiler, dioa, dataflow, subtree, root):
 	for field, child in subtree.fields.iteritems():
 		expr = root.names[0]
-				
-		op = ast.Load(expr, field.type, ast.Existing(field.name))
+		
+		name = ast.Existing(field.name)
+		op = ast.Load(expr, field.type, name)
 		
 		hyperblock = dataflow.exit.hyperblock
 		
@@ -19,6 +20,7 @@ def transformSubtree(compiler, dioa, dataflow, subtree, root):
 		g.setPredicate(dataflow.exit.predicate)
 
 		g.addLocalRead(expr, root)
+		g.addLocalRead(name, dataflow.getExisting(name))
 		
 		values = dioa.set.empty
 		

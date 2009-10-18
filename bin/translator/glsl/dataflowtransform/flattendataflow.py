@@ -1,7 +1,7 @@
 from util.typedispatch import *
 from language.python import ast
 from analysis.dataflowIR import graph
-from analysis.dataflowIR import dce
+from analysis.dataflowIR.transform import dce
 from analysis.dataflowIR import annotations
 
 from analysis.fsdf import canonicaltree

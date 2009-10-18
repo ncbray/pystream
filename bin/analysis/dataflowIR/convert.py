@@ -4,7 +4,7 @@ from language.python import ast
 from analysis.dataflowIR import graph
 from analysis.storegraph import storegraph
 
-import analysis.dataflowIR.dce
+from analysis.dataflowIR.transform import dce
 
 class AbstractState(object):
 	def __init__(self, hyperblock, predicate):
@@ -384,5 +384,5 @@ class CodeToDataflow(TypeDispatcher):
 def evaluateCode(compiler, code):
 	ctd = CodeToDataflow(code)
 	dataflow = ctd.processCode()
-	analysis.dataflowIR.dce.evaluateDataflow(dataflow)
+	dce.evaluateDataflow(dataflow)
 	return dataflow

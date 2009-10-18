@@ -676,6 +676,12 @@ class GenericOp(PredicatedOpNode):
 	def isTypeSwitch(self):
 		return isinstance(self.op, ast.TypeSwitch)
 
+	def isLoad(self):
+		return isinstance(self.op, ast.Load)
+
+	def isStore(self):
+		return isinstance(self.op, ast.Store)
+
 	def replaceUse(self, original, replacement):
 		if isinstance(original, PredicateNode):
 			assert original is self.predicate

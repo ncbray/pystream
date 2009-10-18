@@ -2,6 +2,8 @@ from language.python import ast
 from analysis.dataflowIR import graph
 from analysis.dataflowIR import annotations
 
+from .. import intrinsics
+
 def makeCorrelatedAnnotation(dioa, data):
 	return annotations.CorrelatedAnnotation(dioa.set.flatten(data), data)
 
@@ -65,3 +67,16 @@ def transformSubtree(compiler, dioa, dataflow, subtree, root):
 
 def transformOutput(compiler, dioa, dataflow, contextOut, root):
 	transformSubtree(compiler, dioa, dataflow, contextOut, root)
+
+def killNonintrinsicIO(compiler, dataflow):
+	node = dataflow.exit
+
+	reads = {}
+	for name, slot in node.reads.iteritems():
+		if slot.isField():
+			if not intrinsics.isIntrinsicSlot(slot.name):
+				slot.removeUse(node)
+				continue
+		reads[name] = slot
+
+	node.reads = reads

@@ -64,8 +64,15 @@ components(vec.mat4, float, 16)
 components(int, int, 1)
 components(bool, bool, 1)
 
+def isIntrinsicObject(obj):
+	return obj.xtype.obj.pythonType() in intrinsicTypes
+
 def isIntrinsicField(field):
 	return field.type == 'Attribute' and field.name.pyobj in fields
+
+def isIntrinsicSlot(slot):
+	return isIntrinsicObject(slot.object) and isIntrinsicField(slot.slotName)
+
 
 def isIntrinsicMemoryOp(node):
 	return node.fieldtype == 'Attribute' and isinstance(node.name, ast.Existing) and node.name.object.pyobj in fields

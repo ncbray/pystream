@@ -48,14 +48,28 @@ def findIOTrees(compiler, dioa, code, dataflow):
 		lut   = dataflow.exit.reads
 		exist = dataflow.exit.annotation.mask
 
+		# Context object
 		cout = iotree.evaluateContextObject(dioa, lut, exist, contextObj, 'out')
+		
+		# Return values
+		returns = code.codeparameters.returnparams
+		assert len(returns) == 1, returns
+		rout = iotree.evaluateLocal(dioa, lut, exist, returns[0], 'out')
 
 		# Find the builtin fields
 		cin.match(matcher)
 		cout.match(matcher)
 		
+		# Tranform the context object
 		coutNode = dataflow.entry.modifies[params[1]]
 		iotransform.transformOutput(compiler, dioa, dataflow, cout, coutNode)
+		
+		# Transform the return value
+		routNode = dataflow.exit.reads[returns[0]]
+		iotransform.transformOutput(compiler, dioa, dataflow, rout, routNode)
+		
+		
+		iotransform.killNonintrinsicIO(compiler, dataflow)
 		
 		loadelimination.evaluateDataflow(dataflow)
 		dce.evaluateDataflow(dataflow)

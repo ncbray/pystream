@@ -1,4 +1,3 @@
-from translator.glsl import intrinsics
 from language.glsl import ast as glsl
 from . slotstruct import SlotStruct
 

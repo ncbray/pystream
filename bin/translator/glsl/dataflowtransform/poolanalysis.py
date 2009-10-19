@@ -1,6 +1,4 @@
 from util.typedispatch import *
-import PADS.UnionFind
-import collections
 import itertools
 from .. import intrinsics
 
@@ -424,7 +422,7 @@ class PoolAnalysis(TypeDispatcher):
 
 	def colorGroup(self, group):
 		interference = self.findInterference(group)
-		coloring, grouping, numColors = colorGraph(interference)
+		coloring, grouping, _numColors = colorGraph(interference)
 		return coloring, grouping
 
 	def postProcess(self):

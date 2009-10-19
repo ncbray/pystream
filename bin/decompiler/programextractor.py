@@ -4,10 +4,10 @@ import collections
 
 import language.python.program as program
 
-from . decompiler import decompile
+from . bytecodedecompiler import decompile
 from . errors import IrreducibleGraphException
 
-# Cached "getter" w/ processicng queue and "valid" flag?
+# Cached "getter" w/ processing queue and "valid" flag?
 
 import inspect
 
@@ -23,8 +23,6 @@ from util import xtypes
 
 from _pystream import cfuncptr
 
-
-import util
 
 class FieldNotFoundType(object):
 	pass
@@ -236,7 +234,7 @@ class Extractor(object):
 				attrName = self.getObject(util.uniqueSlotName(attr))
 				return ('Attribute', attrName)
 
-		assert name in d, "%r does not have attribute %r" % (obj, name)
+		assert False, "%r does not have attribute %r" % (obj, name)
 
 
 
@@ -362,7 +360,7 @@ class Extractor(object):
 				ptr = cfuncptr(pyobj)
 				self.registerPointer(ptr, obj)
 			except TypeError:
-				print "Cannot get pointer:", f
+				print "Cannot get pointer:", pyobj
 
 	def canProcess(self, obj):
 		return True

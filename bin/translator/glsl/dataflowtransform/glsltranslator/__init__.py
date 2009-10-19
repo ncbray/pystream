@@ -326,7 +326,7 @@ class GLSLTranslator(TypeDispatcher):
 
 	@dispatch(cfg.CFGTypeSwitch)
 	def visitCFGTypeSwitch(self, node):
-		op = node.switch.op
+		#op = node.switch.op
 		
 		cases = [self(case) for case in node.cases]
 

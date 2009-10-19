@@ -1,3 +1,5 @@
+#@PydevCodeAnalysisIgnore
+
 module('example')
 output('../temp')
 config(checkTypes=True)

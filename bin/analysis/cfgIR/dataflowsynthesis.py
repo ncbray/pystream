@@ -2,7 +2,7 @@ from util.typedispatch import *
 from util import xcollections
 from analysis.dataflowIR import graph
 
-from . cfg import *
+from . import cfg
 from . import dumpcfgir
 from . import structuralanalysis
 
@@ -18,7 +18,7 @@ class CFGResynthesis(object):
 
 		self.blocks = []
 
-	# Collect information about the dataflwo graph to guide the next pass.
+	# Collect information about the dataflow graph to guide the next pass.
 	def gatherInfo(self, nodes, hyperblock, entryPredicate):
 		self.hyperblock = hyperblock
 		self.entryPredicate = entryPredicate
@@ -53,12 +53,12 @@ class CFGResynthesis(object):
 
 		for block in self.blocks:
 			if source.canonicalpredicate and source.canonicalpredicate in block.predicates:
-				branch = CFGBranch(source)
+				branch = cfg.CFGBranch(source)
 				block.addNext(branch)
 
 				for sibling in source.predicates:
 					newkey = block.predicates.union((sibling.canonical(),))
-					newblock = CFGBlock(self.hyperblock, newkey)
+					newblock = cfg.CFGBlock(self.hyperblock, newkey)
 					newblocks.append(newblock)
 					branch.addNext(newblock)
 			else:
@@ -134,7 +134,7 @@ class CFGResynthesis(object):
 	# Place all ops into CFG blocks
 	def schedule(self):
 		key = frozenset((self.entryPredicate.canonical(),))
-		self.entryBlock = CFGBlock(self.hyperblock, key)
+		self.entryBlock = cfg.CFGBlock(self.hyperblock, key)
 		self.blocks.append(self.entryBlock)
 		self.activePredicates = set((self.entryPredicate,))
 

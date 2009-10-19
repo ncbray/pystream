@@ -1,5 +1,4 @@
 from util.typedispatch import *
-from language.python import ast
 from analysis.dataflowIR import graph
 from analysis.dataflowIR.transform import dce
 from analysis.dataflowIR import annotations
@@ -58,8 +57,8 @@ class DataflowFlattener(TypeDispatcher):
 		assert isinstance(src, graph.FieldNode), src
 		assert isinstance(dst, graph.FieldNode), dst
 
-		srcName, srcNode = self(src, index, name)
-		dstName, dstNode = self(dst, index, name)
+		_srcName, srcNode = self(src, index, name)
+		_dstName, dstNode = self(dst, index, name)
 	
 		# Modify the cache
 		self.nodes[(dst, index)] = srcNode
@@ -328,7 +327,7 @@ class DataflowFlattener(TypeDispatcher):
 		result.annotation = annotation
 									
 	def process(self):
-		epn, ep = self(self.dataflow.entryPredicate, 0, '*')
+		_epn, ep = self(self.dataflow.entryPredicate, 0, '*')
 		self.dout.entryPredicate = ep
 		
 		for op in self.order:

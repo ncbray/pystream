@@ -58,7 +58,7 @@ def paramName(p, noName=False):
 
 def codeShortName(code):
 	if isinstance(code, str):
-		name = func
+		name = code
 		args = []
 		vargs = None
 		kargs = None

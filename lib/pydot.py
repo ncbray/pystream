@@ -1,4 +1,5 @@
 # -*- coding: Latin-1 -*-
+#@PydevCodeAnalysisIgnore
 """Graphviz's dot language Python interface.
 
 This module provides with a full interface to create handle modify

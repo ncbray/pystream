@@ -1,3 +1,5 @@
+#@PydevCodeAnalysisIgnore
+
 module('lists')
 output('../temp')
 config(checkTypes=True)

@@ -515,7 +515,7 @@ def testprinttarget(cls):
 """
 	inputs = [[cStringIO.StringIO]]
 
-class TestPrintTargetDecompile(TestDecompiler):
+class TestPrintDecompile(TestDecompiler):
 	s = """
 def testprint():
 	print "Hello,", "world"

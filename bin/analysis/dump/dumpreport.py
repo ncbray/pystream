@@ -480,7 +480,7 @@ def makeHeapTree(liveHeap, heapContexts):
 						points[heap].add(ogroup)
 
 	util.graphalgorithim.dominator.makeSingleHead(points, head)
-	tree, idoms = util.graphalgorithim.dominator.dominatorTree(points, head)
+	tree, _idoms = util.graphalgorithim.dominator.dominatorTree(points, head)
 	return tree, head
 
 def dumpReport(name, compiler, derived, liveInvocations, liveHeap, heapContexts):

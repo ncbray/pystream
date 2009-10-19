@@ -228,8 +228,8 @@ class ClassBuilder(object):
 
 
 class astnode(type):
-	def __new__(mcls, name, bases, d):
-		return ClassBuilder(mcls, name, bases, d).build()
+	def __new__(self, name, bases, d):
+		return ClassBuilder(self, name, bases, d).build()
 
 class ASTNode(object):
 	__metaclass__ = astnode

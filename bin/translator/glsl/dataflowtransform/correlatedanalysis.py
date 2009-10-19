@@ -138,8 +138,8 @@ class GenericOpFunction(TypeDispatcher):
 	def copy(self, name, node):
 		for index in range(self.analysis.numValues(node)):
 			# Don't use get/set as it will log as a read/write?
-			inode, inputpos = self.inputlut[name, index]
-			onode, outpos, unique = self.outputlut[name, index]
+			_inode, inputpos = self.inputlut[name, index]
+			_onode, outpos, _unique = self.outputlut[name, index]
 			self.results[outpos] = self.args[inputpos]
 
 	def fresh(self, ref):
@@ -206,7 +206,7 @@ class GenericOpFunction(TypeDispatcher):
 		name      = self.get(node.name, 0)
 
 		result = set()
-		for (expr, ei), (name, ni) in itertools.product(expr, name):
+		for (expr, ei), (name, _ni) in itertools.product(expr, name):
 			slot = self.fieldSlot(expr, fieldtype, name)
 			result.update(self.get(slot, ei))
 
@@ -226,7 +226,7 @@ class GenericOpFunction(TypeDispatcher):
 		# it must be analyized as a weak update.
 		ambiguous = len(expr)*len(name) > 1
 
-		for (expr, ei), (name, ni) in itertools.product(expr, name):
+		for (expr, ei), (name, _ni) in itertools.product(expr, name):
 			slot = self.fieldSlot(expr, fieldtype, name)
 			self.set(slot, ei, value, weak=ambiguous)
 
@@ -235,7 +235,7 @@ class GenericOpFunction(TypeDispatcher):
 		# TODO could we inject the new correlation here, rather than later?  Make the cases a correlated input?
 
 		conditional = self.get(node.conditional, 0)
-		types = set([ref.xtype.obj.type for ref, ri in conditional])
+		types = set([ref.xtype.obj.type for ref, _ri in conditional])
 
 		for i, case in enumerate(node.cases):
 			casetypes = set([e.object for e in case.types])
@@ -262,7 +262,7 @@ class GenericOpFunction(TypeDispatcher):
 
 		# Init concrete outputs
 		empty = frozenset()
-		self.results = [empty for o in range(self.numOutputs)]
+		self.results = [empty for _o in range(self.numOutputs)]
 
 		# If predicate cannot be true, no point in evaluating?
 		if True in self.get('predicate', 0):
@@ -470,10 +470,8 @@ class DataflowIOAnalysis(TypeDispatcher):
 		# Bind null value
 		self.setValue(self.dataflow.null, 0, self.set.leaf(()))
 
-
-		storeGraph = self.compiler.storeGraph
 		# Bind existing values
-		for obj, e in self.dataflow.existing.iteritems():
+		for e in self.dataflow.existing.itervalues():
 			ref = e.ref
 			leaf = self.set.leaf(((ref, 0),))
 			self.setValue(e, 0, leaf)

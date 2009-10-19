@@ -1,3 +1,5 @@
+#@PydevCodeAnalysisIgnore
+
 from __future__ import absolute_import
 
 # TODO remove once type__call__ and method__call__ are made into a functions.

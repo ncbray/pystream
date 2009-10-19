@@ -1,5 +1,5 @@
 import util.canonical
-from language.python import program, ast
+from language.python import program
 from . import extendedtypes
 from util import xcollections
 
@@ -23,7 +23,6 @@ class LocalSlotName(BaseSlotName):
 	__slots__ = 'code', 'local', 'context'
 	def __init__(self, code, lcl, context):
 		assert code.isCode(), type(code)
-#		assert isinstance(lcl, ast.Local), type(lcl)
 #		assert context.isAnalysisContext(), type(context)
 
 		self.code    = code

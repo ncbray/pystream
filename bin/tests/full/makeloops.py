@@ -1,3 +1,5 @@
+#@PydevCodeAnalysisIgnore
+
 module('loops')
 output('../temp')
 config(checkTypes=True)

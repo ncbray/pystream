@@ -1,3 +1,5 @@
+#@PydevCodeAnalysisIgnore
+
 from vec import *
 
 class Shader(object):
@@ -25,8 +27,8 @@ class SimpleShader(Shader):
 #	Nodes may be conditional on other nodes.
 #	Sophisticated call handling?
 
-# Special glsl functions are inserted *durring* translation into glsl, not before.
-# Before that, vectors and matricies are treated as plain-old datatypes.
+# Special glsl functions are inserted *during* translation into glsl, not before.
+# Before that, vectors and matrices are treated as plain-old datatypes.
 
 # SimpleShader
 #	expose get/set project -> mat4
@@ -37,4 +39,4 @@ class SimpleShader(Shader):
 #	Lit
 #	Polymorphic materials
 #	Polymorphic lights
-#	Paralax occlusion mapping
+#	Parallax occlusion mapping

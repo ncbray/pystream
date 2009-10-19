@@ -60,7 +60,7 @@ def inlineAncestor(t, lut):
 				lut[k] = v
 
 class typedispatcher(type):
-	def __new__(mcls, name, bases, d):
+	def __new__(self, name, bases, d):
 		lut = {}
 		restore = {}
 
@@ -91,7 +91,7 @@ class typedispatcher(type):
 
 		d['__typeDispatchTable__'] = lut
 
-		return type.__new__(mcls, name, bases, d)
+		return type.__new__(self, name, bases, d)
 
 class TypeDispatcher(object):
 	__metaclass__    = typedispatcher

@@ -461,7 +461,7 @@ def evaluate(compiler):
 	with compiler.console.scope('fsdf'):
 
 		if checkRecursive(compiler):
-			console.output('recursive call detected, cannot analyze')
+			compiler.console.output('recursive call detected, cannot analyze')
 			return False
 
 		bdfn = BuildDataflowNetwork()

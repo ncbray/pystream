@@ -204,7 +204,7 @@ class TestCanonicalTree(unittest.TestCase):
 		self.assert_(result, c)
 
 
-class TestCanonicalSet(unittest.TestCase):
+class TestCanonicalSetTree(unittest.TestCase):
 	def setUp(self):
 		self.conditions  = canonicaltree.ConditionManager()
 		self.boolManager = canonicaltree.BoolManager(self.conditions)

@@ -1,7 +1,6 @@
 from util.typedispatch import *
 from language.python import ast
 
-import os.path
 import pydot
 import util.filesystem
 from asttools import astpprint

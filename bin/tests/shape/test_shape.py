@@ -2,6 +2,8 @@ from __future__ import absolute_import
 
 from tests.shape.shape_base import *
 
+import analysis.shape.transferfunctions
+
 from util.tvl import *
 
 class TestExpressions(TestConstraintBase):
@@ -182,8 +184,6 @@ class TestReferenceCounts(TestConstraintBase):
 		self.assertEqual(current, next)
 
 	def testDecrement(self):
-		current = None
-
 		slot = self.fielda
 
 		inc1 = self.refs(slot)

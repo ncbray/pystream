@@ -3,7 +3,7 @@ import analysis.dataflowIR.convert
 from analysis.dataflowIR.transform import loadelimination
 from analysis.dataflowIR.transform import dce
 
-import translator.glsl.dataflowtransform.correlatedanalysis
+from  translator.glsl.dataflowtransform import correlatedanalysis
 
 from . import poolanalysis
 from analysis.cfgIR import dataflowsynthesis
@@ -11,10 +11,11 @@ from . import glsltranslator
 
 from . import iotree
 from . import iotransform
+import analysis.dataflowIR.convert
 
 def makePathMatcher(compiler):
 	root = {}
-	for path, name, input, output in compiler.interface.glsl.attr:
+	for path, name, input, _output in compiler.interface.glsl.attr:
 		current = root
 
 		#path = reverse(path)		
@@ -81,7 +82,7 @@ def evaluateCode(compiler, code):
 		dataflow = analysis.dataflowIR.convert.evaluateCode(compiler, code)
 
 	with compiler.console.scope('analyze'):
-		dioa = translator.glsl.dataflowtransform.correlatedanalysis.evaluateDataflow(compiler, dataflow)
+		dioa = correlatedanalysis.evaluateDataflow(compiler, dataflow)
 		dataflow = dioa.flat
 
 		findIOTrees(compiler, dioa, code, dataflow)

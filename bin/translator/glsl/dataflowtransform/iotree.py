@@ -72,7 +72,7 @@ def printNode(tobj):
 	print tobj.path
 	print tobj.objMasks
 	
-	for field, next in tobj.fields.iteritems():
+	for next in tobj.fields.itervalues():
 		printNode(next)
 
 

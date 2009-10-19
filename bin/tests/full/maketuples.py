@@ -1,3 +1,5 @@
+#@PydevCodeAnalysisIgnore
+
 module('tuples')
 output('../temp')
 config(checkTypes=True)

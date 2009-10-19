@@ -96,7 +96,7 @@ class StoreGraph(MergableNode):
 		self = self.getForward()
 
 		if slotName not in self.slots:
-			assert slotName.isRoot(), slot
+			assert slotName.isRoot(), slotName
 			region = self.regionHint if regionHint is None else regionHint
 			root = SlotNode(None, slotName, region, self.setManager.empty())
 			self.slots[slotName] = root
@@ -190,7 +190,7 @@ class ObjectNode(MergableNode):
 				if fieldName in self.slots:
 					self.slots[fieldName] = self.slots[fieldName].merge(field)
 				else:
-					self.slots[fieldName] = obj
+					self.slots[fieldName] = field
 
 				self = self.getForward()
 

@@ -237,7 +237,7 @@ def evaluate(compiler):
 
 
 		for ep in compiler.interface.entryPoint:
-			rbsa.addEntryPoint(ep.code, ep.selfarg.getObject(extractor), [arg.getObject(compiler.extractor) for arg in ep.args])
+			rbsa.addEntryPoint(ep.code, ep.selfarg.getObject(compiler.extractor), [arg.getObject(compiler.extractor) for arg in ep.args])
 
 		rbsa.handleAllocations()
 

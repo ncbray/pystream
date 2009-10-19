@@ -138,7 +138,7 @@ class ForwardFlowTraverse(TypeDispatcher):
 			case = cases[0]
 			statements = []
 			if case.expr is not None:
-				statements.append(ast.Assign(conditional, [case.expr]))
+				statements.append(ast.Assign(node.conditional, [case.expr]))
 			statements.append(case.body)
 			return ast.Suite(statements)
 		elif changed:

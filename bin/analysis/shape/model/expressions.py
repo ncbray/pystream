@@ -145,15 +145,6 @@ class FieldExpr(Expression):
 		else:
 			return self.parent.stableValue(sys, slot, stableValues)
 
-	def substitute(self, sys, eOld, eNew):
-		if self == eOld:
-			return eNew
-		else:
-			exprNew = self.parent.substitute(sys, eOld, eNew)
-			if exprNew:
-				return sys.canonical.fieldExpr(exprNew, self.slot)
-			else:
-				return None
 
 	# Assumes eNew is a stableLocation.
 	def substitute(self, sys, eOld, eNew, unstableSlot=None, first=True):

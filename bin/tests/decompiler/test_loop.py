@@ -109,7 +109,7 @@ def forreturn(limit):
 
 	inputs = [[-10], [0], [1], [2], [9], [10], [100]]
 
-class TestForBreak(TestDecompiler):
+class TestForBreak1(TestDecompiler):
 	s = """
 def forbreak(limit):
 	for i in range(10):
@@ -138,7 +138,7 @@ def whilebreak(limit):
 	inputs = [[-20], [-1], [0], [1], [2], [3], [7], [11], [14], [21], [42]]
 
 
-class TestForBreak(TestDecompiler):
+class TestForBreak2(TestDecompiler):
 	s = """
 def f(limit):
 	if limit < 2:

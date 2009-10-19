@@ -1,3 +1,5 @@
+#@PydevCodeAnalysisIgnore
+
 module('linear')
 output('../temp')
 config(checkTypes=True)

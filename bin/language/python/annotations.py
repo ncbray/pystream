@@ -1,6 +1,5 @@
-import collections
 from asttools.annotation import *
-from asttools.origin import Origin, originString
+from asttools.origin import Origin
 
 def codeOrigin(code, line=None, col=None):
 	if line is None: line = code.co_firstlineno

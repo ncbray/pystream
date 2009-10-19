@@ -24,7 +24,7 @@ class ArgumentNormalizationAnalysis(TypeDispatcher):
 				self.applicable = False
 
 	@dispatch(ast.DirectCall)
-	def visitCall(self, node):
+	def visitDirectCall(self, node):
 		if self.applicable:
 			self(node.selfarg)
 			self(node.args)

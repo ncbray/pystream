@@ -102,16 +102,11 @@ class CFGBranch(CFGNode):
 		assert other is not None
 		self.next.append(other)
 
-	def replaceNext(self, current, replacement):
-		index = self.next.index(current)
-		self.next[current] = replacement
-
 	def iternext(self):
 		return self.next
 
 	def numOut(self):
 		return len(self.next)
-
 
 	def removeNext(self, node):
 		index = self.next.index(node)

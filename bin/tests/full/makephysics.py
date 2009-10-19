@@ -1,3 +1,5 @@
+#@PydevCodeAnalysisIgnore
+
 module('tests.full.physics')
 output('../temp')
 config(checkTypes=True)

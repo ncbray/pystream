@@ -1,3 +1,5 @@
+#@PydevCodeAnalysisIgnore
+
 from __future__ import absolute_import
 
 from  language.python.ast import *

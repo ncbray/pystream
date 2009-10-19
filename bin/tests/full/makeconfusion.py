@@ -1,3 +1,5 @@
+#@PydevCodeAnalysisIgnore
+
 module('confusion')
 output('../temp')
 config(checkTypes=True)

@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 from tests.shape.shape_base import *
+import analysis.shape.constraints
 
 class FirstExampleBase(TestConstraintBase):
 	def shapeSetUp(self):

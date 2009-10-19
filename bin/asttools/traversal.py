@@ -80,7 +80,6 @@ def allChildrenReversed(s, node):
 		# AST node
 		if node.__shared__:
 			# Shared nodes are not traversed
-			assert not clone, node
 			return node
 
 		# Unshared nodes a rewritten

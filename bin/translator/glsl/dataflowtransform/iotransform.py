@@ -57,12 +57,14 @@ def transformSubtree(compiler, dioa, dataflow, subtree, root):
 		values = makeCorrelatedAnnotation(dioa, values)
 		annotation = annotations.DataflowSlotAnnotation(values, True)
 		outputNode.annotation = annotation
-		
+
 		g.addLocalModify(output, outputNode)
 		
+
+		# Expose the local at the output.
 		dataflow.exit.addExit(output, outputNode)
 				
-		print field, child
+		#print field, child
 		transformSubtree(compiler, dioa, dataflow, child, outputNode)
 
 def transformOutput(compiler, dioa, dataflow, contextOut, root):
@@ -74,9 +76,17 @@ def killNonintrinsicIO(compiler, dataflow):
 	reads = {}
 	for name, slot in node.reads.iteritems():
 		if slot.isField():
+			# Kill non-intrinsic fields.
 			if not intrinsics.isIntrinsicSlot(slot.name):
 				slot.removeUse(node)
 				continue
+		elif slot.isLocal():
+			# Kill locals that do not contain intrinsic types.
+			intrinsicObj = any([intrinsics.isIntrinsicObject(obj) for obj in slot.annotation.values.flat])
+			if not intrinsicObj:
+				slot.removeUse(node)
+				continue
+			
 		reads[name] = slot
 
 	node.reads = reads

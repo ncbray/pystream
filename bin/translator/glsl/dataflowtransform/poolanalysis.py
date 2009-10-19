@@ -267,6 +267,7 @@ class PoolAnalysis(TypeDispatcher):
 		alloc = g.annotation.allocate.flat
 		mod   = g.annotation.modify.flat
 
+		# Find
 		for slot in mod:
 			obj = slot.name.object
 			nonfinal = obj not in alloc
@@ -426,6 +427,12 @@ class PoolAnalysis(TypeDispatcher):
 		return coloring, grouping
 
 	def postProcess(self):
+		# Annotate final objects
+		for obj in self.info.iterkeys():
+			if obj not in self.nonfinal:
+				obj.annotation = obj.annotation.rewrite(final = True)
+		
+		# Process pool information
 		for pool in self.infoList():
 			pool.uniqueCount    = 0
 			pool.nonuniqueCount = 0

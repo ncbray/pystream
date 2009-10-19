@@ -319,10 +319,11 @@ class DataflowFlattener(TypeDispatcher):
 	
 	def translateObjectAnnotations(self, obj, result):
 		preexisting = self.dioa.objectIsPreexisting(*obj)
-		unique = self.dioa.isUniqueObject(*obj)
-		mask = self.dioa.objectExistanceMask[obj]
+		unique      = self.dioa.isUniqueObject(*obj)
+		mask        = self.dioa.objectExistanceMask[obj]
+		final       = False
 		
-		annotation = annotations.DataflowObjectAnnotation(preexisting, unique, mask)
+		annotation = annotations.DataflowObjectAnnotation(preexisting, unique, mask, final)
 		
 		result.annotation = annotation
 									

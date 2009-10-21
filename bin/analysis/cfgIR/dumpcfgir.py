@@ -7,6 +7,9 @@ from . cfg import *
 from language.python import ast
 from asttools import astpprint
 
+from util.async import *
+
+
 class CFGIRStyle(TypeDispatcher):
 	branchColor = 'cyan'
 	mergeColor  = 'magenta'
@@ -168,7 +171,7 @@ class CFGIRDumper(TypeDispatcher):
 
 
 
-
+@async_limited(2)
 def dumpGraph(directory, name, format, g, prog='dot'):
 	s = g.create(prog=prog, format=format)
 	util.filesystem.writeBinaryData(directory, name, format, s)

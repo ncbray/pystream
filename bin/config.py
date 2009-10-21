@@ -1,6 +1,8 @@
 # Use a JIT?
 usePsyco = True
 
+debugOnFailiure = True
+
 # Create output directory relative to this config file.
 import os.path
 base, junk = os.path.split(__file__)

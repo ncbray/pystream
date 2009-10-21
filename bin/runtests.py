@@ -13,7 +13,7 @@ import config
 
 root = scriptsetup.scriptRoot(__file__)
 scriptsetup.libraryDirectory(root, '..', 'lib')
-if config.usePsyco: scriptsetup.initPsyco()
+if config.usePsyco and not config.debugOnFailiure: scriptsetup.initPsyco()
 
 
 # Get white and black lists for tests
@@ -25,5 +25,3 @@ testExclude = testConfigToFiles(getattr(config, 'testExclude', ()))
 
 import testspider
 testspider.runTests(root, testOnly, testExclude)
-
-

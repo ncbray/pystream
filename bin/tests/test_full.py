@@ -3,8 +3,10 @@ from __future__ import absolute_import
 import unittest
 import os.path
 
-
 from . fullcompiler import compileExample
+
+from util.debug import conditionalDebugOnFailiure
+import config
 
 
 example = False
@@ -17,7 +19,10 @@ physics   = True
 recursive = False
 pystone   = False
 
+
 class FullTestBase(unittest.TestCase):
+	
+	@conditionalDebugOnFailiure(config.debugOnFailiure)
 	def setUp(self):
 		# The makefile is relitive to this module.
 		path, filename = os.path.split(__file__)

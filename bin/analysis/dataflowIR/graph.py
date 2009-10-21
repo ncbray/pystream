@@ -688,12 +688,17 @@ class GenericOp(PredicatedOpNode):
 			self.predicate = replacement
 		elif isinstance(original, (LocalNode, ExistingNode)):
 			assert isinstance(replacement, (LocalNode, ExistingNode)), replacement
-			for name in original.names:
-				if name in self.localReads and original is self.localReads[name]:
-					self.localReads[name] = replacement
+			
+			# We can't simply check the game, as bizarre transforms may result in mis-named nodes.
+			for name, value in self.localReads.iteritems():
+				if value is original:
+					# Found it
 					break
 			else:
+				# Did not find
 				assert False, (original, self.localReads)
+
+			self.localReads[name] = replacement
 		else:
 
 			if original.name in self.heapReads:
@@ -795,11 +800,12 @@ class DataflowGraph(object):
 		self.entryPredicate = PredicateNode(self.entry.hyperblock, repr(self.entry.hyperblock))
 		self.entry.addEntry('*', self.entryPredicate)
 
-	def getExisting(self, node):
+	def getExisting(self, node, ref=None):
 		obj = node.object
 
 		if obj not in self.existing:
-			result = ExistingNode(obj, refFromExisting(node))
+			ref = ref or refFromExisting(node)
+			result = ExistingNode(obj, ref)
 			self.existing[obj] = result
 		else:
 			result = self.existing[obj]

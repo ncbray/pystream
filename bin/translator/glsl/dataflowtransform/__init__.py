@@ -61,7 +61,12 @@ def findIOTrees(compiler, dioa, code, dataflow):
 		cin.match(matcher)
 		cout.match(matcher)
 		
-		# Tranform the context object
+		# Transform the trees
+		# NOTE the output is done first, as it references a local which 
+		# will later be transformed / eliminated by the input transform.
+			
+		### OUTPUT ###
+		# Tranform the output context object
 		coutNode = dataflow.entry.modifies[params[1]]
 		iotransform.transformOutput(compiler, dioa, dataflow, cout, coutNode)
 		
@@ -69,6 +74,19 @@ def findIOTrees(compiler, dioa, code, dataflow):
 		routNode = dataflow.exit.reads[returns[0]]
 		iotransform.transformOutput(compiler, dioa, dataflow, rout, routNode)
 		
+		### INPUT ###
+		# Transform self
+		uniformsNode = dataflow.entry.modifies[params[0]]
+		iotransform.transformInput(compiler, dioa, dataflow, uniforms, uniformsNode)
+		
+		# Transform input context object
+		cinNode = dataflow.entry.modifies[params[1]]
+		iotransform.transformInput(compiler, dioa, dataflow, cin, cinNode)
+
+		for p, tree in zip(params[2:], inputs):
+			pNode = dataflow.entry.modifies[p]	
+			iotransform.transformInput(compiler, dioa, dataflow, tree, pNode)
+
 		
 		iotransform.killNonintrinsicIO(compiler, dataflow)
 		

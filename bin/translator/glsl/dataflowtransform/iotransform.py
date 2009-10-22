@@ -70,28 +70,32 @@ def transformInputSubtree(compiler, dioa, dataflow, subtree, root):
 	predicate  = dataflow.entryPredicate
 	objs = root.annotation.values.flat # HACK - what about correlation?
 
+	assert len(objs) > 0
+	obj = tuple(objs)[0]
+
 	# HACK temporarily ignore correlated objects.
 	if len(objs) > 1:
-		exprNode = 	createLocalNode(hyperblock, getName(subtree, root), root.annotation.values)
+		exprNode = createLocalNode(hyperblock, getName(subtree, root), root.annotation.values)
 		dataflow.entry.addEntry(exprNode.names[0], exprNode)
-		return exprNode
-	
-	assert len(objs) == 1
+	else:	
+		assert len(objs) == 1
+		if intrinsics.isIntrinsicObject(obj):
+			exprNode = createLocalNode(hyperblock, getName(subtree, root), root.annotation.values)
+			dataflow.entry.addEntry(exprNode.names[0], exprNode)
+		else:
+			exprNode = allocateObj(dioa, dataflow, subtree, root, obj)
 
-	obj = tuple(objs)[0]
-	
-	if intrinsics.isIntrinsicObject(obj):
-		exprNode = 	createLocalNode(hyperblock, getName(subtree, root), root.annotation.values)
-		dataflow.entry.addEntry(exprNode.names[0], exprNode)
-	else:
-		exprNode = allocateObj(dioa, dataflow, subtree, root, obj)
-
-	if root.isLocal():
-		root.canonical().redirect(exprNode)
+	lut = dataflow.entry.modifies
 
 	for field, child in subtree.fields.iteritems():
-		slot = obj.slots[field]
-		fieldNode = dataflow.entry.modifies[slot]
+		# Field the field nodes for the field name
+		fieldNodes = [lut[o.slots[field]] for o in objs if field in o.slots]
+		
+		fieldNode = fieldNodes[0] # HACK
+		
+		# HACK ignore correlated fields
+		#if fieldNode.annotation.values.correlated.tree(): continue
+		
 		valueNode = transformInputSubtree(compiler, dioa, dataflow, child, fieldNode)
 		name = ast.Existing(field.name)
 		op = ast.Store(exprNode.names[0], field.type, name, valueNode.names[0])
@@ -104,19 +108,15 @@ def transformInputSubtree(compiler, dioa, dataflow, subtree, root):
 		g.addLocalRead(valueNode.names[0], valueNode)
 
 
-		modifies = dioa.set.empty
+		for oldField in fieldNodes:
+			newField = oldField.duplicate()
+			newField.annotation = oldField.annotation
 		
-		slot = obj.knownField(field)
-		oldField = dataflow.entry.modifies[slot]
-
-		newField = oldField.duplicate()
-		newField.annotation = oldField.annotation
-	
-		g.addModify(slot, newField)
+			g.addModify(newField.name, newField)
+			
+			oldField.canonical().redirect(newField)
 		
-		oldField.canonical().redirect(newField)
-		
-		modifies = dioa.set.leaf((newField,))
+		modifies = dioa.set.leaf(fieldNodes)
 		
 		read     = makeCorrelatedAnnotation(dioa, dioa.set.empty)
 		modify   = makeCorrelatedAnnotation(dioa, modifies)
@@ -132,7 +132,10 @@ def transformInputSubtree(compiler, dioa, dataflow, subtree, root):
 	return exprNode
 
 def transformInput(compiler, dioa, dataflow, contextIn, root):
-	transformInputSubtree(compiler, dioa, dataflow, contextIn, root)
+	exprNode = transformInputSubtree(compiler, dioa, dataflow, contextIn, root)
+
+	# We create a new local, so replace it.
+	if root.isLocal(): root.canonical().redirect(exprNode)
 
 
 def transformOutputSubtree(compiler, dioa, dataflow, subtree, root):

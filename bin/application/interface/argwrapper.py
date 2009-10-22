@@ -24,7 +24,6 @@ class ExistingWrapper(ArgumentWrapper):
 
 class ReturnWrapper(ArgumentWrapper):
 	def __init__(self, ep):
-		assert isinstance(ep, EntryPoint), repr(ep)
 		self.ep = ep
 
 	def get(self, dataflow):

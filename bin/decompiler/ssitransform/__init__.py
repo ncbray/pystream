@@ -552,11 +552,7 @@ def ssiTransform(node):
 	if pff.hasExceptionHandling:
 		return node
 
-	if False:
-		nt = NewTransformer(pff.annotate)
-		node = nt.walk(node)
-	else:
-		ssit = SSITransformer(pff.annotate, pff.exceptRead, pff.hasExceptionHandling)
-		node = ssit.transform(node)
+	ssit = SSITransformer(pff.annotate, pff.exceptRead, pff.hasExceptionHandling)
+	node = ssit.transform(node)
 
 	return node

@@ -100,7 +100,7 @@ class Makefile(object):
 			self.executeFile()
 
 			if not self.interface:
-				console.output("No entry points, nothing to do.")
+				compiler.console.output("No entry points, nothing to do.")
 				return
 
 			assert self.outdir, "No output directory declared."

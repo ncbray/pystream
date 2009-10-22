@@ -2,22 +2,21 @@ from analysis.dataflowIR import graph
 
 from analysis.dataflowIR.traverse import dfs
 
+from .. import predicate
+
 def findLoadSrc(g):
 	for node in g.heapReads.itervalues():
 		defn = node.canonical().defn
 		return defn
 
-def attemptTransform(g):
+def attemptTransform(g, pg):
 	# Is the load unused or invalid?
 	if len(g.localModifies) != 1:
 		return False
 	
 	defn = findLoadSrc(g)
 
-	if isinstance(defn, graph.GenericOp) and defn.isStore():
-		if not g.canonicalpredicate is defn.canonicalpredicate:
-			return False
-		
+	if isinstance(defn, graph.GenericOp) and defn.isStore():		
 		# Make sure the load / store parameters are identical
 		# expr
 		if not g.localReads[g.op.expr].canonical() == defn.localReads[defn.op.expr].canonical(): 
@@ -30,6 +29,11 @@ def attemptTransform(g):
 		# field name
 		if not g.localReads[g.op.name].canonical() == defn.localReads[defn.op.name].canonical(): 
 			return False
+
+		# Make sure the store predicate dominates the load predicate
+		if not pg.dominates(defn.canonicalpredicate, g.canonicalpredicate):
+			return False
+
 
 		# Make sure the heap read / modify is identical
 		
@@ -50,7 +54,8 @@ def attemptTransform(g):
 
 	return False
 
-def evaluateDataflow(dataflow):
+
+def collectLoads(dataflow):
 	loads = set()
 	
 	def collect(node):
@@ -58,6 +63,14 @@ def evaluateDataflow(dataflow):
 			loads.add(node)
 	
 	dfs(dataflow, collect)
+	
+	return loads
+
+
+def evaluateDataflow(dataflow):
+	pg = predicate.buildPredicateGraph(dataflow)
+	
+	loads = collectLoads(dataflow)
 	
 	print "LOADS", len(loads)
 	
@@ -68,7 +81,7 @@ def evaluateDataflow(dataflow):
 	while changed:
 		changed = False
 		for load in loads:
-			if attemptTransform(load):
+			if attemptTransform(load, pg):
 				eliminated += 1
 				changed = True 
 	

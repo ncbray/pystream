@@ -1,7 +1,7 @@
 # Use a JIT?
 usePsyco = True
 
-debugOnFailiure = True
+debugOnFailiure = False
 
 # Create output directory relative to this config file.
 import os.path

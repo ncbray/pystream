@@ -30,7 +30,7 @@ class NodeStyle(TypeDispatcher):
 	predicateColor = 'red'
 	predicateLineColor = 'darkred'
 
-	compoundColor = 'white'
+	compoundColor = 'cyan'
 	compoundLineColor = 'black'
 
 	@dispatch(graph.Entry, graph.Exit)
@@ -97,6 +97,9 @@ class DataflowToDot(TypeDispatcher):
 
 		self.style = NodeStyle()
 
+		self.showSplits = False
+		self.showNull   = False
+
 	def isCompound(self, node):
 		return node.isSlot() and len(self.cluster[node.canonical()]) > 1
 
@@ -129,10 +132,15 @@ class DataflowToDot(TypeDispatcher):
 
 	def edge(self, src, dst, style='solid'):
 		if src.isSlot():
+			if not self.showSplits: src  = src.canonical()
 			slot = src
 		else:
+			if not self.showSplits: dst  = dst.canonical()
 			slot = dst
-		
+
+		if not self.showNull and slot.isNull(): return
+
+		# If this is not the canonical representative of a slot cluster, skip it
 		if not self.cluster.isCanonical(slot.canonical()):
 			return
 		
@@ -163,8 +171,8 @@ class DataflowToDot(TypeDispatcher):
 			return 'black'
 
 
-	@dispatch(graph.Merge, graph.Split)
-	def handleOpNode(self, node):
+	@dispatch(graph.Merge)
+	def handleMerge(self, node):
 		for reverse in node.reverse():
 			assert reverse.isUse(node)
 			self.edge(reverse, node)
@@ -172,6 +180,18 @@ class DataflowToDot(TypeDispatcher):
 		for forward in node.forward():
 			assert forward.isDefn(node)
 			self.edge(node, forward)
+			self.mark(forward)
+
+	@dispatch(graph.Split)
+	def handleSplit(self, node):
+		if self.showSplits:
+			for reverse in node.reverse():
+				assert reverse.isUse(node)
+				self.edge(reverse, node)
+	
+		for forward in node.forward():
+			assert forward.isDefn(node)
+			if self.showSplits: self.edge(node, forward)
 			self.mark(forward)
 
 	@dispatch(graph.Gate)

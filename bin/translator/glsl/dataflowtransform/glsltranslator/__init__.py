@@ -308,13 +308,18 @@ class GLSLTranslator(TypeDispatcher):
 		stmt = self(node.op, node)
 		return stmt
 
+	def getGateTarget(self, gate):
+		merge = gate.modify.use
+		assert merge.isMerge(), merge
+		return merge.modify
+
 	@dispatch(graph.Gate)
 	def visitGate(self, node):
 		srcSlot = node.read.canonical()
 		lcl  = self.localNodeRef(srcSlot)				
 		src = SlotRef(lcl, self.slotStruct(srcSlot))	
 
-		dstSlot = node.modify.canonical()
+		dstSlot = self.getGateTarget(node)
 		lcl  = self.localNodeRef(dstSlot)				
 		dst = SlotRef(lcl, self.slotStruct(dstSlot))	
 

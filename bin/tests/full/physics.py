@@ -156,12 +156,13 @@ class Shader(object):
 			trans = self.worldToCamera
 			lightPos = trans*self.lightPos
 
-			lightDir  = lightPos.xyz-pos.xyz
-			lightDist = lightDir.length()
-			lightDir  = lightDir/lightDist
+			lightDir   = lightPos.xyz-pos
+			lightDist2 = lightDir.dot(lightDir)
+			lightDist  = lightDist2**0.5
+			l = lightDir/lightDist
 
-			lightAtten = 1.0/(0.01+lightDist*lightDist)
-			transfer = self.material.transfer(n, lightDir, e)
+			lightAtten = 1.0/(0.01+lightDist2)
+			transfer = self.material.transfer(n, l, e)
 			modulated = transfer*lightAtten
 
 			mainColor = self.material.color*(self.ambient+modulated)

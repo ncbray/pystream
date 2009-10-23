@@ -10,8 +10,8 @@ from util.filesystem import ensureDirectoryExists
 
 from analysis import programculler
 
-from . import dumpgraphs
-from . dumputil import *
+from analysis.dump import dumpgraphs
+from analysis.dump import dumputil
 
 import collections
 from analysis import tools
@@ -21,7 +21,6 @@ import util.graphalgorithim.dominator
 import urllib
 
 from language.python import ast
-from language.python import annotations
 
 from util.async import *
 
@@ -29,7 +28,7 @@ def outputCodeShortName(out, code, links=None, context=None):
 	link = links.codeRef(code, context) if links is not None else None
 
 	if link: out.begin('a', href=link)
-	out << codeShortName(code)
+	out << dumputil.codeShortName(code)
 	if link: out.end('a')
 
 
@@ -41,7 +40,7 @@ def outputObjectShortName(out, heap, links=None):
 
 	if link:
 		out.begin('a', href=link)
-	out << objectShortName(heap)
+	out << dumputil.objectShortName(heap)
 	if link:
 		out.end('a')
 
@@ -105,7 +104,7 @@ def tableRow(out, links, label, *args):
 		if not first: out.tag('br')
 		link = links.objectRef(arg)
 		if link: out.begin('a', href=link)
-		out << objectShortName(arg)
+		out << dumputil.objectShortName(arg)
 		if link: out.end('a')
 
 		first = False
@@ -286,7 +285,7 @@ def dumpFunctionInfo(func, compiler, derived, links, reportDir):
 				out << '\t\t'
 				link = links.objectRef(value)
 				if link: out.begin('a', href=link)
-				out << objectShortName(value)
+				out << dumputil.objectShortName(value)
 				if link: out.end('a')
 				out.endl()
 
@@ -486,7 +485,7 @@ def makeHeapTree(liveHeap, heapContexts):
 def dumpReport(name, compiler, derived, liveInvocations, liveHeap, heapContexts):
 	reportDir = makeReportDirectory(name)
 
-	links = LinkManager()
+	links = dumputil.LinkManager()
 
 	# HACK for closure
 	uid = [0,0]

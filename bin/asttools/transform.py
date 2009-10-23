@@ -1,2 +1,2 @@
 from util.typedispatch import *
-from . traversal import *
+from asttools.traversal import *

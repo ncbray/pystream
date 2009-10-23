@@ -2,7 +2,7 @@ import pydot
 import util.filesystem
 
 from util.typedispatch import *
-from . cfg import *
+from analysis.cfgIR.cfg import *
 
 from language.python import ast
 from asttools import astpprint

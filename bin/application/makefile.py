@@ -1,15 +1,10 @@
 import sys
-import copy
-import os
 import os.path
 
-from util.filesystem import ensureDirectoryExists
 from decompiler.programextractor import extractProgram
 import application.pipeline
 from util import console
-from . import context
-
-import cProfile
+from application import context
 
 from interface import *
 
@@ -109,7 +104,3 @@ class Makefile(object):
 		extractProgram(compiler)
 
 		application.pipeline.evaluate(compiler, self.moduleName)
-
-		# Output
-		#ensureDirectoryExists(self.outdir)
-		#self.outfile = os.path.join(self.outdir, self.moduleName+'.py')

@@ -18,6 +18,7 @@ from PartitionRefinement import PartitionRefinement
 from Sequence import Sequence
 
 class LanguageError(Exception): pass
+class RegExpError(Exception): pass
 
 # maintain Python 2.2 compatibility
 if 'True' not in globals():

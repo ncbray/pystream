@@ -1,7 +1,7 @@
 import os.path
 import pydot
 import util.graphalgorithim.dominator
-from . dumputil import *
+from analysis.dump import dumputil
 from util.async import *
 import util.filesystem
 
@@ -44,7 +44,7 @@ def dump(compiler, liveInvoke, links, reportDir):
 				nodecolor = '#BBBBBB'
 			else:
 				nodecolor = '#33FF33'
-			sg.add_node(pydot.Node(str(id(node)), label=codeShortName(code),
+			sg.add_node(pydot.Node(str(id(node)), label=dumputil.codeShortName(code),
 				shape='box', style="filled", fontsize=8,
 				fillcolor=nodecolor, URL=links.codeRef(node, None)))
 		else:

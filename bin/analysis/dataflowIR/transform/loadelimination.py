@@ -1,8 +1,6 @@
 from analysis.dataflowIR import graph
-
+from analysis.dataflowIR import predicate
 from analysis.dataflowIR.traverse import dfs
-
-from .. import predicate
 
 def findLoadSrc(g):
 	for node in g.heapReads.itervalues():

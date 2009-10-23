@@ -9,6 +9,21 @@ def findLoadSrc(g):
 		defn = node.canonical().defn
 		return defn
 
+# Is the use a copy to the definition?
+# It may be filtered by type switches, etc.
+def isLocalSubset(defn, use):
+	defn = defn.canonical()
+	use = use.canonical()
+		
+	if defn is use:
+		return True
+	elif use.defn.isOp() and use.defn.isTypeSwitch():
+		conditional = use.defn.op.conditional
+		cNode = use.defn.localReads[conditional]
+		return isLocalSubset(defn, cNode)
+
+	return False
+
 def attemptTransform(g, pg):
 	# Is the load unused or invalid?
 	if len(g.localModifies) != 1:
@@ -19,7 +34,7 @@ def attemptTransform(g, pg):
 	if isinstance(defn, graph.GenericOp) and defn.isStore():		
 		# Make sure the load / store parameters are identical
 		# expr
-		if not g.localReads[g.op.expr].canonical() == defn.localReads[defn.op.expr].canonical(): 
+		if not isLocalSubset(defn.localReads[defn.op.expr].canonical(), g.localReads[g.op.expr].canonical()): 
 			return False
 
 		# field type

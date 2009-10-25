@@ -76,12 +76,16 @@ def transformInputSubtree(compiler, dioa, dataflow, subtree, root):
 	# HACK temporarily ignore correlated objects.
 	if len(objs) > 1:
 		exprNode = createLocalNode(hyperblock, getName(subtree, root), root.annotation.values)
-		dataflow.entry.addEntry(exprNode.names[0], exprNode)
+		name = exprNode.names[0]
+		dataflow.entry.addEntry(name, exprNode)
+		subtree.impl = name
 	else:	
 		assert len(objs) == 1
 		if intrinsics.isIntrinsicObject(obj):
 			exprNode = createLocalNode(hyperblock, getName(subtree, root), root.annotation.values)
-			dataflow.entry.addEntry(exprNode.names[0], exprNode)
+			name = exprNode.names[0]
+			dataflow.entry.addEntry(name, exprNode)
+			subtree.impl = name
 		else:
 			exprNode = allocateObj(dioa, dataflow, subtree, root, obj)
 
@@ -125,9 +129,6 @@ def transformInputSubtree(compiler, dioa, dataflow, subtree, root):
 
 		annotation = annotations.DataflowOpAnnotation(read, modify, allocate, mask)
 		g.annotation = annotation
-
-		#import pdb
-		#pdb.set_trace()
 
 	return exprNode
 
@@ -183,10 +184,12 @@ def transformOutputSubtree(compiler, dioa, dataflow, subtree, root):
 		
 		outputNode = addOutput(g, child,  makeCorrelatedAnnotation(dioa, values))
 
+
 		# Expose the local at the output.
-		dataflow.exit.addExit(outputNode.names[0], outputNode)
+		name = outputNode.names[0]
+		dataflow.exit.addExit(name, outputNode)
+		child.impl = name
 				
-		#print field, child
 		transformOutputSubtree(compiler, dioa, dataflow, child, outputNode)
 
 def transformOutput(compiler, dioa, dataflow, contextOut, root):

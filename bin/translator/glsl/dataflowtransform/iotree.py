@@ -10,6 +10,7 @@ class IOTreeObj(object):
 		self.fields   = {}
 
 		self.builtin  = None
+		self.impl     = None
 
 	def getField(self, field):
 		if not field in self.fields:
@@ -29,6 +30,13 @@ class IOTreeObj(object):
 		else:
 			self.builtin = matcher
 
+	def buildImplementationLUT(self, lut):
+		if self.impl:
+			assert self.impl not in lut, self.impl
+			lut[self.impl] = self
+			
+		for child in self.fields.itervalues():
+			child.buildImplementationLUT(lut)
 	
 def handleObj(dioa, obj, lut, exist, mask, tobj):
 	# Does this field actually exist?

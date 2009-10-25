@@ -47,11 +47,14 @@ class RewriterWrapper(TypeDispatcher):
 		return allChildren(self, node)
 
 class GLSLTranslator(TypeDispatcher):
-	def __init__(self, code, poolanalysis, intrinsicRewrite):
+	def __init__(self, code, poolanalysis, intrinsicRewrite, inputLUT, outputLUT):
 		self.code         = code
 		self.poolanalysis = poolanalysis
 
 		self.intrinsicRewrite = intrinsicRewrite
+
+		self.inputLUT  = inputLUT
+		self.outputLUT = outputLUT
 
 		self.wrapper = RewriterWrapper(self)
 
@@ -106,18 +109,18 @@ class GLSLTranslator(TypeDispatcher):
 		return name
 
 	def makeLocalForSlot(self, slot, suggestion=None):
-			slotinfo = self.getSlotInfo(slot.canonical())
-			poolinfo = slotinfo.getPoolInfo()
+		slotinfo = self.getSlotInfo(slot.canonical())
+		poolinfo = slotinfo.getPoolInfo()
 
-			poolimpl = self.getPoolImplForInfo(poolinfo)
-			gt = poolimpl.struct.ast
+		poolimpl = self.getPoolImplForInfo(poolinfo)
+		gt = poolimpl.struct.ast
 
-			if suggestion is None and slot.names:
-				suggestion = slot.names[0].name
+		if suggestion is None and slot.names:
+			suggestion = slot.names[0].name
 
-			lcl =  glsl.Local(gt, self.uniqueName(suggestion))
+		lcl =  glsl.Local(gt, self.uniqueName(suggestion))
 
-			return lcl
+		return lcl
 
 	def uniqueLocalForSlot(self, slot, suggestion=None):
 		slot = slot.canonical()
@@ -325,9 +328,41 @@ class GLSLTranslator(TypeDispatcher):
 
 		return self.transfer(src, dst)
 
+	def generateEpilogue(self, node):
+		epilogue = []
+
+		uid = 0
+		for name, node in node.reads.iteritems():
+			tree = self.outputLUT.get(name)
+			if tree is None: continue
+			
+			# What should the output be named?
+			name = tree.builtin
+			if not name:
+				builtin = False
+				name = "out_%d" % uid
+				uid += 1
+			else:
+				builtin = True
+			
+			# Send data to the output
+			if node.isExisting():
+				lcl = self.makeConstant(node.name.pyobj)
+			else:
+				lcl = self.localNodeRef(node)
+			
+			decl   = glsl.OutputDecl(None, False, False, lcl.type, name)
+			output = glsl.Output(decl)
+			
+			epilogue.append(glsl.Assign(lcl, output))
+			
+		return epilogue
+
 	@dispatch(graph.Exit)
 	def visitExit(self, node):
-		return glsl.Return(None)
+		epilogue = self.generateEpilogue(node)
+		epilogue.append(glsl.Return(None))
+		return epilogue
 
 	@dispatch(cfg.CFGTypeSwitch)
 	def visitCFGTypeSwitch(self, node):
@@ -359,10 +394,10 @@ class GLSLTranslator(TypeDispatcher):
 		return glsl.Code('main', [], glsl.BuiltinType('void'), suite)
 
 
-def process(compiler, code, cfg, poolanalysis):
+def process(compiler, code, cfg, poolanalysis, inputLUT, outputLUT):
 	rewriter = intrinsics.makeIntrinsicRewriter(compiler.extractor)
 
-	gt = GLSLTranslator(code, poolanalysis, rewriter)
+	gt = GLSLTranslator(code, poolanalysis, rewriter, inputLUT, outputLUT)
 	result = gt.process(cfg)
 
 	# HACK for debugging

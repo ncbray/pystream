@@ -85,7 +85,7 @@ class GLSLCodeGen(TypeDispatcher):
 	@dispatch(ast.UniformDecl)
 	def visitUniformDecl(self, node):
 		initialize = '' if node.initializer is None else (" = " +self(node.initializer))
-		return self.wrapSimpleStatement("uniform %s %s%s" % (self.typename(node.type), node.name, initialize))
+		return "uniform %s %s%s" % (self.typename(node.type), node.name, initialize)
 
 	@dispatch(ast.StructureType)
 	def visitStructureType(self, node):

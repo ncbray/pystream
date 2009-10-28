@@ -328,6 +328,41 @@ class GLSLTranslator(TypeDispatcher):
 
 		return self.transfer(src, dst)
 
+	def generatePrologue(self, node):
+		prologue = []
+
+		uid = 0
+		for name, node in node.modifies.iteritems():
+			tree = self.inputLUT.get(name)
+			if tree is None: continue
+			
+			if node.isExisting():
+				lcl = self.makeConstant(node.name.pyobj)
+			else:
+				lcl = self.localNodeRef(node)
+			
+			# What should the output be named?
+			base = tree.treetype
+				
+			name = tree.builtin
+			if not name:
+				builtin = False
+				name = "%s_%d" % (base, uid)
+				uid += 1
+			else:
+				builtin = True
+			
+			if tree.treetype == 'uniform':
+				decl   = glsl.UniformDecl(lcl.type, name, None)
+				input  = glsl.Uniform(decl)
+			else:
+				decl   = glsl.InputDecl(None, False, lcl.type, name)
+				input  = glsl.Input(decl)
+			
+			prologue.append(glsl.Assign(input, lcl))
+			
+		return prologue
+
 	def generateEpilogue(self, node):
 		epilogue = []
 
@@ -360,7 +395,8 @@ class GLSLTranslator(TypeDispatcher):
 
 	@dispatch(graph.Entry)
 	def visitEntry(self, node):
-		return []
+		prologue = self.generatePrologue(node)
+		return prologue
 
 	@dispatch(graph.Merge)
 	def visitMerge(self, node):

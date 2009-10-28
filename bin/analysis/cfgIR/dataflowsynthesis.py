@@ -73,11 +73,19 @@ class CFGResynthesis(object):
 		# Computations on predicates should not be present in the CFG
 		if op.isPredicateOp(): return
 
-		if op.canonicalpredicate and op.canonicalpredicate not in self.activePredicates:
+		cp = op.canonicalpredicate
+		
+		# Entry point and merges have no predicates, so fake it.
+		if cp is None:
+			# Note this is the entryPredicate for the current hyperblock,
+			# not the global entry predicate
+			cp = self.entryPredicate.canonical()
+
+		if cp and cp not in self.activePredicates:
 			self.split(op.canonicalpredicate.source)
 
 		for block in self.blocks:
-			if op.canonicalpredicate in block.predicates:
+			if cp in block.predicates:
 				block.ops.append(op)
 
 	# Count the number of times the op will be duplicated

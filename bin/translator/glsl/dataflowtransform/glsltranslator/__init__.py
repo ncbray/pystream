@@ -358,6 +358,14 @@ class GLSLTranslator(TypeDispatcher):
 			
 		return epilogue
 
+	@dispatch(graph.Entry)
+	def visitEntry(self, node):
+		return []
+
+	@dispatch(graph.Merge)
+	def visitMerge(self, node):
+		return []
+
 	@dispatch(graph.Exit)
 	def visitExit(self, node):
 		epilogue = self.generateEpilogue(node)

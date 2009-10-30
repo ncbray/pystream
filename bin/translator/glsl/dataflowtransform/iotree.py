@@ -9,7 +9,8 @@ class IOTreeObj(object):
 		self.objMasks = {}
 		self.fields   = {}
 
-		self.builtin  = None
+		self.builtin  = False
+		self.name     = None
 		self.impl     = None
 
 	def getField(self, field):
@@ -28,7 +29,8 @@ class IOTreeObj(object):
 				if key in matcher:
 					child.match(matcher[key])
 		else:
-			self.builtin = matcher
+			self.name = matcher
+			self.builtin = True
 
 	def buildImplementationLUT(self, lut):
 		if self.impl:

@@ -105,25 +105,54 @@ def findIOTrees(compiler, dioa, code, dataflow):
 	
 	return inputLUT, outputLUT
 
-def evaluateCode(compiler, code):
-	with compiler.console.scope('convert'):
-		dataflow = analysis.dataflowIR.convert.evaluateCode(compiler, code)
-
-	with compiler.console.scope('analyze'):
-		dioa = correlatedanalysis.evaluateDataflow(compiler, dataflow)
-		dataflow = dioa.flat
-
-		inputLUT, outputLUT = findIOTrees(compiler, dioa, code, dataflow)
-
-		# Reconstruct the CFG from the dataflow graph
-		cfg = dataflowsynthesis.process(compiler, dataflow, code.codeName(), dump=True)
+class DataflowTransformContext(object):
+	def __init__(self, compiler, code):
+		self.compiler = compiler
+		self.code     = code
+	
+	def convert(self):
+		self.dataflow = analysis.dataflowIR.convert.evaluateCode(self.compiler, self.code)
+	
+	def analyze(self):
+		self.dioa = correlatedanalysis.evaluateDataflow(self.compiler, self.dataflow)
+		self.dataflow = self.dioa.flat
+		
+		self.inputLUT, self.outputLUT = findIOTrees(self.compiler, self.dioa, self.code, self.dataflow)
 
 		# Find pools
-		pa = poolanalysis.process(compiler, dataflow, dioa)
+		self.pa = poolanalysis.process(self.compiler, self.dataflow, self.dioa)
+
+	def synthesize(self):
+		# Reconstruct the CFG from the dataflow graph
+		self.cfg = dataflowsynthesis.process(self.compiler, self.dataflow, self.code.codeName(), dump=True)
 	
 		# Translate CFG + pools into GLSL
-		glsltranslator.process(compiler, code, cfg, pa, inputLUT, outputLUT)
+		glsltranslator.process(self.compiler, self.code, self.cfg, self.pa, self.inputLUT, self.outputLUT)
+		
+		
+		
+
+	def dump(self):
+		self.dioa.debugDump(self.code.codeName())
+		analysis.dataflowIR.dump.evaluateDataflow(self.dataflow, 'summaries\dataflow', self.code.codeName())
+
+
+def evaluateCode(compiler, vscode, fscode):
+	vscontext = DataflowTransformContext(compiler, vscode)
+	fscontext = DataflowTransformContext(compiler, fscode)
+
+	with compiler.console.scope('convert'):
+		vscontext.convert()
+		fscontext.convert()
+
+	with compiler.console.scope('analyze'):
+		vscontext.analyze()
+		fscontext.analyze()
+
+	with compiler.console.scope('synthesize'):
+		vscontext.synthesize()
+		fscontext.synthesize()
 
 	with compiler.console.scope('dump'):
-		dioa.debugDump(code.codeName())
-		analysis.dataflowIR.dump.evaluateDataflow(dataflow, 'summaries\dataflow', code.codeName())
+		vscontext.dump()
+		fscontext.dump()

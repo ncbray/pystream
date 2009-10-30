@@ -10,8 +10,8 @@ def makeCorrelatedAnnotation(dioa, data):
 def getName(subtree, root):
 	name = 'bogus'
 
-	if subtree.builtin:
-		name = subtree.builtin
+	if subtree.name:
+		name = subtree.name
 	elif isinstance(root, graph.LocalNode):
 		for lcl in root.names:
 			if lcl.name:

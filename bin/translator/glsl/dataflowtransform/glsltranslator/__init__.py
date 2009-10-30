@@ -344,13 +344,10 @@ class GLSLTranslator(TypeDispatcher):
 			# What should the output be named?
 			base = tree.treetype
 				
-			name = tree.builtin
+			name = tree.name
 			if not name:
-				builtin = False
 				name = "%s_%d" % (base, uid)
 				uid += 1
-			else:
-				builtin = True
 			
 			if tree.treetype == 'uniform':
 				decl   = glsl.UniformDecl(lcl.type, name, None)
@@ -372,13 +369,10 @@ class GLSLTranslator(TypeDispatcher):
 			if tree is None: continue
 			
 			# What should the output be named?
-			name = tree.builtin
+			name = tree.name
 			if not name:
-				builtin = False
 				name = "out_%d" % uid
 				uid += 1
-			else:
-				builtin = True
 			
 			# Send data to the output
 			if node.isExisting():

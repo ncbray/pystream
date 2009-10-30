@@ -8,8 +8,4 @@ def translate(compiler):
 				vs = code.vertexShaderCode()
 				fs = code.fragmentShaderCode()
 
-				with compiler.console.scope('vs'):
-					dataflowtransform.evaluateCode(compiler, vs)
-
-				with compiler.console.scope('fs'):
-					dataflowtransform.evaluateCode(compiler, fs)
+				dataflowtransform.evaluateCode(compiler, vs, fs)

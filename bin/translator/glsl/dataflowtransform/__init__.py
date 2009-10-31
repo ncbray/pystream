@@ -28,7 +28,12 @@ def makePathMatcher(compiler):
 
 	return root
 
-def findIOTrees(compiler, dioa, code, dataflow):
+def findIOTrees(context):
+	
+	compiler = context.compiler
+	dioa = context.dioa
+	code = context.code
+	dataflow = context.dataflow
 	# Find the inputs / uniforms
 	# param 0  -> uniforms
 	# param 1  -> context object
@@ -103,7 +108,24 @@ def findIOTrees(compiler, dioa, code, dataflow):
 	cout.buildImplementationLUT(outputLUT)
 	rout.buildImplementationLUT(outputLUT)
 	
-	return inputLUT, outputLUT
+	context.inputLUT = inputLUT
+	context.outputLUT = outputLUT
+
+	context._uniformTree = uniforms
+
+def harmonizeUniformTrees(name, uid, tree0, tree1):
+	nodename = "%s_%d"  % (name, uid)
+	uid += 1
+
+	tree0.name = nodename
+	tree1.name = nodename
+
+	for field in tree0.fields.iterkeys():
+		if field not in tree1.fields: continue
+		print field
+		uid = harmonizeUniformTrees(name, uid, tree0.fields[field], tree1.fields[field])
+
+	return uid
 
 class DataflowTransformContext(object):
 	def __init__(self, compiler, code):
@@ -117,7 +139,7 @@ class DataflowTransformContext(object):
 		self.dioa = correlatedanalysis.evaluateDataflow(self.compiler, self.dataflow)
 		self.dataflow = self.dioa.flat
 		
-		self.inputLUT, self.outputLUT = findIOTrees(self.compiler, self.dioa, self.code, self.dataflow)
+		findIOTrees(self)
 
 		# Find pools
 		self.pa = poolanalysis.process(self.compiler, self.dataflow, self.dioa)
@@ -136,6 +158,8 @@ class DataflowTransformContext(object):
 		self.dioa.debugDump(self.code.codeName())
 		analysis.dataflowIR.dump.evaluateDataflow(self.dataflow, 'summaries\dataflow', self.code.codeName())
 
+	def uniformTree(self):
+		return self._uniformTree
 
 def evaluateCode(compiler, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, vscode)
@@ -148,6 +172,9 @@ def evaluateCode(compiler, vscode, fscode):
 	with compiler.console.scope('analyze'):
 		vscontext.analyze()
 		fscontext.analyze()
+
+	with compiler.console.scope('link'):
+		harmonizeUniformTrees('common', 0, vscontext.uniformTree(), fscontext.uniformTree())
 
 	with compiler.console.scope('synthesize'):
 		vscontext.synthesize()

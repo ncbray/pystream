@@ -176,6 +176,9 @@ def evaluateCode(compiler, vscode, fscode):
 	with compiler.console.scope('link'):
 		harmonizeUniformTrees('common', 0, vscontext.uniformTree(), fscontext.uniformTree())
 
+	with compiler.console.scope('simplify'):
+		iotransform.killNonBuiltinOutput(fscontext)
+
 	with compiler.console.scope('synthesize'):
 		vscontext.synthesize()
 		fscontext.synthesize()

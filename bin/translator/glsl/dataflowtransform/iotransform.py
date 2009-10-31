@@ -215,3 +215,23 @@ def killNonintrinsicIO(compiler, dataflow):
 		reads[name] = slot
 
 	node.reads = reads
+
+# Used for culling the output of the fragment shader.
+# Only the built-in outputs of the fragment shader are actually used.
+def killNonBuiltinOutput(context):
+	dataflow = context.dataflow
+	node = dataflow.exit
+	reads = {}
+	
+	for name, slot in node.reads.iteritems():
+		if isinstance(name, ast.Local):			
+			if name not in context.outputLUT: continue
+			
+			tree = context.outputLUT[name]
+			if not tree.builtin:
+				slot.removeUse(node)
+				continue
+			
+		reads[name] = slot
+
+	node.reads = reads

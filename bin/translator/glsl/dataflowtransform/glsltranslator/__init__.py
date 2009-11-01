@@ -432,11 +432,11 @@ class GLSLTranslator(TypeDispatcher):
 		return glsl.Code('main', [], glsl.BuiltinType('void'), suite)
 
 
-def process(compiler, code, cfg, poolanalysis, inputLUT, outputLUT):
-	rewriter = intrinsics.makeIntrinsicRewriter(compiler.extractor)
+def process(context):
+	rewriter = intrinsics.makeIntrinsicRewriter(context.compiler.extractor)
 
-	gt = GLSLTranslator(code, poolanalysis, rewriter, inputLUT, outputLUT)
-	result = gt.process(cfg)
+	gt = GLSLTranslator(context.code, context.pa, rewriter, context.trees.inputLUT, context.trees.outputLUT)
+	result = gt.process(context.cfg)
 
 	# HACK for debugging
 	print codegen.GLSLCodeGen()(result)

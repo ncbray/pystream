@@ -225,9 +225,9 @@ def killNonBuiltinOutput(context):
 	
 	for name, slot in node.reads.iteritems():
 		if isinstance(name, ast.Local):			
-			if name not in context.outputLUT: continue
+			if name not in context.trees.outputLUT: continue
 			
-			tree = context.outputLUT[name]
+			tree = context.trees.outputLUT[name]
 			if not tree.builtin:
 				slot.removeUse(node)
 				continue

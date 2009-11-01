@@ -34,84 +34,76 @@ def findIOTrees(context):
 	dioa = context.dioa
 	code = context.code
 	dataflow = context.dataflow
+	
+	trees = IOTrees()
+	context.trees = trees
+	
 	# Find the inputs / uniforms
 	# param 0  -> uniforms
 	# param 1  -> context object
 	# param 2+ -> inputs
-	
-	matcher = makePathMatcher(compiler)
 			
 	params     = code.codeparameters.params		
 	lut        = dataflow.entry.modifies
 	exist      = dataflow.entry.annotation.mask
 	contextObj = iotree.getSingleObject(dioa, lut, params[1])
 	
-	uniforms = iotree.evaluateLocal(dioa, lut, exist, params[0], 'uniform')
-	cin      = iotree.evaluateContextObject(dioa, lut, exist, contextObj, 'in')
-	inputs   = [iotree.evaluateLocal(dioa, lut, exist, p, 'in') for p in params[2:]]
+	trees.uniformIn = iotree.evaluateLocal(dioa, lut, exist, params[0], 'uniform')
+	trees.contextIn = iotree.evaluateContextObject(dioa, lut, exist, params[1], contextObj, 'in')
+	trees.inputs    = [iotree.evaluateLocal(dioa, lut, exist, p, 'in') for p in params[2:]]
 	
 	# Find the outputs
 	lut   = dataflow.exit.reads
 	exist = dataflow.exit.annotation.mask
 	
 	# Context object
-	cout = iotree.evaluateContextObject(dioa, lut, exist, contextObj, 'out')
+	trees.contextOut = iotree.evaluateContextObject(dioa, lut, exist, params[1], contextObj, 'out')
 	
 	# Return values
 	returns = code.codeparameters.returnparams
 	assert len(returns) == 1, returns
-	rout = iotree.evaluateLocal(dioa, lut, exist, returns[0], 'out')
+	trees.returnOut = iotree.evaluateLocal(dioa, lut, exist, returns[0], 'out')
 	
 	# Find the builtin fields
-	cin.match(matcher)
-	cout.match(matcher)
+	trees.match(makePathMatcher(compiler))
 	
 	# Transform the trees
 	# NOTE the output is done first, as it references a local which 
 	# will later be transformed / eliminated by the input transform.
-		
+	
+	def transformOutput(context, tree, lut):
+		node = lut[tree.impl]
+		iotransform.transformOutput(context.compiler, context.dioa, context.dataflow, tree, node)
+
+	def transformInput(context, tree, lut):
+		node = lut[tree.impl]
+		iotransform.transformInput(context.compiler, context.dioa, context.dataflow, tree, node)
+
+	
 	### OUTPUT ###
 	# Transform the output context object
-	coutNode = dataflow.entry.modifies[params[1]]
-	iotransform.transformOutput(compiler, dioa, dataflow, cout, coutNode)
-	
+	transformOutput(context, trees.contextOut, dataflow.entry.modifies)
+
 	# Transform the return value
-	routNode = dataflow.exit.reads[returns[0]]
-	iotransform.transformOutput(compiler, dioa, dataflow, rout, routNode)
+	transformOutput(context, trees.returnOut, dataflow.exit.reads)
 	
 	### INPUT ###
 	# Transform self
-	uniformsNode = dataflow.entry.modifies[params[0]]
-	iotransform.transformInput(compiler, dioa, dataflow, uniforms, uniformsNode)
+	transformInput(context, trees.uniformIn, dataflow.entry.modifies)
 	
 	# Transform input context object
-	cinNode = dataflow.entry.modifies[params[1]]
-	iotransform.transformInput(compiler, dioa, dataflow, cin, cinNode)
-	
-	for p, tree in zip(params[2:], inputs):
-		pNode = dataflow.entry.modifies[p]	
-		iotransform.transformInput(compiler, dioa, dataflow, tree, pNode)
-	
+	transformInput(context, trees.contextIn, dataflow.entry.modifies)
+
+	# Transform the input parameters
+	for tree in trees.inputs:
+		transformInput(context, tree, dataflow.entry.modifies)	
 	
 	iotransform.killNonintrinsicIO(compiler, dataflow)
 	
-	loadelimination.evaluateDataflow(dataflow)
-	dce.evaluateDataflow(dataflow)
+	context.simplify()
 	
-	inputLUT = {}
-	uniforms.buildImplementationLUT(inputLUT)
-	cin.buildImplementationLUT(inputLUT)
-	for input in inputs:
-		input.buildImplementationLUT(inputLUT)
-	
-	outputLUT = {}
-	cout.buildImplementationLUT(outputLUT)
-	rout.buildImplementationLUT(outputLUT)
-	
-	context.inputLUT = inputLUT
-	context.outputLUT = outputLUT
+	trees.buildLUTs()
 
-	context._uniformTree = uniforms
 
 def harmonizeUniformTrees(name, uid, tree0, tree1):
 	nodename = "%s_%d"  % (name, uid)
@@ -126,6 +118,34 @@ def harmonizeUniformTrees(name, uid, tree0, tree1):
 		uid = harmonizeUniformTrees(name, uid, tree0.fields[field], tree1.fields[field])
 
 	return uid
+
+class IOTrees(object):
+	def __init__(self):
+		self.uniformIn = None
+		self.contextIn = None
+		self.inputs  = None
+
+		self.contextOut = None
+		self.returnOut  = None
+
+		self.inputLUT = {}
+		self.outputLUT = {}
+
+	def match(self, matcher):
+		self.contextIn.match(matcher)
+		self.contextOut.match(matcher)
+
+	def buildLUTs(self):
+		self.inputLUT = {}
+		self.uniformIn.buildImplementationLUT(self.inputLUT)
+		self.contextIn.buildImplementationLUT(self.inputLUT)
+		for inp in self.inputs:
+			inp.buildImplementationLUT(self.inputLUT)
+		
+		self.outputLUT = {}
+		self.contextOut.buildImplementationLUT(self.outputLUT)
+		self.returnOut.buildImplementationLUT(self.outputLUT)
+		
 
 class DataflowTransformContext(object):
 	def __init__(self, compiler, code):
@@ -149,17 +169,19 @@ class DataflowTransformContext(object):
 		self.cfg = dataflowsynthesis.process(self.compiler, self.dataflow, self.code.codeName(), dump=True)
 	
 		# Translate CFG + pools into GLSL
-		glsltranslator.process(self.compiler, self.code, self.cfg, self.pa, self.inputLUT, self.outputLUT)
+		glsltranslator.process(self)
 		
-		
-		
-
 	def dump(self):
 		self.dioa.debugDump(self.code.codeName())
 		analysis.dataflowIR.dump.evaluateDataflow(self.dataflow, 'summaries\dataflow', self.code.codeName())
 
 	def uniformTree(self):
-		return self._uniformTree
+		return self.trees.uniformIn
+
+	def simplify(self):
+		loadelimination.evaluateDataflow(self.dataflow)
+		dce.evaluateDataflow(self.dataflow)
+
 
 def evaluateCode(compiler, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, vscode)

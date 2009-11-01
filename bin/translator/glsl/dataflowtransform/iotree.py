@@ -102,8 +102,10 @@ def getSingleObject(dioa, lut, lcl):
 	return tuple(flat)[0]
 
 
-def evaluateContextObject(dioa, lut, exist, obj, treetype):
+def evaluateContextObject(dioa, lut, exist, lcl, obj, treetype):
 	tobj = IOTreeObj(('context',), treetype)
+	tobj.impl = lcl
+	
 	mask = dioa.bool.true
 	handleObj(dioa, obj, lut, exist, mask, tobj)
 
@@ -121,9 +123,10 @@ def evaluateLocal(dioa, lut, exist, lcl, treetype):
 	ctree = node.annotation.values.correlated
 
 	tobj = IOTreeObj((lcl,), treetype)
+	tobj.impl = lcl
 
 	handleCTree(dioa, ctree, lut, exist, dioa.bool.true, tobj)
-	
+		
 	if False: dump(lcl, tobj)
 	
 	return tobj

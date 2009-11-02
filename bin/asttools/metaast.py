@@ -6,6 +6,19 @@ import sys
 
 from . import codegeneration
 
+class FieldDescriptor(object):
+	__slots__ = 'name', 'internalname', 'type', 'optional', 'repeated'
+	
+	def __init__(self, name, internalname, t, optional, repeated):
+		self.name = name
+		self.internalname = internalname
+		self.type = t
+		self.optional = optional
+		self.repeated = repeated
+
+	def __repr__(self):
+		return "astfield(%r, %r, %r, %r, %r)" % (self.name, self.internalname, self.type, self.optional, self.repeated)
+
 # Enforces mutability, but slows down the program.
 wrapProperties = False
 
@@ -178,17 +191,17 @@ class ClassBuilder(object):
 	def finalize(self):
 		return type.__new__(self.type, self.name, self.bases, self.d)
 
-	def makeFunc(self, func, args):
-		code = func(*args)
+	def makeFunc(self, func, args, kargs):
+		code = func(*args, **kargs)
 		#print code
 		#print
-		return codegeneration.compileFunc(code, self.g)
+		return codegeneration.compileFunc(self.name, code, self.g)
 
-	def defaultFunc(self, name, func, args):
+	def defaultFunc(self, name, func, args, kargs={}):
 		if not name in self.d:
-			self.d[name] = self.makeFunc(func, args)
+			self.d[name] = self.makeFunc(func, args, kargs)
 
-	def addDefaultMethods(self, paramnames, fields, types, optional, shared):
+	def addDefaultMethods(self, desc, paramnames, fields, types, optional, shared):
 		dopostinit = self.hasAttr('__postinit__')
 
 		# Generate and attach methods.
@@ -203,7 +216,24 @@ class ClassBuilder(object):
 		self.defaultFunc('fields',   codegeneration.makeGetFields, (paramnames, fields,))
 
 		if self.mutable:
-			self.defaultFunc('replaceChildren', codegeneration.makeReplaceChildren, (self.name, paramnames, fields, types, optional, self.repeated, dopostinit))
+			self.defaultFunc('_replaceChildren', codegeneration.makeReplaceChildren, (self.name, paramnames, fields, types, optional, self.repeated, dopostinit))
+
+		self.defaultFunc('visitChildren', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared})
+		self.defaultFunc('visitChildrenReversed', codegeneration.makeVisit, (self.name, desc), {'reverse':True, 'shared':shared})
+
+		if self.mutable:
+			self.defaultFunc('visitChildrenForced', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared, 'forced':True})
+			self.defaultFunc('visitChildrenReversedForced', codegeneration.makeVisit, (self.name, desc), {'reverse':True, 'shared':shared, 'forced':True})
+
+		# For the sake of uniformity, shared nodes are given a rewrite method even though it does nothing.
+		self.defaultFunc('rewriteChildren', codegeneration.makeRewrite, (self.name, desc), {'reverse':False, 'shared':shared, 'mutate':False, 'vargs':False, 'kargs':False})
+		self.defaultFunc('rewriteChildrenReversed', codegeneration.makeRewrite, (self.name, desc), {'reverse':True, 'shared':shared, 'mutate':False, 'vargs':False, 'kargs':False})
+
+		if self.mutable:
+			self.defaultFunc('replaceChildren', codegeneration.makeRewrite, (self.name, desc), {'reverse':False, 'shared':shared, 'mutate':True, 'vargs':False, 'kargs':False})
+			self.defaultFunc('replaceChildrenReversed', codegeneration.makeRewrite, (self.name, desc), {'reverse':True, 'shared':shared, 'mutate':True, 'vargs':False, 'kargs':False})
+
+
 
 	def mutate(self):
 		self.g   = self.getGlobalDict()
@@ -219,7 +249,11 @@ class ClassBuilder(object):
 		internalNames = list(slots)
 		slots = self.appendToExistingSlots(slots)
 
-		self.addDefaultMethods(fields, internalNames, types, optional, shared)
+		desc = []
+		for name, internal in zip(fields, internalNames):
+			desc.append(FieldDescriptor(name, internal, types.get(name), name in optional, name in self.repeated))
+
+		self.addDefaultMethods(desc, fields, internalNames, types, optional, shared)
 
 		return self
 

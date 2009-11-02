@@ -147,7 +147,7 @@ def allChildrenReversed(s, node):
 def replaceAllChildren(s, node):
 	if isinstance(node, ASTNode):
 		assert node.__shared__, node
-		node.replaceChildren(*[s(child) for child in node.children()])
+		node._replaceChildren(*[s(child) for child in node.children()])
 		return node
 	else:
 		assert False, node
@@ -157,7 +157,7 @@ def replaceAllChildrenReversed(s, node):
 		assert node.__shared__, node
 		newchildren = [s(child) for child in reversed(node.children())]
 		newchildren.reverse()
-		node.replaceChildren(*newchildren)
+		node._replaceChildren(*newchildren)
 		return node
 	else:
 		assert False, node

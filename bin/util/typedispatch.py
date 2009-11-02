@@ -20,26 +20,30 @@ def defaultdispatch(f):
 	defaultWrap.__dispatch__ = (None,)
 	return defaultWrap
 
+
 def dispatch__call__(self, p, *args):
 	t = type(p)
 	table = self.__typeDispatchTable__
 
-	if not t in table: t = None
+	func = table.get(t)
+	
+	if func is None:
+		if not self.__concrete__:
+			# Search for a matching superclass
+			# This is slightly inefficient, as it will check the concrete class again.
+			# On the other hand, this inefficiency will occur only once per class.
+			for supercls in t.mro():
+				func = table.get(supercls)
+				if func is not None: break
+				
+		if func is None:
+			func = table.get(None) # default
 
-	return table[t](self, p, *args)
+		# Cache the function that we found
+		table[t] = func
 
+	return func(self, p, *args)
 
-#def dispatch__call__(self, p, *args):
-#	try:
-#		t = type(p)
-#		table = self.__typeDispatchTable__
-
-#		if not t in table: t = None
-
-#		return table[t](self, p, *args)
-#	except:
-#		print "TRACE", p
-#		raise
 
 class TypeDispatchError(Exception):
 	pass
@@ -98,3 +102,4 @@ class TypeDispatcher(object):
 	__dispatch__     = dispatch__call__
 	__call__         = dispatch__call__
 	exceptionDefault = defaultdispatch(exceptionDefault)
+	__concrete__ = False

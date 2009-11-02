@@ -126,6 +126,15 @@ def divRewrite(self, node):
 	else:
 		return glsl.BinaryOp(self(node.args[0]), '/', self(node.args[1]))
 
+def powRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('pow', self(node.args))
+		#return glsl.BinaryOp(self(node.args[0]), '**', self(node.args[1]))
+
 def dotRewrite(self, node):
 	if not hasNumArgs(node, 2): return
 
@@ -249,6 +258,7 @@ def makeIntrinsicRewriter(extractor):
 	rewriter.attribute(vec.mat4, '__mul__', mulRewrite)
 
 	for v in fvecs: rewriter.attribute(v, '__div__', divRewrite)
+	for v in fvecs: rewriter.attribute(v, '__pow__', powRewrite)
 	for v in fvecs: rewriter.attribute(v, 'dot', dotRewrite)
 	for v in fvecs: rewriter.attribute(v, 'length', lengthRewrite)
 	for v in fvecs: rewriter.attribute(v, 'normalize', normalizeRewrite)

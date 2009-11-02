@@ -93,6 +93,21 @@ class vec2(object):
 			return NotImplemented
 
 
+	def __pow__(self, other):
+		if isinstance(other, vec2):
+			return vec2(self.x**other.x, self.y**other.y)
+		elif isinstance(other, float):
+			return vec2(self.x**other, self.y**other)
+		else:
+			return NotImplemented
+
+	def __rpow__(self, other):
+		if isinstance(other, float):
+			return vec2(other**self.x, other**self.y)
+		else:
+			return NotImplemented
+
+
 	@property
 	def r(self):
 		return self.x
@@ -367,6 +382,21 @@ class vec3(object):
 	def __rdiv__(self, other):
 		if isinstance(other, float):
 			return vec3(other/self.x, other/self.y, other/self.z)
+		else:
+			return NotImplemented
+
+
+	def __pow__(self, other):
+		if isinstance(other, vec3):
+			return vec3(self.x**other.x, self.y**other.y, self.z**other.z)
+		elif isinstance(other, float):
+			return vec3(self.x**other, self.y**other, self.z**other)
+		else:
+			return NotImplemented
+
+	def __rpow__(self, other):
+		if isinstance(other, float):
+			return vec3(other**self.x, other**self.y, other**self.z)
 		else:
 			return NotImplemented
 
@@ -1176,6 +1206,21 @@ class vec4(object):
 	def __rdiv__(self, other):
 		if isinstance(other, float):
 			return vec4(other/self.x, other/self.y, other/self.z, other/self.w)
+		else:
+			return NotImplemented
+
+
+	def __pow__(self, other):
+		if isinstance(other, vec4):
+			return vec4(self.x**other.x, self.y**other.y, self.z**other.z, self.w**other.w)
+		elif isinstance(other, float):
+			return vec4(self.x**other, self.y**other, self.z**other, self.w**other)
+		else:
+			return NotImplemented
+
+	def __rpow__(self, other):
+		if isinstance(other, float):
+			return vec4(other**self.x, other**self.y, other**self.z, other**self.w)
 		else:
 			return NotImplemented
 

@@ -146,7 +146,7 @@ class Shader(object):
 	def shadeFragment(self, context, pos, normal):
 		n = normal.normalize()
 
-		if False:
+		if True:
 			#mainColor = normal
 			mainColor = n*0.5+vec3(0.5, 0.5, 0.5)
 		else:
@@ -167,7 +167,16 @@ class Shader(object):
 
 			mainColor = self.material.color*(self.ambient+modulated)
 
+		mainColor = rgb2srgb(mainColor)
+		mainColor = vec4(mainColor.x, mainColor.y, mainColor.z, 1.0)
 		context.colors = (mainColor,)
 
 def nldot(a, b):
 	return max(a.dot(b), 0.0)
+
+def rgb2srgb(color):
+	scale = color*12.92
+	warp = (color**(1.0/2.4))*1.055-0.055
+	return warp
+	#return min(scale, warp)
+

@@ -288,6 +288,7 @@ for l in range(2, 5):
 	makeOp(base, coords, "sub", "-")
 	makeOp(base, coords, "mul", "*")
 	makeOp(base, coords, "div", "/")
+	makeOp(base, coords, "pow", "**")
 
 	# Swizzles
 	for a in coords:

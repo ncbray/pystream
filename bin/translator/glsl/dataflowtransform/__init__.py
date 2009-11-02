@@ -72,12 +72,14 @@ def findIOTrees(context):
 	# will later be transformed / eliminated by the input transform.
 	
 	def transformOutput(context, tree, lut):
-		node = lut[tree.impl]
-		iotransform.transformOutput(context.compiler, context.dioa, context.dataflow, tree, node)
+		if tree is not None and tree.impl is not None:
+			node = lut[tree.impl]
+			iotransform.transformOutput(context.compiler, context.dioa, context.dataflow, tree, node)
 
 	def transformInput(context, tree, lut):
-		node = lut[tree.impl]
-		iotransform.transformInput(context.compiler, context.dioa, context.dataflow, tree, node)
+		if tree is not None and tree.impl is not None:
+			node = lut[tree.impl]
+			iotransform.transformInput(context.compiler, context.dioa, context.dataflow, tree, node)
 
 	
 	### OUTPUT ###

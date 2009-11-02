@@ -136,6 +136,7 @@ def evaluateContextObject(dioa, lut, exist, lcl, obj, treetype):
 
 def evaluateLocal(dioa, lut, exist, lcl, treetype):
 	if lcl is None: return None
+	if lcl.isDoNotCare(): return IOTreeObj((), treetype)
 		
 	node = lut[lcl]
 	

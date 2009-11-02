@@ -13,6 +13,8 @@ class IOTreeObj(object):
 		self.name     = None
 		self.impl     = None
 
+		self.link     = None
+
 	def getField(self, field):
 		if not field in self.fields:
 			slot = IOTreeObj(self.path + (field,), self.treetype, self)
@@ -39,6 +41,24 @@ class IOTreeObj(object):
 			
 		for child in self.fields.itervalues():
 			child.buildImplementationLUT(lut)
+	
+	def makeLinks(self, other, uid):
+		print "LINK", self.path, other.path
+		
+		self.link  = other
+		other.link = self
+	
+		name = "vs2fs_%d" % uid
+		uid += 1
+	
+		self.name  = name
+		other.name = name
+	
+		for field, child in self.fields.iteritems():
+			if field in other.fields:
+				uid = child.makeLinks(other.fields[field], uid)
+
+		return uid
 	
 def handleObj(dioa, obj, lut, exist, mask, tobj):
 	# Does this field actually exist?

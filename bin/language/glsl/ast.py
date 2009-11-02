@@ -27,15 +27,15 @@ class ConstantDecl(GLSLASTNode):
 	__shared__    = True
 
 class UniformDecl(GLSLASTNode):
-	__fields__    = 'type:Type name:str initializer:(Constant,Constructor)?'
+	__fields__    = 'builtin:bool type:Type name:str initializer:(Constant,Constructor)?'
 	__shared__    = True
 
 class InputDecl(GLSLASTNode):
-	__fields__    = 'interpolation:str? centroid:bool type:Type name:str'
+	__fields__    = 'interpolation:str? centroid:bool builtin:bool type:Type name:str'
 	__shared__    = True
 
 class OutputDecl(GLSLASTNode):
-	__fields__    = 'interpolation:str? centroid:bool invariant:bool type:Type name:str'
+	__fields__    = 'interpolation:str? centroid:bool invariant:bool builtin:bool type:Type name:str'
 	__shared__    = True
 
 #interpolation: (smooth, nonperspective, flat)

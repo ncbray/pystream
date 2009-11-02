@@ -218,7 +218,7 @@ def killNonintrinsicIO(compiler, dataflow):
 
 # Used for culling the output of the fragment shader.
 # Only the built-in outputs of the fragment shader are actually used.
-def killNonBuiltinOutput(context):
+def killUnusedOutputs(context):
 	dataflow = context.dataflow
 	node = dataflow.exit
 	reads = {}
@@ -228,7 +228,7 @@ def killNonBuiltinOutput(context):
 			if name not in context.trees.outputLUT: continue
 			
 			tree = context.trees.outputLUT[name]
-			if not tree.builtin:
+			if not tree.builtin and not tree.link:
 				slot.removeUse(node)
 				continue
 			

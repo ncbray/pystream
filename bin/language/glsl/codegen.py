@@ -85,7 +85,9 @@ class GLSLCodeGen(TypeDispatcher):
 	@dispatch(ast.UniformDecl)
 	def visitUniformDecl(self, node):
 		initialize = '' if node.initializer is None else (" = " +self(node.initializer))
-		return "uniform %s %s%s" % (self.typename(node.type), node.name, initialize)
+		stmt = "uniform %s %s%s" % (self.typename(node.type), node.name, initialize)
+		if node.builtin: stmt = "//" + stmt		
+		return stmt
 
 	@dispatch(ast.StructureType)
 	def visitStructureType(self, node):
@@ -226,11 +228,17 @@ class GLSLCodeGen(TypeDispatcher):
 
 	@dispatch(ast.InputDecl)
 	def visitInputDecl(self, node):
-		return "in %s %s" % (self.typename(node.type), self.visitLocal(node))
+		stmt = "in %s %s" % (self.typename(node.type), self.visitLocal(node))
+		if node.builtin: stmt = "//" + stmt		
+		return stmt
+
 
 	@dispatch(ast.OutputDecl)
 	def visitOutputDecl(self, node):
-		return "out %s %s" % (self.typename(node.type), self.visitLocal(node))
+		stmt = "out %s %s" % (self.typename(node.type), self.visitLocal(node))
+		if node.builtin: stmt = "//" + stmt		
+		return stmt
+
 
 	def makeLocalDecl(self, lcls):
 		decl = "".join(["\t%s %s;\n" % (self.typename(lcl.type), self(lcl)) for lcl in lcls])

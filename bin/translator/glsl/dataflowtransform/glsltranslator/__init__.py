@@ -348,12 +348,13 @@ class GLSLTranslator(TypeDispatcher):
 			if not name:
 				name = "%s_%d" % (base, uid)
 				uid += 1
+				tree.name = name
 			
 			if tree.treetype == 'uniform':
-				decl   = glsl.UniformDecl(lcl.type, name, None)
+				decl   = glsl.UniformDecl(tree.builtin, lcl.type, name, None)
 				input  = glsl.Uniform(decl)
 			else:
-				decl   = glsl.InputDecl(None, False, lcl.type, name)
+				decl   = glsl.InputDecl(None, False, tree.builtin, lcl.type, name)
 				input  = glsl.Input(decl)
 			
 			prologue.append(glsl.Assign(input, lcl))
@@ -380,7 +381,7 @@ class GLSLTranslator(TypeDispatcher):
 			else:
 				lcl = self.localNodeRef(node)
 			
-			decl   = glsl.OutputDecl(None, False, False, lcl.type, name)
+			decl   = glsl.OutputDecl(None, False, False, tree.builtin, lcl.type, name)
 			output = glsl.Output(decl)
 			
 			epilogue.append(glsl.Assign(lcl, output))

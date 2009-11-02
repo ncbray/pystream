@@ -99,12 +99,8 @@ def findIOTrees(context):
 		transformInput(context, tree, dataflow.entry.modifies)	
 	
 	iotransform.killNonintrinsicIO(compiler, dataflow)
-	
-	context.simplify()
-	
 	trees.buildLUTs()
-
-
+	
 def harmonizeUniformTrees(name, uid, tree0, tree1):
 	nodename = "%s_%d"  % (name, uid)
 	uid += 1
@@ -114,7 +110,7 @@ def harmonizeUniformTrees(name, uid, tree0, tree1):
 
 	for field in tree0.fields.iterkeys():
 		if field not in tree1.fields: continue
-		print field
+		print "HARMONIZE", field
 		uid = harmonizeUniformTrees(name, uid, tree0.fields[field], tree1.fields[field])
 
 	return uid
@@ -161,12 +157,12 @@ class DataflowTransformContext(object):
 		
 		findIOTrees(self)
 
-		# Find pools
-		self.pa = poolanalysis.process(self.compiler, self.dataflow, self.dioa)
-
 	def synthesize(self):
 		# Reconstruct the CFG from the dataflow graph
 		self.cfg = dataflowsynthesis.process(self.compiler, self.dataflow, self.code.codeName(), dump=True)
+
+		# Find pools
+		self.pa = poolanalysis.process(self.compiler, self.dataflow, self.dioa)
 	
 		# Translate CFG + pools into GLSL
 		glsltranslator.process(self)
@@ -182,6 +178,25 @@ class DataflowTransformContext(object):
 		loadelimination.evaluateDataflow(self.dataflow)
 		dce.evaluateDataflow(self.dataflow)
 
+	def splitTuple(self, tree):
+		indexLUT = {}
+		for field, node in tree.fields.iteritems():
+			if field.type == 'Array':
+				index = field.name.pyobj
+				indexLUT[index] = node		
+		return [indexLUT[i] for i in range(len(indexLUT))]
+
+	def link(self, other):
+		# Break apart the output tuple.
+		outputs = self.splitTuple(self.trees.returnOut)
+		inputs  = other.trees.inputs
+		
+		assert len(inputs) == len(outputs), "I/O mismatch" 
+		
+		uid = 0
+		for outp, inp in zip(outputs, inputs):
+			uid = outp.makeLinks(inp, uid)
+		
 
 def evaluateCode(compiler, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, vscode)
@@ -197,9 +212,16 @@ def evaluateCode(compiler, vscode, fscode):
 
 	with compiler.console.scope('link'):
 		harmonizeUniformTrees('common', 0, vscontext.uniformTree(), fscontext.uniformTree())
+		vscontext.link(fscontext)
+		
+		iotransform.killUnusedOutputs(fscontext)
+		fscontext.simplify()
+		
+		# TODO load eliminate uniform -> varying
+		# TODO propagate DCE between shaders
 
-	with compiler.console.scope('simplify'):
-		iotransform.killNonBuiltinOutput(fscontext)
+		iotransform.killUnusedOutputs(vscontext)
+		vscontext.simplify()
 
 	with compiler.console.scope('synthesize'):
 		vscontext.synthesize()

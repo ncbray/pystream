@@ -147,7 +147,6 @@ class Shader(object):
 		n = normal.normalize()
 
 		if True:
-			#mainColor = normal
 			mainColor = n*0.5+0.5
 		else:
 			e = -pos.normalize()

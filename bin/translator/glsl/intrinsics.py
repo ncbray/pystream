@@ -147,6 +147,14 @@ def addRewrite(self, node):
 	else:
 		return glsl.BinaryOp(self(node.args[0]), '+', self(node.args[1]))
 
+def raddRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[1]), '+', self(node.args[0]))
+
 def subRewrite(self, node):
 	if not hasNumArgs(node, 2): return
 
@@ -154,6 +162,14 @@ def subRewrite(self, node):
 		return True
 	else:
 		return glsl.BinaryOp(self(node.args[0]), '-', self(node.args[1]))
+
+def rsubRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[1]), '-', self(node.args[0]))
 
 def mulRewrite(self, node):
 	if not hasNumArgs(node, 2): return
@@ -163,6 +179,14 @@ def mulRewrite(self, node):
 	else:
 		return glsl.BinaryOp(self(node.args[0]), '*', self(node.args[1]))
 
+def rmulRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[1]), '*', self(node.args[0]))
+
 def divRewrite(self, node):
 	if not hasNumArgs(node, 2): return
 
@@ -170,6 +194,14 @@ def divRewrite(self, node):
 		return True
 	else:
 		return glsl.BinaryOp(self(node.args[0]), '/', self(node.args[1]))
+
+def rdivRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[1]), '/', self(node.args[0]))
 
 def powRewrite(self, node):
 	if not hasNumArgs(node, 2): return
@@ -180,6 +212,16 @@ def powRewrite(self, node):
 		args = coerceArgs(self, *node.args)
 		if args is None: return None
 		return glsl.IntrinsicOp('pow', args)
+
+def rpowRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		args = coerceArgs(self, *node.args)
+		if args is None: return None
+		return glsl.IntrinsicOp('pow', [args[1], args[0]])
 
 def dotRewrite(self, node):
 	if not hasNumArgs(node, 2): return
@@ -296,20 +338,26 @@ def makeIntrinsicRewriter(extractor):
 	fvecs = (vec.vec2, vec.vec3, vec.vec4)
 
 	for v in fvecs: rewriter.attribute(v, '__add__', addRewrite)
+	for v in fvecs: rewriter.attribute(v, '__radd__', raddRewrite)
 	for v in fvecs: rewriter.attribute(v, '__sub__', subRewrite)
+	for v in fvecs: rewriter.attribute(v, '__rsub__', rsubRewrite)
 
 	#rewriter.attribute(vec.mat2, '__add__', addRewrite)
 	#rewriter.attribute(vec.mat3, '__add__', addRewrite)
 	#rewriter.attribute(vec.mat4, '__add__', addRewrite)
 
 	for v in fvecs: rewriter.attribute(v, '__mul__', mulRewrite)
+	for v in fvecs: rewriter.attribute(v, '__rmul__', rmulRewrite)
 
-	rewriter.attribute(vec.mat2, '__mul__', mulRewrite)
-	rewriter.attribute(vec.mat3, '__mul__', mulRewrite)
-	rewriter.attribute(vec.mat4, '__mul__', mulRewrite)
+	for m in (vec.mat2, vec.mat3, vec.mat4): 
+		rewriter.attribute(m, '__mul__', mulRewrite)
+		#rewriter.attribute(m, '__rmul__', rmulRewrite)
 
 	for v in fvecs: rewriter.attribute(v, '__div__', divRewrite)
+	for v in fvecs: rewriter.attribute(v, '__rdiv__', rdivRewrite)
 	for v in fvecs: rewriter.attribute(v, '__pow__', powRewrite)
+	for v in fvecs: rewriter.attribute(v, '__rpow__', rpowRewrite)
+
 	for v in fvecs: rewriter.attribute(v, 'min', minRewrite)
 	for v in fvecs: rewriter.attribute(v, 'max', maxRewrite)
 

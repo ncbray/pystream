@@ -310,6 +310,9 @@ def makeIntrinsicRewriter(extractor):
 
 	for v in fvecs: rewriter.attribute(v, '__div__', divRewrite)
 	for v in fvecs: rewriter.attribute(v, '__pow__', powRewrite)
+	for v in fvecs: rewriter.attribute(v, 'min', minRewrite)
+	for v in fvecs: rewriter.attribute(v, 'max', maxRewrite)
+
 	for v in fvecs: rewriter.attribute(v, 'dot', dotRewrite)
 	for v in fvecs: rewriter.attribute(v, 'length', lengthRewrite)
 	for v in fvecs: rewriter.attribute(v, 'normalize', normalizeRewrite)

@@ -89,29 +89,38 @@ def make4(a, b, c, d):
 	declGetter("%s%s%s%s"  % (a, b, c, d))	
 	declGetter("%s%s%s%s"  % (lut[a], lut[b], lut[c], lut[d]))
 
-def makeOp(base, coords, opname, op):
-	vecvec = ", ".join(["self.%s%sother.%s" % (coord, op, coord) for coord in coords])
-	vecscalar = ", ".join(["self.%s%sother" % (coord, op) for coord in coords])
-	scalarvec = ", ".join(["other%sself.%s" % (op, coord) for coord in coords])
+def makeOpPrimitive(base, coords, forwardName, reverseName, optemplate):
+	vecvec = ", ".join([optemplate % ('self.'+coord, 'other.'+coord) for coord in coords])
+	vecscalar = ", ".join([optemplate % ('self.'+coord, 'other') for coord in coords])
+	scalarvec = ", ".join([optemplate % ('other', 'self.'+coord) for coord in coords])
+
+        clsName = "%s%d" % (base, len(coords))
 	
-	print """	def __%(opname)s__(self, other):
-		if isinstance(other, %(base)s%(len)s):
-			return %(base)s%(len)s(%(vecvec)s)
+	print """	def %(forwardName)s(self, other):
+		if isinstance(other, %(clsName)s):
+			return %(clsName)s(%(vecvec)s)
 		elif isinstance(other, float):
-			return %(base)s%(len)s(%(vecscalar)s)
+			return %(clsName)s(%(vecscalar)s)
 		else:
 			return NotImplemented
 
-	def __r%(opname)s__(self, other):
+	def %(reverseName)s(self, other):
 		if isinstance(other, float):
-			return %(base)s%(len)s(%(scalarvec)s)
+			return %(clsName)s(%(scalarvec)s)
 		else:
 			return NotImplemented
 
-""" % {'opname':opname, 'op':op, 'base':base, 'len':len(coords), 'vecvec':vecvec, 'vecscalar':vecscalar, 'scalarvec':scalarvec,}
+""" % {'forwardName':forwardName, 'reverseName':reverseName, 'clsName':clsName, 'vecvec':vecvec, 'vecscalar':vecscalar, 'scalarvec':scalarvec,}
 
-	declMethod('__%s__' % opname, ('%s%d' % (base, len(coords)), 'float'))
-	declMethod('__r%s__' % opname, 'float')
+	declMethod(forwardName, (clsName, 'float'))
+	declMethod(reverseName, 'float')
+
+def makeOp(base, coords, opname, op):
+        forwardName = "__%s__" % opname
+        reverseName = "__r%s__" % opname
+        optemplate = "%%s%s%%s" % op
+        makeOpPrimitive(base, coords, forwardName, reverseName, optemplate)
+
 
 def makePos(base, coords):
 	args = ", ".join(["+self.%s" % coord for coord in coords])
@@ -289,6 +298,8 @@ for l in range(2, 5):
 	makeOp(base, coords, "mul", "*")
 	makeOp(base, coords, "div", "/")
 	makeOp(base, coords, "pow", "**")
+	makeOpPrimitive(base, coords, "min", "rmin", "min(%s, %s)")
+	makeOpPrimitive(base, coords, "max", "rmax", "max(%s, %s)")
 
 	# Swizzles
 	for a in coords:

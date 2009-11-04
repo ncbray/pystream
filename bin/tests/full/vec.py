@@ -108,6 +108,36 @@ class vec2(object):
 			return NotImplemented
 
 
+	def min(self, other):
+		if isinstance(other, vec2):
+			return vec2(min(self.x, other.x), min(self.y, other.y))
+		elif isinstance(other, float):
+			return vec2(min(self.x, other), min(self.y, other))
+		else:
+			return NotImplemented
+
+	def rmin(self, other):
+		if isinstance(other, float):
+			return vec2(min(other, self.x), min(other, self.y))
+		else:
+			return NotImplemented
+
+
+	def max(self, other):
+		if isinstance(other, vec2):
+			return vec2(max(self.x, other.x), max(self.y, other.y))
+		elif isinstance(other, float):
+			return vec2(max(self.x, other), max(self.y, other))
+		else:
+			return NotImplemented
+
+	def rmax(self, other):
+		if isinstance(other, float):
+			return vec2(max(other, self.x), max(other, self.y))
+		else:
+			return NotImplemented
+
+
 	@property
 	def r(self):
 		return self.x
@@ -397,6 +427,36 @@ class vec3(object):
 	def __rpow__(self, other):
 		if isinstance(other, float):
 			return vec3(other**self.x, other**self.y, other**self.z)
+		else:
+			return NotImplemented
+
+
+	def min(self, other):
+		if isinstance(other, vec3):
+			return vec3(min(self.x, other.x), min(self.y, other.y), min(self.z, other.z))
+		elif isinstance(other, float):
+			return vec3(min(self.x, other), min(self.y, other), min(self.z, other))
+		else:
+			return NotImplemented
+
+	def rmin(self, other):
+		if isinstance(other, float):
+			return vec3(min(other, self.x), min(other, self.y), min(other, self.z))
+		else:
+			return NotImplemented
+
+
+	def max(self, other):
+		if isinstance(other, vec3):
+			return vec3(max(self.x, other.x), max(self.y, other.y), max(self.z, other.z))
+		elif isinstance(other, float):
+			return vec3(max(self.x, other), max(self.y, other), max(self.z, other))
+		else:
+			return NotImplemented
+
+	def rmax(self, other):
+		if isinstance(other, float):
+			return vec3(max(other, self.x), max(other, self.y), max(other, self.z))
 		else:
 			return NotImplemented
 
@@ -1221,6 +1281,36 @@ class vec4(object):
 	def __rpow__(self, other):
 		if isinstance(other, float):
 			return vec4(other**self.x, other**self.y, other**self.z, other**self.w)
+		else:
+			return NotImplemented
+
+
+	def min(self, other):
+		if isinstance(other, vec4):
+			return vec4(min(self.x, other.x), min(self.y, other.y), min(self.z, other.z), min(self.w, other.w))
+		elif isinstance(other, float):
+			return vec4(min(self.x, other), min(self.y, other), min(self.z, other), min(self.w, other))
+		else:
+			return NotImplemented
+
+	def rmin(self, other):
+		if isinstance(other, float):
+			return vec4(min(other, self.x), min(other, self.y), min(other, self.z), min(other, self.w))
+		else:
+			return NotImplemented
+
+
+	def max(self, other):
+		if isinstance(other, vec4):
+			return vec4(max(self.x, other.x), max(self.y, other.y), max(self.z, other.z), max(self.w, other.w))
+		elif isinstance(other, float):
+			return vec4(max(self.x, other), max(self.y, other), max(self.z, other), max(self.w, other))
+		else:
+			return NotImplemented
+
+	def rmax(self, other):
+		if isinstance(other, float):
+			return vec4(max(other, self.x), max(other, self.y), max(other, self.z), max(other, self.w))
 		else:
 			return NotImplemented
 

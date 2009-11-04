@@ -177,6 +177,5 @@ def nldot(a, b):
 def rgb2srgb(color):
 	scale = color*12.92
 	warp = (color**(1.0/2.4))*1.055-0.055
-	return warp
-	#return min(scale, warp)
+	return scale.min(warp)
 

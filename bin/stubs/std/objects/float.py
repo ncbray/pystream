@@ -6,7 +6,6 @@ from stubs.stubcollector import stubgenerator
 
 @stubgenerator
 def makeFloat(collector):
-	llast         = collector.llast
 	llfunc        = collector.llfunc
 	export        = collector.export
 	highLevelStub = collector.highLevelStub

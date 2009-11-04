@@ -19,10 +19,16 @@ def noself(code):
 # HACK for hand-op
 func_globals_attr = util.uniqueSlotName(types.FunctionType.__dict__['func_globals'])
 
+def compileFunction(s, name):
+	g = None
+	l = {}
+	eval(compile(s, name, 'exec'), g, l)
+	assert len(l) == 1
+	return l.values()[0]
+
 @stubgenerator
 def makeInterpreterStubs(collector):
 	attachAttrPtr = collector.attachAttrPtr
-	llast         = collector.llast
 	llfunc        = collector.llfunc
 	export        = collector.export
 	highLevelStub = collector.highLevelStub
@@ -77,32 +83,16 @@ def makeInterpreterStubs(collector):
 		assert isinstance(name, str), name
 		assert isinstance(attr, str), attr
 		assert isinstance(argnames, (tuple, list)), argnames
-
-		def simpleAttrCallBuilder():
-			# Param
-			args = [Local(argname) for argname in argnames]
-
-
-
-			# Temporaries
-			attrtemp = Local('attrtemp')
-			type_ 	= Local('type_')
-			func 	= Local('func')
-			retval 	= Local('retval')
-			retp    = Local('internal_return')
-
-			# Instructions
-			b = Suite()
-
-			b.append(collector.instLookup(args[0], attr, func))
-			b.append(Assign(Call(func, args, [], None, None), [retval]))
-			b.append(Return([retval]))
-
-			code = Code(name, CodeParameters(None, args, list(argnames), None, None, [retp]), b)
-			code.rewriteAnnotation(origin=Origin(name, __file__, None, None))
-			return code
-
-		return simpleAttrCallBuilder
+		
+		
+		template = """def %(name)s(%(args)s):
+	clsDict = load(load(%(self)s, 'type'), 'dictionary')
+	meth = loadDict(clsDict, %(attr)r)
+	return meth(%(args)s)
+""" % {'name':name, 'attr':attr, 'self':argnames[0], 'args':", ".join(argnames)}
+		
+		f = compileFunction(template, '<generated - %s>' % name)
+		return interpfunc(f)
 
 	@interpfunc
 	def interpreter_getattribute(self, key):
@@ -204,35 +194,43 @@ def makeInterpreterStubs(collector):
 	def interpreter_unpack6(arg):
 		return arg[0], arg[1], arg[2], arg[3], arg[4], arg[5]
 
-	export(llast(simpleAttrCall('interpreter_getitem', '__getitem__', ['self', 'key'])))
-	export(llast(simpleAttrCall('interpreter_setitem', '__setitem__', ['self', 'key', 'value'])))
-	export(llast(simpleAttrCall('interpreter_delitem', '__delitem__', ['self', 'key'])))
+	simpleAttrCall('interpreter_getitem', '__getitem__', ['self', 'key'])
+	simpleAttrCall('interpreter_setitem', '__setitem__', ['self', 'key', 'value'])
+	simpleAttrCall('interpreter_delitem', '__delitem__', ['self', 'key'])
 	# in / not in / __contains__?
-	export(llast(simpleAttrCall('interpreter_iter', '__iter__', ['self'])))
-	export(llast(simpleAttrCall('interpreter_next', 'next', ['self'])))
+	simpleAttrCall('interpreter_iter', '__iter__', ['self'])
+	simpleAttrCall('interpreter_next', 'next', ['self'])
 
 
 
 	from util.python import opnames
 
-	for op in opnames.forward.itervalues():
-		f = export(llast(simpleAttrCall('interpreter%s' % op, op, ['self', 'other'])))
-		foldF = getattr(operator, op)
-		if foldF: staticFold(foldF)(f)
+	def declare(op, isCompare):
+		name  = opnames.forward[op]
+		rname = opnames.reverse[op]
+
+		f = simpleAttrCall('interpreter%s' % name, name, ['self', 'other'])
+		foldF = getattr(operator, name)
+		if foldF:
+			staticFold(foldF)(f)
+			if isCompare:
+				fold(foldF)(f)
 
 
-		# HACK?
-		if op in ('__eq__', '__ne__', '__gt__', '__ge__', '__lt__', '__le__'):
-			if foldF: fold(foldF)(f)
+	for op in opnames.opLUT.keys():		
+		declare(op, False)
+
+	for op in opnames.compare.keys():
+		declare(op, True)
 
 	for op in opnames.inplace.itervalues():
-		f = export(llast(simpleAttrCall('interpreter%s' % op, op, ['self', 'other'])))
+		f = simpleAttrCall('interpreter%s' % op, op, ['self', 'other'])
 		foldF = getattr(operator, op)
 		if foldF: staticFold(foldF)(f)
 
 
 	for op in opnames.unaryPrefixLUT.itervalues():
-		f = export(llast(simpleAttrCall('interpreter%s' % op, op, ['self'])))
+		f = simpleAttrCall('interpreter%s' % op, op, ['self'])
 		foldF = getattr(operator, op)
 		if foldF: staticFold(foldF)(f)
 

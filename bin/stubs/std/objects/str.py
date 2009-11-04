@@ -7,7 +7,6 @@ import operator
 
 @stubgenerator
 def makeString(collector):
-	llast         = collector.llast
 	llfunc        = collector.llfunc
 	export        = collector.export
 	highLevelStub = collector.highLevelStub

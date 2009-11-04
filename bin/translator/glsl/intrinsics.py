@@ -10,8 +10,8 @@ intrinsicTypes = frozenset([float, int, bool, vec.vec2, vec.vec3, vec.vec4, vec.
 constantTypeNodes = {}
 intrinsicTypeNodes = {}
 
-typeComponents = {}
-componentTypes = {}
+typeComponents = {} # type -> (componentType, count)
+componentTypes = {} # (componentType, count) -> type
 componentTypeNodes = {}
 
 fields = {}
@@ -77,6 +77,39 @@ def isIntrinsicSlot(slot):
 def isIntrinsicMemoryOp(node):
 	return node.fieldtype == 'Attribute' and isinstance(node.name, ast.Existing) and node.name.object.pyobj in fields
 
+def getSingleType(node):
+	values = node.annotation.references.merged
+	types = set([value.xtype.obj.pythonType() for value in values])
+	if len(types) != 1: return None
+	t = types.pop()
+	return t
+
+# Expand scalar arguments into vectors
+def coerceArgs(self, arg0, arg1):
+	arg0type = getSingleType(arg0)
+	if arg0type is None: return None
+	
+	arg1type = getSingleType(arg1)
+	if arg1type is None: return None
+
+	arg0 = self(arg0)
+	arg1 = self(arg1)
+
+	if arg0type is arg1type:
+		pass
+	elif typeComponents[arg0type][0] is arg1type:
+		# arg1 needs to be expanded
+		arg1 = glsl.Constructor(intrinsicTypeNodes[arg0type], [arg1])
+	elif typeComponents[arg1type][0] is arg0type:
+		# arg0 needs to be expanded
+		arg0 = glsl.Constructor(intrinsicTypeNodes[arg1type], [arg0])
+	else:
+		# error
+		return None
+
+	return [arg0, arg1]
+
+
 def typeCallRewrite(self, node):
 	if isSimpleCall(node) and isAnalysis(node.args[0], intrinsicTypes):
 		if self is None:
@@ -92,7 +125,19 @@ def maxRewrite(self, node):
 	if self is None:
 		return True
 	else:
-		return glsl.IntrinsicOp('max', self(node.args))
+		args = coerceArgs(self, *node.args)
+		if args is None: return None
+		return glsl.IntrinsicOp('max', args)
+
+def minRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		args = coerceArgs(self, *node.args)
+		if args is None: return None
+		return glsl.IntrinsicOp('min', args)
 
 def addRewrite(self, node):
 	if not hasNumArgs(node, 2): return
@@ -132,8 +177,9 @@ def powRewrite(self, node):
 	if self is None:
 		return True
 	else:
-		return glsl.IntrinsicOp('pow', self(node.args))
-		#return glsl.BinaryOp(self(node.args[0]), '**', self(node.args[1]))
+		args = coerceArgs(self, *node.args)
+		if args is None: return None
+		return glsl.IntrinsicOp('pow', args)
 
 def dotRewrite(self, node):
 	if not hasNumArgs(node, 2): return
@@ -141,7 +187,9 @@ def dotRewrite(self, node):
 	if self is None:
 		return True
 	else:
-		return glsl.IntrinsicOp('dot', self(node.args))
+		args = coerceArgs(self, *node.args)
+		if args is None: return None
+		return glsl.IntrinsicOp('dot', args)
 
 def lengthRewrite(self, node):
 	if not hasNumArgs(node, 1): return
@@ -228,7 +276,9 @@ def floatPowRewrite(self, node):
 	if self is None:
 		return True
 	else:
-		return glsl.IntrinsicOp('pow', self(node.args))
+		args = coerceArgs(self, *node.args)
+		if args is None: return None		
+		return glsl.IntrinsicOp('pow', args)
 
 def makeIntrinsicRewriter(extractor):
 	rewriter = DirectCallRewriter(extractor)
@@ -241,6 +291,7 @@ def makeIntrinsicRewriter(extractor):
 
 	rewriter.addRewrite('type__call__', typeCallRewrite)
 	rewriter.addRewrite('max_stub', maxRewrite)
+	rewriter.addRewrite('min_stub', minRewrite)
 
 	fvecs = (vec.vec2, vec.vec3, vec.vec4)
 

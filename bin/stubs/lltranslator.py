@@ -174,13 +174,13 @@ class LLTranslator(TypeDispatcher):
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
 		defn = self.defn.get(node.expr)
-		if isinstance(defn, (ast.Check, ast.ConvertToBool, ast.Not)):
+		if defn and defn.alwaysReturnsBoolean():
 			# It will be a boolean, so don't bother converting...
 			return node.expr
 		else:
 			return allChildren(self, node)
 
-	@dispatch(ast.BinaryOp, ast.GetAttr, ast.GetSubscript, ast.BuildTuple)
+	@dispatch(ast.BinaryOp, ast.Is, ast.GetAttr, ast.GetSubscript, ast.BuildTuple)
 	def visitExpr(self, node):
 		return allChildren(self, node)
 

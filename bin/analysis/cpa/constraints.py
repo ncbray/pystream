@@ -12,6 +12,8 @@ import util.tvl
 
 import analysis.cpasignature
 
+import util.xtypes as xtypes
+
 def slotRefs(slot):
 	if slot is None:
 		# Not collected.
@@ -121,6 +123,71 @@ class AssignmentConstraint(Constraint):
 
 	def writes(self):
 		return (self.destslot,)
+
+class IsConstraint(CachedConstraint):
+	__slots__ = 'op', 'left', 'right', 'target', 't', 'f'
+	def __init__(self, sys, op, left, right, target):
+		assert target is not None
+		assert isinstance(left, storegraph.SlotNode), type(left)
+		assert isinstance(right, storegraph.SlotNode), type(right)
+
+		self.op       = op
+		self.left     = left
+		self.right    = right
+		self.target   = target
+
+		self.t = False
+		self.f = False
+
+		CachedConstraint.__init__(self, sys, left, right)
+
+	def emitTrue(self):
+		if not self.t:
+			self.t = True
+			self.emitConstant(True)
+			
+	def emitFalse(self):
+		if not self.f:
+			self.f = True
+			self.emitConstant(False)
+		
+	def emitConstant(self, pyobj):
+		obj  = self.sys.extractor.getObject(pyobj)
+		xtype = self.sys.canonical.existingType(obj)
+		self.target.initializeType(xtype)
+		#self.sys.createAssign(field, self.target)
+
+
+	def concreteUpdate(self, leftType, rightType):
+		if self.t and self.f: return
+		
+		lpt = leftType.obj.pythonType()
+		rpt = rightType.obj.pythonType()
+		
+		if lpt is not rpt:
+			#print "type mismatch"
+			self.emitFalse()
+		elif leftType.isExisting() and rightType.isExisting():
+			if leftType.obj is rightType.obj:
+				#print "existing match"
+				self.emitTrue()
+			else:					
+				#print "existing mismatch"
+				self.emitFalse()
+		elif isinstance(lpt, xtypes.ConstantTypes):
+			# May be pooled later, which creates ambiguity
+			# print "ambiguous constant"
+			self.emitTrue()
+			self.emitFalse()
+		elif leftType is rightType:
+			# More that one of this object may be created...
+			# print "ambiguous xtype match" 
+			self.emitTrue()
+			self.emitFalse()					
+		else:
+			# Not the same object, will not be pooled.
+			#print "xtype mistpatch"
+			self.emitFalse()
 
 
 class LoadConstraint(CachedConstraint):

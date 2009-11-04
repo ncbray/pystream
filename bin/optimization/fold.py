@@ -341,6 +341,12 @@ class FoldRewrite(TypeDispatcher):
 		self.logCreated(result)
 		return result
 
+	@dispatch(ast.Is)
+	def visitIs(self, node):
+		result = self.annotateFolded(fold.foldIsAST(self.extractor, node))
+		self.logCreated(result)
+		return result
+
 	@dispatch(ast.UnaryPrefixOp)
 	def visitUnaryPrefixOp(self, node):
 		if self.descriptive(): return node
@@ -350,6 +356,9 @@ class FoldRewrite(TypeDispatcher):
 
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
+		if node.expr.alwaysReturnsBoolean():
+			return self(node.expr)
+			
 		if self.descriptive(): return node
 		result = self.annotateFolded(fold.foldBoolAST(self.extractor, node))
 		self.logCreated(result)

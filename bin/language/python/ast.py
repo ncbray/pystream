@@ -35,6 +35,10 @@ class Existing(Reference):
 	def constantValue(self):
 		return self.object.pyobj
 
+	def alwaysReturnsBoolean(self):
+		return isinstance(self.constantValue(), bool)
+
+
 class Local(Reference):
 	__slots__  = 'name'
 	__shared__ = True
@@ -133,6 +137,9 @@ class GetIter(Expression):
 class ConvertToBool(Expression):
 	__fields__ = 'expr:Expression'
 
+	def alwaysReturnsBoolean(self):
+		return True
+
 class Import(Expression):
 	# TODO fromlist type?
 	__fields__ = 'name:str fromlist*? level:int'
@@ -140,6 +147,9 @@ class Import(Expression):
 # TODO make UnaryPrefixOp? It is in a class of its own...
 class Not(Expression):
 	__fields__ = 'expr:Expression'
+
+	def alwaysReturnsBoolean(self):
+		return True
 
 class UnaryPrefixOp(Expression):
 	__fields__ = 'op:str expr:Expression'
@@ -256,6 +266,9 @@ class MakeFunction(Expression):
 class ShortCircutAnd(Expression):
 	# TODO type?
 	__fields__ = 'terms*'
+
+	def alwaysReturnsBoolean(self):
+		return True
 
 class ShortCircutOr(Expression):
 	# TODO type?
@@ -398,6 +411,11 @@ class Code(BaseCode):
 	def abstractAllocates(self):
 		return None
 
+class Is(Expression):
+	__fields__ = 'left:Expression right:Expression'
+
+	def alwaysReturnsBoolean(self):
+		return True
 
 class Allocate(LLExpression):
 	__fields__ = 'expr:Reference'
@@ -410,3 +428,6 @@ class Store(LLStatement):
 
 class Check(LLExpression):
 	__fields__ = 'expr:Reference fieldtype:str name:Reference'
+
+	def alwaysReturnsBoolean(self):
+		return True

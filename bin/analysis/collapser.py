@@ -233,7 +233,7 @@ class Collapser(TypeDispatcher):
 			self.resetStack()
 			self.process(node.expr)
 
-	@dispatch(ast.BinaryOp)
+	@dispatch(ast.BinaryOp, ast.Is)
 	def visitBinaryOp(self, node):
 		self.process(node.right)
 		self.process(node.left)

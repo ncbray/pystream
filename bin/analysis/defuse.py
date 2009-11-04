@@ -115,7 +115,7 @@ class DefUseVisitor(TypeDispatcher):
 	def visitUnary(self, node):
 		self.use(node, node.expr)
 
-	@dispatch(ast.BinaryOp)
+	@dispatch(ast.BinaryOp, ast.Is)
 	def visitBinaryOp(self, node):
 		self.use(node, node.left)
 		self.use(node, node.right)

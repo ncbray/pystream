@@ -27,7 +27,9 @@ class MarkLocals(TypeDispatcher):
 		visitAllChildren(self, node)
 
 
-nodesWithNoSideEffects = (ast.GetGlobal, ast.Existing, ast.Local, ast.Load, ast.Allocate, ast.BuildTuple, ast.BuildList, ast.BuildMap)
+nodesWithNoSideEffects = (ast.GetGlobal, ast.Existing, ast.Local,
+						ast.Is, ast.Load, ast.Allocate,
+						ast.BuildTuple, ast.BuildList, ast.BuildMap)
 
 class MarkLive(TypeDispatcher):
 	def __init__(self, code):

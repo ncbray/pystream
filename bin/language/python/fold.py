@@ -89,3 +89,17 @@ def foldCallAST(extractor, node, func, args=(), kargs={}):
 		pass
 
 	return node
+
+def foldIsAST(extractor, node):
+	left  = node.left
+	right = node.right
+	if left is right:
+		# Must alias
+		obj = extractor.getObject(True)
+		return ast.Existing(obj)
+	elif isinstance(left, ast.Existing) and isinstance(node.right, ast.Existing):
+		# Known objects
+		obj = extractor.getObject(left.object is right.object)
+		return ast.Existing(obj)
+		
+	return node

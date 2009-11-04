@@ -708,8 +708,13 @@ class InstructionTranslator(object):
 		right = self.getArg()
 		left  = self.getArg()
 
-		bop = BinaryOp(left, op, right)
-		bop = foldBinaryOpAST(self.compiler.extractor, bop)
+		assert op not in ('is not', 'in', 'not in'), "Unsupported operator %r" % op
+
+		if op == 'is':
+			bop = Is(left, right)
+		else:
+			bop = BinaryOp(left, op, right)
+			bop = foldBinaryOpAST(self.compiler.extractor, bop)
 
 		if isinstance(bop, BinaryOp) and bop.op in opnames.inplaceOps:
 			self.pushAssign(bop.left, bop)

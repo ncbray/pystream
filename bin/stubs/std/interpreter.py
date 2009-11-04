@@ -94,6 +94,32 @@ def makeInterpreterStubs(collector):
 		f = compileFunction(template, '<generated - %s>' % name)
 		return interpfunc(f)
 
+	def simpleBinaryOp(name, attr, rattr):
+		assert isinstance(name, str), name
+		assert isinstance(attr, str), attr
+		assert isinstance(rattr, str), attr
+		
+		
+		template = """def %(name)s(self, other):
+	result = NotImplemented
+	
+	clsDict = load(load(self, 'type'), 'dictionary')
+	if checkDict(clsDict, %(attr)r):
+		meth = loadDict(clsDict, %(attr)r)
+		result = meth(self, other)
+
+	if result is NotImplemented:
+		clsDict = load(load(other, 'type'), 'dictionary')
+		if checkDict(clsDict, %(rattr)r):
+			meth = loadDict(clsDict, %(rattr)r)
+			result = meth(other, self)
+		
+	return result
+""" % {'name':name, 'attr':attr, 'rattr':rattr}
+		
+		f = compileFunction(template, '<generated - %s>' % name)
+		return interpfunc(f)
+
 	@interpfunc
 	def interpreter_getattribute(self, key):
 		call = loadDict(load(load(self, 'type'), 'dictionary'), '__getattribute__')
@@ -209,7 +235,7 @@ def makeInterpreterStubs(collector):
 		name  = opnames.forward[op]
 		rname = opnames.reverse[op]
 
-		f = simpleAttrCall('interpreter%s' % name, name, ['self', 'other'])
+		f = simpleBinaryOp('interpreter%s' % name, name, rname)
 		foldF = getattr(operator, name)
 		if foldF:
 			staticFold(foldF)(f)

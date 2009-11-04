@@ -81,6 +81,13 @@ class ExtractDataflow(TypeDispatcher):
 			CallConstraint(self.system, op, expr, args, kwds, vargs, kargs, targets)
 		return targets
 
+	def isOp(self, node, left, right, targets):
+		if self.doOnce(node):
+			assert len(targets) == 1
+			op   = self.contextOp(node)
+			IsConstraint(self.system, op, left, right, targets[0])
+		return targets
+
 	def load(self, node, expr, fieldtype, name, targets):
 		if self.doOnce(node):
 			assert len(targets) == 1
@@ -180,6 +187,10 @@ class ExtractDataflow(TypeDispatcher):
 			targets[0].initializeType(self.system.canonical.existingType(node.object))
 		else:
 			return value
+
+	@dispatch(ast.Is)
+	def visitIs(self, node, targets):
+		return self.isOp(node, self(node.left), self(node.right), targets)
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, targets):

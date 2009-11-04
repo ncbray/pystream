@@ -22,17 +22,13 @@ class ConvertCalls(TypeDispatcher):
 	def exports(self):
 		return self.extractor.stubs.exports
 
-	@defaultdispatch
-	def default(self, node):
-		assert False, repr(type(node))
-
 	@dispatch(str, type(None), ast.Local, ast.Existing, ast.Code, ast.Break, ast.Continue, ast.CodeParameters, ast.DoNotCare)
 	def visitLeaf(self, node):
 		return node
 
 	@dispatch(ast.Suite, ast.Condition, list, tuple,
 		  ast.Assign, ast.Discard, ast.Return,
-		  ast.Allocate, ast.Store, ast.Load, ast.Check,
+		  ast.Is, ast.Allocate, ast.Store, ast.Load, ast.Check,
 		  ast.Switch, ast.For, ast.While,
 		  ast.TypeSwitch, ast.TypeSwitchCase)
 	def visitOK(self, node):

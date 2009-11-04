@@ -202,14 +202,18 @@ class DestackVisitor(StandardVisitor):
 	def getTOS(self, block, stack):
 		assert block.origin, block
 		lcl = stack.peek()
-		conditional = ConvertToBool(lcl)
-		conditional.rewriteAnnotation(origin=block.origin)
-
 		defn = self.ssa.definition(lcl)
 
+		if defn.alwaysReturnsBoolean():
+			# Don't convert if we can infer that it's a boolean value
+			conditional = lcl
+		else:
+			conditional = ConvertToBool(lcl)
+			conditional.rewriteAnnotation(origin=block.origin)
+
+		# Predict what the resulting value can be
 		maybeTrue = True
 		maybeFalse = True
-
 
 		if isinstance(defn, Existing) and defn.object.isConstant():
 			# TODO wrap with exception handling mechanism

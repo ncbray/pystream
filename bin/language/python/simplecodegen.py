@@ -168,13 +168,22 @@ class SimpleExprGen(StandardVisitor):
 		prec = 20
 		return ("not " + self.process(node.expr, prec)), prec
 
+
+	def visitIs(self, node):
+		prec = opnames.binaryOpPrecedence['is']
+
+		left = self.process(node.left, prec, False)
+		right = self.process(node.right, prec, True)
+
+		return (left + " is "  + right), prec
+
+
 	def visitBinaryOp(self, node):
 		assert not node.op in opnames.inplaceOps
 
 		prec = opnames.binaryOpPrecedence[node.op]
 		flipBinding = node.op == '**'
 
-		# TODO flip l/r binding for **
 		left = self.process(node.left, prec, flipBinding)
 		right = self.process(node.right, prec, not flipBinding)
 
@@ -183,6 +192,7 @@ class SimpleExprGen(StandardVisitor):
 			op = " %s " % op
 
 		return (left + op + right), prec
+
 
 	def visitYield(self, node):
 		expr = self.process(node.expr, 24)

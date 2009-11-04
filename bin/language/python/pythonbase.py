@@ -8,6 +8,9 @@ class PythonASTNode(ASTNode):
 	def returnsValue(self):
 		return False
 
+	def alwaysReturnsBoolean(self):
+		return False
+
 	def isPure(self):
 		return False
 

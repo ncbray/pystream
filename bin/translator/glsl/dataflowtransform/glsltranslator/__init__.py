@@ -432,6 +432,16 @@ class GLSLTranslator(TypeDispatcher):
 		suite = self(node)
 		return glsl.Code('main', [], glsl.BuiltinType('void'), suite)
 
+import re
+multipleSpace = re.compile('[ \t]+')
+unessisarySpace = re.compile('((?<![\w \t])[ \t]+)|([ \t]+(?![\w \t]))')
+multipleReturns = re.compile('\n+')
+
+# Removes unnecessary spaces, at the cost of readability
+# Leaves newlines intact, as they influence comments and compiler directives
+def compressGLSL(code):
+	return multipleReturns.sub('\n', unessisarySpace.sub('', multipleSpace.sub(' ', code))).strip()
+	
 
 def process(context):
 	rewriter = intrinsics.makeIntrinsicRewriter(context.compiler.extractor)
@@ -440,6 +450,7 @@ def process(context):
 	result = gt.process(context.cfg)
 
 	# HACK for debugging
-	print codegen.GLSLCodeGen()(result)
+	s = codegen.GLSLCodeGen()(result)
+	print s
 
 	return result

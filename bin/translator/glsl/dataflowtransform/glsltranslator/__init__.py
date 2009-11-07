@@ -287,6 +287,9 @@ class GLSLTranslator(TypeDispatcher):
 		if translated is None:
 			raise TemporaryLimitation(self.code, node, "Cannot handle non-intrinsic function calls.")
 
+		if not g.localModifies:
+			return language.glsl.tools.assign(translated, None)
+
 		assert len(g.localModifies) == 1
 			
 		# HACK use assignment target slot.

@@ -86,6 +86,9 @@ def transformInputSubtree(compiler, dioa, dataflow, subtree, root):
 			name = exprNode.names[0]
 			dataflow.entry.addEntry(name, exprNode)
 			subtree.impl = name
+			
+			# Prevent the fields of this object from being transformed
+			return exprNode
 		else:
 			exprNode = allocateObj(dioa, dataflow, subtree, root, obj)
 
@@ -150,14 +153,18 @@ def transformOutputSubtree(compiler, dioa, dataflow, subtree, root):
 		expr = root.name
 
 	for field, child in subtree.fields.iteritems():
+		
+		if intrinsics.isIntrinsicField(field): continue
+		
 		name = ast.Existing(field.name)
+		nameref = field.name # HACK incorrect
 		op   = ast.Load(expr, field.type, name)
 				
 		g = graph.GenericOp(hyperblock, op) 
 
 		g.setPredicate(predicate)
 		g.addLocalRead(expr, root)
-		g.addLocalRead(name, dataflow.getExisting(name))
+		g.addLocalRead(name, dataflow.getExisting(name, nameref))
 		
 		reads = dioa.set.empty
 		values = dioa.set.empty
@@ -196,42 +203,30 @@ def transformOutput(compiler, dioa, dataflow, contextOut, root):
 	transformOutputSubtree(compiler, dioa, dataflow, contextOut, root)
 
 def killNonintrinsicIO(compiler, dataflow):
-	node = dataflow.exit
-
-	reads = {}
-	for name, slot in node.reads.iteritems():
+	def callback(name, slot):
 		if slot.isField():
 			# Kill non-intrinsic fields.
-			if not intrinsics.isIntrinsicSlot(slot.name):
-				slot.removeUse(node)
-				continue
+			return intrinsics.isIntrinsicSlot(slot.name)
 		elif slot.isLocal():
 			# Kill locals that do not contain intrinsic types.
 			intrinsicObj = any([intrinsics.isIntrinsicObject(obj) for obj in slot.annotation.values.flat])
-			if not intrinsicObj:
-				slot.removeUse(node)
-				continue
-			
-		reads[name] = slot
+			return intrinsicObj
 
-	node.reads = reads
+	node = dataflow.exit.filterUses(callback)
+
 
 # Used for culling the output of the fragment shader.
 # Only the built-in outputs of the fragment shader are actually used.
 def killUnusedOutputs(context):
-	dataflow = context.dataflow
-	node = dataflow.exit
-	reads = {}
-	
-	for name, slot in node.reads.iteritems():
-		if isinstance(name, ast.Local):			
-			if name not in context.trees.outputLUT: continue
-			
+	def callback(name, slot):
+		if isinstance(name, ast.Local):
+			if name not in context.trees.outputLUT:
+				return False
 			tree = context.trees.outputLUT[name]
-			if not tree.builtin and not tree.link:
-				slot.removeUse(node)
-				continue
-			
-		reads[name] = slot
+			return tree.builtin or tree.link
+		else:
+			return True
 
-	node.reads = reads
+	node = context.dataflow.exit	
+	node.filterUses(callback)
+	

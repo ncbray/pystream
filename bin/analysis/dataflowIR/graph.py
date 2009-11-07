@@ -480,6 +480,15 @@ class Exit(PredicatedOpNode):
 			assert name is not None, name
 			self.reads[name] = replacement
 
+	def filterUses(self, callback):
+		reads = {}		
+		for name, slot in self.reads.iteritems():
+			if callback(name, slot):
+				reads[name] = slot
+			else:
+				slot.removeUse(self)
+		self.reads = reads		
+
 
 class Gate(PredicatedOpNode):
 	__slots__ = 'read', 'modify'
@@ -782,6 +791,7 @@ class GenericOp(PredicatedOpNode):
 			assert slot.isDefn(self)
 
 def refFromExisting(node):
+	assert node.annotation.references, node
 	return node.annotation.references.merged[0]
 
 class DataflowGraph(object):

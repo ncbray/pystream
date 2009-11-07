@@ -1,8 +1,8 @@
 from .. import intrinsics
-
+from analysis.storegraph.canonicalobjects import FieldSlotName
 
 class IOTreeObj(object):
-	def __init__(self, path, treetype, parent=None):
+	def __init__(self, path, impl, treetype, parent=None):
 		self.parent   = parent
 		self.path     = path
 		self.treetype = treetype
@@ -11,13 +11,32 @@ class IOTreeObj(object):
 
 		self.builtin  = False
 		self.name     = None
-		self.impl     = None
+		self.impl     = impl
 
 		self.link     = None
 
+	def names(self):
+		if self.isField():
+			return self.getFieldSlots()
+		elif self.impl:
+			return (self.impl,)
+		else:
+			return ()
+
+	def isField(self):
+		return isinstance(self.impl, FieldSlotName)
+
+	def getFieldSlots(self):
+		assert self.parent
+		slots = []
+		for obj in self.parent.objMasks.iterkeys():
+			if self.impl in obj.slots:
+				slots.append(obj.slots[self.impl])
+		return slots
+
 	def getField(self, field):
 		if not field in self.fields:
-			slot = IOTreeObj(self.path + (field,), self.treetype, self)
+			slot = IOTreeObj(self.path + (field,), field, self.treetype, self)
 			self.fields[field] = slot
 		else:
 			slot = self.fields[field]
@@ -35,7 +54,7 @@ class IOTreeObj(object):
 			self.builtin = True
 
 	def buildImplementationLUT(self, lut):
-		if self.impl:
+		if not self.isField() and self.impl:
 			assert self.impl not in lut, self.impl
 			lut[self.impl] = self
 			
@@ -60,6 +79,11 @@ class IOTreeObj(object):
 
 		return uid
 	
+	def unlink(self):
+		if self.link:
+			self.link.link = None
+			self.link = None
+	
 def handleObj(dioa, obj, lut, exist, mask, tobj):
 	# Does this field actually exist?
 	if mask is dioa.bool.false: return
@@ -74,14 +98,16 @@ def handleObj(dioa, obj, lut, exist, mask, tobj):
 
 	for name, field in fieldLUT.iteritems():
 		# Don't ad intrinsic fields to the tree
-		if intrinsics.isIntrinsicField(name): continue
+		#if intrinsics.isIntrinsicField(name): continue
 
 		# Don't ad unused fields to the tree
 		if field not in lut: continue
 		
 		# Handle the contents of the field.
 		ctree = lut[field].annotation.values.correlated
-		handleCTree(dioa, ctree, lut, exist, mask, tobj.getField(name))
+				
+		child = tobj.getField(name)
+		handleCTree(dioa, ctree, lut, exist, mask, child)
 
 
 def handleCTree(dioa, ctree, lut, exist, mask, tobj):
@@ -123,8 +149,7 @@ def getSingleObject(dioa, lut, lcl):
 
 
 def evaluateContextObject(dioa, lut, exist, lcl, obj, treetype):
-	tobj = IOTreeObj(('context',), treetype)
-	tobj.impl = lcl
+	tobj = IOTreeObj(('context',), lcl, treetype)
 	
 	mask = dioa.bool.true
 	handleObj(dioa, obj, lut, exist, mask, tobj)
@@ -136,15 +161,14 @@ def evaluateContextObject(dioa, lut, exist, lcl, obj, treetype):
 
 def evaluateLocal(dioa, lut, exist, lcl, treetype):
 	if lcl is None: return None
-	if lcl.isDoNotCare(): return IOTreeObj((), treetype)
+	if lcl.isDoNotCare(): return IOTreeObj((), None, treetype)
 		
 	node = lut[lcl]
 	
 	# The correlated tree
 	ctree = node.annotation.values.correlated
 
-	tobj = IOTreeObj((lcl,), treetype)
-	tobj.impl = lcl
+	tobj = IOTreeObj((lcl,), lcl, treetype)
 
 	handleCTree(dioa, ctree, lut, exist, dioa.bool.true, tobj)
 		

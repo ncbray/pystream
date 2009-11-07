@@ -149,6 +149,7 @@ class DataflowTransformContext(object):
 	def __init__(self, compiler, code):
 		self.compiler = compiler
 		self.code     = code
+		self.trees    = None
 	
 	def convert(self):
 		self.dataflow = analysis.dataflowIR.convert.evaluateCode(self.compiler, self.code)
@@ -198,7 +199,26 @@ class DataflowTransformContext(object):
 		uid = 0
 		for outp, inp in zip(outputs, inputs):
 			uid = outp.makeLinks(inp, uid)
-		
+
+	def findLiveLinked(self, node, lut, live):
+		if node.link:
+			for name in node.names():
+				if name in lut:
+					live.update(node.link.names())
+					break
+			else:
+				node.unlink()
+
+		for field in node.fields.itervalues():
+			self.findLiveLinked(field, lut, live)
+
+	def findLive(self, node, lut, live):
+		for name in node.names():
+			if name in lut:
+				live.add(name)
+			
+		for field in node.fields.itervalues():
+			self.findLive(field, lut, live)
 
 def evaluateCode(compiler, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, vscode)
@@ -218,11 +238,23 @@ def evaluateCode(compiler, vscode, fscode):
 		
 		iotransform.killUnusedOutputs(fscontext)
 		fscontext.simplify()
-		
-		# TODO load eliminate uniform -> varying
-		# TODO propagate DCE between shaders
 
-		iotransform.killUnusedOutputs(vscontext)
+		# TODO load eliminate uniform -> varying
+
+		# Find the live I/O
+		live = set()		
+		lut = fscontext.dataflow.entry.modifies
+		for inp in fscontext.trees.inputs:
+			fscontext.findLiveLinked(inp, lut, live)
+			
+		lut = vscontext.dataflow.exit.reads
+		vscontext.findLive(vscontext.trees.contextOut, lut, live)
+				
+		# Remove the dead outputs from the vertex shader
+		def filterLive(name, slot):
+			return name in live
+		vscontext.dataflow.exit.filterUses(filterLive)
+
 		vscontext.simplify()
 
 	with compiler.console.scope('synthesize'):

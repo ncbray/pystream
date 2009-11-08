@@ -161,37 +161,50 @@ def typeName(base, l):
 		return "%s%d" % (base, l)
 		
 
+def makeSubconstructor(base, count, baseType, args, indent, srcs=()):
+        if len(srcs) < count:
+                print "%sif isinstance(%s, %s):" % (indent, args[0], baseType)
+                currentSrcs = srcs + (args[0],)
+                makeSubconstructor(base, count, baseType, args[1:], indent+'\t', currentSrcs)
+
+                for i in range(2, 5):
+                        print "%selif isinstance(%s, %s%d):" % (indent, args[0], base, i)
+
+                        currentSrcs = srcs
+                        for coord in allcoords[:i]:
+                                currentSrcs = currentSrcs + ("%s.%s" % (args[0], coord),)
+                                if len(currentSrcs) >= count: break                                
+                                
+                        makeSubconstructor(base, count, baseType, args[1:], indent+'\t', currentSrcs)
+                        
+
+                if count-1 == len(args):
+                        print "%selif %s is None:" % (indent, args[0])
+                        makeSubconstructor(base, count, baseType, (), indent+'\t', srcs*count)
+                        
+                #print "%selse:\n%s\tassert False, type(%s)" % (indent, indent, args[0])
+                print "%selse:\n%s\tpass #assert False, type(%s)" % (indent, indent, args[0])
+
+        else:
+                for arg in args:
+                        #print "%sassert %s is None" % (indent, arg)
+                        print "%spass #assert %s is None" % (indent, arg)
+                
+                for coord, src in zip(allcoords, srcs):
+                        print "%sself.%s = %s" % (indent, coord, src)
+ 
 def makeConstructor(base, coords):
 	parts = [coords[0]]
 	parts.extend(["%s=None" % coord for coord in coords[1:]])
 
 	print "\tdef __init__(self, %s):" % ", ".join(parts)
 
-##	total = 0
-##	for a in len(coords):
-##		total = a
-##		print "\t\tif isinstance(x, %s)":
-##
-##		remaining = 
-##		
-##		if total < len(coords):
-##			for b in len(coords):
-##				total = a+b
-##				if total < len(coords):
-##					for c in len(coords):
-##						total = a+b+c
-##						if total < len(coords):
-##							for d in len(coords):
-##								total = a+b+c+d
-##									if total < len(coords):
-##										pass
-##
-	for coord in coords:
-		print "\t\tself.%s = %s" % (coord, coord)
-	print
+        makeSubconstructor(base, len(coords), 'float', coords, '\t\t')
+        print
 
 	args = ['float']*len(coords)
 	declMethod('__init__', *args)
+
 
 
 def matrixMul(mbase, vbase, l):
@@ -253,6 +266,12 @@ for l in range(2, 5):
 	print
 
 	declMethod('__repr__')
+
+	print "\tdef __float__(self):" 
+	print "\t\treturn self.x"
+	print
+
+	declMethod('__float__')
 
 	print """	def dot(self, other):
 		#assert type(self) is type(other)

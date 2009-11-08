@@ -43,51 +43,54 @@ def declMethod(name, *args):
 def declGetter(name):	
 	print >> interface, "cls.getter(%s)"  % repr(name)
 
-def make1(a):
+def makeName(parts):
+        return "".join(parts)
+
+def makeAltName(parts):
+        return "".join([lut[part] for part in parts])
+
+def isValidSetter(parts):
+     return len(set(parts)) == len(parts)
+
+def printGetter(name, parts):
 	print "\t@property"
-	print "\tdef %s(self):" % (lut[a],)
-	print "\t\treturn self.%s" % (a,)
-	
-	declGetter(lut[a])
+	print "\tdef %s(self):" % name
+	if len(parts) == 1:
+        	print "\t\treturn self.%s" % parts[0]
+        else:
+        	print "\t\treturn vec%d(%s)" % (len(parts), ", ".join(["self.%s" % part for part in parts]))
 
-def make2(a, b):
-	print "\t@property"
-	print "\tdef %s%s(self):" % (a, b)
-	print "\t\treturn vec2(self.%s, self.%s)" % (a, b)
+        if isValidSetter(parts):
+                printSetter(name, parts)
 
-	print "\t@property"
-	print "\tdef %s%s(self):" % (lut[a], lut[b])
-	print "\t\treturn vec2(self.%s, self.%s)" % (a, b)
+def printSetter(name, parts):
+        print "\t@%s.setter" % name
+	print "\tdef %s(self, other):" % name
 
-	declGetter("%s%s"  % (a, b))	
-	declGetter("%s%s"  % (lut[a], lut[b]))
-
-def make3(a, b, c):
-	print "\t@property"
-	print "\tdef %s%s%s(self):" % (a, b, c)
-	print "\t\treturn vec3(self.%s, self.%s, self.%s)" % (a, b, c)
-
-	print "\t@property"
-	print "\tdef %s%s%s(self):" % (lut[a], lut[b], lut[c])
-	print "\t\treturn vec3(self.%s, self.%s, self.%s)" % (a, b, c)
+	# Read before write incase self and other alias
+        for part, src in zip(parts, allcoords):
+                print "\t\t%s = other.%s" % (src, src)
+        for part, src in zip(parts, allcoords):
+                print "\t\tself.%s = %s" % (part, src)
 
 
-	declGetter("%s%s%s"  % (a, b, c))	
-	declGetter("%s%s%s"  % (lut[a], lut[b], lut[c]))
+def makeSwizzle(*parts):
+        name = makeName(parts)
+        altName = makeAltName(parts)
 
+        if name in allcoords:
+                # Name is a real field, only generate the alternate
+                printGetter(altName, parts)
+                print
+        else:
+                printGetter(name, parts)
 
-def make4(a, b, c, d):
-	print "\t@property"
-	print "\tdef %s%s%s%s(self):" % (a, b, c, d)
-	print "\t\treturn vec4(self.%s, self.%s, self.%s, self.%s)" % (a, b, c, d)
+                print "\t%s = %s" % (altName, name)
+                print
 
-	print "\t@property"
-	print "\tdef %s%s%s%s(self):" % (lut[a], lut[b], lut[c], lut[d])
-	print "\t\treturn vec4(self.%s, self.%s, self.%s, self.%s)" % (a, b, c, d)
-
-
-	declGetter("%s%s%s%s"  % (a, b, c, d))	
-	declGetter("%s%s%s%s"  % (lut[a], lut[b], lut[c], lut[d]))
+        	declGetter(name)
+        	
+	declGetter(altName)
 
 def makeOpPrimitive(base, coords, forwardName, reverseName, optemplate):
 	vecvec = ", ".join([optemplate % ('self.'+coord, 'other.'+coord) for coord in coords])
@@ -322,13 +325,13 @@ for l in range(2, 5):
 
 	# Swizzles
 	for a in coords:
-		make1(a)
+		makeSwizzle(a)
 		for b in coords:
-			make2(a, b)
+			makeSwizzle(a, b)
 			for c in coords:
-				make3(a, b, c)
+				makeSwizzle(a, b, c)
 				for d in coords:
-					make4(a, b, c, d)
+					makeSwizzle(a, b, c, d)
 	print
 
 

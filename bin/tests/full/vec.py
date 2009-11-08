@@ -174,177 +174,171 @@ class vec2(object):
 	@property
 	def r(self):
 		return self.x
+	@r.setter
+	def r(self, other):
+		x = other.x
+		self.x = x
+
 	@property
 	def xx(self):
 		return vec2(self.x, self.x)
-	@property
-	def rr(self):
-		return vec2(self.x, self.x)
+	rr = xx
+
 	@property
 	def xxx(self):
 		return vec3(self.x, self.x, self.x)
-	@property
-	def rrr(self):
-		return vec3(self.x, self.x, self.x)
+	rrr = xxx
+
 	@property
 	def xxxx(self):
 		return vec4(self.x, self.x, self.x, self.x)
-	@property
-	def rrrr(self):
-		return vec4(self.x, self.x, self.x, self.x)
+	rrrr = xxxx
+
 	@property
 	def xxxy(self):
 		return vec4(self.x, self.x, self.x, self.y)
-	@property
-	def rrrg(self):
-		return vec4(self.x, self.x, self.x, self.y)
+	rrrg = xxxy
+
 	@property
 	def xxy(self):
 		return vec3(self.x, self.x, self.y)
-	@property
-	def rrg(self):
-		return vec3(self.x, self.x, self.y)
+	rrg = xxy
+
 	@property
 	def xxyx(self):
 		return vec4(self.x, self.x, self.y, self.x)
-	@property
-	def rrgr(self):
-		return vec4(self.x, self.x, self.y, self.x)
+	rrgr = xxyx
+
 	@property
 	def xxyy(self):
 		return vec4(self.x, self.x, self.y, self.y)
-	@property
-	def rrgg(self):
-		return vec4(self.x, self.x, self.y, self.y)
+	rrgg = xxyy
+
 	@property
 	def xy(self):
 		return vec2(self.x, self.y)
-	@property
-	def rg(self):
-		return vec2(self.x, self.y)
+	@xy.setter
+	def xy(self, other):
+		x = other.x
+		y = other.y
+		self.x = x
+		self.y = y
+	rg = xy
+
 	@property
 	def xyx(self):
 		return vec3(self.x, self.y, self.x)
-	@property
-	def rgr(self):
-		return vec3(self.x, self.y, self.x)
+	rgr = xyx
+
 	@property
 	def xyxx(self):
 		return vec4(self.x, self.y, self.x, self.x)
-	@property
-	def rgrr(self):
-		return vec4(self.x, self.y, self.x, self.x)
+	rgrr = xyxx
+
 	@property
 	def xyxy(self):
 		return vec4(self.x, self.y, self.x, self.y)
-	@property
-	def rgrg(self):
-		return vec4(self.x, self.y, self.x, self.y)
+	rgrg = xyxy
+
 	@property
 	def xyy(self):
 		return vec3(self.x, self.y, self.y)
-	@property
-	def rgg(self):
-		return vec3(self.x, self.y, self.y)
+	rgg = xyy
+
 	@property
 	def xyyx(self):
 		return vec4(self.x, self.y, self.y, self.x)
-	@property
-	def rggr(self):
-		return vec4(self.x, self.y, self.y, self.x)
+	rggr = xyyx
+
 	@property
 	def xyyy(self):
 		return vec4(self.x, self.y, self.y, self.y)
-	@property
-	def rggg(self):
-		return vec4(self.x, self.y, self.y, self.y)
+	rggg = xyyy
+
 	@property
 	def g(self):
 		return self.y
+	@g.setter
+	def g(self, other):
+		x = other.x
+		self.y = x
+
 	@property
 	def yx(self):
 		return vec2(self.y, self.x)
-	@property
-	def gr(self):
-		return vec2(self.y, self.x)
+	@yx.setter
+	def yx(self, other):
+		x = other.x
+		y = other.y
+		self.y = x
+		self.x = y
+	gr = yx
+
 	@property
 	def yxx(self):
 		return vec3(self.y, self.x, self.x)
-	@property
-	def grr(self):
-		return vec3(self.y, self.x, self.x)
+	grr = yxx
+
 	@property
 	def yxxx(self):
 		return vec4(self.y, self.x, self.x, self.x)
-	@property
-	def grrr(self):
-		return vec4(self.y, self.x, self.x, self.x)
+	grrr = yxxx
+
 	@property
 	def yxxy(self):
 		return vec4(self.y, self.x, self.x, self.y)
-	@property
-	def grrg(self):
-		return vec4(self.y, self.x, self.x, self.y)
+	grrg = yxxy
+
 	@property
 	def yxy(self):
 		return vec3(self.y, self.x, self.y)
-	@property
-	def grg(self):
-		return vec3(self.y, self.x, self.y)
+	grg = yxy
+
 	@property
 	def yxyx(self):
 		return vec4(self.y, self.x, self.y, self.x)
-	@property
-	def grgr(self):
-		return vec4(self.y, self.x, self.y, self.x)
+	grgr = yxyx
+
 	@property
 	def yxyy(self):
 		return vec4(self.y, self.x, self.y, self.y)
-	@property
-	def grgg(self):
-		return vec4(self.y, self.x, self.y, self.y)
+	grgg = yxyy
+
 	@property
 	def yy(self):
 		return vec2(self.y, self.y)
-	@property
-	def gg(self):
-		return vec2(self.y, self.y)
+	gg = yy
+
 	@property
 	def yyx(self):
 		return vec3(self.y, self.y, self.x)
-	@property
-	def ggr(self):
-		return vec3(self.y, self.y, self.x)
+	ggr = yyx
+
 	@property
 	def yyxx(self):
 		return vec4(self.y, self.y, self.x, self.x)
-	@property
-	def ggrr(self):
-		return vec4(self.y, self.y, self.x, self.x)
+	ggrr = yyxx
+
 	@property
 	def yyxy(self):
 		return vec4(self.y, self.y, self.x, self.y)
-	@property
-	def ggrg(self):
-		return vec4(self.y, self.y, self.x, self.y)
+	ggrg = yyxy
+
 	@property
 	def yyy(self):
 		return vec3(self.y, self.y, self.y)
-	@property
-	def ggg(self):
-		return vec3(self.y, self.y, self.y)
+	ggg = yyy
+
 	@property
 	def yyyx(self):
 		return vec4(self.y, self.y, self.y, self.x)
-	@property
-	def gggr(self):
-		return vec4(self.y, self.y, self.y, self.x)
+	gggr = yyyx
+
 	@property
 	def yyyy(self):
 		return vec4(self.y, self.y, self.y, self.y)
-	@property
-	def gggg(self):
-		return vec4(self.y, self.y, self.y, self.y)
+	gggg = yyyy
+
 
 class vec3(object):
 	__slots__ = 'x', 'y', 'z'
@@ -580,714 +574,696 @@ class vec3(object):
 	@property
 	def r(self):
 		return self.x
+	@r.setter
+	def r(self, other):
+		x = other.x
+		self.x = x
+
 	@property
 	def xx(self):
 		return vec2(self.x, self.x)
-	@property
-	def rr(self):
-		return vec2(self.x, self.x)
+	rr = xx
+
 	@property
 	def xxx(self):
 		return vec3(self.x, self.x, self.x)
-	@property
-	def rrr(self):
-		return vec3(self.x, self.x, self.x)
+	rrr = xxx
+
 	@property
 	def xxxx(self):
 		return vec4(self.x, self.x, self.x, self.x)
-	@property
-	def rrrr(self):
-		return vec4(self.x, self.x, self.x, self.x)
+	rrrr = xxxx
+
 	@property
 	def xxxy(self):
 		return vec4(self.x, self.x, self.x, self.y)
-	@property
-	def rrrg(self):
-		return vec4(self.x, self.x, self.x, self.y)
+	rrrg = xxxy
+
 	@property
 	def xxxz(self):
 		return vec4(self.x, self.x, self.x, self.z)
-	@property
-	def rrrb(self):
-		return vec4(self.x, self.x, self.x, self.z)
+	rrrb = xxxz
+
 	@property
 	def xxy(self):
 		return vec3(self.x, self.x, self.y)
-	@property
-	def rrg(self):
-		return vec3(self.x, self.x, self.y)
+	rrg = xxy
+
 	@property
 	def xxyx(self):
 		return vec4(self.x, self.x, self.y, self.x)
-	@property
-	def rrgr(self):
-		return vec4(self.x, self.x, self.y, self.x)
+	rrgr = xxyx
+
 	@property
 	def xxyy(self):
 		return vec4(self.x, self.x, self.y, self.y)
-	@property
-	def rrgg(self):
-		return vec4(self.x, self.x, self.y, self.y)
+	rrgg = xxyy
+
 	@property
 	def xxyz(self):
 		return vec4(self.x, self.x, self.y, self.z)
-	@property
-	def rrgb(self):
-		return vec4(self.x, self.x, self.y, self.z)
+	rrgb = xxyz
+
 	@property
 	def xxz(self):
 		return vec3(self.x, self.x, self.z)
-	@property
-	def rrb(self):
-		return vec3(self.x, self.x, self.z)
+	rrb = xxz
+
 	@property
 	def xxzx(self):
 		return vec4(self.x, self.x, self.z, self.x)
-	@property
-	def rrbr(self):
-		return vec4(self.x, self.x, self.z, self.x)
+	rrbr = xxzx
+
 	@property
 	def xxzy(self):
 		return vec4(self.x, self.x, self.z, self.y)
-	@property
-	def rrbg(self):
-		return vec4(self.x, self.x, self.z, self.y)
+	rrbg = xxzy
+
 	@property
 	def xxzz(self):
 		return vec4(self.x, self.x, self.z, self.z)
-	@property
-	def rrbb(self):
-		return vec4(self.x, self.x, self.z, self.z)
+	rrbb = xxzz
+
 	@property
 	def xy(self):
 		return vec2(self.x, self.y)
-	@property
-	def rg(self):
-		return vec2(self.x, self.y)
+	@xy.setter
+	def xy(self, other):
+		x = other.x
+		y = other.y
+		self.x = x
+		self.y = y
+	rg = xy
+
 	@property
 	def xyx(self):
 		return vec3(self.x, self.y, self.x)
-	@property
-	def rgr(self):
-		return vec3(self.x, self.y, self.x)
+	rgr = xyx
+
 	@property
 	def xyxx(self):
 		return vec4(self.x, self.y, self.x, self.x)
-	@property
-	def rgrr(self):
-		return vec4(self.x, self.y, self.x, self.x)
+	rgrr = xyxx
+
 	@property
 	def xyxy(self):
 		return vec4(self.x, self.y, self.x, self.y)
-	@property
-	def rgrg(self):
-		return vec4(self.x, self.y, self.x, self.y)
+	rgrg = xyxy
+
 	@property
 	def xyxz(self):
 		return vec4(self.x, self.y, self.x, self.z)
-	@property
-	def rgrb(self):
-		return vec4(self.x, self.y, self.x, self.z)
+	rgrb = xyxz
+
 	@property
 	def xyy(self):
 		return vec3(self.x, self.y, self.y)
-	@property
-	def rgg(self):
-		return vec3(self.x, self.y, self.y)
+	rgg = xyy
+
 	@property
 	def xyyx(self):
 		return vec4(self.x, self.y, self.y, self.x)
-	@property
-	def rggr(self):
-		return vec4(self.x, self.y, self.y, self.x)
+	rggr = xyyx
+
 	@property
 	def xyyy(self):
 		return vec4(self.x, self.y, self.y, self.y)
-	@property
-	def rggg(self):
-		return vec4(self.x, self.y, self.y, self.y)
+	rggg = xyyy
+
 	@property
 	def xyyz(self):
 		return vec4(self.x, self.y, self.y, self.z)
-	@property
-	def rggb(self):
-		return vec4(self.x, self.y, self.y, self.z)
+	rggb = xyyz
+
 	@property
 	def xyz(self):
 		return vec3(self.x, self.y, self.z)
-	@property
-	def rgb(self):
-		return vec3(self.x, self.y, self.z)
+	@xyz.setter
+	def xyz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.x = x
+		self.y = y
+		self.z = z
+	rgb = xyz
+
 	@property
 	def xyzx(self):
 		return vec4(self.x, self.y, self.z, self.x)
-	@property
-	def rgbr(self):
-		return vec4(self.x, self.y, self.z, self.x)
+	rgbr = xyzx
+
 	@property
 	def xyzy(self):
 		return vec4(self.x, self.y, self.z, self.y)
-	@property
-	def rgbg(self):
-		return vec4(self.x, self.y, self.z, self.y)
+	rgbg = xyzy
+
 	@property
 	def xyzz(self):
 		return vec4(self.x, self.y, self.z, self.z)
-	@property
-	def rgbb(self):
-		return vec4(self.x, self.y, self.z, self.z)
+	rgbb = xyzz
+
 	@property
 	def xz(self):
 		return vec2(self.x, self.z)
-	@property
-	def rb(self):
-		return vec2(self.x, self.z)
+	@xz.setter
+	def xz(self, other):
+		x = other.x
+		y = other.y
+		self.x = x
+		self.z = y
+	rb = xz
+
 	@property
 	def xzx(self):
 		return vec3(self.x, self.z, self.x)
-	@property
-	def rbr(self):
-		return vec3(self.x, self.z, self.x)
+	rbr = xzx
+
 	@property
 	def xzxx(self):
 		return vec4(self.x, self.z, self.x, self.x)
-	@property
-	def rbrr(self):
-		return vec4(self.x, self.z, self.x, self.x)
+	rbrr = xzxx
+
 	@property
 	def xzxy(self):
 		return vec4(self.x, self.z, self.x, self.y)
-	@property
-	def rbrg(self):
-		return vec4(self.x, self.z, self.x, self.y)
+	rbrg = xzxy
+
 	@property
 	def xzxz(self):
 		return vec4(self.x, self.z, self.x, self.z)
-	@property
-	def rbrb(self):
-		return vec4(self.x, self.z, self.x, self.z)
+	rbrb = xzxz
+
 	@property
 	def xzy(self):
 		return vec3(self.x, self.z, self.y)
-	@property
-	def rbg(self):
-		return vec3(self.x, self.z, self.y)
+	@xzy.setter
+	def xzy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.x = x
+		self.z = y
+		self.y = z
+	rbg = xzy
+
 	@property
 	def xzyx(self):
 		return vec4(self.x, self.z, self.y, self.x)
-	@property
-	def rbgr(self):
-		return vec4(self.x, self.z, self.y, self.x)
+	rbgr = xzyx
+
 	@property
 	def xzyy(self):
 		return vec4(self.x, self.z, self.y, self.y)
-	@property
-	def rbgg(self):
-		return vec4(self.x, self.z, self.y, self.y)
+	rbgg = xzyy
+
 	@property
 	def xzyz(self):
 		return vec4(self.x, self.z, self.y, self.z)
-	@property
-	def rbgb(self):
-		return vec4(self.x, self.z, self.y, self.z)
+	rbgb = xzyz
+
 	@property
 	def xzz(self):
 		return vec3(self.x, self.z, self.z)
-	@property
-	def rbb(self):
-		return vec3(self.x, self.z, self.z)
+	rbb = xzz
+
 	@property
 	def xzzx(self):
 		return vec4(self.x, self.z, self.z, self.x)
-	@property
-	def rbbr(self):
-		return vec4(self.x, self.z, self.z, self.x)
+	rbbr = xzzx
+
 	@property
 	def xzzy(self):
 		return vec4(self.x, self.z, self.z, self.y)
-	@property
-	def rbbg(self):
-		return vec4(self.x, self.z, self.z, self.y)
+	rbbg = xzzy
+
 	@property
 	def xzzz(self):
 		return vec4(self.x, self.z, self.z, self.z)
-	@property
-	def rbbb(self):
-		return vec4(self.x, self.z, self.z, self.z)
+	rbbb = xzzz
+
 	@property
 	def g(self):
 		return self.y
+	@g.setter
+	def g(self, other):
+		x = other.x
+		self.y = x
+
 	@property
 	def yx(self):
 		return vec2(self.y, self.x)
-	@property
-	def gr(self):
-		return vec2(self.y, self.x)
+	@yx.setter
+	def yx(self, other):
+		x = other.x
+		y = other.y
+		self.y = x
+		self.x = y
+	gr = yx
+
 	@property
 	def yxx(self):
 		return vec3(self.y, self.x, self.x)
-	@property
-	def grr(self):
-		return vec3(self.y, self.x, self.x)
+	grr = yxx
+
 	@property
 	def yxxx(self):
 		return vec4(self.y, self.x, self.x, self.x)
-	@property
-	def grrr(self):
-		return vec4(self.y, self.x, self.x, self.x)
+	grrr = yxxx
+
 	@property
 	def yxxy(self):
 		return vec4(self.y, self.x, self.x, self.y)
-	@property
-	def grrg(self):
-		return vec4(self.y, self.x, self.x, self.y)
+	grrg = yxxy
+
 	@property
 	def yxxz(self):
 		return vec4(self.y, self.x, self.x, self.z)
-	@property
-	def grrb(self):
-		return vec4(self.y, self.x, self.x, self.z)
+	grrb = yxxz
+
 	@property
 	def yxy(self):
 		return vec3(self.y, self.x, self.y)
-	@property
-	def grg(self):
-		return vec3(self.y, self.x, self.y)
+	grg = yxy
+
 	@property
 	def yxyx(self):
 		return vec4(self.y, self.x, self.y, self.x)
-	@property
-	def grgr(self):
-		return vec4(self.y, self.x, self.y, self.x)
+	grgr = yxyx
+
 	@property
 	def yxyy(self):
 		return vec4(self.y, self.x, self.y, self.y)
-	@property
-	def grgg(self):
-		return vec4(self.y, self.x, self.y, self.y)
+	grgg = yxyy
+
 	@property
 	def yxyz(self):
 		return vec4(self.y, self.x, self.y, self.z)
-	@property
-	def grgb(self):
-		return vec4(self.y, self.x, self.y, self.z)
+	grgb = yxyz
+
 	@property
 	def yxz(self):
 		return vec3(self.y, self.x, self.z)
-	@property
-	def grb(self):
-		return vec3(self.y, self.x, self.z)
+	@yxz.setter
+	def yxz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.y = x
+		self.x = y
+		self.z = z
+	grb = yxz
+
 	@property
 	def yxzx(self):
 		return vec4(self.y, self.x, self.z, self.x)
-	@property
-	def grbr(self):
-		return vec4(self.y, self.x, self.z, self.x)
+	grbr = yxzx
+
 	@property
 	def yxzy(self):
 		return vec4(self.y, self.x, self.z, self.y)
-	@property
-	def grbg(self):
-		return vec4(self.y, self.x, self.z, self.y)
+	grbg = yxzy
+
 	@property
 	def yxzz(self):
 		return vec4(self.y, self.x, self.z, self.z)
-	@property
-	def grbb(self):
-		return vec4(self.y, self.x, self.z, self.z)
+	grbb = yxzz
+
 	@property
 	def yy(self):
 		return vec2(self.y, self.y)
-	@property
-	def gg(self):
-		return vec2(self.y, self.y)
+	gg = yy
+
 	@property
 	def yyx(self):
 		return vec3(self.y, self.y, self.x)
-	@property
-	def ggr(self):
-		return vec3(self.y, self.y, self.x)
+	ggr = yyx
+
 	@property
 	def yyxx(self):
 		return vec4(self.y, self.y, self.x, self.x)
-	@property
-	def ggrr(self):
-		return vec4(self.y, self.y, self.x, self.x)
+	ggrr = yyxx
+
 	@property
 	def yyxy(self):
 		return vec4(self.y, self.y, self.x, self.y)
-	@property
-	def ggrg(self):
-		return vec4(self.y, self.y, self.x, self.y)
+	ggrg = yyxy
+
 	@property
 	def yyxz(self):
 		return vec4(self.y, self.y, self.x, self.z)
-	@property
-	def ggrb(self):
-		return vec4(self.y, self.y, self.x, self.z)
+	ggrb = yyxz
+
 	@property
 	def yyy(self):
 		return vec3(self.y, self.y, self.y)
-	@property
-	def ggg(self):
-		return vec3(self.y, self.y, self.y)
+	ggg = yyy
+
 	@property
 	def yyyx(self):
 		return vec4(self.y, self.y, self.y, self.x)
-	@property
-	def gggr(self):
-		return vec4(self.y, self.y, self.y, self.x)
+	gggr = yyyx
+
 	@property
 	def yyyy(self):
 		return vec4(self.y, self.y, self.y, self.y)
-	@property
-	def gggg(self):
-		return vec4(self.y, self.y, self.y, self.y)
+	gggg = yyyy
+
 	@property
 	def yyyz(self):
 		return vec4(self.y, self.y, self.y, self.z)
-	@property
-	def gggb(self):
-		return vec4(self.y, self.y, self.y, self.z)
+	gggb = yyyz
+
 	@property
 	def yyz(self):
 		return vec3(self.y, self.y, self.z)
-	@property
-	def ggb(self):
-		return vec3(self.y, self.y, self.z)
+	ggb = yyz
+
 	@property
 	def yyzx(self):
 		return vec4(self.y, self.y, self.z, self.x)
-	@property
-	def ggbr(self):
-		return vec4(self.y, self.y, self.z, self.x)
+	ggbr = yyzx
+
 	@property
 	def yyzy(self):
 		return vec4(self.y, self.y, self.z, self.y)
-	@property
-	def ggbg(self):
-		return vec4(self.y, self.y, self.z, self.y)
+	ggbg = yyzy
+
 	@property
 	def yyzz(self):
 		return vec4(self.y, self.y, self.z, self.z)
-	@property
-	def ggbb(self):
-		return vec4(self.y, self.y, self.z, self.z)
+	ggbb = yyzz
+
 	@property
 	def yz(self):
 		return vec2(self.y, self.z)
-	@property
-	def gb(self):
-		return vec2(self.y, self.z)
+	@yz.setter
+	def yz(self, other):
+		x = other.x
+		y = other.y
+		self.y = x
+		self.z = y
+	gb = yz
+
 	@property
 	def yzx(self):
 		return vec3(self.y, self.z, self.x)
-	@property
-	def gbr(self):
-		return vec3(self.y, self.z, self.x)
+	@yzx.setter
+	def yzx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.y = x
+		self.z = y
+		self.x = z
+	gbr = yzx
+
 	@property
 	def yzxx(self):
 		return vec4(self.y, self.z, self.x, self.x)
-	@property
-	def gbrr(self):
-		return vec4(self.y, self.z, self.x, self.x)
+	gbrr = yzxx
+
 	@property
 	def yzxy(self):
 		return vec4(self.y, self.z, self.x, self.y)
-	@property
-	def gbrg(self):
-		return vec4(self.y, self.z, self.x, self.y)
+	gbrg = yzxy
+
 	@property
 	def yzxz(self):
 		return vec4(self.y, self.z, self.x, self.z)
-	@property
-	def gbrb(self):
-		return vec4(self.y, self.z, self.x, self.z)
+	gbrb = yzxz
+
 	@property
 	def yzy(self):
 		return vec3(self.y, self.z, self.y)
-	@property
-	def gbg(self):
-		return vec3(self.y, self.z, self.y)
+	gbg = yzy
+
 	@property
 	def yzyx(self):
 		return vec4(self.y, self.z, self.y, self.x)
-	@property
-	def gbgr(self):
-		return vec4(self.y, self.z, self.y, self.x)
+	gbgr = yzyx
+
 	@property
 	def yzyy(self):
 		return vec4(self.y, self.z, self.y, self.y)
-	@property
-	def gbgg(self):
-		return vec4(self.y, self.z, self.y, self.y)
+	gbgg = yzyy
+
 	@property
 	def yzyz(self):
 		return vec4(self.y, self.z, self.y, self.z)
-	@property
-	def gbgb(self):
-		return vec4(self.y, self.z, self.y, self.z)
+	gbgb = yzyz
+
 	@property
 	def yzz(self):
 		return vec3(self.y, self.z, self.z)
-	@property
-	def gbb(self):
-		return vec3(self.y, self.z, self.z)
+	gbb = yzz
+
 	@property
 	def yzzx(self):
 		return vec4(self.y, self.z, self.z, self.x)
-	@property
-	def gbbr(self):
-		return vec4(self.y, self.z, self.z, self.x)
+	gbbr = yzzx
+
 	@property
 	def yzzy(self):
 		return vec4(self.y, self.z, self.z, self.y)
-	@property
-	def gbbg(self):
-		return vec4(self.y, self.z, self.z, self.y)
+	gbbg = yzzy
+
 	@property
 	def yzzz(self):
 		return vec4(self.y, self.z, self.z, self.z)
-	@property
-	def gbbb(self):
-		return vec4(self.y, self.z, self.z, self.z)
+	gbbb = yzzz
+
 	@property
 	def b(self):
 		return self.z
+	@b.setter
+	def b(self, other):
+		x = other.x
+		self.z = x
+
 	@property
 	def zx(self):
 		return vec2(self.z, self.x)
-	@property
-	def br(self):
-		return vec2(self.z, self.x)
+	@zx.setter
+	def zx(self, other):
+		x = other.x
+		y = other.y
+		self.z = x
+		self.x = y
+	br = zx
+
 	@property
 	def zxx(self):
 		return vec3(self.z, self.x, self.x)
-	@property
-	def brr(self):
-		return vec3(self.z, self.x, self.x)
+	brr = zxx
+
 	@property
 	def zxxx(self):
 		return vec4(self.z, self.x, self.x, self.x)
-	@property
-	def brrr(self):
-		return vec4(self.z, self.x, self.x, self.x)
+	brrr = zxxx
+
 	@property
 	def zxxy(self):
 		return vec4(self.z, self.x, self.x, self.y)
-	@property
-	def brrg(self):
-		return vec4(self.z, self.x, self.x, self.y)
+	brrg = zxxy
+
 	@property
 	def zxxz(self):
 		return vec4(self.z, self.x, self.x, self.z)
-	@property
-	def brrb(self):
-		return vec4(self.z, self.x, self.x, self.z)
+	brrb = zxxz
+
 	@property
 	def zxy(self):
 		return vec3(self.z, self.x, self.y)
-	@property
-	def brg(self):
-		return vec3(self.z, self.x, self.y)
+	@zxy.setter
+	def zxy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.z = x
+		self.x = y
+		self.y = z
+	brg = zxy
+
 	@property
 	def zxyx(self):
 		return vec4(self.z, self.x, self.y, self.x)
-	@property
-	def brgr(self):
-		return vec4(self.z, self.x, self.y, self.x)
+	brgr = zxyx
+
 	@property
 	def zxyy(self):
 		return vec4(self.z, self.x, self.y, self.y)
-	@property
-	def brgg(self):
-		return vec4(self.z, self.x, self.y, self.y)
+	brgg = zxyy
+
 	@property
 	def zxyz(self):
 		return vec4(self.z, self.x, self.y, self.z)
-	@property
-	def brgb(self):
-		return vec4(self.z, self.x, self.y, self.z)
+	brgb = zxyz
+
 	@property
 	def zxz(self):
 		return vec3(self.z, self.x, self.z)
-	@property
-	def brb(self):
-		return vec3(self.z, self.x, self.z)
+	brb = zxz
+
 	@property
 	def zxzx(self):
 		return vec4(self.z, self.x, self.z, self.x)
-	@property
-	def brbr(self):
-		return vec4(self.z, self.x, self.z, self.x)
+	brbr = zxzx
+
 	@property
 	def zxzy(self):
 		return vec4(self.z, self.x, self.z, self.y)
-	@property
-	def brbg(self):
-		return vec4(self.z, self.x, self.z, self.y)
+	brbg = zxzy
+
 	@property
 	def zxzz(self):
 		return vec4(self.z, self.x, self.z, self.z)
-	@property
-	def brbb(self):
-		return vec4(self.z, self.x, self.z, self.z)
+	brbb = zxzz
+
 	@property
 	def zy(self):
 		return vec2(self.z, self.y)
-	@property
-	def bg(self):
-		return vec2(self.z, self.y)
+	@zy.setter
+	def zy(self, other):
+		x = other.x
+		y = other.y
+		self.z = x
+		self.y = y
+	bg = zy
+
 	@property
 	def zyx(self):
 		return vec3(self.z, self.y, self.x)
-	@property
-	def bgr(self):
-		return vec3(self.z, self.y, self.x)
+	@zyx.setter
+	def zyx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.z = x
+		self.y = y
+		self.x = z
+	bgr = zyx
+
 	@property
 	def zyxx(self):
 		return vec4(self.z, self.y, self.x, self.x)
-	@property
-	def bgrr(self):
-		return vec4(self.z, self.y, self.x, self.x)
+	bgrr = zyxx
+
 	@property
 	def zyxy(self):
 		return vec4(self.z, self.y, self.x, self.y)
-	@property
-	def bgrg(self):
-		return vec4(self.z, self.y, self.x, self.y)
+	bgrg = zyxy
+
 	@property
 	def zyxz(self):
 		return vec4(self.z, self.y, self.x, self.z)
-	@property
-	def bgrb(self):
-		return vec4(self.z, self.y, self.x, self.z)
+	bgrb = zyxz
+
 	@property
 	def zyy(self):
 		return vec3(self.z, self.y, self.y)
-	@property
-	def bgg(self):
-		return vec3(self.z, self.y, self.y)
+	bgg = zyy
+
 	@property
 	def zyyx(self):
 		return vec4(self.z, self.y, self.y, self.x)
-	@property
-	def bggr(self):
-		return vec4(self.z, self.y, self.y, self.x)
+	bggr = zyyx
+
 	@property
 	def zyyy(self):
 		return vec4(self.z, self.y, self.y, self.y)
-	@property
-	def bggg(self):
-		return vec4(self.z, self.y, self.y, self.y)
+	bggg = zyyy
+
 	@property
 	def zyyz(self):
 		return vec4(self.z, self.y, self.y, self.z)
-	@property
-	def bggb(self):
-		return vec4(self.z, self.y, self.y, self.z)
+	bggb = zyyz
+
 	@property
 	def zyz(self):
 		return vec3(self.z, self.y, self.z)
-	@property
-	def bgb(self):
-		return vec3(self.z, self.y, self.z)
+	bgb = zyz
+
 	@property
 	def zyzx(self):
 		return vec4(self.z, self.y, self.z, self.x)
-	@property
-	def bgbr(self):
-		return vec4(self.z, self.y, self.z, self.x)
+	bgbr = zyzx
+
 	@property
 	def zyzy(self):
 		return vec4(self.z, self.y, self.z, self.y)
-	@property
-	def bgbg(self):
-		return vec4(self.z, self.y, self.z, self.y)
+	bgbg = zyzy
+
 	@property
 	def zyzz(self):
 		return vec4(self.z, self.y, self.z, self.z)
-	@property
-	def bgbb(self):
-		return vec4(self.z, self.y, self.z, self.z)
+	bgbb = zyzz
+
 	@property
 	def zz(self):
 		return vec2(self.z, self.z)
-	@property
-	def bb(self):
-		return vec2(self.z, self.z)
+	bb = zz
+
 	@property
 	def zzx(self):
 		return vec3(self.z, self.z, self.x)
-	@property
-	def bbr(self):
-		return vec3(self.z, self.z, self.x)
+	bbr = zzx
+
 	@property
 	def zzxx(self):
 		return vec4(self.z, self.z, self.x, self.x)
-	@property
-	def bbrr(self):
-		return vec4(self.z, self.z, self.x, self.x)
+	bbrr = zzxx
+
 	@property
 	def zzxy(self):
 		return vec4(self.z, self.z, self.x, self.y)
-	@property
-	def bbrg(self):
-		return vec4(self.z, self.z, self.x, self.y)
+	bbrg = zzxy
+
 	@property
 	def zzxz(self):
 		return vec4(self.z, self.z, self.x, self.z)
-	@property
-	def bbrb(self):
-		return vec4(self.z, self.z, self.x, self.z)
+	bbrb = zzxz
+
 	@property
 	def zzy(self):
 		return vec3(self.z, self.z, self.y)
-	@property
-	def bbg(self):
-		return vec3(self.z, self.z, self.y)
+	bbg = zzy
+
 	@property
 	def zzyx(self):
 		return vec4(self.z, self.z, self.y, self.x)
-	@property
-	def bbgr(self):
-		return vec4(self.z, self.z, self.y, self.x)
+	bbgr = zzyx
+
 	@property
 	def zzyy(self):
 		return vec4(self.z, self.z, self.y, self.y)
-	@property
-	def bbgg(self):
-		return vec4(self.z, self.z, self.y, self.y)
+	bbgg = zzyy
+
 	@property
 	def zzyz(self):
 		return vec4(self.z, self.z, self.y, self.z)
-	@property
-	def bbgb(self):
-		return vec4(self.z, self.z, self.y, self.z)
+	bbgb = zzyz
+
 	@property
 	def zzz(self):
 		return vec3(self.z, self.z, self.z)
-	@property
-	def bbb(self):
-		return vec3(self.z, self.z, self.z)
+	bbb = zzz
+
 	@property
 	def zzzx(self):
 		return vec4(self.z, self.z, self.z, self.x)
-	@property
-	def bbbr(self):
-		return vec4(self.z, self.z, self.z, self.x)
+	bbbr = zzzx
+
 	@property
 	def zzzy(self):
 		return vec4(self.z, self.z, self.z, self.y)
-	@property
-	def bbbg(self):
-		return vec4(self.z, self.z, self.z, self.y)
+	bbbg = zzzy
+
 	@property
 	def zzzz(self):
 		return vec4(self.z, self.z, self.z, self.z)
-	@property
-	def bbbb(self):
-		return vec4(self.z, self.z, self.z, self.z)
+	bbbb = zzzz
+
 
 class vec4(object):
 	__slots__ = 'x', 'y', 'z', 'w'
@@ -1628,2031 +1604,2219 @@ class vec4(object):
 	@property
 	def r(self):
 		return self.x
+	@r.setter
+	def r(self, other):
+		x = other.x
+		self.x = x
+
 	@property
 	def xx(self):
 		return vec2(self.x, self.x)
-	@property
-	def rr(self):
-		return vec2(self.x, self.x)
+	rr = xx
+
 	@property
 	def xxx(self):
 		return vec3(self.x, self.x, self.x)
-	@property
-	def rrr(self):
-		return vec3(self.x, self.x, self.x)
+	rrr = xxx
+
 	@property
 	def xxxx(self):
 		return vec4(self.x, self.x, self.x, self.x)
-	@property
-	def rrrr(self):
-		return vec4(self.x, self.x, self.x, self.x)
+	rrrr = xxxx
+
 	@property
 	def xxxy(self):
 		return vec4(self.x, self.x, self.x, self.y)
-	@property
-	def rrrg(self):
-		return vec4(self.x, self.x, self.x, self.y)
+	rrrg = xxxy
+
 	@property
 	def xxxz(self):
 		return vec4(self.x, self.x, self.x, self.z)
-	@property
-	def rrrb(self):
-		return vec4(self.x, self.x, self.x, self.z)
+	rrrb = xxxz
+
 	@property
 	def xxxw(self):
 		return vec4(self.x, self.x, self.x, self.w)
-	@property
-	def rrra(self):
-		return vec4(self.x, self.x, self.x, self.w)
+	rrra = xxxw
+
 	@property
 	def xxy(self):
 		return vec3(self.x, self.x, self.y)
-	@property
-	def rrg(self):
-		return vec3(self.x, self.x, self.y)
+	rrg = xxy
+
 	@property
 	def xxyx(self):
 		return vec4(self.x, self.x, self.y, self.x)
-	@property
-	def rrgr(self):
-		return vec4(self.x, self.x, self.y, self.x)
+	rrgr = xxyx
+
 	@property
 	def xxyy(self):
 		return vec4(self.x, self.x, self.y, self.y)
-	@property
-	def rrgg(self):
-		return vec4(self.x, self.x, self.y, self.y)
+	rrgg = xxyy
+
 	@property
 	def xxyz(self):
 		return vec4(self.x, self.x, self.y, self.z)
-	@property
-	def rrgb(self):
-		return vec4(self.x, self.x, self.y, self.z)
+	rrgb = xxyz
+
 	@property
 	def xxyw(self):
 		return vec4(self.x, self.x, self.y, self.w)
-	@property
-	def rrga(self):
-		return vec4(self.x, self.x, self.y, self.w)
+	rrga = xxyw
+
 	@property
 	def xxz(self):
 		return vec3(self.x, self.x, self.z)
-	@property
-	def rrb(self):
-		return vec3(self.x, self.x, self.z)
+	rrb = xxz
+
 	@property
 	def xxzx(self):
 		return vec4(self.x, self.x, self.z, self.x)
-	@property
-	def rrbr(self):
-		return vec4(self.x, self.x, self.z, self.x)
+	rrbr = xxzx
+
 	@property
 	def xxzy(self):
 		return vec4(self.x, self.x, self.z, self.y)
-	@property
-	def rrbg(self):
-		return vec4(self.x, self.x, self.z, self.y)
+	rrbg = xxzy
+
 	@property
 	def xxzz(self):
 		return vec4(self.x, self.x, self.z, self.z)
-	@property
-	def rrbb(self):
-		return vec4(self.x, self.x, self.z, self.z)
+	rrbb = xxzz
+
 	@property
 	def xxzw(self):
 		return vec4(self.x, self.x, self.z, self.w)
-	@property
-	def rrba(self):
-		return vec4(self.x, self.x, self.z, self.w)
+	rrba = xxzw
+
 	@property
 	def xxw(self):
 		return vec3(self.x, self.x, self.w)
-	@property
-	def rra(self):
-		return vec3(self.x, self.x, self.w)
+	rra = xxw
+
 	@property
 	def xxwx(self):
 		return vec4(self.x, self.x, self.w, self.x)
-	@property
-	def rrar(self):
-		return vec4(self.x, self.x, self.w, self.x)
+	rrar = xxwx
+
 	@property
 	def xxwy(self):
 		return vec4(self.x, self.x, self.w, self.y)
-	@property
-	def rrag(self):
-		return vec4(self.x, self.x, self.w, self.y)
+	rrag = xxwy
+
 	@property
 	def xxwz(self):
 		return vec4(self.x, self.x, self.w, self.z)
-	@property
-	def rrab(self):
-		return vec4(self.x, self.x, self.w, self.z)
+	rrab = xxwz
+
 	@property
 	def xxww(self):
 		return vec4(self.x, self.x, self.w, self.w)
-	@property
-	def rraa(self):
-		return vec4(self.x, self.x, self.w, self.w)
+	rraa = xxww
+
 	@property
 	def xy(self):
 		return vec2(self.x, self.y)
-	@property
-	def rg(self):
-		return vec2(self.x, self.y)
+	@xy.setter
+	def xy(self, other):
+		x = other.x
+		y = other.y
+		self.x = x
+		self.y = y
+	rg = xy
+
 	@property
 	def xyx(self):
 		return vec3(self.x, self.y, self.x)
-	@property
-	def rgr(self):
-		return vec3(self.x, self.y, self.x)
+	rgr = xyx
+
 	@property
 	def xyxx(self):
 		return vec4(self.x, self.y, self.x, self.x)
-	@property
-	def rgrr(self):
-		return vec4(self.x, self.y, self.x, self.x)
+	rgrr = xyxx
+
 	@property
 	def xyxy(self):
 		return vec4(self.x, self.y, self.x, self.y)
-	@property
-	def rgrg(self):
-		return vec4(self.x, self.y, self.x, self.y)
+	rgrg = xyxy
+
 	@property
 	def xyxz(self):
 		return vec4(self.x, self.y, self.x, self.z)
-	@property
-	def rgrb(self):
-		return vec4(self.x, self.y, self.x, self.z)
+	rgrb = xyxz
+
 	@property
 	def xyxw(self):
 		return vec4(self.x, self.y, self.x, self.w)
-	@property
-	def rgra(self):
-		return vec4(self.x, self.y, self.x, self.w)
+	rgra = xyxw
+
 	@property
 	def xyy(self):
 		return vec3(self.x, self.y, self.y)
-	@property
-	def rgg(self):
-		return vec3(self.x, self.y, self.y)
+	rgg = xyy
+
 	@property
 	def xyyx(self):
 		return vec4(self.x, self.y, self.y, self.x)
-	@property
-	def rggr(self):
-		return vec4(self.x, self.y, self.y, self.x)
+	rggr = xyyx
+
 	@property
 	def xyyy(self):
 		return vec4(self.x, self.y, self.y, self.y)
-	@property
-	def rggg(self):
-		return vec4(self.x, self.y, self.y, self.y)
+	rggg = xyyy
+
 	@property
 	def xyyz(self):
 		return vec4(self.x, self.y, self.y, self.z)
-	@property
-	def rggb(self):
-		return vec4(self.x, self.y, self.y, self.z)
+	rggb = xyyz
+
 	@property
 	def xyyw(self):
 		return vec4(self.x, self.y, self.y, self.w)
-	@property
-	def rgga(self):
-		return vec4(self.x, self.y, self.y, self.w)
+	rgga = xyyw
+
 	@property
 	def xyz(self):
 		return vec3(self.x, self.y, self.z)
-	@property
-	def rgb(self):
-		return vec3(self.x, self.y, self.z)
+	@xyz.setter
+	def xyz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.x = x
+		self.y = y
+		self.z = z
+	rgb = xyz
+
 	@property
 	def xyzx(self):
 		return vec4(self.x, self.y, self.z, self.x)
-	@property
-	def rgbr(self):
-		return vec4(self.x, self.y, self.z, self.x)
+	rgbr = xyzx
+
 	@property
 	def xyzy(self):
 		return vec4(self.x, self.y, self.z, self.y)
-	@property
-	def rgbg(self):
-		return vec4(self.x, self.y, self.z, self.y)
+	rgbg = xyzy
+
 	@property
 	def xyzz(self):
 		return vec4(self.x, self.y, self.z, self.z)
-	@property
-	def rgbb(self):
-		return vec4(self.x, self.y, self.z, self.z)
+	rgbb = xyzz
+
 	@property
 	def xyzw(self):
 		return vec4(self.x, self.y, self.z, self.w)
-	@property
-	def rgba(self):
-		return vec4(self.x, self.y, self.z, self.w)
+	@xyzw.setter
+	def xyzw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.x = x
+		self.y = y
+		self.z = z
+		self.w = w
+	rgba = xyzw
+
 	@property
 	def xyw(self):
 		return vec3(self.x, self.y, self.w)
-	@property
-	def rga(self):
-		return vec3(self.x, self.y, self.w)
+	@xyw.setter
+	def xyw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.x = x
+		self.y = y
+		self.w = z
+	rga = xyw
+
 	@property
 	def xywx(self):
 		return vec4(self.x, self.y, self.w, self.x)
-	@property
-	def rgar(self):
-		return vec4(self.x, self.y, self.w, self.x)
+	rgar = xywx
+
 	@property
 	def xywy(self):
 		return vec4(self.x, self.y, self.w, self.y)
-	@property
-	def rgag(self):
-		return vec4(self.x, self.y, self.w, self.y)
+	rgag = xywy
+
 	@property
 	def xywz(self):
 		return vec4(self.x, self.y, self.w, self.z)
-	@property
-	def rgab(self):
-		return vec4(self.x, self.y, self.w, self.z)
+	@xywz.setter
+	def xywz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.x = x
+		self.y = y
+		self.w = z
+		self.z = w
+	rgab = xywz
+
 	@property
 	def xyww(self):
 		return vec4(self.x, self.y, self.w, self.w)
-	@property
-	def rgaa(self):
-		return vec4(self.x, self.y, self.w, self.w)
+	rgaa = xyww
+
 	@property
 	def xz(self):
 		return vec2(self.x, self.z)
-	@property
-	def rb(self):
-		return vec2(self.x, self.z)
+	@xz.setter
+	def xz(self, other):
+		x = other.x
+		y = other.y
+		self.x = x
+		self.z = y
+	rb = xz
+
 	@property
 	def xzx(self):
 		return vec3(self.x, self.z, self.x)
-	@property
-	def rbr(self):
-		return vec3(self.x, self.z, self.x)
+	rbr = xzx
+
 	@property
 	def xzxx(self):
 		return vec4(self.x, self.z, self.x, self.x)
-	@property
-	def rbrr(self):
-		return vec4(self.x, self.z, self.x, self.x)
+	rbrr = xzxx
+
 	@property
 	def xzxy(self):
 		return vec4(self.x, self.z, self.x, self.y)
-	@property
-	def rbrg(self):
-		return vec4(self.x, self.z, self.x, self.y)
+	rbrg = xzxy
+
 	@property
 	def xzxz(self):
 		return vec4(self.x, self.z, self.x, self.z)
-	@property
-	def rbrb(self):
-		return vec4(self.x, self.z, self.x, self.z)
+	rbrb = xzxz
+
 	@property
 	def xzxw(self):
 		return vec4(self.x, self.z, self.x, self.w)
-	@property
-	def rbra(self):
-		return vec4(self.x, self.z, self.x, self.w)
+	rbra = xzxw
+
 	@property
 	def xzy(self):
 		return vec3(self.x, self.z, self.y)
-	@property
-	def rbg(self):
-		return vec3(self.x, self.z, self.y)
+	@xzy.setter
+	def xzy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.x = x
+		self.z = y
+		self.y = z
+	rbg = xzy
+
 	@property
 	def xzyx(self):
 		return vec4(self.x, self.z, self.y, self.x)
-	@property
-	def rbgr(self):
-		return vec4(self.x, self.z, self.y, self.x)
+	rbgr = xzyx
+
 	@property
 	def xzyy(self):
 		return vec4(self.x, self.z, self.y, self.y)
-	@property
-	def rbgg(self):
-		return vec4(self.x, self.z, self.y, self.y)
+	rbgg = xzyy
+
 	@property
 	def xzyz(self):
 		return vec4(self.x, self.z, self.y, self.z)
-	@property
-	def rbgb(self):
-		return vec4(self.x, self.z, self.y, self.z)
+	rbgb = xzyz
+
 	@property
 	def xzyw(self):
 		return vec4(self.x, self.z, self.y, self.w)
-	@property
-	def rbga(self):
-		return vec4(self.x, self.z, self.y, self.w)
+	@xzyw.setter
+	def xzyw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.x = x
+		self.z = y
+		self.y = z
+		self.w = w
+	rbga = xzyw
+
 	@property
 	def xzz(self):
 		return vec3(self.x, self.z, self.z)
-	@property
-	def rbb(self):
-		return vec3(self.x, self.z, self.z)
+	rbb = xzz
+
 	@property
 	def xzzx(self):
 		return vec4(self.x, self.z, self.z, self.x)
-	@property
-	def rbbr(self):
-		return vec4(self.x, self.z, self.z, self.x)
+	rbbr = xzzx
+
 	@property
 	def xzzy(self):
 		return vec4(self.x, self.z, self.z, self.y)
-	@property
-	def rbbg(self):
-		return vec4(self.x, self.z, self.z, self.y)
+	rbbg = xzzy
+
 	@property
 	def xzzz(self):
 		return vec4(self.x, self.z, self.z, self.z)
-	@property
-	def rbbb(self):
-		return vec4(self.x, self.z, self.z, self.z)
+	rbbb = xzzz
+
 	@property
 	def xzzw(self):
 		return vec4(self.x, self.z, self.z, self.w)
-	@property
-	def rbba(self):
-		return vec4(self.x, self.z, self.z, self.w)
+	rbba = xzzw
+
 	@property
 	def xzw(self):
 		return vec3(self.x, self.z, self.w)
-	@property
-	def rba(self):
-		return vec3(self.x, self.z, self.w)
+	@xzw.setter
+	def xzw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.x = x
+		self.z = y
+		self.w = z
+	rba = xzw
+
 	@property
 	def xzwx(self):
 		return vec4(self.x, self.z, self.w, self.x)
-	@property
-	def rbar(self):
-		return vec4(self.x, self.z, self.w, self.x)
+	rbar = xzwx
+
 	@property
 	def xzwy(self):
 		return vec4(self.x, self.z, self.w, self.y)
-	@property
-	def rbag(self):
-		return vec4(self.x, self.z, self.w, self.y)
+	@xzwy.setter
+	def xzwy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.x = x
+		self.z = y
+		self.w = z
+		self.y = w
+	rbag = xzwy
+
 	@property
 	def xzwz(self):
 		return vec4(self.x, self.z, self.w, self.z)
-	@property
-	def rbab(self):
-		return vec4(self.x, self.z, self.w, self.z)
+	rbab = xzwz
+
 	@property
 	def xzww(self):
 		return vec4(self.x, self.z, self.w, self.w)
-	@property
-	def rbaa(self):
-		return vec4(self.x, self.z, self.w, self.w)
+	rbaa = xzww
+
 	@property
 	def xw(self):
 		return vec2(self.x, self.w)
-	@property
-	def ra(self):
-		return vec2(self.x, self.w)
+	@xw.setter
+	def xw(self, other):
+		x = other.x
+		y = other.y
+		self.x = x
+		self.w = y
+	ra = xw
+
 	@property
 	def xwx(self):
 		return vec3(self.x, self.w, self.x)
-	@property
-	def rar(self):
-		return vec3(self.x, self.w, self.x)
+	rar = xwx
+
 	@property
 	def xwxx(self):
 		return vec4(self.x, self.w, self.x, self.x)
-	@property
-	def rarr(self):
-		return vec4(self.x, self.w, self.x, self.x)
+	rarr = xwxx
+
 	@property
 	def xwxy(self):
 		return vec4(self.x, self.w, self.x, self.y)
-	@property
-	def rarg(self):
-		return vec4(self.x, self.w, self.x, self.y)
+	rarg = xwxy
+
 	@property
 	def xwxz(self):
 		return vec4(self.x, self.w, self.x, self.z)
-	@property
-	def rarb(self):
-		return vec4(self.x, self.w, self.x, self.z)
+	rarb = xwxz
+
 	@property
 	def xwxw(self):
 		return vec4(self.x, self.w, self.x, self.w)
-	@property
-	def rara(self):
-		return vec4(self.x, self.w, self.x, self.w)
+	rara = xwxw
+
 	@property
 	def xwy(self):
 		return vec3(self.x, self.w, self.y)
-	@property
-	def rag(self):
-		return vec3(self.x, self.w, self.y)
+	@xwy.setter
+	def xwy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.x = x
+		self.w = y
+		self.y = z
+	rag = xwy
+
 	@property
 	def xwyx(self):
 		return vec4(self.x, self.w, self.y, self.x)
-	@property
-	def ragr(self):
-		return vec4(self.x, self.w, self.y, self.x)
+	ragr = xwyx
+
 	@property
 	def xwyy(self):
 		return vec4(self.x, self.w, self.y, self.y)
-	@property
-	def ragg(self):
-		return vec4(self.x, self.w, self.y, self.y)
+	ragg = xwyy
+
 	@property
 	def xwyz(self):
 		return vec4(self.x, self.w, self.y, self.z)
-	@property
-	def ragb(self):
-		return vec4(self.x, self.w, self.y, self.z)
+	@xwyz.setter
+	def xwyz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.x = x
+		self.w = y
+		self.y = z
+		self.z = w
+	ragb = xwyz
+
 	@property
 	def xwyw(self):
 		return vec4(self.x, self.w, self.y, self.w)
-	@property
-	def raga(self):
-		return vec4(self.x, self.w, self.y, self.w)
+	raga = xwyw
+
 	@property
 	def xwz(self):
 		return vec3(self.x, self.w, self.z)
-	@property
-	def rab(self):
-		return vec3(self.x, self.w, self.z)
+	@xwz.setter
+	def xwz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.x = x
+		self.w = y
+		self.z = z
+	rab = xwz
+
 	@property
 	def xwzx(self):
 		return vec4(self.x, self.w, self.z, self.x)
-	@property
-	def rabr(self):
-		return vec4(self.x, self.w, self.z, self.x)
+	rabr = xwzx
+
 	@property
 	def xwzy(self):
 		return vec4(self.x, self.w, self.z, self.y)
-	@property
-	def rabg(self):
-		return vec4(self.x, self.w, self.z, self.y)
+	@xwzy.setter
+	def xwzy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.x = x
+		self.w = y
+		self.z = z
+		self.y = w
+	rabg = xwzy
+
 	@property
 	def xwzz(self):
 		return vec4(self.x, self.w, self.z, self.z)
-	@property
-	def rabb(self):
-		return vec4(self.x, self.w, self.z, self.z)
+	rabb = xwzz
+
 	@property
 	def xwzw(self):
 		return vec4(self.x, self.w, self.z, self.w)
-	@property
-	def raba(self):
-		return vec4(self.x, self.w, self.z, self.w)
+	raba = xwzw
+
 	@property
 	def xww(self):
 		return vec3(self.x, self.w, self.w)
-	@property
-	def raa(self):
-		return vec3(self.x, self.w, self.w)
+	raa = xww
+
 	@property
 	def xwwx(self):
 		return vec4(self.x, self.w, self.w, self.x)
-	@property
-	def raar(self):
-		return vec4(self.x, self.w, self.w, self.x)
+	raar = xwwx
+
 	@property
 	def xwwy(self):
 		return vec4(self.x, self.w, self.w, self.y)
-	@property
-	def raag(self):
-		return vec4(self.x, self.w, self.w, self.y)
+	raag = xwwy
+
 	@property
 	def xwwz(self):
 		return vec4(self.x, self.w, self.w, self.z)
-	@property
-	def raab(self):
-		return vec4(self.x, self.w, self.w, self.z)
+	raab = xwwz
+
 	@property
 	def xwww(self):
 		return vec4(self.x, self.w, self.w, self.w)
-	@property
-	def raaa(self):
-		return vec4(self.x, self.w, self.w, self.w)
+	raaa = xwww
+
 	@property
 	def g(self):
 		return self.y
+	@g.setter
+	def g(self, other):
+		x = other.x
+		self.y = x
+
 	@property
 	def yx(self):
 		return vec2(self.y, self.x)
-	@property
-	def gr(self):
-		return vec2(self.y, self.x)
+	@yx.setter
+	def yx(self, other):
+		x = other.x
+		y = other.y
+		self.y = x
+		self.x = y
+	gr = yx
+
 	@property
 	def yxx(self):
 		return vec3(self.y, self.x, self.x)
-	@property
-	def grr(self):
-		return vec3(self.y, self.x, self.x)
+	grr = yxx
+
 	@property
 	def yxxx(self):
 		return vec4(self.y, self.x, self.x, self.x)
-	@property
-	def grrr(self):
-		return vec4(self.y, self.x, self.x, self.x)
+	grrr = yxxx
+
 	@property
 	def yxxy(self):
 		return vec4(self.y, self.x, self.x, self.y)
-	@property
-	def grrg(self):
-		return vec4(self.y, self.x, self.x, self.y)
+	grrg = yxxy
+
 	@property
 	def yxxz(self):
 		return vec4(self.y, self.x, self.x, self.z)
-	@property
-	def grrb(self):
-		return vec4(self.y, self.x, self.x, self.z)
+	grrb = yxxz
+
 	@property
 	def yxxw(self):
 		return vec4(self.y, self.x, self.x, self.w)
-	@property
-	def grra(self):
-		return vec4(self.y, self.x, self.x, self.w)
+	grra = yxxw
+
 	@property
 	def yxy(self):
 		return vec3(self.y, self.x, self.y)
-	@property
-	def grg(self):
-		return vec3(self.y, self.x, self.y)
+	grg = yxy
+
 	@property
 	def yxyx(self):
 		return vec4(self.y, self.x, self.y, self.x)
-	@property
-	def grgr(self):
-		return vec4(self.y, self.x, self.y, self.x)
+	grgr = yxyx
+
 	@property
 	def yxyy(self):
 		return vec4(self.y, self.x, self.y, self.y)
-	@property
-	def grgg(self):
-		return vec4(self.y, self.x, self.y, self.y)
+	grgg = yxyy
+
 	@property
 	def yxyz(self):
 		return vec4(self.y, self.x, self.y, self.z)
-	@property
-	def grgb(self):
-		return vec4(self.y, self.x, self.y, self.z)
+	grgb = yxyz
+
 	@property
 	def yxyw(self):
 		return vec4(self.y, self.x, self.y, self.w)
-	@property
-	def grga(self):
-		return vec4(self.y, self.x, self.y, self.w)
+	grga = yxyw
+
 	@property
 	def yxz(self):
 		return vec3(self.y, self.x, self.z)
-	@property
-	def grb(self):
-		return vec3(self.y, self.x, self.z)
+	@yxz.setter
+	def yxz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.y = x
+		self.x = y
+		self.z = z
+	grb = yxz
+
 	@property
 	def yxzx(self):
 		return vec4(self.y, self.x, self.z, self.x)
-	@property
-	def grbr(self):
-		return vec4(self.y, self.x, self.z, self.x)
+	grbr = yxzx
+
 	@property
 	def yxzy(self):
 		return vec4(self.y, self.x, self.z, self.y)
-	@property
-	def grbg(self):
-		return vec4(self.y, self.x, self.z, self.y)
+	grbg = yxzy
+
 	@property
 	def yxzz(self):
 		return vec4(self.y, self.x, self.z, self.z)
-	@property
-	def grbb(self):
-		return vec4(self.y, self.x, self.z, self.z)
+	grbb = yxzz
+
 	@property
 	def yxzw(self):
 		return vec4(self.y, self.x, self.z, self.w)
-	@property
-	def grba(self):
-		return vec4(self.y, self.x, self.z, self.w)
+	@yxzw.setter
+	def yxzw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.y = x
+		self.x = y
+		self.z = z
+		self.w = w
+	grba = yxzw
+
 	@property
 	def yxw(self):
 		return vec3(self.y, self.x, self.w)
-	@property
-	def gra(self):
-		return vec3(self.y, self.x, self.w)
+	@yxw.setter
+	def yxw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.y = x
+		self.x = y
+		self.w = z
+	gra = yxw
+
 	@property
 	def yxwx(self):
 		return vec4(self.y, self.x, self.w, self.x)
-	@property
-	def grar(self):
-		return vec4(self.y, self.x, self.w, self.x)
+	grar = yxwx
+
 	@property
 	def yxwy(self):
 		return vec4(self.y, self.x, self.w, self.y)
-	@property
-	def grag(self):
-		return vec4(self.y, self.x, self.w, self.y)
+	grag = yxwy
+
 	@property
 	def yxwz(self):
 		return vec4(self.y, self.x, self.w, self.z)
-	@property
-	def grab(self):
-		return vec4(self.y, self.x, self.w, self.z)
+	@yxwz.setter
+	def yxwz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.y = x
+		self.x = y
+		self.w = z
+		self.z = w
+	grab = yxwz
+
 	@property
 	def yxww(self):
 		return vec4(self.y, self.x, self.w, self.w)
-	@property
-	def graa(self):
-		return vec4(self.y, self.x, self.w, self.w)
+	graa = yxww
+
 	@property
 	def yy(self):
 		return vec2(self.y, self.y)
-	@property
-	def gg(self):
-		return vec2(self.y, self.y)
+	gg = yy
+
 	@property
 	def yyx(self):
 		return vec3(self.y, self.y, self.x)
-	@property
-	def ggr(self):
-		return vec3(self.y, self.y, self.x)
+	ggr = yyx
+
 	@property
 	def yyxx(self):
 		return vec4(self.y, self.y, self.x, self.x)
-	@property
-	def ggrr(self):
-		return vec4(self.y, self.y, self.x, self.x)
+	ggrr = yyxx
+
 	@property
 	def yyxy(self):
 		return vec4(self.y, self.y, self.x, self.y)
-	@property
-	def ggrg(self):
-		return vec4(self.y, self.y, self.x, self.y)
+	ggrg = yyxy
+
 	@property
 	def yyxz(self):
 		return vec4(self.y, self.y, self.x, self.z)
-	@property
-	def ggrb(self):
-		return vec4(self.y, self.y, self.x, self.z)
+	ggrb = yyxz
+
 	@property
 	def yyxw(self):
 		return vec4(self.y, self.y, self.x, self.w)
-	@property
-	def ggra(self):
-		return vec4(self.y, self.y, self.x, self.w)
+	ggra = yyxw
+
 	@property
 	def yyy(self):
 		return vec3(self.y, self.y, self.y)
-	@property
-	def ggg(self):
-		return vec3(self.y, self.y, self.y)
+	ggg = yyy
+
 	@property
 	def yyyx(self):
 		return vec4(self.y, self.y, self.y, self.x)
-	@property
-	def gggr(self):
-		return vec4(self.y, self.y, self.y, self.x)
+	gggr = yyyx
+
 	@property
 	def yyyy(self):
 		return vec4(self.y, self.y, self.y, self.y)
-	@property
-	def gggg(self):
-		return vec4(self.y, self.y, self.y, self.y)
+	gggg = yyyy
+
 	@property
 	def yyyz(self):
 		return vec4(self.y, self.y, self.y, self.z)
-	@property
-	def gggb(self):
-		return vec4(self.y, self.y, self.y, self.z)
+	gggb = yyyz
+
 	@property
 	def yyyw(self):
 		return vec4(self.y, self.y, self.y, self.w)
-	@property
-	def ggga(self):
-		return vec4(self.y, self.y, self.y, self.w)
+	ggga = yyyw
+
 	@property
 	def yyz(self):
 		return vec3(self.y, self.y, self.z)
-	@property
-	def ggb(self):
-		return vec3(self.y, self.y, self.z)
+	ggb = yyz
+
 	@property
 	def yyzx(self):
 		return vec4(self.y, self.y, self.z, self.x)
-	@property
-	def ggbr(self):
-		return vec4(self.y, self.y, self.z, self.x)
+	ggbr = yyzx
+
 	@property
 	def yyzy(self):
 		return vec4(self.y, self.y, self.z, self.y)
-	@property
-	def ggbg(self):
-		return vec4(self.y, self.y, self.z, self.y)
+	ggbg = yyzy
+
 	@property
 	def yyzz(self):
 		return vec4(self.y, self.y, self.z, self.z)
-	@property
-	def ggbb(self):
-		return vec4(self.y, self.y, self.z, self.z)
+	ggbb = yyzz
+
 	@property
 	def yyzw(self):
 		return vec4(self.y, self.y, self.z, self.w)
-	@property
-	def ggba(self):
-		return vec4(self.y, self.y, self.z, self.w)
+	ggba = yyzw
+
 	@property
 	def yyw(self):
 		return vec3(self.y, self.y, self.w)
-	@property
-	def gga(self):
-		return vec3(self.y, self.y, self.w)
+	gga = yyw
+
 	@property
 	def yywx(self):
 		return vec4(self.y, self.y, self.w, self.x)
-	@property
-	def ggar(self):
-		return vec4(self.y, self.y, self.w, self.x)
+	ggar = yywx
+
 	@property
 	def yywy(self):
 		return vec4(self.y, self.y, self.w, self.y)
-	@property
-	def ggag(self):
-		return vec4(self.y, self.y, self.w, self.y)
+	ggag = yywy
+
 	@property
 	def yywz(self):
 		return vec4(self.y, self.y, self.w, self.z)
-	@property
-	def ggab(self):
-		return vec4(self.y, self.y, self.w, self.z)
+	ggab = yywz
+
 	@property
 	def yyww(self):
 		return vec4(self.y, self.y, self.w, self.w)
-	@property
-	def ggaa(self):
-		return vec4(self.y, self.y, self.w, self.w)
+	ggaa = yyww
+
 	@property
 	def yz(self):
 		return vec2(self.y, self.z)
-	@property
-	def gb(self):
-		return vec2(self.y, self.z)
+	@yz.setter
+	def yz(self, other):
+		x = other.x
+		y = other.y
+		self.y = x
+		self.z = y
+	gb = yz
+
 	@property
 	def yzx(self):
 		return vec3(self.y, self.z, self.x)
-	@property
-	def gbr(self):
-		return vec3(self.y, self.z, self.x)
+	@yzx.setter
+	def yzx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.y = x
+		self.z = y
+		self.x = z
+	gbr = yzx
+
 	@property
 	def yzxx(self):
 		return vec4(self.y, self.z, self.x, self.x)
-	@property
-	def gbrr(self):
-		return vec4(self.y, self.z, self.x, self.x)
+	gbrr = yzxx
+
 	@property
 	def yzxy(self):
 		return vec4(self.y, self.z, self.x, self.y)
-	@property
-	def gbrg(self):
-		return vec4(self.y, self.z, self.x, self.y)
+	gbrg = yzxy
+
 	@property
 	def yzxz(self):
 		return vec4(self.y, self.z, self.x, self.z)
-	@property
-	def gbrb(self):
-		return vec4(self.y, self.z, self.x, self.z)
+	gbrb = yzxz
+
 	@property
 	def yzxw(self):
 		return vec4(self.y, self.z, self.x, self.w)
-	@property
-	def gbra(self):
-		return vec4(self.y, self.z, self.x, self.w)
+	@yzxw.setter
+	def yzxw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.y = x
+		self.z = y
+		self.x = z
+		self.w = w
+	gbra = yzxw
+
 	@property
 	def yzy(self):
 		return vec3(self.y, self.z, self.y)
-	@property
-	def gbg(self):
-		return vec3(self.y, self.z, self.y)
+	gbg = yzy
+
 	@property
 	def yzyx(self):
 		return vec4(self.y, self.z, self.y, self.x)
-	@property
-	def gbgr(self):
-		return vec4(self.y, self.z, self.y, self.x)
+	gbgr = yzyx
+
 	@property
 	def yzyy(self):
 		return vec4(self.y, self.z, self.y, self.y)
-	@property
-	def gbgg(self):
-		return vec4(self.y, self.z, self.y, self.y)
+	gbgg = yzyy
+
 	@property
 	def yzyz(self):
 		return vec4(self.y, self.z, self.y, self.z)
-	@property
-	def gbgb(self):
-		return vec4(self.y, self.z, self.y, self.z)
+	gbgb = yzyz
+
 	@property
 	def yzyw(self):
 		return vec4(self.y, self.z, self.y, self.w)
-	@property
-	def gbga(self):
-		return vec4(self.y, self.z, self.y, self.w)
+	gbga = yzyw
+
 	@property
 	def yzz(self):
 		return vec3(self.y, self.z, self.z)
-	@property
-	def gbb(self):
-		return vec3(self.y, self.z, self.z)
+	gbb = yzz
+
 	@property
 	def yzzx(self):
 		return vec4(self.y, self.z, self.z, self.x)
-	@property
-	def gbbr(self):
-		return vec4(self.y, self.z, self.z, self.x)
+	gbbr = yzzx
+
 	@property
 	def yzzy(self):
 		return vec4(self.y, self.z, self.z, self.y)
-	@property
-	def gbbg(self):
-		return vec4(self.y, self.z, self.z, self.y)
+	gbbg = yzzy
+
 	@property
 	def yzzz(self):
 		return vec4(self.y, self.z, self.z, self.z)
-	@property
-	def gbbb(self):
-		return vec4(self.y, self.z, self.z, self.z)
+	gbbb = yzzz
+
 	@property
 	def yzzw(self):
 		return vec4(self.y, self.z, self.z, self.w)
-	@property
-	def gbba(self):
-		return vec4(self.y, self.z, self.z, self.w)
+	gbba = yzzw
+
 	@property
 	def yzw(self):
 		return vec3(self.y, self.z, self.w)
-	@property
-	def gba(self):
-		return vec3(self.y, self.z, self.w)
+	@yzw.setter
+	def yzw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.y = x
+		self.z = y
+		self.w = z
+	gba = yzw
+
 	@property
 	def yzwx(self):
 		return vec4(self.y, self.z, self.w, self.x)
-	@property
-	def gbar(self):
-		return vec4(self.y, self.z, self.w, self.x)
+	@yzwx.setter
+	def yzwx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.y = x
+		self.z = y
+		self.w = z
+		self.x = w
+	gbar = yzwx
+
 	@property
 	def yzwy(self):
 		return vec4(self.y, self.z, self.w, self.y)
-	@property
-	def gbag(self):
-		return vec4(self.y, self.z, self.w, self.y)
+	gbag = yzwy
+
 	@property
 	def yzwz(self):
 		return vec4(self.y, self.z, self.w, self.z)
-	@property
-	def gbab(self):
-		return vec4(self.y, self.z, self.w, self.z)
+	gbab = yzwz
+
 	@property
 	def yzww(self):
 		return vec4(self.y, self.z, self.w, self.w)
-	@property
-	def gbaa(self):
-		return vec4(self.y, self.z, self.w, self.w)
+	gbaa = yzww
+
 	@property
 	def yw(self):
 		return vec2(self.y, self.w)
-	@property
-	def ga(self):
-		return vec2(self.y, self.w)
+	@yw.setter
+	def yw(self, other):
+		x = other.x
+		y = other.y
+		self.y = x
+		self.w = y
+	ga = yw
+
 	@property
 	def ywx(self):
 		return vec3(self.y, self.w, self.x)
-	@property
-	def gar(self):
-		return vec3(self.y, self.w, self.x)
+	@ywx.setter
+	def ywx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.y = x
+		self.w = y
+		self.x = z
+	gar = ywx
+
 	@property
 	def ywxx(self):
 		return vec4(self.y, self.w, self.x, self.x)
-	@property
-	def garr(self):
-		return vec4(self.y, self.w, self.x, self.x)
+	garr = ywxx
+
 	@property
 	def ywxy(self):
 		return vec4(self.y, self.w, self.x, self.y)
-	@property
-	def garg(self):
-		return vec4(self.y, self.w, self.x, self.y)
+	garg = ywxy
+
 	@property
 	def ywxz(self):
 		return vec4(self.y, self.w, self.x, self.z)
-	@property
-	def garb(self):
-		return vec4(self.y, self.w, self.x, self.z)
+	@ywxz.setter
+	def ywxz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.y = x
+		self.w = y
+		self.x = z
+		self.z = w
+	garb = ywxz
+
 	@property
 	def ywxw(self):
 		return vec4(self.y, self.w, self.x, self.w)
-	@property
-	def gara(self):
-		return vec4(self.y, self.w, self.x, self.w)
+	gara = ywxw
+
 	@property
 	def ywy(self):
 		return vec3(self.y, self.w, self.y)
-	@property
-	def gag(self):
-		return vec3(self.y, self.w, self.y)
+	gag = ywy
+
 	@property
 	def ywyx(self):
 		return vec4(self.y, self.w, self.y, self.x)
-	@property
-	def gagr(self):
-		return vec4(self.y, self.w, self.y, self.x)
+	gagr = ywyx
+
 	@property
 	def ywyy(self):
 		return vec4(self.y, self.w, self.y, self.y)
-	@property
-	def gagg(self):
-		return vec4(self.y, self.w, self.y, self.y)
+	gagg = ywyy
+
 	@property
 	def ywyz(self):
 		return vec4(self.y, self.w, self.y, self.z)
-	@property
-	def gagb(self):
-		return vec4(self.y, self.w, self.y, self.z)
+	gagb = ywyz
+
 	@property
 	def ywyw(self):
 		return vec4(self.y, self.w, self.y, self.w)
-	@property
-	def gaga(self):
-		return vec4(self.y, self.w, self.y, self.w)
+	gaga = ywyw
+
 	@property
 	def ywz(self):
 		return vec3(self.y, self.w, self.z)
-	@property
-	def gab(self):
-		return vec3(self.y, self.w, self.z)
+	@ywz.setter
+	def ywz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.y = x
+		self.w = y
+		self.z = z
+	gab = ywz
+
 	@property
 	def ywzx(self):
 		return vec4(self.y, self.w, self.z, self.x)
-	@property
-	def gabr(self):
-		return vec4(self.y, self.w, self.z, self.x)
+	@ywzx.setter
+	def ywzx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.y = x
+		self.w = y
+		self.z = z
+		self.x = w
+	gabr = ywzx
+
 	@property
 	def ywzy(self):
 		return vec4(self.y, self.w, self.z, self.y)
-	@property
-	def gabg(self):
-		return vec4(self.y, self.w, self.z, self.y)
+	gabg = ywzy
+
 	@property
 	def ywzz(self):
 		return vec4(self.y, self.w, self.z, self.z)
-	@property
-	def gabb(self):
-		return vec4(self.y, self.w, self.z, self.z)
+	gabb = ywzz
+
 	@property
 	def ywzw(self):
 		return vec4(self.y, self.w, self.z, self.w)
-	@property
-	def gaba(self):
-		return vec4(self.y, self.w, self.z, self.w)
+	gaba = ywzw
+
 	@property
 	def yww(self):
 		return vec3(self.y, self.w, self.w)
-	@property
-	def gaa(self):
-		return vec3(self.y, self.w, self.w)
+	gaa = yww
+
 	@property
 	def ywwx(self):
 		return vec4(self.y, self.w, self.w, self.x)
-	@property
-	def gaar(self):
-		return vec4(self.y, self.w, self.w, self.x)
+	gaar = ywwx
+
 	@property
 	def ywwy(self):
 		return vec4(self.y, self.w, self.w, self.y)
-	@property
-	def gaag(self):
-		return vec4(self.y, self.w, self.w, self.y)
+	gaag = ywwy
+
 	@property
 	def ywwz(self):
 		return vec4(self.y, self.w, self.w, self.z)
-	@property
-	def gaab(self):
-		return vec4(self.y, self.w, self.w, self.z)
+	gaab = ywwz
+
 	@property
 	def ywww(self):
 		return vec4(self.y, self.w, self.w, self.w)
-	@property
-	def gaaa(self):
-		return vec4(self.y, self.w, self.w, self.w)
+	gaaa = ywww
+
 	@property
 	def b(self):
 		return self.z
+	@b.setter
+	def b(self, other):
+		x = other.x
+		self.z = x
+
 	@property
 	def zx(self):
 		return vec2(self.z, self.x)
-	@property
-	def br(self):
-		return vec2(self.z, self.x)
+	@zx.setter
+	def zx(self, other):
+		x = other.x
+		y = other.y
+		self.z = x
+		self.x = y
+	br = zx
+
 	@property
 	def zxx(self):
 		return vec3(self.z, self.x, self.x)
-	@property
-	def brr(self):
-		return vec3(self.z, self.x, self.x)
+	brr = zxx
+
 	@property
 	def zxxx(self):
 		return vec4(self.z, self.x, self.x, self.x)
-	@property
-	def brrr(self):
-		return vec4(self.z, self.x, self.x, self.x)
+	brrr = zxxx
+
 	@property
 	def zxxy(self):
 		return vec4(self.z, self.x, self.x, self.y)
-	@property
-	def brrg(self):
-		return vec4(self.z, self.x, self.x, self.y)
+	brrg = zxxy
+
 	@property
 	def zxxz(self):
 		return vec4(self.z, self.x, self.x, self.z)
-	@property
-	def brrb(self):
-		return vec4(self.z, self.x, self.x, self.z)
+	brrb = zxxz
+
 	@property
 	def zxxw(self):
 		return vec4(self.z, self.x, self.x, self.w)
-	@property
-	def brra(self):
-		return vec4(self.z, self.x, self.x, self.w)
+	brra = zxxw
+
 	@property
 	def zxy(self):
 		return vec3(self.z, self.x, self.y)
-	@property
-	def brg(self):
-		return vec3(self.z, self.x, self.y)
+	@zxy.setter
+	def zxy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.z = x
+		self.x = y
+		self.y = z
+	brg = zxy
+
 	@property
 	def zxyx(self):
 		return vec4(self.z, self.x, self.y, self.x)
-	@property
-	def brgr(self):
-		return vec4(self.z, self.x, self.y, self.x)
+	brgr = zxyx
+
 	@property
 	def zxyy(self):
 		return vec4(self.z, self.x, self.y, self.y)
-	@property
-	def brgg(self):
-		return vec4(self.z, self.x, self.y, self.y)
+	brgg = zxyy
+
 	@property
 	def zxyz(self):
 		return vec4(self.z, self.x, self.y, self.z)
-	@property
-	def brgb(self):
-		return vec4(self.z, self.x, self.y, self.z)
+	brgb = zxyz
+
 	@property
 	def zxyw(self):
 		return vec4(self.z, self.x, self.y, self.w)
-	@property
-	def brga(self):
-		return vec4(self.z, self.x, self.y, self.w)
+	@zxyw.setter
+	def zxyw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.z = x
+		self.x = y
+		self.y = z
+		self.w = w
+	brga = zxyw
+
 	@property
 	def zxz(self):
 		return vec3(self.z, self.x, self.z)
-	@property
-	def brb(self):
-		return vec3(self.z, self.x, self.z)
+	brb = zxz
+
 	@property
 	def zxzx(self):
 		return vec4(self.z, self.x, self.z, self.x)
-	@property
-	def brbr(self):
-		return vec4(self.z, self.x, self.z, self.x)
+	brbr = zxzx
+
 	@property
 	def zxzy(self):
 		return vec4(self.z, self.x, self.z, self.y)
-	@property
-	def brbg(self):
-		return vec4(self.z, self.x, self.z, self.y)
+	brbg = zxzy
+
 	@property
 	def zxzz(self):
 		return vec4(self.z, self.x, self.z, self.z)
-	@property
-	def brbb(self):
-		return vec4(self.z, self.x, self.z, self.z)
+	brbb = zxzz
+
 	@property
 	def zxzw(self):
 		return vec4(self.z, self.x, self.z, self.w)
-	@property
-	def brba(self):
-		return vec4(self.z, self.x, self.z, self.w)
+	brba = zxzw
+
 	@property
 	def zxw(self):
 		return vec3(self.z, self.x, self.w)
-	@property
-	def bra(self):
-		return vec3(self.z, self.x, self.w)
+	@zxw.setter
+	def zxw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.z = x
+		self.x = y
+		self.w = z
+	bra = zxw
+
 	@property
 	def zxwx(self):
 		return vec4(self.z, self.x, self.w, self.x)
-	@property
-	def brar(self):
-		return vec4(self.z, self.x, self.w, self.x)
+	brar = zxwx
+
 	@property
 	def zxwy(self):
 		return vec4(self.z, self.x, self.w, self.y)
-	@property
-	def brag(self):
-		return vec4(self.z, self.x, self.w, self.y)
+	@zxwy.setter
+	def zxwy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.z = x
+		self.x = y
+		self.w = z
+		self.y = w
+	brag = zxwy
+
 	@property
 	def zxwz(self):
 		return vec4(self.z, self.x, self.w, self.z)
-	@property
-	def brab(self):
-		return vec4(self.z, self.x, self.w, self.z)
+	brab = zxwz
+
 	@property
 	def zxww(self):
 		return vec4(self.z, self.x, self.w, self.w)
-	@property
-	def braa(self):
-		return vec4(self.z, self.x, self.w, self.w)
+	braa = zxww
+
 	@property
 	def zy(self):
 		return vec2(self.z, self.y)
-	@property
-	def bg(self):
-		return vec2(self.z, self.y)
+	@zy.setter
+	def zy(self, other):
+		x = other.x
+		y = other.y
+		self.z = x
+		self.y = y
+	bg = zy
+
 	@property
 	def zyx(self):
 		return vec3(self.z, self.y, self.x)
-	@property
-	def bgr(self):
-		return vec3(self.z, self.y, self.x)
+	@zyx.setter
+	def zyx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.z = x
+		self.y = y
+		self.x = z
+	bgr = zyx
+
 	@property
 	def zyxx(self):
 		return vec4(self.z, self.y, self.x, self.x)
-	@property
-	def bgrr(self):
-		return vec4(self.z, self.y, self.x, self.x)
+	bgrr = zyxx
+
 	@property
 	def zyxy(self):
 		return vec4(self.z, self.y, self.x, self.y)
-	@property
-	def bgrg(self):
-		return vec4(self.z, self.y, self.x, self.y)
+	bgrg = zyxy
+
 	@property
 	def zyxz(self):
 		return vec4(self.z, self.y, self.x, self.z)
-	@property
-	def bgrb(self):
-		return vec4(self.z, self.y, self.x, self.z)
+	bgrb = zyxz
+
 	@property
 	def zyxw(self):
 		return vec4(self.z, self.y, self.x, self.w)
-	@property
-	def bgra(self):
-		return vec4(self.z, self.y, self.x, self.w)
+	@zyxw.setter
+	def zyxw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.z = x
+		self.y = y
+		self.x = z
+		self.w = w
+	bgra = zyxw
+
 	@property
 	def zyy(self):
 		return vec3(self.z, self.y, self.y)
-	@property
-	def bgg(self):
-		return vec3(self.z, self.y, self.y)
+	bgg = zyy
+
 	@property
 	def zyyx(self):
 		return vec4(self.z, self.y, self.y, self.x)
-	@property
-	def bggr(self):
-		return vec4(self.z, self.y, self.y, self.x)
+	bggr = zyyx
+
 	@property
 	def zyyy(self):
 		return vec4(self.z, self.y, self.y, self.y)
-	@property
-	def bggg(self):
-		return vec4(self.z, self.y, self.y, self.y)
+	bggg = zyyy
+
 	@property
 	def zyyz(self):
 		return vec4(self.z, self.y, self.y, self.z)
-	@property
-	def bggb(self):
-		return vec4(self.z, self.y, self.y, self.z)
+	bggb = zyyz
+
 	@property
 	def zyyw(self):
 		return vec4(self.z, self.y, self.y, self.w)
-	@property
-	def bgga(self):
-		return vec4(self.z, self.y, self.y, self.w)
+	bgga = zyyw
+
 	@property
 	def zyz(self):
 		return vec3(self.z, self.y, self.z)
-	@property
-	def bgb(self):
-		return vec3(self.z, self.y, self.z)
+	bgb = zyz
+
 	@property
 	def zyzx(self):
 		return vec4(self.z, self.y, self.z, self.x)
-	@property
-	def bgbr(self):
-		return vec4(self.z, self.y, self.z, self.x)
+	bgbr = zyzx
+
 	@property
 	def zyzy(self):
 		return vec4(self.z, self.y, self.z, self.y)
-	@property
-	def bgbg(self):
-		return vec4(self.z, self.y, self.z, self.y)
+	bgbg = zyzy
+
 	@property
 	def zyzz(self):
 		return vec4(self.z, self.y, self.z, self.z)
-	@property
-	def bgbb(self):
-		return vec4(self.z, self.y, self.z, self.z)
+	bgbb = zyzz
+
 	@property
 	def zyzw(self):
 		return vec4(self.z, self.y, self.z, self.w)
-	@property
-	def bgba(self):
-		return vec4(self.z, self.y, self.z, self.w)
+	bgba = zyzw
+
 	@property
 	def zyw(self):
 		return vec3(self.z, self.y, self.w)
-	@property
-	def bga(self):
-		return vec3(self.z, self.y, self.w)
+	@zyw.setter
+	def zyw(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.z = x
+		self.y = y
+		self.w = z
+	bga = zyw
+
 	@property
 	def zywx(self):
 		return vec4(self.z, self.y, self.w, self.x)
-	@property
-	def bgar(self):
-		return vec4(self.z, self.y, self.w, self.x)
+	@zywx.setter
+	def zywx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.z = x
+		self.y = y
+		self.w = z
+		self.x = w
+	bgar = zywx
+
 	@property
 	def zywy(self):
 		return vec4(self.z, self.y, self.w, self.y)
-	@property
-	def bgag(self):
-		return vec4(self.z, self.y, self.w, self.y)
+	bgag = zywy
+
 	@property
 	def zywz(self):
 		return vec4(self.z, self.y, self.w, self.z)
-	@property
-	def bgab(self):
-		return vec4(self.z, self.y, self.w, self.z)
+	bgab = zywz
+
 	@property
 	def zyww(self):
 		return vec4(self.z, self.y, self.w, self.w)
-	@property
-	def bgaa(self):
-		return vec4(self.z, self.y, self.w, self.w)
+	bgaa = zyww
+
 	@property
 	def zz(self):
 		return vec2(self.z, self.z)
-	@property
-	def bb(self):
-		return vec2(self.z, self.z)
+	bb = zz
+
 	@property
 	def zzx(self):
 		return vec3(self.z, self.z, self.x)
-	@property
-	def bbr(self):
-		return vec3(self.z, self.z, self.x)
+	bbr = zzx
+
 	@property
 	def zzxx(self):
 		return vec4(self.z, self.z, self.x, self.x)
-	@property
-	def bbrr(self):
-		return vec4(self.z, self.z, self.x, self.x)
+	bbrr = zzxx
+
 	@property
 	def zzxy(self):
 		return vec4(self.z, self.z, self.x, self.y)
-	@property
-	def bbrg(self):
-		return vec4(self.z, self.z, self.x, self.y)
+	bbrg = zzxy
+
 	@property
 	def zzxz(self):
 		return vec4(self.z, self.z, self.x, self.z)
-	@property
-	def bbrb(self):
-		return vec4(self.z, self.z, self.x, self.z)
+	bbrb = zzxz
+
 	@property
 	def zzxw(self):
 		return vec4(self.z, self.z, self.x, self.w)
-	@property
-	def bbra(self):
-		return vec4(self.z, self.z, self.x, self.w)
+	bbra = zzxw
+
 	@property
 	def zzy(self):
 		return vec3(self.z, self.z, self.y)
-	@property
-	def bbg(self):
-		return vec3(self.z, self.z, self.y)
+	bbg = zzy
+
 	@property
 	def zzyx(self):
 		return vec4(self.z, self.z, self.y, self.x)
-	@property
-	def bbgr(self):
-		return vec4(self.z, self.z, self.y, self.x)
+	bbgr = zzyx
+
 	@property
 	def zzyy(self):
 		return vec4(self.z, self.z, self.y, self.y)
-	@property
-	def bbgg(self):
-		return vec4(self.z, self.z, self.y, self.y)
+	bbgg = zzyy
+
 	@property
 	def zzyz(self):
 		return vec4(self.z, self.z, self.y, self.z)
-	@property
-	def bbgb(self):
-		return vec4(self.z, self.z, self.y, self.z)
+	bbgb = zzyz
+
 	@property
 	def zzyw(self):
 		return vec4(self.z, self.z, self.y, self.w)
-	@property
-	def bbga(self):
-		return vec4(self.z, self.z, self.y, self.w)
+	bbga = zzyw
+
 	@property
 	def zzz(self):
 		return vec3(self.z, self.z, self.z)
-	@property
-	def bbb(self):
-		return vec3(self.z, self.z, self.z)
+	bbb = zzz
+
 	@property
 	def zzzx(self):
 		return vec4(self.z, self.z, self.z, self.x)
-	@property
-	def bbbr(self):
-		return vec4(self.z, self.z, self.z, self.x)
+	bbbr = zzzx
+
 	@property
 	def zzzy(self):
 		return vec4(self.z, self.z, self.z, self.y)
-	@property
-	def bbbg(self):
-		return vec4(self.z, self.z, self.z, self.y)
+	bbbg = zzzy
+
 	@property
 	def zzzz(self):
 		return vec4(self.z, self.z, self.z, self.z)
-	@property
-	def bbbb(self):
-		return vec4(self.z, self.z, self.z, self.z)
+	bbbb = zzzz
+
 	@property
 	def zzzw(self):
 		return vec4(self.z, self.z, self.z, self.w)
-	@property
-	def bbba(self):
-		return vec4(self.z, self.z, self.z, self.w)
+	bbba = zzzw
+
 	@property
 	def zzw(self):
 		return vec3(self.z, self.z, self.w)
-	@property
-	def bba(self):
-		return vec3(self.z, self.z, self.w)
+	bba = zzw
+
 	@property
 	def zzwx(self):
 		return vec4(self.z, self.z, self.w, self.x)
-	@property
-	def bbar(self):
-		return vec4(self.z, self.z, self.w, self.x)
+	bbar = zzwx
+
 	@property
 	def zzwy(self):
 		return vec4(self.z, self.z, self.w, self.y)
-	@property
-	def bbag(self):
-		return vec4(self.z, self.z, self.w, self.y)
+	bbag = zzwy
+
 	@property
 	def zzwz(self):
 		return vec4(self.z, self.z, self.w, self.z)
-	@property
-	def bbab(self):
-		return vec4(self.z, self.z, self.w, self.z)
+	bbab = zzwz
+
 	@property
 	def zzww(self):
 		return vec4(self.z, self.z, self.w, self.w)
-	@property
-	def bbaa(self):
-		return vec4(self.z, self.z, self.w, self.w)
+	bbaa = zzww
+
 	@property
 	def zw(self):
 		return vec2(self.z, self.w)
-	@property
-	def ba(self):
-		return vec2(self.z, self.w)
+	@zw.setter
+	def zw(self, other):
+		x = other.x
+		y = other.y
+		self.z = x
+		self.w = y
+	ba = zw
+
 	@property
 	def zwx(self):
 		return vec3(self.z, self.w, self.x)
-	@property
-	def bar(self):
-		return vec3(self.z, self.w, self.x)
+	@zwx.setter
+	def zwx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.z = x
+		self.w = y
+		self.x = z
+	bar = zwx
+
 	@property
 	def zwxx(self):
 		return vec4(self.z, self.w, self.x, self.x)
-	@property
-	def barr(self):
-		return vec4(self.z, self.w, self.x, self.x)
+	barr = zwxx
+
 	@property
 	def zwxy(self):
 		return vec4(self.z, self.w, self.x, self.y)
-	@property
-	def barg(self):
-		return vec4(self.z, self.w, self.x, self.y)
+	@zwxy.setter
+	def zwxy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.z = x
+		self.w = y
+		self.x = z
+		self.y = w
+	barg = zwxy
+
 	@property
 	def zwxz(self):
 		return vec4(self.z, self.w, self.x, self.z)
-	@property
-	def barb(self):
-		return vec4(self.z, self.w, self.x, self.z)
+	barb = zwxz
+
 	@property
 	def zwxw(self):
 		return vec4(self.z, self.w, self.x, self.w)
-	@property
-	def bara(self):
-		return vec4(self.z, self.w, self.x, self.w)
+	bara = zwxw
+
 	@property
 	def zwy(self):
 		return vec3(self.z, self.w, self.y)
-	@property
-	def bag(self):
-		return vec3(self.z, self.w, self.y)
+	@zwy.setter
+	def zwy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.z = x
+		self.w = y
+		self.y = z
+	bag = zwy
+
 	@property
 	def zwyx(self):
 		return vec4(self.z, self.w, self.y, self.x)
-	@property
-	def bagr(self):
-		return vec4(self.z, self.w, self.y, self.x)
+	@zwyx.setter
+	def zwyx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.z = x
+		self.w = y
+		self.y = z
+		self.x = w
+	bagr = zwyx
+
 	@property
 	def zwyy(self):
 		return vec4(self.z, self.w, self.y, self.y)
-	@property
-	def bagg(self):
-		return vec4(self.z, self.w, self.y, self.y)
+	bagg = zwyy
+
 	@property
 	def zwyz(self):
 		return vec4(self.z, self.w, self.y, self.z)
-	@property
-	def bagb(self):
-		return vec4(self.z, self.w, self.y, self.z)
+	bagb = zwyz
+
 	@property
 	def zwyw(self):
 		return vec4(self.z, self.w, self.y, self.w)
-	@property
-	def baga(self):
-		return vec4(self.z, self.w, self.y, self.w)
+	baga = zwyw
+
 	@property
 	def zwz(self):
 		return vec3(self.z, self.w, self.z)
-	@property
-	def bab(self):
-		return vec3(self.z, self.w, self.z)
+	bab = zwz
+
 	@property
 	def zwzx(self):
 		return vec4(self.z, self.w, self.z, self.x)
-	@property
-	def babr(self):
-		return vec4(self.z, self.w, self.z, self.x)
+	babr = zwzx
+
 	@property
 	def zwzy(self):
 		return vec4(self.z, self.w, self.z, self.y)
-	@property
-	def babg(self):
-		return vec4(self.z, self.w, self.z, self.y)
+	babg = zwzy
+
 	@property
 	def zwzz(self):
 		return vec4(self.z, self.w, self.z, self.z)
-	@property
-	def babb(self):
-		return vec4(self.z, self.w, self.z, self.z)
+	babb = zwzz
+
 	@property
 	def zwzw(self):
 		return vec4(self.z, self.w, self.z, self.w)
-	@property
-	def baba(self):
-		return vec4(self.z, self.w, self.z, self.w)
+	baba = zwzw
+
 	@property
 	def zww(self):
 		return vec3(self.z, self.w, self.w)
-	@property
-	def baa(self):
-		return vec3(self.z, self.w, self.w)
+	baa = zww
+
 	@property
 	def zwwx(self):
 		return vec4(self.z, self.w, self.w, self.x)
-	@property
-	def baar(self):
-		return vec4(self.z, self.w, self.w, self.x)
+	baar = zwwx
+
 	@property
 	def zwwy(self):
 		return vec4(self.z, self.w, self.w, self.y)
-	@property
-	def baag(self):
-		return vec4(self.z, self.w, self.w, self.y)
+	baag = zwwy
+
 	@property
 	def zwwz(self):
 		return vec4(self.z, self.w, self.w, self.z)
-	@property
-	def baab(self):
-		return vec4(self.z, self.w, self.w, self.z)
+	baab = zwwz
+
 	@property
 	def zwww(self):
 		return vec4(self.z, self.w, self.w, self.w)
-	@property
-	def baaa(self):
-		return vec4(self.z, self.w, self.w, self.w)
+	baaa = zwww
+
 	@property
 	def a(self):
 		return self.w
+	@a.setter
+	def a(self, other):
+		x = other.x
+		self.w = x
+
 	@property
 	def wx(self):
 		return vec2(self.w, self.x)
-	@property
-	def ar(self):
-		return vec2(self.w, self.x)
+	@wx.setter
+	def wx(self, other):
+		x = other.x
+		y = other.y
+		self.w = x
+		self.x = y
+	ar = wx
+
 	@property
 	def wxx(self):
 		return vec3(self.w, self.x, self.x)
-	@property
-	def arr(self):
-		return vec3(self.w, self.x, self.x)
+	arr = wxx
+
 	@property
 	def wxxx(self):
 		return vec4(self.w, self.x, self.x, self.x)
-	@property
-	def arrr(self):
-		return vec4(self.w, self.x, self.x, self.x)
+	arrr = wxxx
+
 	@property
 	def wxxy(self):
 		return vec4(self.w, self.x, self.x, self.y)
-	@property
-	def arrg(self):
-		return vec4(self.w, self.x, self.x, self.y)
+	arrg = wxxy
+
 	@property
 	def wxxz(self):
 		return vec4(self.w, self.x, self.x, self.z)
-	@property
-	def arrb(self):
-		return vec4(self.w, self.x, self.x, self.z)
+	arrb = wxxz
+
 	@property
 	def wxxw(self):
 		return vec4(self.w, self.x, self.x, self.w)
-	@property
-	def arra(self):
-		return vec4(self.w, self.x, self.x, self.w)
+	arra = wxxw
+
 	@property
 	def wxy(self):
 		return vec3(self.w, self.x, self.y)
-	@property
-	def arg(self):
-		return vec3(self.w, self.x, self.y)
+	@wxy.setter
+	def wxy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.w = x
+		self.x = y
+		self.y = z
+	arg = wxy
+
 	@property
 	def wxyx(self):
 		return vec4(self.w, self.x, self.y, self.x)
-	@property
-	def argr(self):
-		return vec4(self.w, self.x, self.y, self.x)
+	argr = wxyx
+
 	@property
 	def wxyy(self):
 		return vec4(self.w, self.x, self.y, self.y)
-	@property
-	def argg(self):
-		return vec4(self.w, self.x, self.y, self.y)
+	argg = wxyy
+
 	@property
 	def wxyz(self):
 		return vec4(self.w, self.x, self.y, self.z)
-	@property
-	def argb(self):
-		return vec4(self.w, self.x, self.y, self.z)
+	@wxyz.setter
+	def wxyz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.w = x
+		self.x = y
+		self.y = z
+		self.z = w
+	argb = wxyz
+
 	@property
 	def wxyw(self):
 		return vec4(self.w, self.x, self.y, self.w)
-	@property
-	def arga(self):
-		return vec4(self.w, self.x, self.y, self.w)
+	arga = wxyw
+
 	@property
 	def wxz(self):
 		return vec3(self.w, self.x, self.z)
-	@property
-	def arb(self):
-		return vec3(self.w, self.x, self.z)
+	@wxz.setter
+	def wxz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.w = x
+		self.x = y
+		self.z = z
+	arb = wxz
+
 	@property
 	def wxzx(self):
 		return vec4(self.w, self.x, self.z, self.x)
-	@property
-	def arbr(self):
-		return vec4(self.w, self.x, self.z, self.x)
+	arbr = wxzx
+
 	@property
 	def wxzy(self):
 		return vec4(self.w, self.x, self.z, self.y)
-	@property
-	def arbg(self):
-		return vec4(self.w, self.x, self.z, self.y)
+	@wxzy.setter
+	def wxzy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.w = x
+		self.x = y
+		self.z = z
+		self.y = w
+	arbg = wxzy
+
 	@property
 	def wxzz(self):
 		return vec4(self.w, self.x, self.z, self.z)
-	@property
-	def arbb(self):
-		return vec4(self.w, self.x, self.z, self.z)
+	arbb = wxzz
+
 	@property
 	def wxzw(self):
 		return vec4(self.w, self.x, self.z, self.w)
-	@property
-	def arba(self):
-		return vec4(self.w, self.x, self.z, self.w)
+	arba = wxzw
+
 	@property
 	def wxw(self):
 		return vec3(self.w, self.x, self.w)
-	@property
-	def ara(self):
-		return vec3(self.w, self.x, self.w)
+	ara = wxw
+
 	@property
 	def wxwx(self):
 		return vec4(self.w, self.x, self.w, self.x)
-	@property
-	def arar(self):
-		return vec4(self.w, self.x, self.w, self.x)
+	arar = wxwx
+
 	@property
 	def wxwy(self):
 		return vec4(self.w, self.x, self.w, self.y)
-	@property
-	def arag(self):
-		return vec4(self.w, self.x, self.w, self.y)
+	arag = wxwy
+
 	@property
 	def wxwz(self):
 		return vec4(self.w, self.x, self.w, self.z)
-	@property
-	def arab(self):
-		return vec4(self.w, self.x, self.w, self.z)
+	arab = wxwz
+
 	@property
 	def wxww(self):
 		return vec4(self.w, self.x, self.w, self.w)
-	@property
-	def araa(self):
-		return vec4(self.w, self.x, self.w, self.w)
+	araa = wxww
+
 	@property
 	def wy(self):
 		return vec2(self.w, self.y)
-	@property
-	def ag(self):
-		return vec2(self.w, self.y)
+	@wy.setter
+	def wy(self, other):
+		x = other.x
+		y = other.y
+		self.w = x
+		self.y = y
+	ag = wy
+
 	@property
 	def wyx(self):
 		return vec3(self.w, self.y, self.x)
-	@property
-	def agr(self):
-		return vec3(self.w, self.y, self.x)
+	@wyx.setter
+	def wyx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.w = x
+		self.y = y
+		self.x = z
+	agr = wyx
+
 	@property
 	def wyxx(self):
 		return vec4(self.w, self.y, self.x, self.x)
-	@property
-	def agrr(self):
-		return vec4(self.w, self.y, self.x, self.x)
+	agrr = wyxx
+
 	@property
 	def wyxy(self):
 		return vec4(self.w, self.y, self.x, self.y)
-	@property
-	def agrg(self):
-		return vec4(self.w, self.y, self.x, self.y)
+	agrg = wyxy
+
 	@property
 	def wyxz(self):
 		return vec4(self.w, self.y, self.x, self.z)
-	@property
-	def agrb(self):
-		return vec4(self.w, self.y, self.x, self.z)
+	@wyxz.setter
+	def wyxz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.w = x
+		self.y = y
+		self.x = z
+		self.z = w
+	agrb = wyxz
+
 	@property
 	def wyxw(self):
 		return vec4(self.w, self.y, self.x, self.w)
-	@property
-	def agra(self):
-		return vec4(self.w, self.y, self.x, self.w)
+	agra = wyxw
+
 	@property
 	def wyy(self):
 		return vec3(self.w, self.y, self.y)
-	@property
-	def agg(self):
-		return vec3(self.w, self.y, self.y)
+	agg = wyy
+
 	@property
 	def wyyx(self):
 		return vec4(self.w, self.y, self.y, self.x)
-	@property
-	def aggr(self):
-		return vec4(self.w, self.y, self.y, self.x)
+	aggr = wyyx
+
 	@property
 	def wyyy(self):
 		return vec4(self.w, self.y, self.y, self.y)
-	@property
-	def aggg(self):
-		return vec4(self.w, self.y, self.y, self.y)
+	aggg = wyyy
+
 	@property
 	def wyyz(self):
 		return vec4(self.w, self.y, self.y, self.z)
-	@property
-	def aggb(self):
-		return vec4(self.w, self.y, self.y, self.z)
+	aggb = wyyz
+
 	@property
 	def wyyw(self):
 		return vec4(self.w, self.y, self.y, self.w)
-	@property
-	def agga(self):
-		return vec4(self.w, self.y, self.y, self.w)
+	agga = wyyw
+
 	@property
 	def wyz(self):
 		return vec3(self.w, self.y, self.z)
-	@property
-	def agb(self):
-		return vec3(self.w, self.y, self.z)
+	@wyz.setter
+	def wyz(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.w = x
+		self.y = y
+		self.z = z
+	agb = wyz
+
 	@property
 	def wyzx(self):
 		return vec4(self.w, self.y, self.z, self.x)
-	@property
-	def agbr(self):
-		return vec4(self.w, self.y, self.z, self.x)
+	@wyzx.setter
+	def wyzx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.w = x
+		self.y = y
+		self.z = z
+		self.x = w
+	agbr = wyzx
+
 	@property
 	def wyzy(self):
 		return vec4(self.w, self.y, self.z, self.y)
-	@property
-	def agbg(self):
-		return vec4(self.w, self.y, self.z, self.y)
+	agbg = wyzy
+
 	@property
 	def wyzz(self):
 		return vec4(self.w, self.y, self.z, self.z)
-	@property
-	def agbb(self):
-		return vec4(self.w, self.y, self.z, self.z)
+	agbb = wyzz
+
 	@property
 	def wyzw(self):
 		return vec4(self.w, self.y, self.z, self.w)
-	@property
-	def agba(self):
-		return vec4(self.w, self.y, self.z, self.w)
+	agba = wyzw
+
 	@property
 	def wyw(self):
 		return vec3(self.w, self.y, self.w)
-	@property
-	def aga(self):
-		return vec3(self.w, self.y, self.w)
+	aga = wyw
+
 	@property
 	def wywx(self):
 		return vec4(self.w, self.y, self.w, self.x)
-	@property
-	def agar(self):
-		return vec4(self.w, self.y, self.w, self.x)
+	agar = wywx
+
 	@property
 	def wywy(self):
 		return vec4(self.w, self.y, self.w, self.y)
-	@property
-	def agag(self):
-		return vec4(self.w, self.y, self.w, self.y)
+	agag = wywy
+
 	@property
 	def wywz(self):
 		return vec4(self.w, self.y, self.w, self.z)
-	@property
-	def agab(self):
-		return vec4(self.w, self.y, self.w, self.z)
+	agab = wywz
+
 	@property
 	def wyww(self):
 		return vec4(self.w, self.y, self.w, self.w)
-	@property
-	def agaa(self):
-		return vec4(self.w, self.y, self.w, self.w)
+	agaa = wyww
+
 	@property
 	def wz(self):
 		return vec2(self.w, self.z)
-	@property
-	def ab(self):
-		return vec2(self.w, self.z)
+	@wz.setter
+	def wz(self, other):
+		x = other.x
+		y = other.y
+		self.w = x
+		self.z = y
+	ab = wz
+
 	@property
 	def wzx(self):
 		return vec3(self.w, self.z, self.x)
-	@property
-	def abr(self):
-		return vec3(self.w, self.z, self.x)
+	@wzx.setter
+	def wzx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.w = x
+		self.z = y
+		self.x = z
+	abr = wzx
+
 	@property
 	def wzxx(self):
 		return vec4(self.w, self.z, self.x, self.x)
-	@property
-	def abrr(self):
-		return vec4(self.w, self.z, self.x, self.x)
+	abrr = wzxx
+
 	@property
 	def wzxy(self):
 		return vec4(self.w, self.z, self.x, self.y)
-	@property
-	def abrg(self):
-		return vec4(self.w, self.z, self.x, self.y)
+	@wzxy.setter
+	def wzxy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.w = x
+		self.z = y
+		self.x = z
+		self.y = w
+	abrg = wzxy
+
 	@property
 	def wzxz(self):
 		return vec4(self.w, self.z, self.x, self.z)
-	@property
-	def abrb(self):
-		return vec4(self.w, self.z, self.x, self.z)
+	abrb = wzxz
+
 	@property
 	def wzxw(self):
 		return vec4(self.w, self.z, self.x, self.w)
-	@property
-	def abra(self):
-		return vec4(self.w, self.z, self.x, self.w)
+	abra = wzxw
+
 	@property
 	def wzy(self):
 		return vec3(self.w, self.z, self.y)
-	@property
-	def abg(self):
-		return vec3(self.w, self.z, self.y)
+	@wzy.setter
+	def wzy(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		self.w = x
+		self.z = y
+		self.y = z
+	abg = wzy
+
 	@property
 	def wzyx(self):
 		return vec4(self.w, self.z, self.y, self.x)
-	@property
-	def abgr(self):
-		return vec4(self.w, self.z, self.y, self.x)
+	@wzyx.setter
+	def wzyx(self, other):
+		x = other.x
+		y = other.y
+		z = other.z
+		w = other.w
+		self.w = x
+		self.z = y
+		self.y = z
+		self.x = w
+	abgr = wzyx
+
 	@property
 	def wzyy(self):
 		return vec4(self.w, self.z, self.y, self.y)
-	@property
-	def abgg(self):
-		return vec4(self.w, self.z, self.y, self.y)
+	abgg = wzyy
+
 	@property
 	def wzyz(self):
 		return vec4(self.w, self.z, self.y, self.z)
-	@property
-	def abgb(self):
-		return vec4(self.w, self.z, self.y, self.z)
+	abgb = wzyz
+
 	@property
 	def wzyw(self):
 		return vec4(self.w, self.z, self.y, self.w)
-	@property
-	def abga(self):
-		return vec4(self.w, self.z, self.y, self.w)
+	abga = wzyw
+
 	@property
 	def wzz(self):
 		return vec3(self.w, self.z, self.z)
-	@property
-	def abb(self):
-		return vec3(self.w, self.z, self.z)
+	abb = wzz
+
 	@property
 	def wzzx(self):
 		return vec4(self.w, self.z, self.z, self.x)
-	@property
-	def abbr(self):
-		return vec4(self.w, self.z, self.z, self.x)
+	abbr = wzzx
+
 	@property
 	def wzzy(self):
 		return vec4(self.w, self.z, self.z, self.y)
-	@property
-	def abbg(self):
-		return vec4(self.w, self.z, self.z, self.y)
+	abbg = wzzy
+
 	@property
 	def wzzz(self):
 		return vec4(self.w, self.z, self.z, self.z)
-	@property
-	def abbb(self):
-		return vec4(self.w, self.z, self.z, self.z)
+	abbb = wzzz
+
 	@property
 	def wzzw(self):
 		return vec4(self.w, self.z, self.z, self.w)
-	@property
-	def abba(self):
-		return vec4(self.w, self.z, self.z, self.w)
+	abba = wzzw
+
 	@property
 	def wzw(self):
 		return vec3(self.w, self.z, self.w)
-	@property
-	def aba(self):
-		return vec3(self.w, self.z, self.w)
+	aba = wzw
+
 	@property
 	def wzwx(self):
 		return vec4(self.w, self.z, self.w, self.x)
-	@property
-	def abar(self):
-		return vec4(self.w, self.z, self.w, self.x)
+	abar = wzwx
+
 	@property
 	def wzwy(self):
 		return vec4(self.w, self.z, self.w, self.y)
-	@property
-	def abag(self):
-		return vec4(self.w, self.z, self.w, self.y)
+	abag = wzwy
+
 	@property
 	def wzwz(self):
 		return vec4(self.w, self.z, self.w, self.z)
-	@property
-	def abab(self):
-		return vec4(self.w, self.z, self.w, self.z)
+	abab = wzwz
+
 	@property
 	def wzww(self):
 		return vec4(self.w, self.z, self.w, self.w)
-	@property
-	def abaa(self):
-		return vec4(self.w, self.z, self.w, self.w)
+	abaa = wzww
+
 	@property
 	def ww(self):
 		return vec2(self.w, self.w)
-	@property
-	def aa(self):
-		return vec2(self.w, self.w)
+	aa = ww
+
 	@property
 	def wwx(self):
 		return vec3(self.w, self.w, self.x)
-	@property
-	def aar(self):
-		return vec3(self.w, self.w, self.x)
+	aar = wwx
+
 	@property
 	def wwxx(self):
 		return vec4(self.w, self.w, self.x, self.x)
-	@property
-	def aarr(self):
-		return vec4(self.w, self.w, self.x, self.x)
+	aarr = wwxx
+
 	@property
 	def wwxy(self):
 		return vec4(self.w, self.w, self.x, self.y)
-	@property
-	def aarg(self):
-		return vec4(self.w, self.w, self.x, self.y)
+	aarg = wwxy
+
 	@property
 	def wwxz(self):
 		return vec4(self.w, self.w, self.x, self.z)
-	@property
-	def aarb(self):
-		return vec4(self.w, self.w, self.x, self.z)
+	aarb = wwxz
+
 	@property
 	def wwxw(self):
 		return vec4(self.w, self.w, self.x, self.w)
-	@property
-	def aara(self):
-		return vec4(self.w, self.w, self.x, self.w)
+	aara = wwxw
+
 	@property
 	def wwy(self):
 		return vec3(self.w, self.w, self.y)
-	@property
-	def aag(self):
-		return vec3(self.w, self.w, self.y)
+	aag = wwy
+
 	@property
 	def wwyx(self):
 		return vec4(self.w, self.w, self.y, self.x)
-	@property
-	def aagr(self):
-		return vec4(self.w, self.w, self.y, self.x)
+	aagr = wwyx
+
 	@property
 	def wwyy(self):
 		return vec4(self.w, self.w, self.y, self.y)
-	@property
-	def aagg(self):
-		return vec4(self.w, self.w, self.y, self.y)
+	aagg = wwyy
+
 	@property
 	def wwyz(self):
 		return vec4(self.w, self.w, self.y, self.z)
-	@property
-	def aagb(self):
-		return vec4(self.w, self.w, self.y, self.z)
+	aagb = wwyz
+
 	@property
 	def wwyw(self):
 		return vec4(self.w, self.w, self.y, self.w)
-	@property
-	def aaga(self):
-		return vec4(self.w, self.w, self.y, self.w)
+	aaga = wwyw
+
 	@property
 	def wwz(self):
 		return vec3(self.w, self.w, self.z)
-	@property
-	def aab(self):
-		return vec3(self.w, self.w, self.z)
+	aab = wwz
+
 	@property
 	def wwzx(self):
 		return vec4(self.w, self.w, self.z, self.x)
-	@property
-	def aabr(self):
-		return vec4(self.w, self.w, self.z, self.x)
+	aabr = wwzx
+
 	@property
 	def wwzy(self):
 		return vec4(self.w, self.w, self.z, self.y)
-	@property
-	def aabg(self):
-		return vec4(self.w, self.w, self.z, self.y)
+	aabg = wwzy
+
 	@property
 	def wwzz(self):
 		return vec4(self.w, self.w, self.z, self.z)
-	@property
-	def aabb(self):
-		return vec4(self.w, self.w, self.z, self.z)
+	aabb = wwzz
+
 	@property
 	def wwzw(self):
 		return vec4(self.w, self.w, self.z, self.w)
-	@property
-	def aaba(self):
-		return vec4(self.w, self.w, self.z, self.w)
+	aaba = wwzw
+
 	@property
 	def www(self):
 		return vec3(self.w, self.w, self.w)
-	@property
-	def aaa(self):
-		return vec3(self.w, self.w, self.w)
+	aaa = www
+
 	@property
 	def wwwx(self):
 		return vec4(self.w, self.w, self.w, self.x)
-	@property
-	def aaar(self):
-		return vec4(self.w, self.w, self.w, self.x)
+	aaar = wwwx
+
 	@property
 	def wwwy(self):
 		return vec4(self.w, self.w, self.w, self.y)
-	@property
-	def aaag(self):
-		return vec4(self.w, self.w, self.w, self.y)
+	aaag = wwwy
+
 	@property
 	def wwwz(self):
 		return vec4(self.w, self.w, self.w, self.z)
-	@property
-	def aaab(self):
-		return vec4(self.w, self.w, self.w, self.z)
+	aaab = wwwz
+
 	@property
 	def wwww(self):
 		return vec4(self.w, self.w, self.w, self.w)
-	@property
-	def aaaa(self):
-		return vec4(self.w, self.w, self.w, self.w)
+	aaaa = wwww
+
 
 class mat2(object):
 	__slots__ = 'm00', 'm01', 'm10', 'm11'

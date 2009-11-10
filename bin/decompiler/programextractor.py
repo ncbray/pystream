@@ -231,7 +231,7 @@ class Extractor(object):
 		for t in inspect.getmro(obj.type.pyobj):
 			attr = t.__dict__.get(name)
 			if attr:
-				attrName = self.getObject(util.uniqueSlotName(attr))
+				attrName = self.getObject(self.compiler.slots.uniqueSlotName(attr))
 				return ('Attribute', attrName)
 
 		assert False, "%r does not have attribute %r" % (obj, name)
@@ -322,7 +322,7 @@ class Extractor(object):
 		assert not isinstance(pyobj, program.AbstractObject)
 		flat = self.flatTypeDict(type(pyobj))
 		if '__dict__' in flat:
-			return util.uniqueSlotName(flat['__dict__'])
+			return self.compiler.slots.uniqueSlotName(flat['__dict__'])
 		else:
 			return None
 
@@ -351,7 +351,7 @@ class Extractor(object):
 		if isinstance(pyobj, xtypes.MemberDescriptorType):
 			# It's a slot descriptor.
 			# HACK there's no such thing as a "slot pointer", so use a unique string
-			mangledNameObj = self.__getObject(util.uniqueSlotName(pyobj))
+			mangledNameObj = self.__getObject(self.compiler.slots.uniqueSlotName(pyobj))
 			obj.addLowLevel(self.desc.slotObj, mangledNameObj)
 
 		# Requires a C function pointer.
@@ -419,7 +419,7 @@ class Extractor(object):
 			# TODO slot wrapper for methods?
 			if inspect.ismemberdescriptor(member):
 				try:
-					mangledName = util.uniqueSlotName(member)
+					mangledName = self.compiler.slots.uniqueSlotName(member)
 					value = member.__get__(pyobj, type(pyobj))
 					obj.addSlot(self.__getObject(mangledName), self.__getObject(value))
 				except:

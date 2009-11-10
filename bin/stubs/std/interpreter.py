@@ -16,9 +16,6 @@ def noself(code):
 	code.codeparameters = CodeParameters(None, p.params, p.paramnames, p.vparam, p.kparam, p.returnparams)
 	return code
 
-# HACK for hand-op
-func_globals_attr = util.uniqueSlotName(types.FunctionType.__dict__['func_globals'])
-
 def compileFunction(s, name):
 	g = None
 	l = {}
@@ -37,6 +34,11 @@ def makeInterpreterStubs(collector):
 	fold          = collector.fold
 	staticFold    = collector.staticFold
 	attachPtr     = collector.attachPtr
+
+	# HACK for hand-op
+	global func_globals_attr
+	func_globals_attr = collector.compiler.slots.uniqueSlotName(types.FunctionType.__dict__['func_globals'])
+
 
 	def interpfunc(f=None, descriptive=False):
 		def wrapper(f):

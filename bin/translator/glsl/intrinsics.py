@@ -24,45 +24,54 @@ for t in constantTypes:
 	constantTypeNodes[t] = intrinsicTypeNodes[t]
 
 import util
-def uniqueAttrName(type, name):
-	return util.uniqueSlotName(type.__dict__[name])
 
-def addName(type, name, fields):
-	un = uniqueAttrName(type, name)
-	fields[un] = name
+initialized = False
 
-def components(cls, ctype, cnum):
-	key = ctype, cnum
+def init(compiler):
+	# Prevent multiple initializations
+	global initialized
+	if initialized: return
+	initialized = True
 	
-	# HACK (float, 4) -> vec4 and mat2?  
-	if key not in componentTypes:
-		typeComponents[cls] = key
-		componentTypes[key] = cls
-		componentTypeNodes[key] = intrinsicTypeNodes[cls]
-
-components(float, float, 1)
-
-components(vec.vec2, float, 2)
-addName(vec.vec2, 'x', fields)
-addName(vec.vec2, 'y', fields)
-
-components(vec.vec3, float, 3)
-addName(vec.vec3, 'x', fields)
-addName(vec.vec3, 'y', fields)
-addName(vec.vec3, 'z', fields)
-
-components(vec.vec4, float, 4)
-addName(vec.vec4, 'x', fields)
-addName(vec.vec4, 'y', fields)
-addName(vec.vec4, 'z', fields)
-addName(vec.vec4, 'w', fields)
-
-components(vec.mat2, float, 4)
-components(vec.mat3, float, 9)
-components(vec.mat4, float, 16)
-
-components(int, int, 1)
-components(bool, bool, 1)
+	def uniqueAttrName(type, name):
+		return compiler.slots.uniqueSlotName(type.__dict__[name])
+	
+	def addName(type, name, fields):
+		un = uniqueAttrName(type, name)
+		fields[un] = name
+	
+	def components(cls, ctype, cnum):
+		key = ctype, cnum
+		
+		# HACK (float, 4) -> vec4 and mat2?  
+		if key not in componentTypes:
+			typeComponents[cls] = key
+			componentTypes[key] = cls
+			componentTypeNodes[key] = intrinsicTypeNodes[cls]
+	
+	components(float, float, 1)
+	
+	components(vec.vec2, float, 2)
+	addName(vec.vec2, 'x', fields)
+	addName(vec.vec2, 'y', fields)
+	
+	components(vec.vec3, float, 3)
+	addName(vec.vec3, 'x', fields)
+	addName(vec.vec3, 'y', fields)
+	addName(vec.vec3, 'z', fields)
+	
+	components(vec.vec4, float, 4)
+	addName(vec.vec4, 'x', fields)
+	addName(vec.vec4, 'y', fields)
+	addName(vec.vec4, 'z', fields)
+	addName(vec.vec4, 'w', fields)
+	
+	components(vec.mat2, float, 4)
+	components(vec.mat3, float, 9)
+	components(vec.mat4, float, 16)
+	
+	components(int, int, 1)
+	components(bool, bool, 1)
 
 def isIntrinsicObject(obj):
 	return obj.xtype.obj.pythonType() in intrinsicTypes
@@ -323,6 +332,8 @@ def floatPowRewrite(self, node):
 		return glsl.IntrinsicOp('pow', args)
 
 def makeIntrinsicRewriter(extractor):
+	init(extractor.compiler)
+	
 	rewriter = DirectCallRewriter(extractor)
 
 	rewriter.addRewrite('prim_float_add', floatAddRewrite)

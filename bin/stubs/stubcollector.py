@@ -37,7 +37,7 @@ class StubCollector(object):
 
 	def loadAttribute(self, expr, type, name, target):
 		descriptor  = type.__dict__[name]
-		mangledName = util.uniqueSlotName(descriptor)
+		mangledName = self.compiler.slots.uniqueSlotName(descriptor)
 		return ast.Assign(ast.Load(expr, 'Attribute', self.existing(mangledName)), [target])
 
 	def returnNone(self):

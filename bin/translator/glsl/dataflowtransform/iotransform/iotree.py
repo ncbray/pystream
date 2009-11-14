@@ -1,4 +1,4 @@
-from .. import intrinsics
+from ... import intrinsics
 from analysis.storegraph.canonicalobjects import FieldSlotName
 
 class IOTreeObj(object):

@@ -9,8 +9,10 @@ from . import poolanalysis
 from analysis.cfgIR import dataflowsynthesis
 from . import glsltranslator
 
-from . import iotree
+from . iotransform import iotree
 from . import iotransform
+from .iotransform import serialize
+
 import analysis.dataflowIR.convert
 
 def makePathMatcher(compiler):
@@ -260,6 +262,9 @@ def evaluateCode(compiler, vscode, fscode):
 	with compiler.console.scope('synthesize'):
 		vscontext.synthesize()
 		fscontext.synthesize()
+
+		# HACK must merge uniforms first?
+		serialize.serializeUniforms(vscontext)
 
 	with compiler.console.scope('dump'):
 		vscontext.dump()

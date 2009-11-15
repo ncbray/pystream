@@ -170,7 +170,7 @@ class DataflowTransformContext(object):
 		self.pa = poolanalysis.process(self.compiler, self.dataflow, self.dioa)
 	
 		# Translate CFG + pools into GLSL
-		glsltranslator.process(self)
+		self.shaderCode = glsltranslator.process(self)
 		
 	def dump(self):
 		self.dioa.debugDump(self.code.codeName())

@@ -7,6 +7,10 @@ from asttools.astpprint import pprint
 
 from ... import intrinsics
 
+import cStringIO
+
+import util.filesystem
+
 def serializeUniformNode(context, self, tree, root):
 	statements = []
 
@@ -16,7 +20,7 @@ def serializeUniformNode(context, self, tree, root):
 	if intrinsics.isIntrinsicObject(obj):
 		t = obj.xtype.obj.pythonType()
 		
-		name = context.compiler.extractor.getObject("bind_" + t.__name__)
+		name = context.compiler.extractor.getObject("bind_uniform_" + t.__name__)
 		
 		shaderName = tree.name
 		shaderNameExpr = ast.Existing(context.compiler.extractor.getObject(shaderName))
@@ -53,7 +57,7 @@ def serializeUniformNode(context, self, tree, root):
 		
 	return statements
 
-def serializeUniforms(context):
+def bindUniforms(context):
 	uniforms = context.trees.uniformIn
 
 	self   = ast.Local('self')		
@@ -66,21 +70,67 @@ def serializeUniforms(context):
 
 	return code
 
+
+
+def bindStreams(context):
+	self   = ast.Local('self')		
+	streams   = [ast.Local(param.name) for param in context.code.codeparameters.params[2:]] 
+
+	statements = []
+	
+	for tree, root in zip(context.trees.inputs, streams):
+		assert len(tree.objMasks) == 1
+		obj = tree.objMasks.keys()[0]
+		assert intrinsics.isIntrinsicObject(obj)
+		t = obj.xtype.obj.pythonType()
+		
+		name = context.compiler.extractor.getObject("bind_stream_" + t.__name__)
+		
+		shaderName = tree.name
+		shaderNameExpr = ast.Existing(context.compiler.extractor.getObject(shaderName))
+		
+		op = ast.Call(ast.GetAttr(self, ast.Existing(name)), [shaderNameExpr, root], [], None, None)
+		statements.append(ast.Discard(op))		
+
+	
+	body = ast.Suite(statements)
+	
+	args = [self]
+	args.extend(streams)
+	names = [arg.name for arg in args]
+	params = ast.CodeParameters(None, args, names, None, None, [])
+	code = ast.Code('bindStreams', params, body)
+	
+	return code
+
 def generateBindingClass(vscontext, fscontext):
-	code = serializeUniforms(vscontext)
-
-
-	fdef = ast.FunctionDef('bindUniforms', code, [])
 	
-	statements = [fdef]
+	vs = ast.Assign(ast.Existing(vscontext.compiler.extractor.getObject(vscontext.shaderCode)), [ast.Local('vs')])
+	fs = ast.Assign(ast.Existing(fscontext.compiler.extractor.getObject(fscontext.shaderCode)), [ast.Local('fs')])
 	
-	objectExpr = ast.Existing(vscontext.compiler.extractor.getObject('object'))
+	code = bindUniforms(vscontext)
+	uniformfdef = ast.FunctionDef('bindUniforms', code, [])
+
+	code = bindStreams(vscontext)
+	streamfdef = ast.FunctionDef('bindStreams', code, [])
+
+	
+	statements = [fs, vs, uniformfdef, streamfdef]
+	
+	objectExpr = ast.Existing(vscontext.compiler.extractor.getObject('BaseCompiledShader'))
 	cdef = ast.ClassDef('CompiledShader', [ast.GetGlobal(objectExpr)], ast.Suite(statements), [])
 
 	#pprint(cdef)
 	
+	buffer = cStringIO.StringIO()
+	SimpleCodeGen(buffer).walk(cdef)
+	
+	s = buffer.getvalue()
+	
 	print
-	SimpleCodeGen(sys.stdout).walk(cdef)
+	print s
 	print
+	
+	util.filesystem.writeData('summaries', 'compiledshader', 'py', s)
 	
 	return cdef

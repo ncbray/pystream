@@ -456,4 +456,4 @@ def process(context):
 	s = codegen.GLSLCodeGen()(result)
 	print s
 
-	return result
+	return s

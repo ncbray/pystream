@@ -748,6 +748,17 @@ class SimpleCodeGen(StandardVisitor):
 		self.process(node.ast)
 		self.out.endBlock()
 
+	def visitFunctionDef(self, node):
+		assert not node.decorators
+		self.visitCode(node.code, node.name)
+		
+	def visitClassDef(self, node):
+		assert not node.decorators
+		bases = [self.seg.process(base) for base in node.bases]
+		self.out.startBlock('class %s(%s)' % (node.name, ", ".join(bases)))
+		self.process(node.body)
+		self.out.endBlock()
+
 	def visitMakeFunction(self, node):
 		assert not node.defaults
 

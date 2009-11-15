@@ -431,3 +431,13 @@ class Check(LLExpression):
 
 	def alwaysReturnsBoolean(self):
 		return True
+
+### Definitions ###
+# These are used when generating code, not during compilation 
+
+class FunctionDef(CompoundStatement):
+	__fields__ = 'name:str code:Code decorators:Expression*'
+
+class ClassDef(CompoundStatement):
+	__fields__ = 'name:str bases:Expression* body:Suite decorators:Expression*'
+	

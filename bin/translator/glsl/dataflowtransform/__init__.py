@@ -264,7 +264,7 @@ def evaluateCode(compiler, vscode, fscode):
 		fscontext.synthesize()
 
 		# HACK must merge uniforms first?
-		serialize.serializeUniforms(vscontext)
+		serialize.generateBindingClass(vscontext, fscontext)
 
 	with compiler.console.scope('dump'):
 		vscontext.dump()

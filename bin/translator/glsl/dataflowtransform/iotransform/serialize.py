@@ -63,11 +63,24 @@ def serializeUniforms(context):
 	
 	params = ast.CodeParameters(None, [self, shader], ['self', 'shader'], None, None, [])
 	code = ast.Code('bindUniforms', params, body)
-	
-	#pprint(code)
-	
-	print
-	SimpleCodeGen(sys.stdout).walk(code)
-	print
-	
+
 	return code
+
+def generateBindingClass(vscontext, fscontext):
+	code = serializeUniforms(vscontext)
+
+
+	fdef = ast.FunctionDef('bindUniforms', code, [])
+	
+	statements = [fdef]
+	
+	objectExpr = ast.Existing(vscontext.compiler.extractor.getObject('object'))
+	cdef = ast.ClassDef('CompiledShader', [ast.GetGlobal(objectExpr)], ast.Suite(statements), [])
+
+	#pprint(cdef)
+	
+	print
+	SimpleCodeGen(sys.stdout).walk(cdef)
+	print
+	
+	return cdef

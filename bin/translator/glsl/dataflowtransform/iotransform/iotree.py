@@ -84,6 +84,49 @@ class IOTreeObj(object):
 			self.link.link = None
 			self.link = None
 	
+	def localClone(self, parent):
+		print "local clone", self.path
+		
+		result = IOTreeObj(self.path, self.impl, self.treetype, parent)
+		result.name    = self.name
+		result.builtin = self.builtin
+	
+		for k, v in self.objMasks.iteritems():
+			result.objMasks[k] = v
+	
+		return result
+	
+	def clone(self, parent):
+		result = self.localClone(parent)
+	
+		for field, child in self.fields.iteritems():
+			result.fields[field] = child.clone(result)
+	
+		return result
+	
+	def merge(self, other, parent):
+		result = self.localClone(parent)
+
+		# Wierd: the trees will have entirely different sets of object names!		
+		for k, v in other.objMasks.iteritems():
+			result.objMasks[k] = v
+		
+		fields = set()
+		fields.update(self.fields.iterkeys())
+		fields.update(other.fields.iterkeys())
+	
+		for field in fields:
+			if field in self.fields and field in other.fields:
+				child = self.fields[field].merge(other.fields[field], result)
+			elif field in self.fields:
+				child = self.fields[field].clone(result)
+			else:
+				child = other.fields[field].clone(result)
+
+			result.fields[field] = child
+	
+		return result
+	
 def handleObj(dioa, obj, lut, exist, mask, tobj):
 	# Does this field actually exist?
 	if mask is dioa.bool.false: return

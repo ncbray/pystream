@@ -439,10 +439,13 @@ import re
 multipleSpace = re.compile('[ \t]+')
 unessisarySpace = re.compile('((?<![\w \t])[ \t]+)|([ \t]+(?![\w \t]))')
 multipleReturns = re.compile('\n+')
+singleLineComments = re.compile('//[^\n]*')
+multiLineComments = re.compile('/\*([^*]|\*(?!/))*\*/')
 
 # Removes unnecessary spaces, at the cost of readability
 # Leaves newlines intact, as they influence comments and compiler directives
 def compressGLSL(code):
+	code = singleLineComments.sub('', multiLineComments.sub('', code))
 	return multipleReturns.sub('\n', unessisarySpace.sub('', multipleSpace.sub(' ', code))).strip()
 	
 
@@ -456,4 +459,4 @@ def process(context):
 	s = codegen.GLSLCodeGen()(result)
 	print s
 
-	return s
+	return compressGLSL(s)

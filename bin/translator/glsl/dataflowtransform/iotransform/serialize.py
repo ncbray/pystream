@@ -11,19 +11,20 @@ import cStringIO
 
 import util.filesystem
 
-def serializeUniformNode(context, self, tree, root):
+from . import existingtransform
+
+def serializeUniformNode(compiler, self, tree, root):
 	statements = []
 
-	assert len(tree.objMasks) == 1
+	types = set([k.xtype.obj.pythonType() for k in tree.objMasks.iterkeys()])
+	assert len(types) == 1
 	
-	obj = tree.objMasks.keys()[0]
-	if intrinsics.isIntrinsicObject(obj):
-		t = obj.xtype.obj.pythonType()
-		
-		name = context.compiler.extractor.getObject("bind_uniform_" + t.__name__)
+	t = types.pop()
+	if intrinsics.isIntrinsicType(t):		
+		name = compiler.extractor.getObject("bind_uniform_" + t.__name__)
 		
 		shaderName = tree.name
-		shaderNameExpr = ast.Existing(context.compiler.extractor.getObject(shaderName))
+		shaderNameExpr = ast.Existing(compiler.extractor.getObject(shaderName))
 		
 		op = ast.Call(ast.GetAttr(self, ast.Existing(name)), [shaderNameExpr, root], [], None, None)
 		statements.append(ast.Discard(op))
@@ -34,7 +35,7 @@ def serializeUniformNode(context, self, tree, root):
 			assert field.type == 'Attribute'
 			
 			name = field.name.pyobj
-			descriptor = context.compiler.slots.reverse[name]
+			descriptor = compiler.slots.reverse[name]
 			cls  = descriptor.__objclass__
 			attr = descriptor.__name__ 
 
@@ -42,9 +43,9 @@ def serializeUniformNode(context, self, tree, root):
 			assert cls.__dict__[attr] is descriptor, "Can't find original descriptor!"
 			
 			# Load the field
-			clsExpr  = ast.Existing(context.compiler.extractor.getObject(cls))
-			attrExpr = ast.Existing(context.compiler.extractor.getObject(attr))
-			getExpr = ast.Existing(context.compiler.extractor.getObject('__get__'))
+			clsExpr  = ast.Existing(compiler.extractor.getObject(cls))
+			attrExpr = ast.Existing(compiler.extractor.getObject(attr))
+			getExpr = ast.Existing(compiler.extractor.getObject('__get__'))
 			
 			op = ast.Call(ast.GetAttr(ast.GetAttr(clsExpr, attrExpr), getExpr), [root], [], None, None)
 			childroot = ast.Local('bogus')
@@ -53,17 +54,15 @@ def serializeUniformNode(context, self, tree, root):
 			statements.append(assign)
 
 			# Recurse
-			statements.extend(serializeUniformNode(context, self, child, childroot))
+			statements.extend(serializeUniformNode(compiler, self, child, childroot))
 		
 	return statements
 
-def bindUniforms(context):
-	uniforms = context.trees.uniformIn
-
+def bindUniforms(compiler, uniforms):
 	self   = ast.Local('self')		
 	shader = ast.Local('shader')
 	
-	body = ast.Suite(serializeUniformNode(context, self, uniforms, shader))
+	body = ast.Suite(serializeUniformNode(compiler, self, uniforms, shader))
 	
 	params = ast.CodeParameters(None, [self, shader], ['self', 'shader'], None, None, [])
 	code = ast.Code('bindUniforms', params, body)
@@ -104,21 +103,27 @@ def bindStreams(context):
 	return code
 
 def generateBindingClass(vscontext, fscontext):
+	compiler = vscontext.compiler
 	
-	vs = ast.Assign(ast.Existing(vscontext.compiler.extractor.getObject(vscontext.shaderCode)), [ast.Local('vs')])
-	fs = ast.Assign(ast.Existing(fscontext.compiler.extractor.getObject(fscontext.shaderCode)), [ast.Local('fs')])
+	vs = ast.Assign(ast.Existing(compiler.extractor.getObject(vscontext.shaderCode)), [ast.Local('vs')])
+	fs = ast.Assign(ast.Existing(compiler.extractor.getObject(fscontext.shaderCode)), [ast.Local('fs')])
 	
-	code = bindUniforms(vscontext)
+	merged = vscontext.trees.uniformIn.merge(fscontext.trees.uniformIn, None)
+		
+	code = bindUniforms(vscontext.compiler, merged)
 	uniformfdef = ast.FunctionDef('bindUniforms', code, [])
 
 	code = bindStreams(vscontext)
 	streamfdef = ast.FunctionDef('bindStreams', code, [])
-
 	
 	statements = [fs, vs, uniformfdef, streamfdef]
-	
-	objectExpr = ast.Existing(vscontext.compiler.extractor.getObject('BaseCompiledShader'))
-	cdef = ast.ClassDef('CompiledShader', [ast.GetGlobal(objectExpr)], ast.Suite(statements), [])
+
+	moduleExpr = ast.Existing(compiler.extractor.getObject('pystreamruntime'))	
+	baseExpr = ast.Existing(compiler.extractor.getObject('BaseCompiledShader'))
+	base = ast.GetAttr(ast.GetGlobal(moduleExpr), baseExpr)
+	cdef = ast.ClassDef('CompiledShader', [base], ast.Suite(statements), [])
+
+	cdef = existingtransform.evaluateAST(compiler, cdef)
 
 	#pprint(cdef)
 	
@@ -126,6 +131,9 @@ def generateBindingClass(vscontext, fscontext):
 	SimpleCodeGen(buffer).walk(cdef)
 	
 	s = buffer.getvalue()
+	
+	# HACK for imports
+	s = "import pystreamruntime\nimport tests.full.physics\n\n" + s
 	
 	print
 	print s

@@ -76,6 +76,9 @@ def init(compiler):
 def isIntrinsicObject(obj):
 	return obj.xtype.obj.pythonType() in intrinsicTypes
 
+def isIntrinsicType(t):
+	return t in intrinsicTypes
+
 def isIntrinsicField(field):
 	return field.type == 'Attribute' and field.name.pyobj in fields
 

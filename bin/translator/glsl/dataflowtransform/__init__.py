@@ -119,6 +119,19 @@ def harmonizeUniformTrees(name, uid, tree0, tree1):
 
 	return uid
 
+def nameTree(name, uid, tree):
+	if not tree.name:
+		nodename = "%s_%d"  % (name, uid)
+		uid += 1
+	
+		tree.name = nodename
+
+	for field, child in tree.fields.iteritems():
+		uid = nameTree(name, uid, child)
+
+	return uid
+
+
 class IOTrees(object):
 	def __init__(self):
 		self.uniformIn = None
@@ -236,6 +249,11 @@ def evaluateCode(compiler, vscode, fscode):
 
 	with compiler.console.scope('link'):
 		harmonizeUniformTrees('common', 0, vscontext.uniformTree(), fscontext.uniformTree())
+		
+		# HACK avoid name conflicts by explicitly naming the trees
+		nameTree('uniform_vs', 0, vscontext.uniformTree())
+		nameTree('uniform_fs', 0, fscontext.uniformTree())
+
 		vscontext.link(fscontext)
 		
 		iotransform.killUnusedOutputs(fscontext)
@@ -263,7 +281,6 @@ def evaluateCode(compiler, vscode, fscode):
 		vscontext.synthesize()
 		fscontext.synthesize()
 
-		# HACK must merge uniforms first?
 		serialize.generateBindingClass(vscontext, fscontext)
 
 	with compiler.console.scope('dump'):

@@ -9,6 +9,7 @@ import types
 # This allows issubclass(type, type) to be folded
 # Types are almost constant, however, by fiat.
 constantTypes = set((float, int, long, str, bool, type(None), type, types.CodeType))
+lexicalConstantTypes = set((float, int, long, str, bool, type(None)))
 
 class ProgramDecl(object):
 	__slots__ = ()
@@ -33,6 +34,10 @@ class AbstractObject(ProgramDecl):
 	def isConstant(self):
 		return False
 
+	def isLexicalConstant(self):
+		return False
+
+
 def isConstant(pyobj):
 	if isinstance(pyobj, (tuple, frozenset)):
 		for item in pyobj:
@@ -41,6 +46,17 @@ def isConstant(pyobj):
 		return True
 	else:
 		return type(pyobj) in constantTypes
+
+
+def isLexicalConstant(pyobj):
+	if isinstance(pyobj, (tuple, frozenset)):
+		for item in pyobj:
+			if not isLexicalConstant(item):
+				return False
+		return True
+	else:
+		return type(pyobj) in lexicalConstantTypes
+
 
 class Object(AbstractObject):
 	__slots__ = 'pyobj', 'typeinfo', 'slot', 'array', 'dictionary', 'lowlevel'
@@ -64,6 +80,9 @@ class Object(AbstractObject):
 
 	def isConstant(self):
 		return isConstant(self.pyobj)
+
+	def isLexicalConstant(self):
+		return isLexicalConstant(self.pyobj)
 
 	def isType(self):
 		return isinstance(self.pyobj, type)

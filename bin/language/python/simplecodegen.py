@@ -30,10 +30,14 @@ def getConstant(node, t=None):
 
 def getExistingStr(node):
 	assert isinstance(node, ast.Existing)
-	if node.object.isConstant():
+	if node.object.isLexicalConstant():
 		return repr(node.object.pyobj)
 	else:
-		return "[|%r|]" % node.object
+		obj = node.object
+		if hasattr(obj,' pyobj'):
+			obj = obj.pyobj
+		
+		return "|[%r]|" % obj
 
 class SimpleExprGen(StandardVisitor):
 	def __init__(self, parent):

@@ -146,7 +146,7 @@ class Shader(object):
 	def shadeFragment(self, context, pos, normal):
 		n = normal.normalize()
 
-		if True:
+		if False:
 			mainColor = n*0.5+0.5
 		else:
 			e = -pos.normalize()
@@ -160,7 +160,8 @@ class Shader(object):
 			lightDist  = lightDist2**0.5
 			l = lightDir/lightDist
 
-			lightAtten = 1.0/(0.01+lightDist2)
+			lightAtten = 1.0/(0.01+lightDist2*(1.0/(100.0**2)))
+			#lightAtten = 1.0
 			transfer = self.material.transfer(n, l, e)
 			modulated = transfer*lightAtten
 

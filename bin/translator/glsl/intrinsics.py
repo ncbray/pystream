@@ -308,6 +308,14 @@ def floatAddRewrite(self, node):
 	else:
 		return glsl.BinaryOp(self(node.args[0]), '+', self(node.args[1]))
 
+def floatSubRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '-', self(node.args[1]))
+
 def floatMulRewrite(self, node):
 	if not hasNumArgs(node, 2): return
 
@@ -340,6 +348,7 @@ def makeIntrinsicRewriter(extractor):
 	rewriter = DirectCallRewriter(extractor)
 
 	rewriter.addRewrite('prim_float_add', floatAddRewrite)
+	rewriter.addRewrite('prim_float_sub', floatSubRewrite)	
 	rewriter.addRewrite('prim_float_mul', floatMulRewrite)
 	rewriter.addRewrite('prim_float_div', floatDivRewrite)
 	rewriter.addRewrite('prim_float_pow', floatPowRewrite)

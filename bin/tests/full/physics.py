@@ -82,12 +82,27 @@ def simpleUpdate(dt, iterations):
 	return swarm
 
 class SurfaceFragment(object):
-	__slots__ = 'material', 'diffuseLight', 'specularLight'
+	__slots__ = 'material', 'p', 'n', 'e', 'diffuseLight', 'specularLight'
 
-	def __init__(self, material):
+	def __init__(self, material, p, n):
 		self.material      = material
 		self.diffuseLight  = vec3(0.0, 0.0, 0.0)
 		self.specularLight = vec3(0.0, 0.0, 0.0)
+
+		self.p = p
+		self.n = n
+		self.e = -p.normalize()
+
+
+	def accumulateDiffuseLight(self, l, amt):
+		self.diffuseLight  += self.material.diffuseTransfer(self.n, l, self.e)*amt
+
+	def accumulateSpecularLight(self, l, amt):
+		self.specularLight += self.material.specularTransfer(self.n, l, self.e)*amt
+
+	def accumulateLight(self, l, amt):
+		self.accumulateDiffuseLight(l, amt)
+		self.accumulateSpecularLight(l, amt)
 
 	def litColor(self):
 		return self.material.color*self.diffuseLight*0.5+self.specularLight*0.5
@@ -98,12 +113,14 @@ class Material(object):
 	def __init__(self):
 		self.color = vec3(0.125, 0.125, 1.0)
 
-	def transfer(self, n, l, e):
-		# TODO 1/PI scale?		
+	def diffuseTransfer(self, n, l, e):
 		return nldot(n, l)
 
-	def surface(self):
-		return SurfaceFragment(self)
+	def specularTransfer(self, n, l, e):
+		return 0.0
+
+	def surface(self, p, n):
+		return SurfaceFragment(self, p, n)
 
 class LambertMaterial(Material):
 	pass
@@ -118,26 +135,63 @@ class PhongMaterial(Material):
 		Material.__init__(self)
 		self.shinny = shinny
 
-	def transfer(self, n, l, e):
-		# TODO separate transfer components
-		# TODO 1/PI scale?
-
+	def specularTransfer(self, n, l, e):
 		# Blinn-Phong transfer
 		h = (l+e).normalize()
-		
-		ndl = nldot(n, l)
-		ndh = nldot(n, h)
-
-		diffuse = ndl
-		
+		ndh = nldot(n, h)		
 		# Scale by (shinny+8)/8 to approximate energy conservation
 		scale = (self.shinny+8.0)*0.125
-		specular = (ndh**self.shinny)*scale
-		return diffuse, specular
+		return (ndh**self.shinny)*scale
 
+
+class Light(object):
+	__slots__ = ()
+
+class AmbientLight(Light):
+	__slots__ = 'direction', 'color0', 'color1'
+
+
+	def __init__(self, direction, color0, color1):
+		self.direction = direction
+		self.color0 = color0
+		self.color1 = color1
+
+			
+	def accumulate(self, surface, w2c):
+		dir = self.direction
+		cdir = (w2c*vec4(dir.x, dir.y, dir.z, 0.0)).xyz
+
+		amt = cdir.dot(surface.n)*0.5+0.5 # HACK?
+		
+		# TODO lerp?
+		color = self.color0*amt + self.color1*(1.0-amt)
+
+		surface.diffuseLight += color
+	
+class PointLight(Light):
+	__slots__ = 'position', 'color', 'attenuation'
+	
+	def __init__(self, position, color, attenuation):
+		self.position    = position
+		self.color       = color
+		self.attenuation = attenuation
+			
+	def accumulate(self, surface, w2c):
+		p = self.position
+		pos = (w2c*vec4(p.x, p.y, p.z, 1.0)).xyz
+
+		dir    = pos-surface.p
+		dist2  = dir.dot(dir)
+		dist   = dist2**0.5
+		dists  = vec3(1.0, dist, dist2)
+		
+		lightAtten = 1.0/dists.dot(self.attenuation)
+		
+		surface.accumulateLight(dir/dist, self.color*lightAtten)
+		
 
 class Shader(object):
-	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'lightPos', 'ambient', 'material'
+	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'light', 'ambient', 'material'
 	def __init__(self):
 		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
 					  0.0, 1.0, 0.0, 0.0,
@@ -155,9 +209,9 @@ class Shader(object):
 					  0.0, 0.0, 1.0, 0.0,
 					  0.0, 0.0, 0.0, 1.0)
 
-		self.lightPos = vec4(0.0, 10.0, 0.0, 1.0)
+		self.light = PointLight(vec3(0.0, 10.0, 0.0), vec3(1.0, 1.0, 1.0), vec3(0.01, 0.0, 0.00001))
 
-		self.ambient = vec3(0.25, 0.25, 0.25)
+		self.ambient = AmbientLight(vec3(0.0, 1.0, 0.0), vec3(0.25, 0.75, 0.25), vec3(0.75, 0.25, 0.25))
 
 		self.material = Material()
 
@@ -171,35 +225,16 @@ class Shader(object):
 		return newpos.xyz, newnormal.xyz
 
 	def shadeFragment(self, context, pos, normal):
-		n = normal.normalize()
-
-		if False:
-			mainColor = n*0.5+0.5
-		else:
-			e = -pos.normalize()
-
-			surface = self.material.surface()
-			
-			surface.diffuseLight += self.ambient
-			
-			# Light into camera space
-			trans = self.worldToCamera
-			lightPos = trans*self.lightPos
-
-			lightDir   = lightPos.xyz-pos
-			lightDist2 = lightDir.dot(lightDir)
-			lightDist  = lightDist2**0.5
-			l = lightDir/lightDist
-
-			lightAtten = 1.0/(0.01+lightDist2*(1.0/(100.0**2)))
-			diffuseTransfer, specularTransfer = self.material.transfer(n, l, e)
-			
-			surface.diffuseLight  += diffuseTransfer*lightAtten
-			surface.specularLight += specularTransfer*lightAtten
-						
-			mainColor = surface.litColor()
+		surface = self.material.surface(pos, normal.normalize())
+		
+		# Accumulate lighting
+		self.ambient.accumulate(surface, self.worldToCamera)
+		self.light.accumulate(surface, self.worldToCamera)
+					
+		mainColor = surface.litColor()
 
 		mainColor = rgb2srgb(mainColor)
+		
 		mainColor = vec4(mainColor.x, mainColor.y, mainColor.z, 1.0)
 		context.colors = (mainColor,)
 

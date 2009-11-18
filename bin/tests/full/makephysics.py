@@ -54,8 +54,10 @@ attr(inst(physics.Shader), 'objectToWorld', inst(vec.mat4))
 attr(inst(physics.Shader), 'worldToCamera', inst(vec.mat4))
 attr(inst(physics.Shader), 'projection', inst(vec.mat4))
 
-attr(inst(physics.Shader), 'lightPos', inst(vec.vec4))
-attr(inst(physics.Shader), 'ambient',  inst(vec.vec3))
+attr(inst(physics.Shader), 'light', inst(physics.PointLight))
+
+
+attr(inst(physics.Shader), 'ambient',  inst(physics.AmbientLight))
 #attr(inst(physics.Shader), 'color',    inst(vec.vec3))
 #attr(inst(physics.Shader), 'material',    inst(physics.Material))
 
@@ -71,6 +73,14 @@ attr(inst(physics.PhongMaterial),   'shinny',     inst(float))
 
 
 attr(inst(physics.Material), 'color',    inst(vec.vec3))
+
+attr(inst(physics.PointLight), 'position',    inst(vec.vec3))
+attr(inst(physics.PointLight), 'color',       inst(vec.vec3))
+attr(inst(physics.PointLight), 'attenuation', inst(vec.vec3))
+
+attr(inst(physics.AmbientLight), 'direction',  inst(vec.vec3))
+attr(inst(physics.AmbientLight), 'color0',     inst(vec.vec3))
+attr(inst(physics.AmbientLight), 'color1',     inst(vec.vec3))
 
 
 ### Declare special paths for GLSL ###

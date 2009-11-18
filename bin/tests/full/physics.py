@@ -233,7 +233,7 @@ class Shader(object):
 					
 		mainColor = surface.litColor()
 
-		mainColor = rgb2srgb(mainColor)
+		mainColor = rgb2srgb(tonemap(mainColor))
 		
 		mainColor = vec4(mainColor.x, mainColor.y, mainColor.z, 1.0)
 		context.colors = (mainColor,)
@@ -246,3 +246,14 @@ def rgb2srgb(color):
 	warp = (color**(1.0/2.4))*1.055-0.055
 	return scale.min(warp)
 
+def rgbLuminance(color):
+	return color.dot(vec3(0.2125, 0.7154, 0.0721))
+
+def srgbLuma(color):
+	return color.dot(vec3(0.299, 0.587, 0.114))
+
+def tonemap(color):
+	L = rgbLuminance(color)
+	maxL  = 4.0
+	scale = (1.0+L/(maxL*maxL))/(1.0+L)
+	return color*scale

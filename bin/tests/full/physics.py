@@ -81,6 +81,17 @@ def simpleUpdate(dt, iterations):
 
 	return swarm
 
+class SurfaceFragment(object):
+	__slots__ = 'material', 'diffuseLight', 'specularLight'
+
+	def __init__(self, material):
+		self.material      = material
+		self.diffuseLight  = vec3(0.0, 0.0, 0.0)
+		self.specularLight = vec3(0.0, 0.0, 0.0)
+
+	def litColor(self):
+		return self.material.color*self.diffuseLight*0.5+self.specularLight*0.5
+	
 
 class Material(object):
 	__slots__ = 'color'
@@ -90,6 +101,9 @@ class Material(object):
 	def transfer(self, n, l, e):
 		# TODO 1/PI scale?		
 		return nldot(n, l)
+
+	def surface(self):
+		return SurfaceFragment(self)
 
 class LambertMaterial(Material):
 	pass
@@ -107,17 +121,19 @@ class PhongMaterial(Material):
 	def transfer(self, n, l, e):
 		# TODO separate transfer components
 		# TODO 1/PI scale?
-		
-		
+
 		# Blinn-Phong transfer
 		h = (l+e).normalize()
 		
-		diffuse  = nldot(n, l)
+		ndl = nldot(n, l)
+		ndh = nldot(n, h)
+
+		diffuse = ndl
 		
 		# Scale by (shinny+8)/8 to approximate energy conservation
 		scale = (self.shinny+8.0)*0.125
-		specular = (nldot(n, h)**self.shinny)*scale
-		return diffuse + specular
+		specular = (ndh**self.shinny)*scale
+		return diffuse, specular
 
 
 class Shader(object):
@@ -162,6 +178,10 @@ class Shader(object):
 		else:
 			e = -pos.normalize()
 
+			surface = self.material.surface()
+			
+			surface.diffuseLight += self.ambient
+			
 			# Light into camera space
 			trans = self.worldToCamera
 			lightPos = trans*self.lightPos
@@ -172,11 +192,12 @@ class Shader(object):
 			l = lightDir/lightDist
 
 			lightAtten = 1.0/(0.01+lightDist2*(1.0/(100.0**2)))
-			#lightAtten = 1.0
-			transfer = self.material.transfer(n, l, e)
-			modulated = transfer*lightAtten
-
-			mainColor = self.material.color*(self.ambient+modulated)
+			diffuseTransfer, specularTransfer = self.material.transfer(n, l, e)
+			
+			surface.diffuseLight  += diffuseTransfer*lightAtten
+			surface.specularLight += specularTransfer*lightAtten
+						
+			mainColor = surface.litColor()
 
 		mainColor = rgb2srgb(mainColor)
 		mainColor = vec4(mainColor.x, mainColor.y, mainColor.z, 1.0)

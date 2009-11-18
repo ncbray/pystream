@@ -99,7 +99,7 @@ def makeInterpreterStubs(collector):
 	def simpleBinaryOp(name, attr, rattr):
 		assert isinstance(name, str), name
 		assert isinstance(attr, str), attr
-		assert isinstance(rattr, str), attr
+		assert isinstance(rattr, str), rattr
 		
 		
 		template = """def %(name)s(self, other):
@@ -118,6 +118,38 @@ def makeInterpreterStubs(collector):
 		
 	return result
 """ % {'name':name, 'attr':attr, 'rattr':rattr}
+		
+		f = compileFunction(template, '<generated - %s>' % name)
+		return interpfunc(f)
+
+	def simpleInplaceBinaryOp(name, iattr, attr, rattr):
+		assert isinstance(name, str), name
+		assert isinstance(iattr, str), iattr
+		assert isinstance(attr, str), attr
+		assert isinstance(rattr, str), rattr
+		
+		
+		template = """def %(name)s(self, other):
+	result = NotImplemented
+	
+	clsDict = load(load(self, 'type'), 'dictionary')
+	if checkDict(clsDict, %(iattr)r):
+		meth = loadDict(clsDict, %(iattr)r)
+		result = meth(self, other)	
+
+	if result is NotImplemented:	
+		if checkDict(clsDict, %(attr)r):
+			meth = loadDict(clsDict, %(attr)r)
+			result = meth(self, other)
+
+	if result is NotImplemented:
+		clsDict = load(load(other, 'type'), 'dictionary')
+		if checkDict(clsDict, %(rattr)r):
+			meth = loadDict(clsDict, %(rattr)r)
+			result = meth(other, self)
+		
+	return result
+""" % {'name':name, 'iattr':iattr, 'attr':attr, 'rattr':rattr}
 		
 		f = compileFunction(template, '<generated - %s>' % name)
 		return interpfunc(f)
@@ -237,6 +269,7 @@ def makeInterpreterStubs(collector):
 		name  = opnames.forward[op]
 		rname = opnames.reverse[op]
 
+
 		f = simpleBinaryOp('interpreter%s' % name, name, rname)
 		foldF = getattr(operator, name)
 		if foldF:
@@ -244,18 +277,15 @@ def makeInterpreterStubs(collector):
 			if isCompare:
 				fold(foldF)(f)
 
+		if not isCompare:
+			iname = opnames.inplace[op]
+			i = simpleInplaceBinaryOp('interpreter%s' % iname, iname, name, rname)
 
 	for op in opnames.opLUT.keys():		
 		declare(op, False)
 
 	for op in opnames.compare.keys():
 		declare(op, True)
-
-	for op in opnames.inplace.itervalues():
-		f = simpleAttrCall('interpreter%s' % op, op, ['self', 'other'])
-		foldF = getattr(operator, op)
-		if foldF: staticFold(foldF)(f)
-
 
 	for op in opnames.unaryPrefixLUT.itervalues():
 		f = simpleAttrCall('interpreter%s' % op, op, ['self'])

@@ -88,8 +88,8 @@ class Material(object):
 		self.color = vec3(0.125, 0.125, 1.0)
 
 	def transfer(self, n, l, e):
+		# TODO 1/PI scale?		
 		return nldot(n, l)
-
 
 class LambertMaterial(Material):
 	pass
@@ -105,8 +105,19 @@ class PhongMaterial(Material):
 		self.shinny = shinny
 
 	def transfer(self, n, l, e):
+		# TODO separate transfer components
+		# TODO 1/PI scale?
+		
+		
+		# Blinn-Phong transfer
 		h = (l+e).normalize()
-		return nldot(n, l)+nldot(n, h)**self.shinny
+		
+		diffuse  = nldot(n, l)
+		
+		# Scale by (shinny+8)/8 to approximate energy conservation
+		scale = (self.shinny+8.0)*0.125
+		specular = (nldot(n, h)**self.shinny)*scale
+		return diffuse + specular
 
 
 class Shader(object):

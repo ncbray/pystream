@@ -116,7 +116,7 @@ def generateBindingClass(vscontext, fscontext):
 	code = bindStreams(vscontext)
 	streamfdef = ast.FunctionDef('bindStreams', code, [])
 	
-	statements = [fs, vs, uniformfdef, streamfdef]
+	statements = [vs, fs, uniformfdef, streamfdef]
 
 	moduleExpr = ast.Existing(compiler.extractor.getObject('pystreamruntime'))	
 	baseExpr = ast.Existing(compiler.extractor.getObject('BaseCompiledShader'))

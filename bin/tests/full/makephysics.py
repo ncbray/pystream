@@ -6,7 +6,7 @@ config(checkTypes=True)
 
 
 import tests.full.physics as physics
-import tests.full.vec as vec
+import shader.vec as vec
 
 attr(inst(vec.vec2), 'x', inst(float))
 attr(inst(vec.vec2), 'y', inst(float))

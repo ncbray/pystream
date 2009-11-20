@@ -244,7 +244,7 @@ def matrixMul(mbase, vbase, l):
 	declMethod('__imul__', ('%s%d'% (vbase, l), 'float'))
 
 
-print >> interface, "from vec import *"
+print >> interface, "from shader.vec import *"
 print >> interface, "from decl import *"
 
 ### Declare vectors

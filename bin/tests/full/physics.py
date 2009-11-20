@@ -1,5 +1,5 @@
 import random
-from vec import *
+from shader.vec import *
 
 class Particle(object):
 	__slots__ = 'position', 'velocity'

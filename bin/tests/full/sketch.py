@@ -1,6 +1,6 @@
 #@PydevCodeAnalysisIgnore
 
-from vec import *
+from shader.vec import *
 
 class Shader(object):
 	def projected(self, pos):

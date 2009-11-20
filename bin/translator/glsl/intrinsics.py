@@ -1,7 +1,7 @@
 from optimization.termrewrite import *
 from language.glsl import ast as glsl
 
-from tests.full import vec
+from shader import vec
 import random
 
 constantTypes = frozenset([float, int, bool])

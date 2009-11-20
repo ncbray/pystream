@@ -1,4 +1,4 @@
-from vec import *
+from shader.vec import *
 from decl import *
 
 cls = class_(vec2)

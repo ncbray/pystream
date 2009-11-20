@@ -191,7 +191,7 @@ class PointLight(Light):
 		
 
 class Shader(object):
-	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'light', 'ambient', 'material'
+	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'light', 'ambient', 'material', 'sampler'
 	def __init__(self):
 		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
 					  0.0, 1.0, 0.0, 0.0,
@@ -214,6 +214,8 @@ class Shader(object):
 		self.ambient = AmbientLight(vec3(0.0, 1.0, 0.0), vec3(0.25, 0.75, 0.25), vec3(0.75, 0.25, 0.25))
 
 		self.material = Material()
+		
+		self.sampler  = None
 
 	def shadeVertex(self, context, pos, normal):
 		trans     = self.worldToCamera*self.objectToWorld
@@ -232,6 +234,10 @@ class Shader(object):
 		self.light.accumulate(surface, self.worldToCamera)
 					
 		mainColor = surface.litColor()
+
+		textureColor = self.sampler.texture(pos.xz).xyz
+
+		mainColor *= textureColor
 
 		mainColor = rgb2srgb(tonemap(mainColor))
 		

@@ -228,7 +228,7 @@ class StubCollector(object):
 	### Attachment functions ###
 	def replaceObject(self, o):
 		def callback(f):
-			assert self.highLevelLUT[f.func_name] == f, "Must declare as high level stub before replacing."
+			#assert self.highLevelLUT[f.func_name] == f, "Must declare as high level stub before replacing."
 			self.compiler.extractor.replaceObject(o, f)
 			return f
 		return callback
@@ -240,7 +240,7 @@ class StubCollector(object):
 				f = self.codeToFunction[obj]
 			else:
 				f = obj
-				assert self.highLevelLUT[f.func_name] == f, "Must declare as high level stub before replacing."
+				#assert self.highLevelLUT[f.func_name] == f, "Must declare as high level stub before replacing."
 			self.compiler.extractor.replaceAttr(o, attr, f)
 			return obj
 		return callback

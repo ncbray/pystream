@@ -6,7 +6,8 @@ config(checkTypes=True)
 
 
 import tests.full.physics as physics
-import shader.vec as vec
+from shader import vec
+from shader import sampler
 
 attr(inst(vec.vec2), 'x', inst(float))
 attr(inst(vec.vec2), 'y', inst(float))
@@ -58,14 +59,8 @@ attr(inst(physics.Shader), 'light', inst(physics.PointLight))
 
 
 attr(inst(physics.Shader), 'ambient',  inst(physics.AmbientLight))
-#attr(inst(physics.Shader), 'color',    inst(vec.vec3))
-#attr(inst(physics.Shader), 'material',    inst(physics.Material))
 
-#attr(inst(physics.Shader),          'material',  inst(physics.LambertMaterial))
-#attr(inst(physics.LambertMaterial), 'color',     inst(vec.vec3))
-
-#attr(inst(physics.Shader),          'material',  inst(physics.DummyMaterial))
-#attr(inst(physics.DummyMaterial),   'color',     inst(vec.vec3))
+attr(inst(physics.Shader), 'sampler',  inst(sampler.sampler2D))
 
 attr(inst(physics.Shader),          'material',  inst(physics.PhongMaterial))
 attr(inst(physics.PhongMaterial),   'color',     inst(vec.vec3))

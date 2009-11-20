@@ -1,11 +1,21 @@
 from optimization.termrewrite import *
 from language.glsl import ast as glsl
 
-from shader import vec
+from shader import vec, sampler
 import random
 
+def _merge(*args):
+	data = []
+	for arg in args:
+		data.extend(arg)
+	return frozenset(data)
+
 constantTypes = frozenset([float, int, bool])
-intrinsicTypes = frozenset([float, int, bool, vec.vec2, vec.vec3, vec.vec4, vec.mat2, vec.mat3, vec.mat4])
+vectorTypes   = frozenset([vec.vec2, vec.vec3, vec.vec4])
+matrixTypes   = frozenset([vec.mat2, vec.mat3, vec.mat4])
+samplerTypes  = frozenset([sampler.sampler2D])
+
+intrinsicTypes = _merge(constantTypes, vectorTypes, matrixTypes, samplerTypes)
 
 constantTypeNodes = {}
 intrinsicTypeNodes = {}
@@ -72,6 +82,9 @@ def init(compiler):
 	
 	components(int, int, 1)
 	components(bool, bool, 1)
+
+	components(sampler.sampler2D, sampler.sampler2D, 1)
+
 
 def isIntrinsicObject(obj):
 	return obj.xtype.obj.pythonType() in intrinsicTypes
@@ -342,6 +355,16 @@ def floatPowRewrite(self, node):
 		if args is None: return None		
 		return glsl.IntrinsicOp('pow', args)
 
+
+def samplerTextureRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('texture', [self(arg) for arg in node.args])
+	
+
 def makeIntrinsicRewriter(extractor):
 	init(extractor.compiler)
 	
@@ -397,5 +420,7 @@ def makeIntrinsicRewriter(extractor):
 
 	# HACK
 	rewriter.attribute(random._random.Random, 'random', randomRewrite)
+
+	rewriter.addRewrite('texture', samplerTextureRewrite)
 
 	return rewriter

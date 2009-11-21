@@ -63,11 +63,15 @@ attr(inst(physics.Shader), 'ambient',  inst(physics.AmbientLight))
 attr(inst(physics.Shader), 'sampler',  inst(sampler.sampler2D))
 
 attr(inst(physics.Shader),          'material',  inst(physics.PhongMaterial))
-attr(inst(physics.PhongMaterial),   'color',     inst(vec.vec3))
+
+attr(inst(physics.Material), 'diffuseColor',    inst(vec.vec3))
+attr(inst(physics.Material), 'specularColor',   inst(vec.vec3))
+
 attr(inst(physics.PhongMaterial),   'shinny',     inst(float))
 
-
-attr(inst(physics.Material), 'color',    inst(vec.vec3))
+# HACK don't the declarations from the base class take effect?
+attr(inst(physics.PhongMaterial), 'diffuseColor',    inst(vec.vec3))
+attr(inst(physics.PhongMaterial), 'specularColor',   inst(vec.vec3))
 
 attr(inst(physics.PointLight), 'position',    inst(vec.vec3))
 attr(inst(physics.PointLight), 'color',       inst(vec.vec3))
@@ -92,4 +96,4 @@ glsl.output(attrslot(inst(FSContext), 'depth'), 'gl_FragDepth');
 
 ### Declare  the shader entrypoint ###
 
-glsl.shader(physics.Shader, inst(vec.vec4), inst(vec.vec3))
+glsl.shader(physics.Shader, inst(vec.vec4), inst(vec.vec3), inst(vec.vec2))

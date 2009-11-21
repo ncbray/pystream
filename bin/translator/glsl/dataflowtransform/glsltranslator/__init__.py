@@ -132,6 +132,10 @@ class GLSLTranslator(TypeDispatcher):
 
 		return lcl
 
+	def replaceLocal(self, slot, replacement):
+		slot = slot.canonical()
+		self.indexname[slot] = replacement
+
 	def makeConstant(self, value):
 		t = intrinsics.constantTypeNodes[type(value)]
 		return glsl.Constant(t, value)
@@ -356,6 +360,11 @@ class GLSLTranslator(TypeDispatcher):
 			if tree.treetype == 'uniform':
 				decl   = glsl.UniformDecl(tree.builtin, lcl.type, name, None)
 				input  = glsl.Uniform(decl)
+				
+				# HACK don't copy the uniforms.  Samplers cannot be copied
+				# Inputs are still copied due to inout WAR hazards.
+				self.replaceLocal(node, input)
+				continue
 			else:
 				decl   = glsl.InputDecl(None, False, tree.builtin, lcl.type, name)
 				input  = glsl.Input(decl)

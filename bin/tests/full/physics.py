@@ -82,10 +82,14 @@ def simpleUpdate(dt, iterations):
 	return swarm
 
 class SurfaceFragment(object):
-	__slots__ = 'material', 'p', 'n', 'e', 'diffuseLight', 'specularLight'
+	__slots__ = 'material', 'p', 'n', 'e', 'diffuseColor', 'specularColor', 'diffuseLight', 'specularLight'
 
 	def __init__(self, material, p, n):
 		self.material      = material
+		
+		self.diffuseColor  = vec3(1.0, 1.0, 1.0)
+		self.specularColor = vec3(1.0, 1.0, 1.0)
+
 		self.diffuseLight  = vec3(0.0, 0.0, 0.0)
 		self.specularLight = vec3(0.0, 0.0, 0.0)
 
@@ -93,25 +97,19 @@ class SurfaceFragment(object):
 		self.n = n
 		self.e = -p.normalize()
 
-
-	def accumulateDiffuseLight(self, l, amt):
+	def accumulateLight(self, l, amt):
 		self.diffuseLight  += self.material.diffuseTransfer(self.n, l, self.e)*amt
-
-	def accumulateSpecularLight(self, l, amt):
 		self.specularLight += self.material.specularTransfer(self.n, l, self.e)*amt
 
-	def accumulateLight(self, l, amt):
-		self.accumulateDiffuseLight(l, amt)
-		self.accumulateSpecularLight(l, amt)
-
 	def litColor(self):
-		return self.material.color*self.diffuseLight*0.5+self.specularLight*0.5
+		return self.diffuseColor*self.diffuseLight+self.specularColor*self.specularLight
 	
 
 class Material(object):
-	__slots__ = 'color'
+	__slots__ = 'diffuseColor', 'specularColor'
 	def __init__(self):
-		self.color = vec3(0.125, 0.125, 1.0)
+		self.diffuseColor  = vec3(0.125, 0.125, 1.0)
+		self.specularColor = vec3(0.5, 0.5, 0.5)
 
 	def diffuseTransfer(self, n, l, e):
 		return nldot(n, l)
@@ -120,7 +118,10 @@ class Material(object):
 		return 0.0
 
 	def surface(self, p, n):
-		return SurfaceFragment(self, p, n)
+		surface = SurfaceFragment(self, p, n)
+		surface.diffuseColor  = self.diffuseColor
+		surface.specularColor = self.specularColor
+		return surface
 
 class LambertMaterial(Material):
 	pass
@@ -149,7 +150,6 @@ class Light(object):
 
 class AmbientLight(Light):
 	__slots__ = 'direction', 'color0', 'color1'
-
 
 	def __init__(self, direction, color0, color1):
 		self.direction = direction
@@ -217,27 +217,26 @@ class Shader(object):
 		
 		self.sampler  = None
 
-	def shadeVertex(self, context, pos, normal):
+	def shadeVertex(self, context, pos, normal, texCoord):
 		trans     = self.worldToCamera*self.objectToWorld
 		newpos    = trans*pos
 		newnormal = trans*vec4(normal.x, normal.y, normal.z, 0.0)
 
 		context.position = self.projection*newpos
 
-		return newpos.xyz, newnormal.xyz
+		return newpos.xyz, newnormal.xyz, texCoord
 
-	def shadeFragment(self, context, pos, normal):
+	def shadeFragment(self, context, pos, normal, texCoord):
 		surface = self.material.surface(pos, normal.normalize())
+
+		# Texture
+		surface.diffuseColor *= self.sampler.texture(texCoord).xyz
 		
 		# Accumulate lighting
 		self.ambient.accumulate(surface, self.worldToCamera)
 		self.light.accumulate(surface, self.worldToCamera)
 					
 		mainColor = surface.litColor()
-
-		textureColor = self.sampler.texture(pos.xz).xyz
-
-		mainColor *= textureColor
 
 		mainColor = rgb2srgb(tonemap(mainColor))
 		

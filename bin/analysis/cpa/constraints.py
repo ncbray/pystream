@@ -55,7 +55,8 @@ class Constraint(object):
 			console.output("Unresolved %r:" % self.name())
 			for slot in bad:
 				console.output("\t%r" % slot)
-				console.output("\t%r" % slot.slotName.context)				
+				if hasattr(slot.slotName, 'context'):
+					console.output("\t%r" % slot.slotName.context)				
 			console.output('')
 
 class CachedConstraint(Constraint):

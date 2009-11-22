@@ -125,6 +125,27 @@ def makeOp(base, coords, opname, op):
         makeOpPrimitive(base, coords, forwardName, reverseName, optemplate)
 
 
+def makeExp(base, coords):
+	args = ", ".join(["math.exp(self.%s)" % coord for coord in coords])
+	
+	print """	def exp(self):
+		return %(base)s%(len)s(%(args)s)
+
+""" % {'base':base, 'len':len(coords), 'args':args}
+	
+	declMethod('exp')
+
+def makeLog(base, coords):
+	args = ", ".join(["math.log(self.%s)" % coord for coord in coords])
+	
+	print """	def log(self):
+		return %(base)s%(len)s(%(args)s)
+
+""" % {'base':base, 'len':len(coords), 'args':args}
+	
+	declMethod('log')
+
+
 def makePos(base, coords):
 	args = ", ".join(["+self.%s" % coord for coord in coords])
 	
@@ -249,15 +270,20 @@ print >> interface, "from decl import *"
 
 ### Declare vectors
 
+print "import math"
+print
+
 for l in range(2, 5):
 	coords = allcoords[:l]
 	base = "vec"
+	
+	fullname = "%s%d" % (base, l)
 	
 	print "class %s%d(object):" % (base, l)
 	print "\t__slots__ = %s" % (", ".join([repr(coord) for coord in coords]))
 	print
 
-	declClass("%s%d" % (base, l))
+	declClass(fullname)
 	for coord in coords:
 		declSlot(coord, 'float')
 
@@ -283,7 +309,7 @@ for l in range(2, 5):
 """ % ("+".join(["self.%s*other.%s" % (coord, coord) for coord in coords]),)
 
 
-	declMethod('dot', "%s%d" % (base, l))
+	declMethod('dot', fullname)
 
 	print """	def length(self):
 		return self.dot(self)**0.5
@@ -293,11 +319,18 @@ for l in range(2, 5):
 	declMethod('length')
 
 
+	print """	def distance(self, other):
+		return (self-other).length()
+
+"""
+
+	declMethod('distance', fullname)
+
+
 	print """	def normalize(self):
 		return self/self.length()
 
 """
-
 	declMethod('normalize')
 
 
@@ -309,7 +342,33 @@ for l in range(2, 5):
 		return vec3(x, y, z)
 
 """
-		declMethod('cross', "%s%d" % (base, l))
+	declMethod('cross', fullname)
+
+	print """	def mix(self, other, amt):
+		return self*(1.0-amt)+other*amt
+
+"""
+	declMethod('mix', fullname, (fullname, 'float'))
+
+	print """	def reflect(self, normal):
+		return self-normal*(2*self.dot(normal))
+
+"""
+	declMethod('reflect', fullname)
+
+	print """	def refract(self, normal, eta):
+		ndi = self.dot(normal)
+		k = 1.0-eta*eta*(1.0-ndi*ndi)
+		if k < 0:
+			return %s(0.0)
+		else:	
+			return self*eta-normal*(eta*ndi+k**0.5)
+
+""" % fullname
+	declMethod('refract', fullname, 'float')
+
+	makeExp(base, coords)
+	makeLog(base, coords)
 
 	makePos(base, coords)
 	makeNeg(base, coords)

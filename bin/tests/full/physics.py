@@ -158,14 +158,15 @@ class AmbientLight(Light):
 
 			
 	def accumulate(self, surface, w2c):
+		# Transform the direction into world space
 		dir = self.direction
 		cdir = (w2c*vec4(dir.x, dir.y, dir.z, 0.0)).xyz
 
-		amt = cdir.dot(surface.n)*0.5+0.5 # HACK?
+		# Blend the hemispheric colors
+		amt = cdir.dot(surface.n)*0.5+0.5
+		color = self.color1.mix(self.color0, amt)
 		
-		# TODO lerp?
-		color = self.color0*amt + self.color1*(1.0-amt)
-
+		# Add directly to diffuse, no transfer functions
 		surface.diffuseLight += color
 	
 class PointLight(Light):

@@ -274,6 +274,64 @@ def normalizeRewrite(self, node):
 	else:
 		return glsl.IntrinsicOp('normalize', self(node.args))
 
+def distanceRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		args = coerceArgs(self, *node.args)
+		if args is None: return None
+		return glsl.IntrinsicOp('distance', args)
+
+def mixRewrite(self, node):
+	if not hasNumArgs(node, 3): return
+
+	if self is None:
+		return True
+	else:
+		args = coerceArgs(self, node.args[0], node.args[1])
+		if args is None: return None
+		args.append(self(node.args[2]))
+		return glsl.IntrinsicOp('mix', args)
+
+def reflectRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		args = coerceArgs(self, *node.args)
+		if args is None: return None
+		return glsl.IntrinsicOp('reflect', args)
+
+def refractRewrite(self, node):
+	if not hasNumArgs(node, 3): return
+
+	if self is None:
+		return True
+	else:
+		args = coerceArgs(self, node.args[0], node.args[1])
+		if args is None: return None
+		args.append(self(node.args[2]))
+		return glsl.IntrinsicOp('refract', args)
+
+def expRewrite(self, node):
+	if not hasNumArgs(node, 1): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('exp', self(node.args))
+
+def logRewrite(self, node):
+	if not hasNumArgs(node, 1): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('log', self(node.args))
+
 def posRewrite(self, node):
 	if not hasNumArgs(node, 1): return
 
@@ -410,6 +468,13 @@ def makeIntrinsicRewriter(extractor):
 	for v in fvecs: rewriter.attribute(v, 'dot', dotRewrite)
 	for v in fvecs: rewriter.attribute(v, 'length', lengthRewrite)
 	for v in fvecs: rewriter.attribute(v, 'normalize', normalizeRewrite)
+	for v in fvecs: rewriter.attribute(v, 'distance', distanceRewrite)
+	for v in fvecs: rewriter.attribute(v, 'mix', mixRewrite)
+	for v in fvecs: rewriter.attribute(v, 'reflect', reflectRewrite)
+	for v in fvecs: rewriter.attribute(v, 'refract', refractRewrite)
+	for v in fvecs: rewriter.attribute(v, 'exp', expRewrite)
+	for v in fvecs: rewriter.attribute(v, 'log', logRewrite)
+
 
 	for v in fvecs: rewriter.attribute(v, '__pos__', posRewrite)
 	for v in fvecs: rewriter.attribute(v, '__neg__', negRewrite)

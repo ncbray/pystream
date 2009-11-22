@@ -1,3 +1,5 @@
+import math
+
 class vec2(object):
 	__slots__ = 'x', 'y'
 
@@ -50,8 +52,37 @@ class vec2(object):
 		return self.dot(self)**0.5
 
 
+	def distance(self, other):
+		return (self-other).length()
+
+
 	def normalize(self):
 		return self/self.length()
+
+
+	def mix(self, other, amt):
+		return self*(1.0-amt)+other*amt
+
+
+	def reflect(self, normal):
+		return self-normal*(2*self.dot(normal))
+
+
+	def refract(self, normal, eta):
+		ndi = self.dot(normal)
+		k = 1.0-eta*eta*(1.0-ndi*ndi)
+		if k < 0:
+			return vec2(0.0)
+		else:	
+			return self*eta-normal*(eta*ndi+k**0.5)
+
+
+	def exp(self):
+		return vec2(math.exp(self.x), math.exp(self.y))
+
+
+	def log(self):
+		return vec2(math.log(self.x), math.log(self.y))
 
 
 	def __pos__(self):
@@ -443,6 +474,10 @@ class vec3(object):
 		return self.dot(self)**0.5
 
 
+	def distance(self, other):
+		return (self-other).length()
+
+
 	def normalize(self):
 		return self/self.length()
 
@@ -452,6 +487,31 @@ class vec3(object):
 		y = self.z*other.x-self.x*other.z
 		z = self.x*other.y-self.y*other.x
 		return vec3(x, y, z)
+
+
+	def mix(self, other, amt):
+		return self*(1.0-amt)+other*amt
+
+
+	def reflect(self, normal):
+		return self-normal*(2*self.dot(normal))
+
+
+	def refract(self, normal, eta):
+		ndi = self.dot(normal)
+		k = 1.0-eta*eta*(1.0-ndi*ndi)
+		if k < 0:
+			return vec3(0.0)
+		else:	
+			return self*eta-normal*(eta*ndi+k**0.5)
+
+
+	def exp(self):
+		return vec3(math.exp(self.x), math.exp(self.y), math.exp(self.z))
+
+
+	def log(self):
+		return vec3(math.log(self.x), math.log(self.y), math.log(self.z))
 
 
 	def __pos__(self):
@@ -1480,8 +1540,37 @@ class vec4(object):
 		return self.dot(self)**0.5
 
 
+	def distance(self, other):
+		return (self-other).length()
+
+
 	def normalize(self):
 		return self/self.length()
+
+
+	def mix(self, other, amt):
+		return self*(1.0-amt)+other*amt
+
+
+	def reflect(self, normal):
+		return self-normal*(2*self.dot(normal))
+
+
+	def refract(self, normal, eta):
+		ndi = self.dot(normal)
+		k = 1.0-eta*eta*(1.0-ndi*ndi)
+		if k < 0:
+			return vec4(0.0)
+		else:	
+			return self*eta-normal*(eta*ndi+k**0.5)
+
+
+	def exp(self):
+		return vec4(math.exp(self.x), math.exp(self.y), math.exp(self.z), math.exp(self.w))
+
+
+	def log(self):
+		return vec4(math.log(self.x), math.log(self.y), math.log(self.z), math.log(self.w))
 
 
 	def __pos__(self):

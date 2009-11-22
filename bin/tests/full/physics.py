@@ -192,8 +192,22 @@ class PointLight(Light):
 		surface.accumulateLight(dir/dist, self.color*lightAtten)
 		
 
+class Fog(object):
+	__slots__ = 'color', 'density'
+	def __init__(self, color, density):
+		self.color = color
+		self.density = density
+
+	def apply(self, color, position):
+		return self.color.mix(color, math.exp(position.length()*-self.density))
+
+
 class Shader(object):
-	__slots__ = 'objectToWorld', 'worldToCamera', 'projection', 'light', 'ambient', 'material', 'sampler'
+	__slots__ = ['objectToWorld', 'worldToCamera', 'projection',
+				'light', 'ambient',
+				'material', 'sampler',
+				'fog']
+
 	def __init__(self):
 		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
 					  0.0, 1.0, 0.0, 0.0,
@@ -239,13 +253,14 @@ class Shader(object):
 		self.light.accumulate(surface, self.worldToCamera)
 					
 		mainColor = surface.litColor()
-
-		mainColor = vec3(1.0, 1.0, 1.0).mix(mainColor, math.exp(pos.length()*-0.0005))
-
-		mainColor = rgb2srgb(tonemap(mainColor))
+		mainColor = self.fog.apply(mainColor, surface.p)
+		mainColor = self.processOutputColor(mainColor)
 		
 		mainColor = vec4(mainColor.x, mainColor.y, mainColor.z, 1.0)
 		context.colors = (mainColor,)
+
+	def processOutputColor(self, color):
+		return rgb2srgb(tonemap(color))
 
 def nldot(a, b):
 	return max(a.dot(b), 0.0)

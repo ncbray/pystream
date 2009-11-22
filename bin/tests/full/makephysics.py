@@ -62,7 +62,7 @@ attr(inst(physics.Shader), 'ambient',  inst(physics.AmbientLight))
 
 attr(inst(physics.Shader), 'sampler',  inst(sampler.sampler2D))
 
-attr(inst(physics.Shader),          'material',  inst(physics.PhongMaterial))
+attr(inst(physics.Shader),  'material',  inst(physics.PhongMaterial))
 
 attr(inst(physics.Material), 'diffuseColor',    inst(vec.vec3))
 attr(inst(physics.Material), 'specularColor',   inst(vec.vec3))
@@ -80,6 +80,12 @@ attr(inst(physics.PointLight), 'attenuation', inst(vec.vec3))
 attr(inst(physics.AmbientLight), 'direction',  inst(vec.vec3))
 attr(inst(physics.AmbientLight), 'color0',     inst(vec.vec3))
 attr(inst(physics.AmbientLight), 'color1',     inst(vec.vec3))
+
+
+attr(inst(physics.Shader),  'fog',  inst(physics.Fog))
+
+attr(inst(physics.Fog), 'color',    inst(vec.vec3))
+attr(inst(physics.Fog), 'density',  inst(float))
 
 
 ### Declare special paths for GLSL ###

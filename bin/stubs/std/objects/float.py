@@ -30,6 +30,13 @@ def makeFloat(collector):
 	### Primitive float operations ###
 	##################################
 
+	@export
+	@staticFold(lambda a: +a)
+	@llfunc(primitive=True)
+	def prim_float_pos(a):
+		return allocate(float)
+
+	@export
 	@staticFold(lambda a: -a)
 	@llfunc(primitive=True)
 	def prim_float_neg(a):
@@ -110,6 +117,11 @@ def makeFloat(collector):
 	##############################
 	### Float object functions ###
 	##############################
+
+	@attachPtr(float, '__pos__')
+	@llfunc
+	def float__pos__(self):
+		return prim_float_pos(self)
 
 	@attachPtr(float, '__neg__')
 	@llfunc

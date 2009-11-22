@@ -433,6 +433,8 @@ def makeIntrinsicRewriter(extractor):
 	rewriter.addRewrite('prim_float_mul', floatMulRewrite)
 	rewriter.addRewrite('prim_float_div', floatDivRewrite)
 	rewriter.addRewrite('prim_float_pow', floatPowRewrite)
+	rewriter.addRewrite('prim_float_pos', posRewrite)
+	rewriter.addRewrite('prim_float_neg', negRewrite)
 
 
 	rewriter.addRewrite('type__call__', typeCallRewrite)

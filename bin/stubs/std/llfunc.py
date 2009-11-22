@@ -7,7 +7,7 @@ from language.python.ast import *
 
 # HACK for highlevel functions?
 from util import xtypes
-method  = xtypes.MethodType
+method   = xtypes.MethodType
 function = xtypes.FunctionType
 
 from .. stubcollector import stubgenerator
@@ -70,12 +70,18 @@ def makeLLFunc(collector):
 #			dictDescDict = load(dictDescType, 'dictionary')
 #			selfDict     = loadDict(dictDescDict, '__get__')(dictDesc, self, selfType)
 
-		# HACK
+		# HACK load from low-level dictionary field instead of using get/set
 		if check(self, 'dictionary'):
 			selfDict = load(self, 'dictionary')
 			if checkDict(selfDict, field):
 				# Field in instance dictionary
 				return loadDict(selfDict, field)
+
+		# NOTE even if the previous return is always taken,
+		# the following code will still be analyzed.
+		# This is a weakness in the implementation that causes
+		# false "unresolved constraints"
+		# TODO analyze CFG instead of AST
 
 		if getter:
 			# It's a method descriptor
@@ -83,9 +89,9 @@ def makeLLFunc(collector):
 		elif exists:
 			# It's a class variable
 			return desc
-
-		# HACK not found?
-		return desc
+		else:
+			# HACK not found?
+			return desc
 
 
 	@attachPtr(object, '__setattr__')

@@ -1,3 +1,4 @@
+import math
 import random
 from shader.vec import *
 
@@ -238,6 +239,8 @@ class Shader(object):
 		self.light.accumulate(surface, self.worldToCamera)
 					
 		mainColor = surface.litColor()
+
+		mainColor = vec3(1.0, 1.0, 1.0).mix(mainColor, math.exp(pos.length()*-0.0005))
 
 		mainColor = rgb2srgb(tonemap(mainColor))
 		

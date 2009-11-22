@@ -439,6 +439,10 @@ def makeIntrinsicRewriter(extractor):
 	rewriter.addRewrite('max_stub', maxRewrite)
 	rewriter.addRewrite('min_stub', minRewrite)
 
+	rewriter.addRewrite('math_exp', expRewrite)
+	rewriter.addRewrite('math_log', expRewrite)
+
+
 	fvecs = (vec.vec2, vec.vec3, vec.vec4)
 
 	for v in fvecs: rewriter.attribute(v, '__add__', addRewrite)

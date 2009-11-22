@@ -108,7 +108,6 @@ class AssignmentConstraint(Constraint):
 
 		Constraint.__init__(self, sys)
 
-
 	def update(self):
 		self.destslot = self.destslot.update(self.sourceslot)
 
@@ -118,7 +117,7 @@ class AssignmentConstraint(Constraint):
 		self.destslot.dependsWrite(self)
 
 	def name(self):
-		return self
+		return "%r -> %r" % (self.sourceslot, self.destslot)
 
 	def reads(self):
 		return (self.sourceslot,)

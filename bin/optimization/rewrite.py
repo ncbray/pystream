@@ -36,6 +36,11 @@ def rewriteTerm(term, replace):
 		term = Rewriter(replace)(term)
 	return term
 
+def rewrite(compiler, code, replace):
+	if replace:
+		Rewriter(replace).processCode(code)
+	return code
+
 def rewriteAndSimplify(compiler, code, replace):
 	if replace:
 		Rewriter(replace).processCode(code)

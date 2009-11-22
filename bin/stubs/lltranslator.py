@@ -6,6 +6,7 @@ from language.python import program
 from asttools import astpprint
 
 import optimization.simplify
+import optimization.convertboolelimination
 
 def checkCallArgs(node, count):
 	assert len(node.args) == count, node
@@ -238,6 +239,7 @@ class LLTranslator(TypeDispatcher):
 		node.ast = self(node.ast)
 		self.code = None
 
+		optimization.convertboolelimination.evaluateCode(self.compiler, node)
 		optimization.simplify.evaluateCode(self.compiler, node)
 
 		#astpprint.pprint(node)

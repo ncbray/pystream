@@ -23,7 +23,7 @@ def localSlot(sys, code, lcl, context):
 	elif lcl is None:
 		return None
 	else:
-		assert False
+		assert False, type(lcl)
 
 def calleeSlotsFromContext(sys, context):
 	code = context.signature.code
@@ -32,7 +32,11 @@ def calleeSlotsFromContext(sys, context):
 
 	selfparam   = localSlot(sys, code, callee.selfparam, context)
 	parameters  = tuple([localSlot(sys, code, p, context) for p in callee.params])
-	defaults    = []
+	if callee.defaults:
+		defaults = callee.defaults # HACK?
+		#defualts = tuple([localSlot(sys, code, d, context) for d in callee.defaults])		
+	else:
+		defaults    = ()
 	vparam      = localSlot(sys, code, callee.vparam, context)
 	kparam      = localSlot(sys, code, callee.kparam, context)
 	returnparams = [localSlot(sys, code, param, context) for param in callee.returnparams]
@@ -135,9 +139,25 @@ class AnalysisContext(CanonicalObject):
 		# Bind the positional parameters
 		numArgs  = len(sig.params)
 		numParam = len(callee.params)
-		assert numArgs >= numParam
+		
 		for arg, cpaType, param in zip(caller.args[:numParam], sig.params[:numParam], callee.params):
 			self.initalizeParameter(sys, param, cpaType, arg)
+
+		#assert numArgs >= numParam
+		# HACK bind defaults
+		if numArgs < numParam:
+			defaultOffset = len(callee.params)-len(callee.defaults)
+			for i in range(numArgs, numParam):
+				obj = callee.defaults[i-defaultOffset].object
+				
+				# Create an initialize an existing object
+				name = sys.canonical.existingName(sig.code, obj, self)
+				slot = self.group.root(name)
+				slot.initializeType(sys.canonical.existingType(obj))
+					
+				# Transfer the default
+				sys.createAssign(slot, callee.params[i])
+			
 
 		# An op context for implicit allocation
 		cop = sys.canonical.opContext(sig.code, None, self)
@@ -155,7 +175,7 @@ class AnalysisContext(CanonicalObject):
 				sys.logModify(cop, param)
 
 		else:
-			assert callee.vparam is not None or numArgs == numParam
+			pass #assert callee.vparam is not None or numArgs == numParam
 
 		# Bind the kparams
 		assert callee.kparam is None

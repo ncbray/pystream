@@ -10,6 +10,6 @@ class sampler2D(Sampler):
 		# TODO ivec?
 		return vec.vec2(1.0, 1.0)
 
-	def texture(self, P):
+	def texture(self, P, bias=None):
 		# TODO bias
 		return vec.vec4(1.0, 1.0, 1.0, 1.0)

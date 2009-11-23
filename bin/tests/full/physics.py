@@ -88,11 +88,11 @@ class SurfaceFragment(object):
 	def __init__(self, material, p, n):
 		self.material      = material
 		
-		self.diffuseColor  = vec3(1.0, 1.0, 1.0)
-		self.specularColor = vec3(1.0, 1.0, 1.0)
+		self.diffuseColor  = vec3(1.0)
+		self.specularColor = vec3(1.0)
 
-		self.diffuseLight  = vec3(0.0, 0.0, 0.0)
-		self.specularLight = vec3(0.0, 0.0, 0.0)
+		self.diffuseLight  = vec3(0.0)
+		self.specularLight = vec3(0.0)
 
 		self.p = p
 		self.n = n
@@ -161,7 +161,7 @@ class AmbientLight(Light):
 	def accumulate(self, surface, w2c):
 		# Transform the direction into world space
 		dir = self.direction
-		cdir = (w2c*vec4(dir.x, dir.y, dir.z, 0.0)).xyz
+		cdir = (w2c*vec4(dir, 0.0)).xyz
 
 		# Blend the hemispheric colors
 		amt = cdir.dot(surface.n)*0.5+0.5
@@ -180,7 +180,7 @@ class PointLight(Light):
 			
 	def accumulate(self, surface, w2c):
 		p = self.position
-		pos = (w2c*vec4(p.x, p.y, p.z, 1.0)).xyz
+		pos = (w2c*vec4(p, 1.0)).xyz
 
 		dir    = pos-surface.p
 		dist2  = dir.dot(dir)
@@ -236,7 +236,7 @@ class Shader(object):
 	def shadeVertex(self, context, pos, normal, texCoord):
 		trans     = self.worldToCamera*self.objectToWorld
 		newpos    = trans*pos
-		newnormal = trans*vec4(normal.x, normal.y, normal.z, 0.0)
+		newnormal = trans*vec4(normal, 0.0)
 
 		context.position = self.projection*newpos
 
@@ -256,7 +256,7 @@ class Shader(object):
 		mainColor = self.fog.apply(mainColor, surface.p)
 		mainColor = self.processOutputColor(mainColor)
 		
-		mainColor = vec4(mainColor.x, mainColor.y, mainColor.z, 1.0)
+		mainColor = vec4(mainColor, 1.0)
 		context.colors = (mainColor,)
 
 	def processOutputColor(self, color):

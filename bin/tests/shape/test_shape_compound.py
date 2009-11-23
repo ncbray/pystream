@@ -59,7 +59,7 @@ class TestSimpleCase(TestCompoundConstraintBase):
 			])
 
 
-		self.code = ast.Code('test', ast.CodeParameters(None, [x, y], ['x', 'y'], None, None, [ret]), self.body)
+		self.code = ast.Code('test', ast.CodeParameters(None, [x, y], ['x', 'y'], [], None, None, [ret]), self.body)
 
 		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
 		b, self.bSlot, self.bExpr  = self.makeLocalObjs('b')
@@ -176,7 +176,7 @@ class TestCallLoadCase(TestCompoundConstraintBase):
 			])
 
 
-		self.code = ast.Code('loadTest', ast.CodeParameters(None, [x], ['x'], None, None, [ret]), body)
+		self.code = ast.Code('loadTest', ast.CodeParameters(None, [x], ['x'], [], None, None, [ret]), body)
 
 
 		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
@@ -276,7 +276,7 @@ class TestVArgCase(TestCompoundConstraintBase):
 			])
 
 
-		self.code = ast.Code('buildTreeTest', ast.CodeParameters(None, [x, y, z], ['x', 'y', 'z'], None, None, [ret]), body)
+		self.code = ast.Code('buildTreeTest', ast.CodeParameters(None, [x, y, z], ['x', 'y', 'z'], [], None, None, [ret]), body)
 
 
 		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
@@ -407,7 +407,7 @@ class TestVParamCase(TestCompoundConstraintBase):
 			ast.Return([vargs])
 			])
 
-		self.code = ast.Code('buildTupleTest', ast.CodeParameters(None, [], [], vargs, None, [ret]), body)
+		self.code = ast.Code('buildTupleTest', ast.CodeParameters(None, [], [], [], vargs, None, [ret]), body)
 
 
 		a, self.aSlot, self.aExpr  = self.makeLocalObjs('a')
@@ -520,7 +520,7 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 			ast.Return([l]),
 			])
 
-		code = ast.Code('reverseTestDummy', ast.CodeParameters(None, [l, n], ['l', 'n'], None, None, [ret]), body)
+		code = ast.Code('reverseTestDummy', ast.CodeParameters(None, [l, n], ['l', 'n'], [], None, None, [ret]), body)
 
 		self.makeConstraints(code)
 
@@ -560,7 +560,7 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 
 
 		# Pre-declare
-		self.code = ast.Code('reverseTest', ast.CodeParameters(None, [l, n], ['l', 'n'], None, None, [ret]), ast.Suite([]))
+		self.code = ast.Code('reverseTest', ast.CodeParameters(None, [l, n], ['l', 'n'], [], None, None, [ret]), ast.Suite([]))
 
 
 		cond = ast.Condition(ast.Suite([]), t)
@@ -688,7 +688,7 @@ class TestAllocateCase(TestCompoundConstraintBase):
 			ast.Assign(alloc, [y]),
 			])
 
-		fakecode = ast.Code('bogus', ast.CodeParameters(None, [], [], None, None, []), self.code)
+		fakecode = ast.Code('bogus', ast.CodeParameters(None, [], [], [], None, None, []), self.code)
 
 		lc = self.sys.cpacanonical.localName(fakecode, x, self.context)
 		xinfo = self.root.root(lc)

@@ -154,6 +154,16 @@ class ArgumentNormalizationTransform(TypeDispatcher):
 		self.newParams = [ast.Local() for i in range(vparamLen)]
 		self.newNames  = [None for i in range(vparamLen)]
 
+		if p.defaults is None:
+			# No code defaults
+			defaults = None
+		elif vparamLen > 0:
+			# Defaults are never used
+			defaults = ()
+		else:
+			# Number of arguments unchanged, defaults may be used, do nothing
+			defaults = p.defaults
+
 		for i, lcl in enumerate(self.newParams):
 			field = self.storeGraph.canonical.fieldName('Array', self.storeGraph.extractor.getObject(i))
 			self.transferReferences(self.vparam, field, lcl)
@@ -165,7 +175,7 @@ class ArgumentNormalizationTransform(TypeDispatcher):
 		kparam = p.kparam
 		returnparams = p.returnparams
 
-		node.codeparameters = ast.CodeParameters(selfparam, parameters, parameternames, vparam, kparam, returnparams)
+		node.codeparameters = ast.CodeParameters(selfparam, parameters, parameternames, defaults, vparam, kparam, returnparams)
 		node.ast = self(node.ast)
 
 def evaluate(compiler):

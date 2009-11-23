@@ -10,7 +10,7 @@ import inspect
 from . disassembler import disassemble
 
 # HACK
-import language.python.ast as cfg
+from language.python import ast
 
 import decompiler.errors
 
@@ -38,7 +38,19 @@ def decompile(compiler, func, trace=False, ssa=True, descriptive=False):
 	except:
 		mname = 'unknown_module'
 
-	return decompileCode(compiler, func.func_code, mname, trace=trace, ssa=ssa, descriptive=descriptive)
+	code = decompileCode(compiler, func.func_code, mname, trace=trace, ssa=ssa, descriptive=descriptive)
+
+	# HACK turn function defaults into code defaults
+	# Really, we should check for immutability / consistency across all functions using this code
+	if func.func_defaults is not None:
+		defaults = [ast.Existing(compiler.extractor.getObject(obj)) for obj in func.func_defaults]
+	else:
+		defaults = []
+
+	# HACK mutate the AST node
+	code.codeparameters.defaults = defaults
+	
+	return code
 
 def decompileCode(compiler, code, mname, trace=False, ssa=True, descriptive=False):
 	return Decompiler(compiler).disassemble(code, mname, trace=trace, ssa=ssa, descriptive=descriptive)

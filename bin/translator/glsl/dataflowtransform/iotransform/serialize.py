@@ -64,7 +64,7 @@ def bindUniforms(compiler, uniforms):
 	
 	body = ast.Suite(serializeUniformNode(compiler, self, uniforms, shader))
 	
-	params = ast.CodeParameters(None, [self, shader], ['self', 'shader'], None, None, [])
+	params = ast.CodeParameters(None, [self, shader], ['self', 'shader'], [], None, None, [])
 	code = ast.Code('bindUniforms', params, body)
 
 	return code
@@ -97,7 +97,7 @@ def bindStreams(context):
 	args = [self]
 	args.extend(streams)
 	names = [arg.name for arg in args]
-	params = ast.CodeParameters(None, args, names, None, None, [])
+	params = ast.CodeParameters(None, args, names, [], None, None, [])
 	code = ast.Code('bindStreams', params, body)
 	
 	return code

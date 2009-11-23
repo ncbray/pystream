@@ -114,7 +114,7 @@ class MarkLive(TypeDispatcher):
 			vparam = self.filterParam(node.vparam)
 			kparam = self.filterParam(node.kparam)
 
-		return ast.CodeParameters(selfparam, params, node.paramnames, vparam, kparam, node.returnparams)
+		return ast.CodeParameters(selfparam, params, node.paramnames, node.defaults, vparam, kparam, node.returnparams)
 
 def evaluateCode(compiler, node, initialLive=None):
 	rewrite = MarkLive(node)

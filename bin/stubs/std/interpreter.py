@@ -13,7 +13,7 @@ import util
 
 def noself(code):
 	p = code.codeparameters
-	code.codeparameters = CodeParameters(None, p.params, p.paramnames, p.vparam, p.kparam, p.returnparams)
+	code.codeparameters = CodeParameters(None, p.params, p.paramnames, p.defaults, p.vparam, p.kparam, p.returnparams)
 	return code
 
 def compileFunction(s, name):

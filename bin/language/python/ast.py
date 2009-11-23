@@ -370,12 +370,13 @@ ParameterDecl = (Local, DoNotCare)
 class CodeParameters(PythonASTNode):
 	# TODO support paramnames:str?* (different than paramnames:str*?)
 	__fields__ = """selfparam:ParameterDecl?
-			params:ParameterDecl* paramnames:(str,NoneType)*
+			params:ParameterDecl* paramnames:(str,NoneType)* defaults:Existing*?
 			vparam:ParameterDecl? kparam:ParameterDecl?
 			returnparams:ParameterDecl*"""
 
 	def codeParameters(self):
-		return util.python.calling.CalleeParams(self.selfparam, self.params, self.paramnames, [], self.vparam, self.kparam, self.returnparams)
+		defaults = self.defaults if self.defaults is not None else ()
+		return util.python.calling.CalleeParams(self.selfparam, self.params, self.paramnames, defaults, self.vparam, self.kparam, self.returnparams)
 
 
 class Code(BaseCode):

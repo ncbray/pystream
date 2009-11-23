@@ -22,10 +22,11 @@ def createShaderProgram(extractor):
 	selfparam = None
 	parameters = (Local('vs'), Local('fs'), Local('shader'))
 	parameternames = ('vs', 'fs', 'shader')
+	defaults = ()
 	streams = Local('streams')
 	returnparams = [Local('return_shader_program')]
 
-	codeparameters = CodeParameters(selfparam, parameters, parameternames, streams, None, returnparams)
+	codeparameters = CodeParameters(selfparam, parameters, parameternames, defaults, streams, None, returnparams)
 
 	vscontext = Local('vs_context')
 	fscontext = Local('fs_context')

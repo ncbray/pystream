@@ -86,7 +86,7 @@ class InterproceduralDataflow(object):
 		# Setup the "external" context, used for creaing bogus slots.
 		self.externalOp  = util.canonical.Sentinel('<externalOp>')
 
-		self.externalFunction = ast.Code('external', ast.CodeParameters(None, [], [], None, None, [ast.Local('internal_return')]), ast.Suite([]))
+		self.externalFunction = ast.Code('external', ast.CodeParameters(None, [], [], [], None, None, [ast.Local('internal_return')]), ast.Suite([]))
 		externalSignature = self._signature(self.externalFunction, None, ())
 		opPath  = self.initialOpPath()
 		self.externalFunctionContext = self._canonicalContext(externalSignature, opPath, self.storeGraph)

@@ -516,11 +516,12 @@ class SSITransformer(StandardVisitor):
 		selfparam = selfparam
 		parameters = params
 		parameternames = p.paramnames
+		defaults = p.defaults
 		vparam = vparam
 		kparam = kparam
 		returnparams = p.returnparams
 
-		node.codeparameters = CodeParameters(selfparam, parameters, parameternames, vparam, kparam, returnparams)
+		node.codeparameters = CodeParameters(selfparam, parameters, parameternames, defaults, vparam, kparam, returnparams)
 		node.ast = ast
 
 		returns = self.handlers.returns.pop()

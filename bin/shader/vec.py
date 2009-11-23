@@ -437,11 +437,6 @@ class vec3(object):
 				self.x = x.x
 				self.y = x.y
 				self.z = y.x
-			elif y is None:
-				self.x = x.x
-				self.y = x.y
-				self.z = x.x
-				self.w = x.y
 			else:
 				pass #assert False, type(y)
 		elif isinstance(x, vec3):
@@ -1471,11 +1466,6 @@ class vec4(object):
 				self.y = x.y
 				self.z = y.x
 				self.w = y.y
-			elif y is None:
-				self.x = x.x
-				self.y = x.y
-				self.z = x.x
-				self.w = x.y
 			else:
 				pass #assert False, type(y)
 		elif isinstance(x, vec3):
@@ -1507,11 +1497,6 @@ class vec4(object):
 				self.y = x.y
 				self.z = x.z
 				self.w = y.x
-			elif y is None:
-				self.x = x.x
-				self.y = x.y
-				self.z = x.z
-				self.w = x.x
 			else:
 				pass #assert False, type(y)
 		elif isinstance(x, vec4):

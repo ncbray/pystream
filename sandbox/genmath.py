@@ -202,7 +202,7 @@ def makeSubconstructor(base, count, baseType, args, indent, srcs=()):
                         makeSubconstructor(base, count, baseType, args[1:], indent+'\t', currentSrcs)
                         
 
-                if count-1 == len(args):
+                if len(srcs) == 1:
                         print "%selif %s is None:" % (indent, args[0])
                         makeSubconstructor(base, count, baseType, (), indent+'\t', srcs*count)
                         

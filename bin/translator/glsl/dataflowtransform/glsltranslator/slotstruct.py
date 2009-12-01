@@ -92,5 +92,5 @@ class SlotStruct(object):
 			print t.__name__, c
 		print
 
-		print codegen.GLSLCodeGen()(self.ast)
+		print codegen.evaluateCode(None, self.ast)
 		print

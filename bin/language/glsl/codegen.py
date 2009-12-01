@@ -1,6 +1,8 @@
 from asttools.transform import *
 from . import ast
 
+from . import codecollapser
+
 class TypeNameGen(TypeDispatcher):
 	@dispatch(ast.BuiltinType)
 	def visitBuiltinType(self, node):
@@ -271,3 +273,7 @@ class GLSLCodeGen(TypeDispatcher):
 		localdecl = self.makeLocalDecl(finder.locals)
 
 		return "%s\n%s %s(%s)\n{\n%s\n%s}\n" % (header, self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.params]), localdecl, self(node.body))
+
+def evaluateCode(compiler, code):
+	code = codecollapser.evaluateCode(compiler, code)
+	return GLSLCodeGen()(code)

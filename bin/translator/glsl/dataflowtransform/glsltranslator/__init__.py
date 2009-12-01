@@ -465,7 +465,7 @@ def process(context):
 	result = gt.process(context.cfg)
 
 	# HACK for debugging
-	s = codegen.GLSLCodeGen()(result)
+	s = codegen.evaluateCode(context.compiler, result)
 	print s
 
 	return compressGLSL(s)

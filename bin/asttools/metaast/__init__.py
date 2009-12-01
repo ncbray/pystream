@@ -201,6 +201,10 @@ class ClassBuilder(object):
 		if not name in self.d:
 			self.d[name] = self.makeFunc(func, args, kargs)
 
+	def copyFunc(self, src, dst):
+		if not dst in self.d:
+			self.d[dst] = self.d[src]
+
 	def addDefaultMethods(self, desc, paramnames, fields, types, optional, shared):
 		dopostinit = self.hasAttr('__postinit__')
 
@@ -224,6 +228,9 @@ class ClassBuilder(object):
 		if self.mutable:
 			self.defaultFunc('visitChildrenForced', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared, 'forced':True})
 			self.defaultFunc('visitChildrenReversedForced', codegeneration.makeVisit, (self.name, desc), {'reverse':True, 'shared':shared, 'forced':True})
+		else:
+			self.copyFunc('visitChildren', 'visitChildrenForced')
+			self.copyFunc('visitChildrenReversed', 'visitChildrenReversedForced')
 
 		# For the sake of uniformity, shared nodes are given a rewrite method even though it does nothing.
 		self.defaultFunc('rewriteChildren', codegeneration.makeRewrite, (self.name, desc), {'reverse':False, 'shared':shared, 'mutate':False, 'vargs':False, 'kargs':False})

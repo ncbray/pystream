@@ -258,6 +258,16 @@ def dotRewrite(self, node):
 		if args is None: return None
 		return glsl.IntrinsicOp('dot', args)
 
+def crossRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		args = coerceArgs(self, *node.args)
+		if args is None: return None
+		return glsl.IntrinsicOp('cross', args)
+
 def lengthRewrite(self, node):
 	if not hasNumArgs(node, 1): return
 
@@ -486,6 +496,7 @@ def makeIntrinsicRewriter(extractor):
 	for v in fvecs: rewriter.attribute(v, '__neg__', negRewrite)
 	for v in fvecs: rewriter.attribute(v, '__abs__', absRewrite)
 
+	rewriter.attribute(vec.vec3, 'cross', crossRewrite)
 
 	rewriter.function(vec.vec4.__dict__['xyz'].fget, swizzleRewrite)
 

@@ -204,8 +204,10 @@ def evaluateContextObject(dioa, lut, exist, lcl, obj, treetype):
 
 def evaluateLocal(dioa, lut, exist, lcl, treetype):
 	if lcl is None: return None
-	if lcl.isDoNotCare(): return IOTreeObj((), None, treetype)
-		
+	
+	if lcl.isDoNotCare() or lcl not in lut:
+		return IOTreeObj((), None, treetype)
+	
 	node = lut[lcl]
 	
 	# The correlated tree

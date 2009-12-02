@@ -86,10 +86,12 @@ def bindStreams(context):
 		name = context.compiler.extractor.getObject("bind_stream_" + t.__name__)
 		
 		shaderName = tree.name
-		shaderNameExpr = ast.Existing(context.compiler.extractor.getObject(shaderName))
 		
-		op = ast.Call(ast.GetAttr(self, ast.Existing(name)), [shaderNameExpr, root], [], None, None)
-		statements.append(ast.Discard(op))		
+		if shaderName is not None:
+			shaderNameExpr = ast.Existing(context.compiler.extractor.getObject(shaderName))
+			
+			op = ast.Call(ast.GetAttr(self, ast.Existing(name)), [shaderNameExpr, root], [], None, None)
+			statements.append(ast.Discard(op))		
 
 	
 	body = ast.Suite(statements)

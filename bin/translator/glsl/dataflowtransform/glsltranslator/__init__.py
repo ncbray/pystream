@@ -297,12 +297,16 @@ class GLSLTranslator(TypeDispatcher):
 		assert len(g.localModifies) == 1
 			
 		# HACK use assignment target slot.
-		target = g.localModifies[0]
-		slot = target.canonical()
+		target   = g.localModifies[0]
+		slot     = target.canonical()
 		poolimpl = self.getPoolImpl(slot)
 		
 		targetInfo = self.getSlotInfo(slot)
-		assert targetInfo.canUnbox()
+		
+#		if not targetInfo.canUnbox():
+#			pi = targetInfo.poolinfo
+#			assert False, (pi.types, pi.objects, pi.nonfinal) 
+#		assert targetInfo.canUnbox(), (slot, g.op)
 
 		src = SlotRef(translated, poolimpl.struct)
 

@@ -148,6 +148,10 @@ class GLSLCodeGen(TypeDispatcher):
 	def visitAssign(self, node, prec=17):
 		return self.wrapSimpleStatement("%s = %s" % (self(node.lcl, 15), self(node.expr, 16)), 16, prec)
 
+	@dispatch(ast.Store)
+	def visitStore(self, node, prec=17):
+		return self.wrapSimpleStatement("%s.%s = %s" % (self(node.expr, 1), node.name, self(node.value, 16)), 16, prec)
+
 	@dispatch(ast.Discard)
 	def visitDiscard(self, node, prec=17):
 		return self.wrapSimpleStatement(self(node.expr, 16), 16, prec)

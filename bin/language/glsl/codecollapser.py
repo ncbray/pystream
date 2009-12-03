@@ -7,14 +7,32 @@ class CollapserAnalysis(TypeDispatcher):
 		self.inputs  = set()
 		self.outputs = set()
 		
+		self.active = set()
+		
 	def addUse(self, lcl):
-		uses, defns = self.stats.get(lcl, (0, 0))		
-		self.stats[lcl] = (uses+1, defns)
+		uses, defns, possible = self.stats.get(lcl, (0, 0, False))
+		
+		if uses == 0 and defns == 1 and lcl in self.active:
+			possible = True
+		else:
+			possible = False
+			
+		self.stats[lcl] = (uses+1, defns, possible)
 
 	def addDefn(self, lcl):
-		uses, defns = self.stats.get(lcl, (0, 0))		
-		self.stats[lcl] = (uses, defns+1)
+		uses, defns, possible = self.stats.get(lcl, (0, 0, False))
 		
+		if defns == 0:
+			self.active.add(lcl)
+		else:
+			possible = False
+			if lcl in self.active: self.active.remove(lcl)
+				
+		self.stats[lcl] = (uses, defns+1, possible)
+	
+	def reset(self):
+		self.active.clear()
+	
 	@dispatch(str, glsl.BuiltinType, glsl.Constant)
 	def visitLeaf(self, node):
 		pass	
@@ -44,6 +62,12 @@ class CollapserAnalysis(TypeDispatcher):
 		else:
 			assert False, type(node.lcl)
 	
+	@dispatch(glsl.Store)
+	def visitStore(self, node):
+		self(node.value)
+		self.reset() # Do not collapse past the store, as it has side effects
+		self(node.expr)
+	
 	@dispatch(glsl.Suite,
 			glsl.Discard, glsl.Return,
 			glsl.BinaryOp, glsl.UnaryPrefixOp, glsl.Constructor,
@@ -64,9 +88,9 @@ class CollapserAnalysis(TypeDispatcher):
 		
 		possible = set()
 		
-		for node, (uses, defns) in self.stats.iteritems():
+		for node, (uses, defns, pos) in self.stats.iteritems():
 			if isinstance(node, glsl.Local):
-				if defns == 1 and uses == 1:
+				if pos and defns == 1 and uses == 1:
 					possible.add(node)
 			elif isinstance(node, glsl.UniformDecl):
 				if uses == 1:
@@ -129,7 +153,7 @@ class CollapserTransform(TypeDispatcher):
 	@dispatch(glsl.Suite,
 			glsl.Discard, glsl.Return,
 			glsl.BinaryOp, glsl.UnaryPrefixOp, glsl.Constructor,
-			glsl.Load,
+			glsl.Load, glsl.Store,
 			glsl.IntrinsicOp # HACK can intrinsic ops mutate?
 			)
 	def visitOK(self, node):

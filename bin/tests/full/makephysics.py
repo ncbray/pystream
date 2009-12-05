@@ -60,7 +60,8 @@ attr(inst(physics.Shader), 'light', inst(physics.PointLight))
 
 attr(inst(physics.Shader), 'ambient',  inst(physics.AmbientLight))
 
-attr(inst(physics.Shader), 'sampler',  inst(sampler.sampler2D))
+attr(inst(physics.Shader), 'sampler',    inst(sampler.sampler2D))
+attr(inst(physics.Shader), 'normalmap',  inst(sampler.sampler2D))
 
 attr(inst(physics.Shader),  'material',  inst(physics.PhongMaterial))
 
@@ -102,4 +103,4 @@ glsl.output(attrslot(inst(FSContext), 'depth'), 'gl_FragDepth');
 
 ### Declare  the shader entrypoint ###
 
-glsl.shader(physics.Shader, inst(vec.vec4), inst(vec.vec3), inst(vec.vec2))
+glsl.shader(physics.Shader, inst(vec.vec4), inst(vec.vec3), inst(vec.vec3), inst(vec.vec3), inst(vec.vec2))

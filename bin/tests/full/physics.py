@@ -205,7 +205,8 @@ class Fog(object):
 class Shader(object):
 	__slots__ = ['objectToWorld', 'worldToCamera', 'projection',
 				'light', 'ambient',
-				'material', 'sampler',
+				'material',
+				'sampler', 'normalmap',
 				'fog']
 
 	def __init__(self):
@@ -231,19 +232,43 @@ class Shader(object):
 
 		self.material = Material()
 		
-		self.sampler  = None
+		self.sampler    = None
+		self.normalmap  = None
 
-	def shadeVertex(self, context, pos, normal, texCoord):
-		trans     = self.worldToCamera*self.objectToWorld
-		newpos    = trans*pos
-		newnormal = trans*vec4(normal, 0.0)
+	def shadeVertex(self, context, pos, normal, tangent, bitangent, texCoord):
+		trans      = self.worldToCamera*self.objectToWorld
+		newpos     = trans*pos
+		
+		newnormal  = (trans*vec4(normal, 0.0)).xyz
+		
+		newtangent = (trans*vec4(tangent.xyz, 0.0)).xyz
+		#newtangent = vec4(newtangent, tangent.w)
+
+		newbitangent  = (trans*vec4(bitangent, 0.0)).xyz
 
 		context.position = self.projection*newpos
 
-		return newpos.xyz, newnormal.xyz, texCoord
+		return newpos.xyz, newnormal, newtangent, newbitangent, texCoord
 
-	def shadeFragment(self, context, pos, normal, texCoord):
-		surface = self.material.surface(pos, normal.normalize())
+	def shadeFragment(self, context, pos, normal, tangent, bitangent, texCoord):
+		n  = normal.normalize()
+				
+		t      = tangent.xyz.normalize()
+		b      = bitangent.normalize()	
+		#btsign = tangent.w
+		#b      = (n.cross(t)*btsign).normalize()
+
+		# Look up the tangent space normal and transform it to camera space
+		tsn = self.normalmap.texture(texCoord).xyz*2.0-1.0
+		
+		normal = vec3(tsn.x*t.x + tsn.y*b.x + tsn.z*n.x,
+					  tsn.x*t.y + tsn.y*b.y + tsn.z*n.y,
+					  tsn.x*t.z + tsn.y*b.z + tsn.z*n.z)
+
+		# Correct errors from the texture normal
+		normal = normal.normalize()
+
+		surface = self.material.surface(pos, normal)
 
 		# Texture
 		surface.diffuseColor *= self.sampler.texture(texCoord).xyz
@@ -255,7 +280,7 @@ class Shader(object):
 		mainColor = surface.litColor()
 		mainColor = self.fog.apply(mainColor, surface.p)
 		mainColor = self.processOutputColor(mainColor)
-		
+
 		mainColor = vec4(mainColor, 1.0)
 		context.colors = (mainColor,)
 

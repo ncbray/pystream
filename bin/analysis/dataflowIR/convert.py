@@ -52,7 +52,10 @@ def gate(pred, value):
 	gate.setPredicate(pred)
 	gate.addRead(value)
 
-	result = value.duplicate()
+	if isinstance(value, graph.ExistingNode):
+		result = graph.LocalNode(pred.hyperblock)
+	else:
+		result = value.duplicate()
 	gate.addModify(result)
 	result = gate.modify
 
@@ -204,6 +207,7 @@ class CodeToDataflow(TypeDispatcher):
 
 	def handleOp(self, node, targets):
 		g = self(node)
+		assert isinstance(g, graph.GenericOp), (node, g)
 		for lcl in targets:
 			target = self.localTarget(lcl)
 			self.set(lcl, target)
@@ -276,7 +280,7 @@ class CodeToDataflow(TypeDispatcher):
 
 	@dispatch(ast.Assign)
 	def processAssign(self, node):
-		if isinstance(node.expr, ast.Local) and len(node.lcls) == 1:
+		if isinstance(node.expr, (ast.Local, ast.Existing)) and len(node.lcls) == 1:
 			# Local copy
 			target = node.lcls[0]
 			g = self.get(node.expr)

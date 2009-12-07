@@ -145,7 +145,7 @@ class GLSLTranslator(TypeDispatcher):
 		return self.localNodeRef(node)
 
 	def localNodeRef(self, lcl):
-		assert isinstance(lcl, graph.LocalNode), lcl
+		assert isinstance(lcl, (graph.LocalNode, graph.ExistingNode)), lcl
 		lcl = lcl.canonical()				
 		indexName = self.uniqueLocalForSlot(lcl)
 		return indexName
@@ -330,7 +330,13 @@ class GLSLTranslator(TypeDispatcher):
 	@dispatch(graph.Gate)
 	def visitGate(self, node):
 		srcSlot = node.read.canonical()
-		lcl  = self.localNodeRef(srcSlot)				
+		
+		
+		if srcSlot.isExisting():
+			lcl = self.makeConstant(srcSlot.name.pyobj)
+		else:
+			lcl  = self.localNodeRef(srcSlot)
+							
 		src = SlotRef(lcl, self.slotStruct(srcSlot))	
 
 		dstSlot = self.getGateTarget(node)

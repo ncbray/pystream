@@ -68,6 +68,16 @@ class CollapserAnalysis(TypeDispatcher):
 		self.reset() # Do not collapse past the store, as it has side effects
 		self(node.expr)
 	
+	@dispatch(glsl.Switch)
+	def visitSwitch(self, node):
+		# TODO branch actives instead of reseting?
+		self(node.condition)
+		self.reset()
+		self(node.t)
+		self.reset()
+		self(node.f)
+		self.reset()
+	
 	@dispatch(glsl.Suite,
 			glsl.Discard, glsl.Return,
 			glsl.BinaryOp, glsl.UnaryPrefixOp, glsl.Constructor,
@@ -150,7 +160,7 @@ class CollapserTransform(TypeDispatcher):
 		return glsl.Assign(expr, node.lcl)
 
 	
-	@dispatch(glsl.Suite,
+	@dispatch(glsl.Suite, glsl.Switch,
 			glsl.Discard, glsl.Return,
 			glsl.BinaryOp, glsl.UnaryPrefixOp, glsl.Constructor,
 			glsl.Load, glsl.Store,

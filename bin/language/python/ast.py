@@ -295,6 +295,9 @@ class EndFinally(ControlFlow):
 	pass
 
 
+class Assert(ControlFlow):
+	__fields__ = 'test message?'
+
 ###########
 ### CFG ###
 ###########

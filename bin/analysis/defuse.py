@@ -120,6 +120,11 @@ class DefUseVisitor(TypeDispatcher):
 		self.use(node, node.left)
 		self.use(node, node.right)
 
+	@dispatch(ast.Assert)
+	def visitAssert(self, node):
+		self.use(node, node.test)
+		self.use(node, node.message)
+
 	def handleArgs(self, node):
 		for arg in node.args:
 			self.use(node, arg)

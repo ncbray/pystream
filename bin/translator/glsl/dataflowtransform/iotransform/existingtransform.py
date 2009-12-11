@@ -47,7 +47,8 @@ class ExistingTransform(TypeDispatcher):
 		decorators = [decorator.rewriteChildren(self) for decorator in node.decorators]
 		return ast.FunctionDef(node.name, code, decorators) 
 	
-	@dispatch(ast.ClassDef, ast.GetGlobal, ast.CodeParameters, ast.Suite, 
+	@dispatch(ast.ClassDef, ast.GetGlobal, ast.CodeParameters, ast.Suite,
+			ast.Switch, ast.Condition, ast.Assert,
 			ast.Assign, ast.Discard,
 			ast.Call, ast.GetAttr)
 	def visitOK(self, node):

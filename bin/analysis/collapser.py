@@ -233,6 +233,15 @@ class Collapser(TypeDispatcher):
 			self.resetStack()
 			self.process(node.expr)
 
+	@dispatch(ast.Assert)
+	def visitAssert(self, node):
+		self.resetStack()
+		self.process(node.message)
+		self.process(node.test)
+		# HACK should to collapse asserts?
+		self.markPossible(node.test, node.message)
+
+
 	@dispatch(ast.BinaryOp, ast.Is)
 	def visitBinaryOp(self, node):
 		self.process(node.right)

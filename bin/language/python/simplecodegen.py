@@ -553,6 +553,14 @@ class SimpleCodeGen(StandardVisitor):
 		stmt = self.seg.process(node.expr)
 		self.emitStatement(stmt)
 
+	def visitAssert(self, node):
+		if node.message:
+			stmt = "assert %s, %s" % (self.seg.process(node.test, 24), self.seg.process(node.message, 24))
+		else:
+			stmt = "assert %s" % (self.seg.process(node.test, 24))
+
+		self.emitStatement(stmt)
+
 	def visitStore(self, node):
 		stmt = "<store>(%s, %r, %s, %s)" % (self.seg.process(node.expr, 24), node.fieldtype, self.seg.process(node.name, 24), self.seg.process(node.value, 24))
 		self.emitStatement(stmt)

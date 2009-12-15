@@ -1,4 +1,4 @@
-from asttools.origin import originString
+from util.asttools.origin import originString
 
 class TranslationError(Exception):
 	def __init__(self, code, node, reason):

@@ -3,7 +3,7 @@ import sys
 from language.python import ast
 from language.python.simplecodegen import SimpleCodeGen
 
-from asttools.astpprint import pprint
+from util.asttools.astpprint import pprint
 
 from ... import intrinsics
 

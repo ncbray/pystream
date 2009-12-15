@@ -1,7 +1,7 @@
 from util.io.xmloutput  import XMLOutput
 from language.python import simplecodegen
-from asttools import astpprint
-from asttools.origin import originString
+from util.asttools import astpprint
+from util.asttools.origin import originString
 
 import config
 import os.path

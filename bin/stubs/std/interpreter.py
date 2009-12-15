@@ -3,7 +3,7 @@
 from __future__ import absolute_import
 
 from  language.python.ast import *
-from  asttools.origin import Origin
+from util.asttools.origin import Origin
 
 from .. stubcollector import stubgenerator
 

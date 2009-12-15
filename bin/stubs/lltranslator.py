@@ -2,7 +2,7 @@ from util.typedispatch import *
 from language.python import ast
 
 # HACK for debugging
-from asttools import astpprint
+from util.asttools import astpprint
 
 import optimization.simplify
 import optimization.convertboolelimination

@@ -5,7 +5,7 @@ from util.typedispatch import *
 from analysis.cfgIR.cfg import *
 
 from language.python import ast
-from asttools import astpprint
+from util.asttools import astpprint
 
 from util.application.async import *
 

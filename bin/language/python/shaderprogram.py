@@ -1,5 +1,4 @@
 from language.python.ast import *
-import asttools.annotation as annotation
 
 ### BEGIN support code ###
 

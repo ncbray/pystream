@@ -1,5 +1,5 @@
 from util.typedispatch import *
-from asttools.origin import originString
+from util.asttools.origin import originString
 
 from language.python import ast
 from language.python import program

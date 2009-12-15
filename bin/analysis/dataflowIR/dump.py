@@ -3,7 +3,7 @@ from language.python import ast
 
 import pydot
 from util.io import filesystem
-from asttools import astpprint
+from util.asttools import astpprint
 
 import analysis.dataflowIR.graph as graph
 

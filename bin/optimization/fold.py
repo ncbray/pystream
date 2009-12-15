@@ -1,5 +1,5 @@
 from util.typedispatch import *
-import asttools.annotation
+from util.asttools import annotation
 
 from language.python import ast
 
@@ -147,9 +147,9 @@ class FoldRewrite(TypeDispatcher):
 
 	# Filter out all the references that don't match the type.
 	def filterReferenceAnnotationByType(self, a, group):
-		filtered = [asttools.annotation.annotationSet([ref for ref in crefs if self.typeMatch(ref, group)])
+		filtered = [annotation.annotationSet([ref for ref in crefs if self.typeMatch(ref, group)])
 				for crefs in a.references.context]
-		filtered = asttools.annotation.makeContextualAnnotation(filtered)
+		filtered = annotation.makeContextualAnnotation(filtered)
 		return a.rewrite(references=filtered)
 
 	# If the argument at pos in the invocation context does not have a
@@ -168,7 +168,7 @@ class FoldRewrite(TypeDispatcher):
 	# Filter out these invocations.
 	def filterOpAnnotationByType(self, a, group, pos):
 		newcinvokes = [self.filterInvokesByType(invokes, group, pos) for invokes in a.invokes.context]
-		invokes     = asttools.annotation.makeContextualAnnotation(newcinvokes)
+		invokes     = annotation.makeContextualAnnotation(newcinvokes)
 		return a.rewrite(invokes=invokes)
 
 	# Make a mask to kill contexts that have no references... they will never be evaluated.
@@ -289,7 +289,7 @@ class FoldRewrite(TypeDispatcher):
 
 	def existingFromNode(self, cobj):
 		node = ast.Existing(cobj.xtype.obj)
-		references = asttools.annotation.makeContextualAnnotation([(cobj,) for context in self.code.annotation.contexts])
+		references = annotation.makeContextualAnnotation([(cobj,) for context in self.code.annotation.contexts])
 		node.rewriteAnnotation(references=references)
 		return node
 

@@ -12,7 +12,7 @@ function = xtypes.FunctionType
 
 from .. stubcollector import stubgenerator
 
-from asttools.origin import Origin
+from util.asttools.origin import Origin
 
 
 @stubgenerator

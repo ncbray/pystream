@@ -13,21 +13,50 @@ import util.filesystem
 
 from . import existingtransform
 
-def serializeUniformNode(compiler, self, tree, root):
-	statements = []
-
-	types = set([k.xtype.obj.pythonType() for k in tree.objMasks.iterkeys()])
-	assert len(types) == 1
+def bindUniform(compiler, self, name, t, value):
+	methodName = compiler.extractor.getObject("bind_uniform_" + t.__name__)
 	
-	t = types.pop()
-	if intrinsics.isIntrinsicType(t):		
-		name = compiler.extractor.getObject("bind_uniform_" + t.__name__)
+	shaderNameExpr = ast.Existing(compiler.extractor.getObject(name))
+	
+	op = ast.Call(ast.GetAttr(self, ast.Existing(methodName)), [shaderNameExpr, value], [], None, None)
+	return ast.Discard(op)
+	
+
+# TODO mask?
+def serializeUniformNode(compiler, self, tree, root):
+	types = sorted(set([k.xtype.obj.pythonType() for k in tree.objMasks.iterkeys()]))
+	assert len(types) > 0
+	
+	if len(types) == 1:
+		return handleUniformType(compiler, self, tree, root, types[0])	
+	else:
+		switches = []
+		for t in types:
+			clsExpr = ast.Existing(compiler.extractor.getObject(t))
+			isinstanceExpr = ast.GetGlobal(ast.Existing(compiler.extractor.getObject('isinstance')))
+			cond  = ast.Call(isinstanceExpr, [root, clsExpr], [], None, None)
+			suite = ast.Suite(handleUniformType(compiler, self, tree, root, t))
+			
+			# Bind an integer that indicated the type of the object?
+			value = ast.Existing(compiler.extractor.getObject(len(types)))
+			suite = ast.Suite([bindUniform(compiler, self, 'bogus', int, value) ,suite])
+			
+			switches.append((cond, suite))
 		
-		shaderName = tree.name
-		shaderNameExpr = ast.Existing(compiler.extractor.getObject(shaderName))
+		current = ast.Suite([ast.Assert(ast.Existing(compiler.extractor.getObject(False)), None)])
 		
-		op = ast.Call(ast.GetAttr(self, ast.Existing(name)), [shaderNameExpr, root], [], None, None)
-		statements.append(ast.Discard(op))
+		for cond, suite in reversed(switches):
+			current = ast.Switch(ast.Condition(ast.Suite([]), cond), suite, ast.Suite([current]))
+		
+		return [current]
+	
+def handleUniformType(compiler, self, tree, root, t):
+	statements = []	
+	
+	if intrinsics.isIntrinsicType(t):	
+		statements.append(bindUniform(compiler, self, tree.name, t, root))
+	
+	# TODO mutually exclusive?
 	
 	for field, child in tree.fields.iteritems():
 		if not intrinsics.isIntrinsicField(field):
@@ -41,6 +70,9 @@ def serializeUniformNode(compiler, self, tree, root):
 
 			# HACK may have been renamed...
 			assert cls.__dict__[attr] is descriptor, "Can't find original descriptor!"
+			
+			# This field is obviously not on the object
+			if not issubclass(t, cls): continue
 			
 			# Load the field
 			clsExpr  = ast.Existing(compiler.extractor.getObject(cls))

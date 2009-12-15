@@ -48,6 +48,8 @@ class PoolInfo(Mergable):
 		self.preexisting = False
 		self.allocated   = False
 
+		self.typeTaken   = False
+
 		self.contains    = set()
 
 		# Derived
@@ -102,6 +104,7 @@ class PoolInfo(Mergable):
 		self.nonfinal    |= other.nonfinal
 		self.preexisting |= other.preexisting
 		self.allocated   |= other.allocated
+		self.typeTaken   |= other.typeTaken
 
 		self.contains.update(other.contains)
 		del other.contains
@@ -129,6 +132,7 @@ class PoolInfo(Mergable):
 			print "Pre/Alloc", self.preexisting, "/", self.allocated
 			print "U/N", self.uniqueCount, "/", self.nonuniqueCount
 			print "Types", sorted(self.types)
+			print "Type Taken", self.typeTaken
 			print "Contains", sorted(self.contains)
 			print sorted(self.objects)
 			print sorted(self.intrinsics)
@@ -308,12 +312,12 @@ class PoolAnalysis(TypeDispatcher):
 
 	@dispatch(ast.TypeSwitch)
 	def visitTypeSwitch(self, node, g):
-		# TODO union locals?
-
 		read = g.localReads[node.conditional]
 		modifies = g.localModifies
 		self.unionSlots(read, *modifies)
 
+		info = self.getSlotInfo(read)
+		info.poolinfo.typeTaken = True
 
 	@dispatch(graph.Entry, graph.Exit,
 	graph.LocalNode, graph.FieldNode, graph.PredicateNode,

@@ -64,6 +64,8 @@ attr(inst(physics.Shader), 'sampler',    inst(sampler.sampler2D))
 attr(inst(physics.Shader), 'normalmap',  inst(sampler.sampler2D))
 
 attr(inst(physics.Shader),  'material',  inst(physics.PhongMaterial))
+attr(inst(physics.Shader),  'material',  inst(physics.LambertMaterial))
+
 
 attr(inst(physics.Material), 'diffuseColor',    inst(vec.vec3))
 attr(inst(physics.Material), 'specularColor',   inst(vec.vec3))
@@ -73,6 +75,10 @@ attr(inst(physics.PhongMaterial),   'shinny',     inst(float))
 # HACK don't the declarations from the base class take effect?
 attr(inst(physics.PhongMaterial), 'diffuseColor',    inst(vec.vec3))
 attr(inst(physics.PhongMaterial), 'specularColor',   inst(vec.vec3))
+
+attr(inst(physics.LambertMaterial), 'diffuseColor',    inst(vec.vec3))
+attr(inst(physics.LambertMaterial), 'specularColor',   inst(vec.vec3))
+
 
 attr(inst(physics.PointLight), 'position',    inst(vec.vec3))
 attr(inst(physics.PointLight), 'color',       inst(vec.vec3))

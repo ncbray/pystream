@@ -280,6 +280,21 @@ class GenericOpFunction(TypeDispatcher):
 		# Note that if the predicate cannot be true, the results are undefined.
 		return tuple(self.results)
 
+	def correlationFixup(self, analysis, g):
+		# TODO functions can't inject new correlations, so we must fix it up afterwards?
+		
+		# Type switch fixup
+		if isinstance(g.op, ast.TypeSwitch):
+			# Creates a new correlation for the type switch (g.op)
+			correlation = analysis.cond.condition(g.op, range(len(g.op.cases)))
+
+			for mask, pnode, enode in zip(correlation.mask.itervalues(), g.predicates, g.localModifies):
+				# Mask the predicate
+				analysis.maskSetValue(pnode, 0, mask)
+				
+				# Mask the local, if present
+				if enode is not None: analysis.maskSetValue(enode, 0, mask)
+
 	def dispatch(self, analysis, g):
 		self.init(analysis, g)
 		self.registerIO(analysis, g)
@@ -291,15 +306,7 @@ class GenericOpFunction(TypeDispatcher):
 		for node, index, position in self.outputs:
 			analysis.setValue(node, index, result[position])
 
-		# Type switch fixup
-		# TODO functions can't inject new correlations, so we must fixup?
-		if isinstance(g.op, ast.TypeSwitch):
-			correlation = analysis.cond.condition(g.op, range(len(g.op.cases)))
-
-			for mask, pnode, enode in zip(correlation.mask.itervalues(), g.predicates, g.localModifies):
-				analysis.maskSetValue(pnode, 0, mask)
-				if enode is not None: analysis.maskSetValue(enode, 0, mask)
-
+		self.correlationFixup(analysis, g)
 
 		analysis.opReads[g]     = result[self.readPosition]
 		analysis.opModifies[g]  = result[self.modifyPosition]

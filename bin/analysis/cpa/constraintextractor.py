@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 from asttools.origin import originString
 
 from language.python import ast
@@ -123,7 +123,7 @@ class ExtractDataflow(TypeDispatcher):
 
 	@dispatch(ast.Suite, ast.Condition)
 	def visitOK(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
 	@dispatch(list)
 	def visitList(self, node):

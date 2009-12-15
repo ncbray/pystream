@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 from analysis.astcollector import getOps
 
@@ -11,6 +11,9 @@ class Finder(object):
 			self.processed.add(node)
 			for child in self.children(node):
 				self.process(child)
+
+	def children(self, node):
+		raise NotImplementedError
 
 class CallGraphFinder(Finder):
 	def __init__(self):
@@ -80,7 +83,12 @@ def findLiveContexts(interface):
 
 class LiveHeapFinder(TypeDispatcher):
 	def __init__(self):
+		TypeDispatcher.__init__(self)
 		self.live = set()
+
+	@dispatch(str, int, type(None))
+	def visitLeaf(self, node):
+		pass
 
 	@dispatch(ast.Local, ast.Existing)
 	def visitReference(self, node):
@@ -88,7 +96,7 @@ class LiveHeapFinder(TypeDispatcher):
 
 	@defaultdispatch
 	def visitDefault(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
 	def process(self, code):
 		for child in code.children():

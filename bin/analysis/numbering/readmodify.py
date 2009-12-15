@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 
 class ReadModifyInfo(object):
@@ -36,18 +36,18 @@ class FindReadModify(TypeDispatcher):
 	@dispatch(ast.Allocate)
 	def visitAllocate(self, node, info):
 		# TODO what about type/field nullification?
-		visitAllChildrenArgs(self, node, info)
+		node.visitChildrenArgs(self, info)
 
 	@dispatch(ast.Load, ast.Check)
 	def visitMemoryExpr(self, node, info):
-		visitAllChildrenArgs(self, node, info)
+		node.visitChildrenArgs(self, info)
 		info.fieldRead.update(node.annotation.reads[0])
 		info.fieldModify.update(node.annotation.modifies[0])
 
 	@dispatch(ast.Store)
 	def visitStore(self, node):
 		info = ReadModifyInfo()
-		visitAllChildrenArgs(self, node, info)
+		node.visitChildrenArgs(self, info)
 		info.fieldRead.update(node.annotation.reads[0])
 		info.fieldModify.update(node.annotation.modifies[0])
 		self.lut[node] = info
@@ -56,7 +56,7 @@ class FindReadModify(TypeDispatcher):
 
 	@dispatch(ast.DirectCall, ast.Call, ast.MethodCall)
 	def visitDirectCall(self, node, info):
-		visitAllChildrenArgs(self, node, info)
+		node.visitChildrenArgs(self, info)
 		info.fieldRead.update(node.annotation.reads[0])
 		info.fieldModify.update(node.annotation.modifies[0])
 
@@ -84,7 +84,8 @@ class FindReadModify(TypeDispatcher):
 
 	@dispatch(list)
 	def visitList(self, node, info):
-		visitAllChildrenArgs(self, node, info)
+		for child in node:
+			self(child, info)
 
 	@dispatch(ast.Suite)
 	def visitSuite(self, node):

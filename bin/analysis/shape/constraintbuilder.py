@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 
 from . model import expressions
@@ -10,11 +10,16 @@ import util.python.calling
 
 class GetLocals(TypeDispatcher):
 	def __init__(self):
+		TypeDispatcher.__init__()
 		self.locals = set()
 
 	@defaultdispatch
 	def default(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
+
+	@dispatch(str, int, type(None))
+	def visitLeaf(self, node):
+		pass
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):

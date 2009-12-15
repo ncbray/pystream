@@ -1,9 +1,10 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 from language.python import annotations
 
 class ArgumentNormalizationAnalysis(TypeDispatcher):
 	def __init__(self, storeGraph):
+		TypeDispatcher.__init__(self)
 		self.storeGraph = storeGraph
 		self.applicable = True
 		self.vparam = None
@@ -33,10 +34,15 @@ class ArgumentNormalizationAnalysis(TypeDispatcher):
 			if node.kargs is self.vparam:
 				self.applicable = False
 
+	@dispatch(list, tuple)
+	def visitContainer(self, node):
+		for child in node:
+			self(child)
+
 	@defaultdispatch
 	def visitDefault(self, node):
 		if self.applicable:
-			visitAllChildren(self, node)
+			node.visitChildren(self)
 
 	def process(self, node):
 		if not node.isStandardCode():
@@ -81,7 +87,15 @@ class ArgumentNormalizationTransform(TypeDispatcher):
 
 	@defaultdispatch
 	def visitDefault(self, node):
-		return allChildren(self, node)
+		return node.rewriteChildren(self)
+
+	@dispatch(list, tuple)
+	def visitContainer(self, node):
+		return [self(child) for child in node]
+
+	@dispatch(str, int, type(None))
+	def visitLeaf(self, node):
+		return None
 
 	@dispatch(ast.Call)
 	def visitCall(self, node):
@@ -95,7 +109,7 @@ class ArgumentNormalizationTransform(TypeDispatcher):
 			result.annotation = node.annotation
 			return result
 		else:
-			return allChildren(self, node)
+			return node.rewriteChildren(self)
 
 	@dispatch(ast.MethodCall)
 	def visitMethodCall(self, node):
@@ -109,7 +123,7 @@ class ArgumentNormalizationTransform(TypeDispatcher):
 			result.annotation = node.annotation
 			return result
 		else:
-			return allChildren(self, node)
+			return node.rewriteChildren(self)
 
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node):
@@ -124,7 +138,7 @@ class ArgumentNormalizationTransform(TypeDispatcher):
 			return result
 
 		else:
-			return allChildren(self, node)
+			return node.rewriteChildren(self)
 
 	def extend(self, old, new):
 		return list(old)+new

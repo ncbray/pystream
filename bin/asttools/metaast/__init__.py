@@ -225,12 +225,16 @@ class ClassBuilder(object):
 		self.defaultFunc('visitChildren', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared})
 		self.defaultFunc('visitChildrenReversed', codegeneration.makeVisit, (self.name, desc), {'reverse':True, 'shared':shared})
 
+		self.defaultFunc('visitChildrenArgs', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared, 'vargs':True})
+
 		if self.mutable:
 			self.defaultFunc('visitChildrenForced', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared, 'forced':True})
 			self.defaultFunc('visitChildrenReversedForced', codegeneration.makeVisit, (self.name, desc), {'reverse':True, 'shared':shared, 'forced':True})
+			self.defaultFunc('visitChildrenForcedArgs', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared, 'forced':True, 'vargs':True})
 		else:
 			self.copyFunc('visitChildren', 'visitChildrenForced')
 			self.copyFunc('visitChildrenReversed', 'visitChildrenReversedForced')
+			self.copyFunc('visitChildrenArgs', 'visitChildrenForcedArgs')
 
 		# For the sake of uniformity, shared nodes are given a rewrite method even though it does nothing.
 		self.defaultFunc('rewriteChildren', codegeneration.makeRewrite, (self.name, desc), {'reverse':False, 'shared':shared, 'mutate':False, 'vargs':False, 'kargs':False})

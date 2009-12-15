@@ -1,8 +1,9 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 
 import collections
 
+leafs = (str, int, type(None))
 
 class DFS(object):
 	def __init__(self, pre):
@@ -18,15 +19,17 @@ class DFS(object):
 
 		self.pre(node)
 
+		# Don't recurse on leaf nodes
+		if isinstance(node, leafs): return
+
 		# Recurse
 
 		# HACK we must analyze the code inside MakeFunction
 		doForce = isinstance(node, ast.MakeFunction)
 		if force or doForce:
-			visitAllChildrenForced(self.visit, node, doForce)
+			node.visitChildrenForcedArgs(self.visit, doForce)
 		else:
-			visitAllChildren(self.visit, node)
-
+			node.visitChildren(self.visit)
 
 	def process(self, node):
 		# Force the traversal of the entry point.
@@ -35,6 +38,8 @@ class DFS(object):
 
 class DefUseVisitor(TypeDispatcher):
 	def __init__(self):
+		TypeDispatcher.__init__(self)
+
 		self.lcldef 	= collections.defaultdict(list)
 		self.lcluse 	= collections.defaultdict(list)
 

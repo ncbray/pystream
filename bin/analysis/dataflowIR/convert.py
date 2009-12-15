@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 
 from analysis.dataflowIR import graph
@@ -26,6 +26,9 @@ class AbstractState(object):
 		else:
 			result = self.slots[slot]
 		return result
+
+	def generate(self, slot):
+		raise NotImplementedError
 
 class State(AbstractState):
 	def __init__(self, hyperblock, predicate, parent):
@@ -343,9 +346,9 @@ class CodeToDataflow(TypeDispatcher):
 	def processLeaf(self, node):
 		return None
 
-	@dispatch(ast.Suite, list, tuple)
+	@dispatch(ast.Suite)
 	def processOK(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
 	def handleExit(self):
 		state = self.mergeStates(self.returns)

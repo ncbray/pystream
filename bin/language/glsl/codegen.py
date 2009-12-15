@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 from . import ast
 
 from . import codecollapser
@@ -20,7 +20,16 @@ class TypeNameGen(TypeDispatcher):
 class FindLocals(TypeDispatcher):
 	@defaultdispatch
 	def visitOK(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
+
+	@dispatch(list, tuple)
+	def visitContainer(self, node):
+		for child in node:
+			self(child)
+
+	@dispatch(str, int, type(None))
+	def visitLeaf(self, node):
+		pass
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):

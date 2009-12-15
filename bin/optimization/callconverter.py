@@ -1,13 +1,12 @@
-from asttools.transform import *
-
+from util.typedispatch import *
 from language.python import ast
-from language.python import program
 
 from util.python import opnames
 
 
 class ConvertCalls(TypeDispatcher):
 	def __init__(self, extractor, code):
+		TypeDispatcher.__init__(self)
 		self.extractor = extractor
 		self.code = code
 
@@ -26,17 +25,21 @@ class ConvertCalls(TypeDispatcher):
 	def visitLeaf(self, node):
 		return node
 
-	@dispatch(ast.Suite, ast.Condition, list, tuple,
+	@dispatch(list, tuple)
+	def visitContainer(self, node):
+		return [self(child) for child in node]
+
+	@dispatch(ast.Suite, ast.Condition,
 		  ast.Assign, ast.Discard, ast.Return,
 		  ast.Is, ast.Allocate, ast.Store, ast.Load, ast.Check,
 		  ast.Switch, ast.For, ast.While,
 		  ast.TypeSwitch, ast.TypeSwitchCase)
 	def visitOK(self, node):
-		return allChildren(self, node)
+		return node.rewriteChildren(self)
 
 	@dispatch(ast.Call, ast.DirectCall, ast.MethodCall)
 	def visitCall(self, node):
-		return allChildren(self, node)
+		return node.rewriteChildren(self)
 
 	@dispatch(ast.ConvertToBool)
 	def visitConvertToBool(self, node):
@@ -123,5 +126,5 @@ class ConvertCalls(TypeDispatcher):
 
 def callConverter(extractor, node):
 	converter = ConvertCalls(extractor, node)
-	replaceAllChildren(converter, node)
+	node.replaceChildren(converter)
 	return node

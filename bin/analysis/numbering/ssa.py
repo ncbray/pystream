@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 
 class ForwardESSA(TypeDispatcher):
@@ -340,11 +340,16 @@ class ForwardESSA(TypeDispatcher):
 
 	@dispatch(ast.Allocate, ast.Load, ast.Check, ast.DirectCall)
 	def processOP(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
-	@dispatch(ast.Suite, list, tuple)
+	@dispatch(ast.Suite)
 	def processOK(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
+
+	@dispatch(list, tuple)
+	def processContainer(self, node):
+		for child in node:
+			self(child)
 
 	def renameParam(self, p):
 		if isinstance(p, ast.Local):

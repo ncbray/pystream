@@ -1,11 +1,11 @@
 # Split contexts unless types match
-# Add type-switched disbatch where cloning does not work?
+# Add type-switched dispatch where cloning does not work?
 
 # Whole program optimization
 
 import collections
 from PADS.UnionFind import UnionFind
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 import optimization.simplify
 from analysis import programculler
@@ -18,7 +18,7 @@ class GroupUnifier(object):
 		self.dirty         = set()
 
 	def init(self, context):
-		self.unify[context]
+		self.unify[context] # Make sure context is in the union find
 		self.unifyGroups[context] = set((context,))
 		self.dirty.add(context)
 
@@ -37,7 +37,7 @@ class GroupUnifier(object):
 			group.update(self.unifyGroups[context])
 			del self.unifyGroups[context]
 
-			# The context may be unified, so make sure it doesn't hang arround.
+			# The context may be unified, so make sure it doesn't hang around.
 			if context in self.dirty: self.dirty.remove(context)
 
 		# Mark the context for processing.
@@ -54,7 +54,7 @@ class GroupUnifier(object):
 	def group(self, context):
 		return self.unifyGroups[context]
 
-# Figures out what functions should have seperate implementations,
+# Figures out what functions should have separate implementations,
 # to improve optimization / realizability
 class ProgramCloner(object):
 	def __init__(self, liveContexts):
@@ -515,9 +515,13 @@ class FunctionCloner(TypeDispatcher):
 			lcl = self.localMap[node]
 		return lcl
 
+	@dispatch(str, int, type(None))
+	def visitLeaf(self, node):
+		return node
+
 	@defaultdispatch
 	def default(self, node):
-		result = allChildren(self, node, clone=True)
+		result = node.rewriteCloned(self)
 		self.transferAnalysisData(node, result)
 		return result
 
@@ -586,7 +590,7 @@ class FunctionCloner(TypeDispatcher):
 		replacement.annotation = original.annotation.contextSubset(self.contextRemap)
 
 	def process(self):
-		replaceAllChildren(self, self.code)
+		self.code.replaceChildren(self)
 
 def evaluate(compiler):
 	with compiler.console.scope('clone'):

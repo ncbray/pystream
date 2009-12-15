@@ -1,8 +1,9 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 
 class Collapser(TypeDispatcher):
 	def __init__(self, defines, uses):
+		TypeDispatcher.__init__(self)
 		self.defines	= defines
 		self.uses 	= uses
 		self.resetStack()
@@ -41,11 +42,11 @@ class Collapser(TypeDispatcher):
 
 	@dispatch(ast.Suite)
 	def visitSuite(self, node):
-		visitAllChildrenReversed(self.process, node.blocks)
+		node.visitChildrenReversed(self.process)
 
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
-		visitAllChildrenReversed(self.process, node.exprs)
+		node.visitChildrenReversed(self.process)
 
 		for expr in node.exprs:
 			if not isinstance(expr, ast.Existing):

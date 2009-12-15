@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 
 import collections
@@ -211,20 +211,18 @@ class BuildDataflowNetwork(TypeDispatcher):
 	def visitLeaf(self, node):
 		pass
 
-	@dispatch(ast.Suite, list, tuple, ast.Switch, ast.Condition, ast.Assign, ast.Discard)
+	@dispatch(ast.Suite, ast.Switch, ast.Condition, ast.Assign, ast.Discard)
 	def visitOK(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
 	@dispatch(ast.For, ast.While)
 	def visitFor(self, node):
-		# TODO evalute preample outside "loopLevel"
+		# TODO evaluate preamble outside "loopLevel"
 		self.loopLevel += 1
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 		self.loopLevel -= 1
 
 	def processCode(self, node):
-		#lut = self.fms.processCode(node)
-
 		self.contexts += 1
 		if node not in self.contextLUT:
 			self.contextLUT[node] = 1
@@ -233,8 +231,6 @@ class BuildDataflowNetwork(TypeDispatcher):
 
 		for child in node.children():
 			self(child)
-
-
 
 
 class Operation(object):
@@ -298,7 +294,7 @@ class MarkUses(TypeDispatcher):
 
 	@dispatch(list, tuple)
 	def visitContainer(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
@@ -306,7 +302,7 @@ class MarkUses(TypeDispatcher):
 
 	def process(self, node):
 		self.op = node
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
 
 class BuildCorrelatedDataflow(TypeDispatcher):
@@ -403,9 +399,9 @@ class BuildCorrelatedDataflow(TypeDispatcher):
 		self.defineOp(node, [])
 		self.returns = [self.useLocal(node, lcl) for lcl in node.exprs]
 
-	@dispatch(ast.Suite, list)
+	@dispatch(ast.Suite)
 	def visitOK(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
 	@dispatch(str, ast.CodeParameters)
 	def visitLeaf(self, node):
@@ -454,8 +450,6 @@ def checkRecursive(compiler):
 	recursive = findRecursiveGroups(liveInvocations)
 	return recursive
 
-#def evaluateCode(compiler, code):
-#	pass
 
 def evaluate(compiler):
 	with compiler.console.scope('fsdf'):
@@ -484,7 +478,6 @@ def evaluate(compiler):
 		print "Unique Allocated"
 		for obj in bdfn.uniqueAllocated:
 			print '\t', obj
-
 
 #		bcd = BuildCorrelatedDataflow()
 #		for ep in compiler.interface.entryPoint:

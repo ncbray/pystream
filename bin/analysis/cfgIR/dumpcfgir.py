@@ -7,7 +7,7 @@ from analysis.cfgIR.cfg import *
 from language.python import ast
 from asttools import astpprint
 
-from util.async import *
+from util.application.async import *
 
 
 class CFGIRStyle(TypeDispatcher):

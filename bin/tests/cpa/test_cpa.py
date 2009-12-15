@@ -6,7 +6,7 @@ import application.makefile
 from decompiler.programextractor import extractProgram
 
 
-from util.console import Console
+from util.application.console import Console
 from application.context import CompilerContext
 
 from decompiler.programextractor import Extractor

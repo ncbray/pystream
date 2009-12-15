@@ -3,7 +3,7 @@ import os.path
 
 from decompiler.programextractor import extractProgram
 import application.pipeline
-from util import console
+from util.application.console import Console
 from application import context
 
 from interface import *
@@ -88,7 +88,7 @@ class Makefile(object):
 		exec f in makeDSL
 
 	def pystreamCompile(self):
-		compiler = context.CompilerContext(console.Console())
+		compiler = context.CompilerContext(Console())
 
 		with compiler.console.scope("makefile"):
 			compiler.console.output("Processing %s" % self.filename)

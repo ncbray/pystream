@@ -7,7 +7,7 @@ from asttools import astpprint
 
 import analysis.dataflowIR.graph as graph
 
-from util.async import *
+from util.application.async import *
 
 class NodeStyle(TypeDispatcher):
 	localColor     = 'lime'

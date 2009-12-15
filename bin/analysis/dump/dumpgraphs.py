@@ -2,7 +2,7 @@ import os.path
 import pydot
 import util.graphalgorithim.dominator
 from analysis.dump import dumputil
-from util.async import *
+from util.application.async import *
 from util.io import filesystem
 
 def dumpGraph(directory, name, format, g, prog='dot'):

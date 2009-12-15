@@ -21,7 +21,7 @@ import urllib
 
 from language.python import ast
 
-from util.async import *
+from util.application.async import *
 
 # Filter an iterable into keys and values, and collect
 # values with the same key into groups.

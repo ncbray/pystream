@@ -16,7 +16,7 @@ from . import flattendataflow
 # For dumping
 from util.io.xmloutput import XMLOutput
 
-from util.async import *
+from util.application.async import *
 from util.io import filesystem
 
 class GenericOpFunction(TypeDispatcher):

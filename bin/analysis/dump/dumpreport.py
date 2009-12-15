@@ -1,4 +1,4 @@
-from util.xmloutput  import XMLOutput
+from util.io.xmloutput  import XMLOutput
 from language.python import simplecodegen
 from asttools import astpprint
 from asttools.origin import originString
@@ -6,7 +6,7 @@ from asttools.origin import originString
 import config
 import os.path
 from util import itergroupings
-from util.filesystem import ensureDirectoryExists
+from util.io.filesystem import ensureDirectoryExists
 
 from analysis import programculler
 

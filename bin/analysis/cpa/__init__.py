@@ -1,6 +1,6 @@
 import collections
 import itertools
-import util.formatting
+from util.io import formatting
 
 import base
 
@@ -486,10 +486,10 @@ class InterproceduralDataflow(object):
 		console.output("Contexts:      %d" % len(self.liveContexts))
 		console.output("Code:          %d" % len(self.liveCode))
 		console.output("Contexts/Code: %.1f" % (float(len(self.liveContexts))/max(len(self.liveCode), 1)))
-		console.output("Slot Memory:   %s" % util.formatting.memorySize(self.slotMemory()))
+		console.output("Slot Memory:   %s" % formatting.memorySize(self.slotMemory()))
 		console.output('')
-		console.output("Decompile:     %s" % util.formatting.elapsedTime(self.decompileTime))
-		console.output("Solve:         %s" % util.formatting.elapsedTime(self.solveTime))
+		console.output("Decompile:     %s" % formatting.elapsedTime(self.decompileTime))
+		console.output("Solve:         %s" % formatting.elapsedTime(self.solveTime))
 		console.output('')
 
 def evaluate(compiler, opPathLength=0, firstPass=True):

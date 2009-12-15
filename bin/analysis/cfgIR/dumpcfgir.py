@@ -1,5 +1,5 @@
 import pydot
-import util.filesystem
+from util.io import filesystem
 
 from util.typedispatch import *
 from analysis.cfgIR.cfg import *
@@ -174,7 +174,7 @@ class CFGIRDumper(TypeDispatcher):
 @async_limited(2)
 def dumpGraph(directory, name, format, g, prog='dot'):
 	s = g.create(prog=prog, format=format)
-	util.filesystem.writeBinaryData(directory, name, format, s)
+	filesystem.writeBinaryData(directory, name, format, s)
 
 def process(compiler, entry, directory, name):
 	cfgird = CFGIRDumper()

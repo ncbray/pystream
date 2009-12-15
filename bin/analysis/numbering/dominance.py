@@ -2,7 +2,7 @@ import util.graphalgorithim.dominator
 from . dataflow import ForwardDataflow
 
 # For debugging
-from util.xmloutput import XMLOutput
+from util.io.xmloutput import XMLOutput
 
 class MakeForwardDominance(object):
 	def printDebug(self, tree, head):

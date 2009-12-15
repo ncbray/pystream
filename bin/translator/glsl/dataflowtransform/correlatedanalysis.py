@@ -14,10 +14,10 @@ from . import imagebuilder
 from . import flattendataflow
 
 # For dumping
-from util.xmloutput import XMLOutput
+from util.io.xmloutput import XMLOutput
 
 from util.async import *
-import util.filesystem
+from util.io import filesystem
 
 class GenericOpFunction(TypeDispatcher):
 	def __init__(self, manager):
@@ -550,7 +550,7 @@ class DataflowIOAnalysis(TypeDispatcher):
 		directory = 'summaries\\dataflow'
 
 		# Dump information about ops
-		f   = util.filesystem.fileOutput(directory, name+'-ops', 'html')
+		f   = filesystem.fileOutput(directory, name+'-ops', 'html')
 		out = XMLOutput(f)
 
 		with out.scope('html'):
@@ -593,7 +593,7 @@ class DataflowIOAnalysis(TypeDispatcher):
 		f.close()
 
 		# Dump information about memory
-		f   = util.filesystem.fileOutput(directory, name+'-memory', 'html')
+		f   = filesystem.fileOutput(directory, name+'-memory', 'html')
 		out = XMLOutput(f)
 
 		with out.scope('html'):

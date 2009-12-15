@@ -3,11 +3,11 @@ import pydot
 import util.graphalgorithim.dominator
 from analysis.dump import dumputil
 from util.async import *
-import util.filesystem
+from util.io import filesystem
 
 def dumpGraph(directory, name, format, g, prog='dot'):
 	s = g.create(prog=prog, format=format)
-	util.filesystem.writeBinaryData(directory, name, format, s)
+	filesystem.writeBinaryData(directory, name, format, s)
 
 @async
 def dump(compiler, liveInvoke, links, reportDir):

@@ -9,7 +9,7 @@ from ... import intrinsics
 
 import cStringIO
 
-import util.filesystem
+from util.io import filesystem
 
 from . import existingtransform
 
@@ -173,6 +173,6 @@ def generateBindingClass(vscontext, fscontext):
 	print s
 	print
 	
-	util.filesystem.writeData('summaries', 'compiledshader', 'py', s)
+	filesystem.writeData('summaries', 'compiledshader', 'py', s)
 	
 	return cdef

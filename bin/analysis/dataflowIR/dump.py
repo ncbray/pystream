@@ -2,7 +2,7 @@ from util.typedispatch import *
 from language.python import ast
 
 import pydot
-import util.filesystem
+from util.io import filesystem
 from asttools import astpprint
 
 import analysis.dataflowIR.graph as graph
@@ -372,7 +372,7 @@ class ClusterNodes(object):
 
 def dumpGraph(directory, name, format, g, prog='dot'):
 	s = g.create(prog=prog, format=format)
-	util.filesystem.writeBinaryData(directory, name, format, s)
+	filesystem.writeBinaryData(directory, name, format, s)
 
 @async_limited(2)
 def evaluateDataflow(dataflow, directory, name):

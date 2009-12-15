@@ -1,4 +1,4 @@
-from util import dot
+from util.io import dot
 import collections
 
 from util.visitor import StandardVisitor

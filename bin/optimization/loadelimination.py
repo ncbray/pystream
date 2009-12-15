@@ -7,7 +7,7 @@ from analysis.numbering.ssa import ForwardESSA
 from optimization.rewrite import rewriteAndSimplify
 
 # For debugging
-from util.xmloutput import XMLOutput
+from util.io.xmloutput import XMLOutput
 
 import collections
 

@@ -1,6 +1,6 @@
 from language.python import ast
 from analysis.dataflowIR import graph
-from util import xcollections
+from util.monkeypatch import xcollections
 
 leafTypes = (float, int, bool)
 

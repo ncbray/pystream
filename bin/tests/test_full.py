@@ -5,7 +5,7 @@ import os.path
 
 from . fullcompiler import compileExample
 
-from util.debug import conditionalDebugOnFailiure
+from util.debug.debugger import conditionalDebugOnFailiure
 import config
 
 

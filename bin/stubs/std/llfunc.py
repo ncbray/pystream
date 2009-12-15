@@ -6,7 +6,7 @@ from __future__ import absolute_import
 from language.python.ast import *
 
 # HACK for highlevel functions?
-from util import xtypes
+from util.monkeypatch import xtypes
 method   = xtypes.MethodType
 function = xtypes.FunctionType
 

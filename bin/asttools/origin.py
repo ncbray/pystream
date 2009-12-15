@@ -1,4 +1,4 @@
-from util.xcollections import namedtuple
+from util.monkeypatch.xcollections import namedtuple
 
 def originString(origin):
 	if origin is None: return "<unknown origin>"

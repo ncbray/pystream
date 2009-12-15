@@ -1,5 +1,5 @@
 import sys
-from util import xcollections
+from util.monkeypatch import xcollections
 
 class CachedSetManager(object):
 	def __init__(self):

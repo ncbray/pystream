@@ -19,7 +19,7 @@ import util
 
 from application.errors import TemporaryLimitation, InternalError
 
-from util import xtypes
+from util.monkeypatch import xtypes
 
 from _pystream import cfuncptr
 

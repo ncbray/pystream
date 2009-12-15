@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from _pystream import cfuncptr
-from util import xtypes
+from util.monkeypatch import xtypes
 from language.python import ast
 
 import util

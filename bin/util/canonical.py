@@ -1,4 +1,4 @@
-from util import xcollections
+from util.monkeypatch import xcollections
 
 class Sentinel(object):
 	__slots__ = 'name', '__weakref__'

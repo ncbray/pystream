@@ -2,7 +2,6 @@ from asttools.transform import *
 from language.python import ast
 from language.python import annotations
 
-import util.xtypes
 from analysis import tools
 import dataflow.forward
 

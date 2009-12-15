@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 from .. stubcollector import stubgenerator
 
-from util import xtypes
+from util.monkeypatch import xtypes
 tupleiterator  = xtypes.TupleIteratorType
 listiterator   = xtypes.ListIteratorType
 xrangeiterator = xtypes.XRangeIteratorType

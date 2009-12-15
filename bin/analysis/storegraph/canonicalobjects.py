@@ -1,7 +1,7 @@
 import util.canonical
 from language.python import program
 from . import extendedtypes
-from util import xcollections
+from util.monkeypatch import xcollections
 
 class BaseSlotName(util.canonical.CanonicalObject):
 	__slots__ = ()

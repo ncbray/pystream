@@ -1,5 +1,5 @@
 from util.typedispatch import *
-from util import xcollections
+from util.monkeypatch import xcollections
 from analysis.dataflowIR import graph
 
 from . import cfg

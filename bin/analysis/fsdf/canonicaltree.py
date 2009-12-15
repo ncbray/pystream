@@ -1,5 +1,5 @@
 import itertools
-from util import xcollections
+from util.monkeypatch import xcollections
 
 class Condition(object):
 	__slots__ = 'name', 'uid', 'values', 'mask'

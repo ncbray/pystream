@@ -12,7 +12,7 @@ import util.tvl
 
 import analysis.cpasignature
 
-import util.xtypes as xtypes
+from util.monkeypatch import xtypes
 
 def slotRefs(slot):
 	if slot is None:

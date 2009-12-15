@@ -1,4 +1,4 @@
-from util.visitor import StandardVisitor
+from util.typedispatch import *
 
 from language.python.ast import Local
 
@@ -76,7 +76,9 @@ def mergeFramesParallel(frames):
 
 	return outp
 
-class PlaceFlowFunctions(StandardVisitor):
+class PlaceFlowFunctions(TypeDispatcher):
+	__namedispatch__ = True # HACK emulates old visitor	
+	
 	def __init__(self, numbering):
 		super(PlaceFlowFunctions, self).__init__()
 		self.frame = PlaceFrame()
@@ -87,44 +89,30 @@ class PlaceFlowFunctions(StandardVisitor):
 		self.exceptRead = set()
 		self.hasExceptionHandling = False
 
-	def visitstr(self, node):
-		return node
+	@dispatch(str, int, float, type(None))
+	def visitLeaf(self, node):
+		pass
 
-	def visitint(self, node):
-		return node
-
-	def visitfloat(self, node):
-		return node
-
-	def visitNoneType(self, node):
-		return node
-
-	def visitlist(self, node):
-		return [self.visit(child) for child in node]
-
-	def visittuple(self, node):
-		return tuple([self.visit(child) for child in node])
-
+	@defaultdispatch
 	def default(self, node):
-		for child in node.children():
-			self.visit(child)
+		node.visitChildren(self)
 
 	def visitLocal(self, node):
 		self.frame.normal.read(node)
 
 	def visitAssign(self, node):
-		self.visit(node.expr)
+		self(node.expr)
 
 		for lcl in node.lcls:
 			self.frame.normal.modify(lcl)
 
 	def visitUnpackSequence(self, node):
-		self.visit(node.expr)
+		self(node.expr)
 		for target in node.targets:
 			self.frame.normal.modify(target)
 
 	def visitReturn(self, node):
-		self.default(node)
+		node.visitChildren(self)
 		self.frame.doReturn()
 
 	def visitContinue(self, node):
@@ -134,7 +122,7 @@ class PlaceFlowFunctions(StandardVisitor):
 		self.frame.doBreak()
 
 	def visitRaise(self, node):
-		self.default(node)
+		node.visitChildren(self)
 		self.frame.doRaise()
 
 	def filterMerges(self, node, merges):
@@ -142,22 +130,22 @@ class PlaceFlowFunctions(StandardVisitor):
 
 
 	def visitExceptionHandler(self, node):
-		self.visit(node.preamble)
-		self.visit(node.type)
+		self(node.preamble)
+		self(node.type)
 
 		if isinstance(node.value, Local):
 			self.frame.normal.modify(node.value)
 		else:
-			self.visit(node.value)
+			self(node.value)
 
-		self.visit(node.body)
+		self(node.body)
 
 
 	def visitTryExceptFinally(self, node):
 		# HACK
 		self.hasExceptionHandling = True
 
-		self.visit(node.body)
+		self(node.body)
 
 		old = self.frame
 
@@ -166,13 +154,13 @@ class PlaceFlowFunctions(StandardVisitor):
 		for handler in node.handlers:
 			self.hasExceptionHandling = True
 			self.frame = f = PlaceFrame()
-			self.visit(handler)
+			self(handler)
 			exceptional.append(f)
 
 		if node.defaultHandler:
 			self.hasExceptionHandling = True
 			self.frame = f = PlaceFrame()
-			self.visit(node.defaultHandler)
+			self(node.defaultHandler)
 			exceptional.append(f)
 
 		merged = mergeFramesParallel(exceptional)
@@ -185,11 +173,11 @@ class PlaceFlowFunctions(StandardVisitor):
 		self.exceptRead.update(reads)
 
 		self.frame = els = PlaceFrame()
-		self.visit(node.else_)
+		self(node.else_)
 
 
 		self.frame = fin = PlaceFrame()
-		self.visit(node.finally_)
+		self(node.finally_)
 
 		freads = tuple(fin.normal._read)
 		fmodifies = self.filterMerges(node, fin.normal._modify)
@@ -202,7 +190,7 @@ class PlaceFlowFunctions(StandardVisitor):
 		self.frame = old
 
 	def visitSwitch(self, node):
-		self.visit(node.condition)
+		self(node.condition)
 
 		assert self.frame.normal
 
@@ -211,12 +199,12 @@ class PlaceFlowFunctions(StandardVisitor):
 
 		t = PlaceFrame()
 		self.frame = t
-		self.visit(node.t)
+		self(node.t)
 
 
 		f = PlaceFrame()
 		self.frame = f
-		self.visit(node.f)
+		self(node.f)
 
 
 		merged = mergeFramesParallel((t, f))
@@ -242,8 +230,8 @@ class PlaceFlowFunctions(StandardVisitor):
 
 
 
-		self.visit(node.condition)
-		self.visit(node.body)
+		self(node.condition)
+		self(node.body)
 
 
 		# Merge in the continues.
@@ -263,7 +251,7 @@ class PlaceFlowFunctions(StandardVisitor):
 		self.frame.breaks = []
 
 		# Evaluate the else block
-		self.visit(node.else_)
+		self(node.else_)
 
 
 
@@ -289,7 +277,7 @@ class PlaceFlowFunctions(StandardVisitor):
 
 
 	def visitFor(self, node):
-		self.visit(node.iterator)
+		self(node.iterator)
 
 		old = self.frame
 
@@ -299,9 +287,9 @@ class PlaceFlowFunctions(StandardVisitor):
 		if isinstance(node.index, Local):
 			self.frame.normal.modify(node.index)
 		else:
-			self.visit(node.index)
+			self(node.index)
 
-		self.visit(node.body)
+		self(node.body)
 
 
 		# Merge in the continues.
@@ -322,7 +310,7 @@ class PlaceFlowFunctions(StandardVisitor):
 
 
 		# Evaluate the else block
-		self.visit(node.else_)
+		self(node.else_)
 
 
 
@@ -347,12 +335,12 @@ class PlaceFlowFunctions(StandardVisitor):
 		self.frame = old
 
 
-	def visitCode(self, node):
+	def process(self, node):
 		old = self.frame
 
 		self.frame = PlaceFrame()
 
-		self.visit(node.ast)
+		self(node.ast)
 
 		result = self.frame
 		assert not result.breaks, result.breaks

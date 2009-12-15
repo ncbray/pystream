@@ -25,7 +25,7 @@ def generateCode(func, trace):
 
 	sio = StringIO()
 	scg = SimpleCodeGen(sio)
-	scg.walk(f)
+	scg.process(f)
 	return sio.getvalue()
 
 # How do I prevent it from being a test?

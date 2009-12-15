@@ -162,7 +162,7 @@ def generateBindingClass(vscontext, fscontext):
 	#pprint(cdef)
 	
 	buffer = cStringIO.StringIO()
-	SimpleCodeGen(buffer).walk(cdef)
+	SimpleCodeGen(buffer).process(cdef)
 	
 	s = buffer.getvalue()
 	

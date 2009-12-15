@@ -99,8 +99,7 @@ class LiveHeapFinder(TypeDispatcher):
 		node.visitChildren(self)
 
 	def process(self, code):
-		for child in code.children():
-			self(child)
+		code.visitChildrenForced(self)
 
 # HACK this may not be 100% sound, as it only considers references
 # directly embedded in the code.

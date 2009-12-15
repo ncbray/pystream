@@ -31,7 +31,7 @@ def evaluateCode(compiler, node):
 		print "#######################################"
 		sio = StringIO()
 		scg = SimpleCodeGen(sio)
-		scg.walk(node)
+		scg.process(node)
 		print sio.getvalue()
 		raise
 

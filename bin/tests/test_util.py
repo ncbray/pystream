@@ -210,7 +210,7 @@ class TestCallingUtility(unittest.TestCase):
 ##
 ####		sio = StringIO()
 ####		scg = SimpleCodeGen(sio)
-####		scg.walk(f)
+####		scg.process(f)
 ####		print sio.getvalue()
 ##
 ##		return f

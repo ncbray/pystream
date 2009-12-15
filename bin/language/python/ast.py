@@ -38,6 +38,11 @@ class Existing(Reference):
 	def alwaysReturnsBoolean(self):
 		return isinstance(self.constantValue(), bool)
 
+	def clone(self):
+		result = Existing(self.object)
+		result.annotation = self.annotation
+		return result
+
 
 class Local(Reference):
 	__slots__  = 'name'
@@ -60,6 +65,11 @@ class Local(Reference):
 
 	def isPure(self):
 		return True
+
+	def clone(self):
+		result = Local(self.name)
+		result.annotation = self.annotation
+		return result
 
 class DoNotCare(Reference):
 	__slots__  = ()
@@ -99,7 +109,10 @@ class Cell(PythonASTNode):
 	def __repr__(self):
 		return "%s(%r)" % (type(self).__name__, self.name)
 
-
+	def clone(self):
+		result = Cell(self.name)
+		result.annotation = self.annotation
+		return result
 
 class GetGlobal(Expression):
 	__fields__ = 'name:Existing'

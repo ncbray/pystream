@@ -1,7 +1,7 @@
 import types
 import sys
 
-from util.visitor import StandardVisitor
+from util.typedispatch import *
 from . pythonoutput import PythonOutput
 
 from analysis import defuse
@@ -39,9 +39,10 @@ def getExistingStr(node):
 		
 		return "|[%r]|" % obj
 
-class SimpleExprGen(StandardVisitor):
+class SimpleExprGen(TypeDispatcher):
+	__namedispatch__ = True # HACK emulates old visitor	
 	def __init__(self, parent):
-		StandardVisitor.__init__(self)
+		TypeDispatcher.__init__(self)
 
 		# For renaming locals
 		self.localLUT = {}
@@ -111,7 +112,7 @@ class SimpleExprGen(StandardVisitor):
 		return "None", -1
 
 	def visitGetCellDeref(self, node):
-		return self.visit(node.cell)
+		return self(node.cell)
 
 
 	def visitImport(self, node):
@@ -290,7 +291,7 @@ class SimpleExprGen(StandardVisitor):
 		if node in self.collapsed:
 			return self.collapsed[node]
 		else:
-			return self.visit(node)
+			return self(node)
 
 
 	def visitShortCircutOr(self, node):
@@ -337,8 +338,12 @@ def protect(text, inner, outer, right=False):
 	return text
 
 
-class SimpleCodeGen(StandardVisitor):
+class SimpleCodeGen(TypeDispatcher):
+	__namedispatch__ = True # HACK emulates old visitor	
+	
 	def __init__(self, out=None):
+		TypeDispatcher.__init__(self)
+		
 		if out is None:
 			out = PythonOutput(sys.stdout)
 		elif not isinstance(out, PythonOutput):
@@ -371,23 +376,10 @@ class SimpleCodeGen(StandardVisitor):
 				return
 
 		self.out.emitStatement(stmt)
-
-	def process(self, node):
-##		assert hasattr(node, 'onEntry'), type(node)
-##
-##		for partialmerge in node.onEntry:
-##			self.process(partialmerge)
-
-		result = self.visit(node)
-
-##		for partialmerge in node.onExit:
-##			self.process(partialmerge)
-
-		return result
-
+	
 	def processNoEmit(self, node):
 		self.enterSupress()
-		ret = self.process(node)
+		ret = self(node)
 		self.exitSupress()
 		return ret
 
@@ -527,7 +519,7 @@ class SimpleCodeGen(StandardVisitor):
 		elif isinstance(node.expr, ast.MakeFunction):
 			assert len(node.lcls) == 1
 			# HACK to rename the function
-			self.process(node.expr)
+			self(node.expr)
 			name = node.expr.code.name
 			lcl = self.seg.process(node.lcls[0])
 			if name != lcl:
@@ -536,7 +528,7 @@ class SimpleCodeGen(StandardVisitor):
 			# HACK
 			pass
 ##		elif isinstance(node.expr, (ast.ShortCircutAnd, ast.ShortCircutOr)):
-##			expr, p = self.visit(node.expr)
+##			expr, p = self(node.expr)
 ##
 ##			stmt = "%s = %s" % (self.seg.process(node.lcl), expr)
 ##			self.emitStatement(stmt)
@@ -588,7 +580,7 @@ class SimpleCodeGen(StandardVisitor):
 			self.emitStatement("print")
 
 	def visitCondition(self, node):
-		self.process(node.preamble)
+		self(node.preamble)
 
 		conditional = node.conditional
 
@@ -598,13 +590,13 @@ class SimpleCodeGen(StandardVisitor):
 		if conditional in self.seg.collapsed:
 			return self.seg.collapsed[conditional]
 		else:
-			return self.seg.visit(conditional)
+			return self.seg(conditional)
 
 	def visitShortCircutOr(self, node):
 		prec = 22
 		partial = []
 		for term in node.terms:
-			text, inner = self.process(term)
+			text, inner = self(term)
 			partial.append(protect(text, inner, prec))
 		return " or ".join(partial), prec
 
@@ -612,20 +604,20 @@ class SimpleCodeGen(StandardVisitor):
 		prec = 21
 		partial = []
 		for term in node.terms:
-			text, inner = self.process(term)
+			text, inner = self(term)
 			partial.append(protect(text, inner, prec))
 		return " and ".join(partial), prec
 
 	def visitSwitch(self, node):
-		cond, prec = self.process(node.condition)
+		cond, prec = self(node.condition)
 
 		self.out.startBlock('if %s' % cond)
-		self.process(node.t)
+		self(node.t)
 		self.out.endBlock()
 
 		if node.f and node.f.significant():
 			self.out.startBlock("else")
-			self.process(node.f)
+			self(node.f)
 			self.out.endBlock()
 
 	def visitTypeSwitchCase(self, node):
@@ -640,7 +632,7 @@ class SimpleCodeGen(StandardVisitor):
 		else:
 			self.out.startBlock("{case %s}" % (", ".join(types)))
 
-		self.process(node.body)
+		self(node.body)
 		self.out.endBlock()
 
 
@@ -648,7 +640,7 @@ class SimpleCodeGen(StandardVisitor):
 		cond = self.seg.process(node.conditional)
 		self.out.startBlock("<type switch %s>" % cond)
 		for case in node.cases:
-			self.process(case)
+			self(case)
 		self.out.endBlock()
 
 	def visitExceptionHandler(self, node):
@@ -662,49 +654,49 @@ class SimpleCodeGen(StandardVisitor):
 			args.append(value)
 
 		self.out.startBlock('except %s' % ", ".join(args))
-		self.process(node.body)
+		self(node.body)
 		self.out.endBlock()
 
 	def visitTryExceptFinally(self, node):
 		self.out.startBlock('try')
-		self.process(node.body)
+		self(node.body)
 		self.out.endBlock()
 
 		for handler in node.handlers:
-			self.process(handler)
+			self(handler)
 
 		if node.defaultHandler:
 			self.out.startBlock("except")
-			self.process(node.defaultHandler)
+			self(node.defaultHandler)
 			self.out.endBlock()
 
 		if node.else_:
 			self.out.startBlock("else")
-			self.process(node.else_)
+			self(node.else_)
 			self.out.endBlock()
 
 		if node.finally_:
 			self.out.startBlock("finally")
-			self.process(node.finally_)
+			self(node.finally_)
 			self.out.endBlock()
 
 
 	def visitWhile(self, node):
-		cond, prec = self.process(node.condition)
+		cond, prec = self(node.condition)
 
 		self.out.startBlock('while %s' % cond)
 
-		self.process(node.body)
+		self(node.body)
 
 		# Do the conditions for the next loop.
 		# Should, in fact, produce nothing.
-		cond, prec = self.process(node.condition)
+		cond, prec = self(node.condition)
 
 		self.out.endBlock()
 
 		if node.else_ and node.else_.significant():
 			self.out.startBlock('else')
-			self.process(node.else_)
+			self(node.else_)
 			self.out.endBlock()
 
 	def visitFor(self, node):
@@ -712,19 +704,19 @@ class SimpleCodeGen(StandardVisitor):
 		index = node.index
 		self.out.startBlock('for %s in %s' % (self.seg.process(index), self.seg.process(iterator)))
 
-		self.process(node.body)
+		self(node.body)
 
 		self.out.endBlock()
 
 		if node.else_ and node.else_.significant():
 			self.out.startBlock('else')
-			self.process(node.else_)
+			self(node.else_)
 			self.out.endBlock()
 
 
 	def visitSuite(self, node):
 		for child in node.blocks:
-			self.process(child)
+			self(child)
 
 	def visitCode(self, node, name=None):
 		if name is None: name = node.name
@@ -762,7 +754,7 @@ class SimpleCodeGen(StandardVisitor):
 		glbldef = [name for name in globaldefines.iterkeys()]
 		if glbldef: self.out.emitStatement("global %s" % ", ".join(glbldef))
 
-		self.process(node.ast)
+		self(node.ast)
 		self.out.endBlock()
 
 	def visitFunctionDef(self, node):
@@ -773,14 +765,17 @@ class SimpleCodeGen(StandardVisitor):
 		assert not node.decorators
 		bases = [self.seg.process(base) for base in node.bases]
 		self.out.startBlock('class %s(%s)' % (node.name, ", ".join(bases)))
-		self.process(node.body)
+		self(node.body)
 		self.out.endBlock()
 
 	def visitMakeFunction(self, node):
 		assert not node.defaults
 
 		#assert not node.cells
-		self.visit(node.code)
+		self(node.code)
 
 	def visitLibrary(self, node):
 		self.emitStatement("# CANNOT GENERATE CODE FOR LIBRARY.")
+
+	def process(self, node):
+		return self(node)

@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 
+from util.typedispatch import *
+
 import collections
 
 from language.python.ast import *
-
-from util.visitor import StandardVisitor
 
 from .. import errors
 from . import pythonstack
@@ -64,9 +64,11 @@ class SSADefinitions(object):
 		return self.defn.get(local, local)
 
 
-class DestackVisitor(StandardVisitor):
+class DestackVisitor(TypeDispatcher):
+	__namedispatch__ = True # HACK emulates old visitor
+	
 	def __init__(self, code, mname, compiler, callback, trace=False):
-		StandardVisitor.__init__(self)
+		TypeDispatcher.__init__(self)
 		self.ssa = SSADefinitions()
 		self.code = code
 		self.moduleName = mname
@@ -173,7 +175,7 @@ class DestackVisitor(StandardVisitor):
 		newdefns = {}
 
 		while block:
-			outblock, stack = self.visit(block, stack)
+			outblock, stack = self(block, stack)
 
 			if outblock != None and outblock in self.defns:
 				for k, v in self.defns[outblock].iteritems():
@@ -227,7 +229,7 @@ class DestackVisitor(StandardVisitor):
 		assert isinstance(stack, PythonStack), stack
 
 		if isinstance(cond, flowblocks.Linear):
-			block, stack = self.visit(cond, stack)
+			block, stack = self(cond, stack)
 			conditional, framset, (maybeTrue, maybeFalse) = self.getTOS(cond, stack)
 
 			temp = Local()
@@ -239,7 +241,7 @@ class DestackVisitor(StandardVisitor):
 			tstack = stack.duplicate()
 			fstack = stack.duplicate()
 		else:
-			condition, tstack, fstack, (maybeTrue, maybeFalse) = self.visit(cond, stack)
+			condition, tstack, fstack, (maybeTrue, maybeFalse) = self(cond, stack)
 
 		assert isinstance(condition, Condition), condition
 
@@ -373,7 +375,7 @@ class DestackVisitor(StandardVisitor):
 		o = None
 
 		if block:
-			o, stack = self.visit(block, stack)
+			o, stack = self(block, stack)
 		else:
 			o = Suite()
 
@@ -430,7 +432,7 @@ class DestackVisitor(StandardVisitor):
 		assert isinstance(stack, PythonStack), stack
 
 
-		suite, loopstack = self.visit(block.loop, stack.duplicate())
+		suite, loopstack = self(block.loop, stack.duplicate())
 
 		# HACK for "for" loops"
 		# We need a handle on the actual loop so we can
@@ -455,7 +457,7 @@ class DestackVisitor(StandardVisitor):
 
 		### Evaluate the loop "else" ###
 		if block._else:
-			else_, elsestack = self.visit(block._else, stack.duplicate())
+			else_, elsestack = self(block._else, stack.duplicate())
 
 			if else_ and not isinstance(else_, Suite):
 				else_ = Suite([else_])
@@ -563,10 +565,10 @@ class DestackVisitor(StandardVisitor):
 		stack = PythonStack()
 
 		### Evaluate the try block ###
-		tryblock, stack = self.visit(block.tryBlock, stack)
+		tryblock, stack = self(block.tryBlock, stack)
 
 		if block.elseBlock:
-			elseblock, stack = self.visit(block.elseBlock, stack)
+			elseblock, stack = self(block.elseBlock, stack)
 		else:
 			elseblock = None
 
@@ -577,7 +579,7 @@ class DestackVisitor(StandardVisitor):
 		stack.push(pythonstack.exceptionType)
 
 		### Evaluate the except block ###
-		exceptblock, stack = self.visit(block.exceptBlock, stack)
+		exceptblock, stack = self(block.exceptBlock, stack)
 		if exceptblock == None:
 			assert stack
 			exceptblock = Suite()
@@ -594,12 +596,12 @@ class DestackVisitor(StandardVisitor):
 		oldstack = stack
 
 		stack = PythonStack()
-		tryblock, stack = self.visit(block.tryBlock, stack)
+		tryblock, stack = self(block.tryBlock, stack)
 
 		stack = PythonStack()
 		stack.push(pythonstack.flowInfo)
 
-		finallyblock, stack = self.visit(block.finallyBlock, stack)
+		finallyblock, stack = self(block.finallyBlock, stack)
 
 		if isinstance(tryblock, TryExceptFinally):
 			outblock = tryblock
@@ -643,7 +645,7 @@ class DestackVisitor(StandardVisitor):
 
 
 		# Evaluate the body.
-		bodyBlock, bodystack = self.visit(block.body, bodystack)
+		bodyBlock, bodystack = self(block.body, bodystack)
 
 		defn = self.getDefns(bodyBlock)
 		assert pythonstack.loopIndex in defn, bodyBlock
@@ -694,7 +696,7 @@ class DestackVisitor(StandardVisitor):
 			fstack = stack.duplicate()
 
 		# Evaluate the body.
-		bodyBlock, bodystack = self.visit(block.body, tstack)
+		bodyBlock, bodystack = self(block.body, tstack)
 
 		if not isinstance(bodyBlock, Suite):
 			bodyBlock = Suite([bodyBlock])
@@ -713,7 +715,7 @@ class DestackVisitor(StandardVisitor):
 	# External entry point.
 	def process(self, block, stack):
 		assert isinstance(stack, PythonStack)
-		block, stack = self.walk(block, stack)
+		block, stack = self(block, stack)
 		return block
 
 

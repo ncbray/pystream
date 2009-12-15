@@ -1,4 +1,4 @@
-from util.visitor import StandardVisitor, TracingVisitor
+from util.typedispatch import *
 
 from PADS.DFS import postorder
 
@@ -16,7 +16,7 @@ def standardSuiteFilter(prev, next):
 def standardFinallyFilter(prev, next):
 	return standardSuiteFilter(prev, next) and not isinstance(prev, EndFinally)
 
-class StructuralAnalyzer(StandardVisitor):
+class StructuralAnalyzer(TypeDispatcher):
 	def process(self, root, trace=False):
 		self.trace=trace
 
@@ -24,12 +24,12 @@ class StructuralAnalyzer(StandardVisitor):
 		post = list(postorder(BlockWrapper(), root))
 
 		for block in post:
-			self.walk(block)
+			self(block)
 
 			if block.isRegion():
 				self.process(block.entry())
 
-
+	@dispatch(EndFinally)
 	def visitEndFinally(self, block):
 		if isinstance(block.next, Merge) and block.next.numEntries() == 2:
 			merge = block.next
@@ -45,46 +45,11 @@ class StructuralAnalyzer(StandardVisitor):
 				block.next.replacePrev(block, None)
 				block.replaceNext(merge, None)
 
-	def visitReturn(self, block):
+	@dispatch(Return, Break, Continue, Raise, NormalExit, Linear)
+	def visitLeaf(self, block):
 		pass
 
-	def visitBreak(self, block):
-		pass
-
-	def visitContinue(self, block):
-		pass
-
-	def visitRaise(self, block):
-		pass
-
-	def visitNormalExit(self, block):
-		pass
-
-	def visitLinear(self, block):
-		pass
-
-##		if isinstance(block.prev, Merge):
-##			incoming = block.prev.incomingSet()
-##			canMove = True
-##			inst = None
-##
-##			for i in incoming:
-##				if isinstance(i, Linear) and len(i.instructions) > 0:
-##					print "PREV", i.instructions[-1], i.instructions[-1] == inst
-##
-##					if inst == None:
-##						inst = i.instructions[-1]
-##					elif inst == i.instructions[-1]:
-##						continue
-##
-##				canMove = False
-##				break
-##
-##			if canMove:
-##				print "!"*60
-##				print inst
-
-
+	@dispatch(Merge)
 	def visitMerge(self, block):
 		# TODO eliminate null merges?  (hard, as the length of the incoming set may be less than the number of edges.)
 
@@ -127,7 +92,7 @@ class StructuralAnalyzer(StandardVisitor):
 
 			incoming = tuple(block.incomingSet())
 			if isinstance(incoming[0], NormalEntry) or isinstance(incoming[1], NormalEntry):
-				# This is an infinate "while" loop with the condition folded away.
+				# This is an infinite "while" loop with the condition folded away.
 
 				if isinstance(incoming[0], NormalEntry):
 					entry = incoming[0]
@@ -217,6 +182,7 @@ class StructuralAnalyzer(StandardVisitor):
 		self.spliceContinue(block)
 		self.contractSuite(parent, block)
 
+	@dispatch(Switch)
 	def visitSwitch(self, block):
 		self.shortenSwitchExits(block)
 
@@ -360,10 +326,11 @@ class StructuralAnalyzer(StandardVisitor):
 		return False
 
 
-
+	@dispatch(ForIter)
 	def visitForIter(self, block):
 		self.contractSuite(block, block.iter)
 
+	@dispatch(NormalEntry)
 	def visitNormalEntry(self, block):
 		if isinstance(block.region, LoopRegion):
 			# This is the start of a loop with no exit.
@@ -416,7 +383,7 @@ class StructuralAnalyzer(StandardVisitor):
 				entryEdge = CFGEdge(block, block.next)
 				self.moveIntoRegion(entryEdge, None, region)
 
-# This doesn't work as expected, as it may cause spurrious "else" statements to be attached to nestled loops.
+# This doesn't work as expected, as it may cause spurious "else" statements to be attached to nestled loops.
 
 ##	def unwindLoopMerge(self, merge, entry):
 ##		incoming = tuple(merge.incomingSet())
@@ -427,6 +394,7 @@ class StructuralAnalyzer(StandardVisitor):
 ##		if merge.numEntries() == 1:
 ##			merge.eliminate()
 
+	@dispatch(LoopRegion)
 	def visitLoopRegion(self, block):
 		entry = block.entry().next
 
@@ -508,7 +476,7 @@ class StructuralAnalyzer(StandardVisitor):
 
 		assert block.exceptional, exitEdge
 
-
+	@dispatch(FinallyRegion)
 	def visitFinallyRegion(self, block):
 		# If normal exit exists, chop at linear terminal after merge.
 		# else, chop at linear terminal from finally.
@@ -546,7 +514,7 @@ class StructuralAnalyzer(StandardVisitor):
 
 		self.makeSuite(entryEdge, exitEdge)
 
-
+	@dispatch(ExceptRegion)
 	def visitExceptRegion(self, block):
 		# chop except after linear + split*
 		# if normal exit exists, chop point must be mutal merge.
@@ -601,6 +569,7 @@ class StructuralAnalyzer(StandardVisitor):
 		entryEdge = CFGEdge(block.prev, block)
 		self.moveIntoRegion(entryEdge, exitEdge, region)
 
+	@dispatch(CodeBlock)
 	def visitCodeBlock(self, block):
 		assert False, "Cannot deal with code blocks."
 		pass

@@ -1,14 +1,16 @@
+from util.typedispatch import *
 from util.io import dot
 import collections
-
-from util.visitor import StandardVisitor
 
 import os.path
 
 import config
 
-class FlowBlockDump(StandardVisitor):
+import flowblocks
+
+class FlowBlockDump(TypeDispatcher):
 	def process(self, name, root):
+		TypeDispatcher.__init__()
 		self.processed = set()
 		self.queue = collections.deque()
 		self.regiongraph = {}
@@ -19,7 +21,7 @@ class FlowBlockDump(StandardVisitor):
 
 		while self.queue:
 			block = self.queue.popleft()
-			self.walk(block)
+			self(block)
 
 		dot.createGraphic(self.g, os.path.join(config.outputDirectory, name))
 
@@ -68,118 +70,135 @@ class FlowBlockDump(StandardVisitor):
 	def clusterEdge(self, cluster, label):
 		return {'label':label, 'ltail':cluster.name}
 
+	@dispatch(flowblocks.CodeBlock)
 	def visitCodeBlock(self, block):
 		self.makeNode(block, self.flowStyle('function', block.marked))
 		self.enqueue(block.entry())
 
+	@dispatch(flowblocks.LoopRegion)
 	def visitLoopRegion(self, block):
 		self.makeNode(block, self.flowStyle('loop', block.marked))
 		self.enqueue(block.entry())
 		if block.normal: self.makeEdge(block, block.normal)
 		self.makeEdge(block, block.exceptional, self.labeledEdge('break'))
 
-
+	@dispatch(flowblocks.FinallyRegion)
 	def visitFinallyRegion(self, block):
 		self.makeNode(block, self.flowStyle('finally', block.marked))
 		self.enqueue(block.entry())
 		if block.normal: self.makeEdge(block, block.normal)
 		self.makeEdge(block, block.exceptional, self.labeledEdge('finally'))
 
+	@dispatch(flowblocks.ExceptRegion)
 	def visitExceptRegion(self, block):
 		self.makeNode(block, self.flowStyle('except', block.marked))
 		self.enqueue(block.entry())
 		if block.normal: self.makeEdge(block, block.normal)
 		self.makeEdge(block, block.exceptional, self.labeledEdge('except'))
 
-
+	@dispatch(flowblocks.Linear)
 	def visitLinear(self, block):
 		label = '\n'.join((inst.opcodeString() for inst in block.instructions))
 		self.makeNode(block, self.instructionStyle(label, block.marked))
 		self.makeEdge(block, block.next)
 
+	@dispatch(flowblocks.EndFinally)
 	def visitEndFinally(self, block):
 		self.makeNode(block, self.instructionStyle('end finally', block.marked))
 		if block.next: self.makeEdge(block, block.next)
 
+	@dispatch(flowblocks.SwitchRegion)
 	def visitSwitchRegion(self, block):
 		self.makeNode(block, self.flowStyle(block.name, block.marked))
 		self.enqueue(block.entry())
 		if block.next: self.makeEdge(block, block.next)
 
-
+	@dispatch(flowblocks.LoopElse)
 	def visitLoopElse(self, block):
 		self.makeNode(block, self.flowStyle(block.name, block.marked))
 		self.enqueue(block.entry())
 		if block.next: self.makeEdge(block, block.next)
 
-
+	@dispatch(flowblocks.TryFinally)
 	def visitTryFinally(self, block):
 		self.makeNode(block, self.flowStyle(block.name, block.marked))
 		self.enqueue(block.entry())
 		if block.next: self.makeEdge(block, block.next)
 
+	@dispatch(flowblocks.TryExcept)
 	def visitTryExcept(self, block):
 		self.makeNode(block, self.flowStyle(block.name, block.marked))
 		self.enqueue(block.entry())
 		if block.next: self.makeEdge(block, block.next)
 
+	@dispatch(flowblocks.SuiteRegion)
 	def visitSuiteRegion(self, block):
 		self.makeNode(block, self.flowStyle(block.name, block.marked))
 		self.enqueue(block.entry())
 		if block.next: self.makeEdge(block, block.next)
 
+	@dispatch(flowblocks.ForLoop)
 	def visitForLoop(self, block):
 		self.makeNode(block, self.flowStyle(block.name, block.marked))
 		self.enqueue(block.entry())
 		if block.next: self.makeEdge(block, block.next)
 
+	@dispatch(flowblocks.WhileLoop)
 	def visitWhileLoop(self, block):
 		self.makeNode(block, self.flowStyle(block.name, block.marked))
 		self.enqueue(block.entry())
 		if block.next: self.makeEdge(block, block.next)
 
-
+	@dispatch(flowblocks.NormalEntry)
 	def visitNormalEntry(self, block):
 		self.makeNode(block, self.pointStyle(block))
 		if block.next: self.makeEdge(block, block.next)
 
+	@dispatch(flowblocks.NormalExit)
 	def visitNormalExit(self, block):
 		self.makeNode(block, self.pointStyle(block))
 
-	def visitExceptionalExit(self, block):
-		if block.next: # No exceptional exit for functions?
-			self.makeNode(block, self.instructionStyle('exceptional exit', block.marked))
-			self.makeEdge(block, block.next)
+#	@dispatch(flowblocks.ExceptionalExit)
+#	def visitExceptionalExit(self, block):
+#		if block.next: # No exceptional exit for functions?
+#			self.makeNode(block, self.instructionStyle('exceptional exit', block.marked))
+#			self.makeEdge(block, block.next)
 
+	@dispatch(flowblocks.Merge)
 	def visitMerge(self, block):
 		self.makeNode(block, self.pointStyle(block))
 		self.makeEdge(block, block.next)
 
+	@dispatch(flowblocks.Return)
 	def visitReturn(self, block):
 		self.makeNode(block, self.instructionStyle('return', block.marked))
 
+	@dispatch(flowblocks.Break)
 	def visitBreak(self, block):
 		self.makeNode(block, self.instructionStyle('break', block.marked))
 
+	@dispatch(flowblocks.Continue)
 	def visitContinue(self, block):
 		self.makeNode(block, self.instructionStyle('continue', block.marked))
 
-
+	@dispatch(flowblocks.Raise)
 	def visitRaise(self, block):
 		self.makeNode(block, self.instructionStyle('raise %d' % block.nargs, block.marked))
 
-
+	@dispatch(flowblocks.ForIter)
 	def visitForIter(self, block):
 		self.makeNode(block, self.flowStyle('for iter', block.marked))
 		self.makeEdge(block, block.iter, self.labeledEdge('iter'))
 		self.makeEdge(block, block.done, self.labeledEdge('done'))
 
+	@dispatch(flowblocks.Switch)
 	def visitSwitch(self, block):
 		#self.enqueue(block.cond)
 		self.makeNode(block, self.pointStyle(block))
 		self.makeEdge(block, block.t, self.labeledEdge('t'))
 		self.makeEdge(block, block.f, self.labeledEdge('f'))
 
+	@dispatch(flowblocks.ShortCircutAnd)
 	def visitShortCircutAnd(self, block):
 		self.makeNode(block, self.pointStyle(block))
 
@@ -187,14 +206,15 @@ class FlowBlockDump(StandardVisitor):
 			self.makeEdge(block, term)
 			self.enqueue(term)
 
-
+	@dispatch(flowblocks.ShortCircutOr)
 	def visitShortCircutOr(self, block):
 		self.makeNode(block, self.pointStyle(block))
 
 		for term in block.terms:
 			self.makeEdge(block, term)
 			self.enqueue(term)
-
+			
+	@dispatch(flowblocks.CheckStack)
 	def visitCheckStack(self, block):
 		self.makeNode(block, self.pointStyle(block))
 

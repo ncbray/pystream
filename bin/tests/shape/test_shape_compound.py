@@ -595,7 +595,7 @@ class TestRecursiveCase(TestCompoundConstraintBase):
 		self.code.ast = body
 
 		#from language.python import simplecodegen
-		#simplecodegen.SimpleCodeGen(None).walk(self.code)
+		#simplecodegen.SimpleCodeGen(None).process(self.code)
 
 
 		dc.rewriteAnnotation(invokes=(((callCode, self.context),), None))

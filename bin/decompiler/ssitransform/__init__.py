@@ -1,8 +1,7 @@
 from __future__ import absolute_import
 
-from util.visitor import StandardVisitor
-
-from language.python.ast import *
+from util.typedispatch import *
+from language.python import ast
 
 import analysis.defuse
 
@@ -41,7 +40,9 @@ class Handlers(object):
 
 
 
-class SSITransformer(StandardVisitor):
+class SSITransformer(TypeDispatcher):
+	__namedispatch__ = True # HACK emulates old visitor		
+	
 	def __init__(self, annotate, readExcept, hasExceptionHandling):
 		super(SSITransformer, self).__init__()
 		self.locals = LocalFrame()
@@ -58,26 +59,6 @@ class SSITransformer(StandardVisitor):
 
 		self.hasExceptionHandling = hasExceptionHandling
 
-	# HACK to retain annotations
-	# TODO rewrite using new framework?
-	def visit(self, node, *args):
-		result = StandardVisitor.visit(self, node, *args)
-
-		if hasattr(node, 'annotation') and result:
-			result.annotation = node.annotation
-
-		return result
-
-	def process(self, node):
-		assert self.locals
-
-		if node == None: return None
-
-##		assert not node.onEntry
-##		assert not node.onExit
-
-		return self.visit(node)
-
 	def enterExcept(self, r):
 		self.exceptLevel += 1
 
@@ -87,14 +68,14 @@ class SSITransformer(StandardVisitor):
 			rn.update(self.exceptRename[-1])
 
 
-		merges = Suite([])
+		merges = ast.Suite([])
 
 		for lcl in r:
 			if not lcl in rn:
-				old = self.visit(lcl)
-				merge = Local(lcl.name)
+				old = self(lcl)
+				merge = lcl.clone()
 				rn[lcl] = merge
-				asgn = Assign(old, merge)
+				asgn = ast.Assign(old, merge)
 				asgn.markMerge()
 				merges.append(asgn)
 
@@ -112,36 +93,25 @@ class SSITransformer(StandardVisitor):
 
 	def exceptLocal(self, lcl):
 		if not lcl in self.exceptLocals:
-			self.exceptLocals[lcl] = Local(lcl.name)
+			self.exceptLocals[lcl] = lcl.clone()
 		return self.exceptLocals[lcl]
-		#return self.exceptRename[-1].get(lcl)
-
 
 	def reach(self, lcl):
-		while lcl in self.defns and isinstance(self.defns[lcl], Local):
+		while lcl in self.defns and isinstance(self.defns[lcl], ast.Local):
 			lcl = self.defns[lcl]
 		return lcl
 
+	@defaultdispatch
 	def default(self, node):
-		# TODO: should be process instead of visit?
-		children = [self.visit(child) for child in node.children()]
-		return type(node)(*children)
+		return node.rewriteChildren(self)
 
-	def visitstr(self, node):
+	@dispatch(str, int, type(None))
+	def visitLeaf(self, node):
 		return node
 
-	def visitint(self, node):
-		return node
-
-	def visitNoneType(self, node):
-		return node
-
-	def visittuple(self, node):
-		return tuple([self.visit(i) for i in node])
-
-	def visitlist(self, node):
-		return [self.visit(i) for i in node]
-
+	@dispatch(list, tuple)
+	def visitContainer(self, node):
+		return [self(child) for child in node]
 
 	def visitExisting(self, node):
 		return node
@@ -159,27 +129,26 @@ class SSITransformer(StandardVisitor):
 		return node
 
 	def visitDelete(self, node):
-##		lcl = self.process(node.lcl)
+##		lcl = self(node.lcl)
 ##		self.locals.deleteLocal(node.lcl)
 ##		return Delete(lcl)
 
 		# Delete is meaningless once we SSA the code.
 		return None
 
-
 ##	def visitRaise(self, node):
-##		return Raise(self.process(node.exception), self.process(node.parameter), self.process(node.traceback))
+##		return Raise(self(node.exception), self(node.parameter), self(node.traceback))
 
 	def visitUnpackSequence(self, node):
-		expr = self.process(node.expr)
+		expr = self(node.expr)
 		targets = [self.locals.writeLocal(target) for target in node.targets]
-		out = UnpackSequence(expr, targets)
+		out = node.reconstruct(expr, targets)
 
 		if self.hasExceptionHandling:
-			out = Suite([out])
+			out = ast.Suite([out])
 
 			for oldtgt, newtgt in zip(node.targets, targets):
-				asgn = Assign(newtgt, self.exceptLocal(oldtgt))
+				asgn = ast.Assign(newtgt, self.exceptLocal(oldtgt))
 				asgn.markMerge()
 				out.append(asgn)
 
@@ -188,9 +157,9 @@ class SSITransformer(StandardVisitor):
 	def visitCondition(self, node):
 		# HACK
 		try:
-			preamble = self.process(node.preamble)
-			conditional = self.process(node.conditional)
-			newnode = Condition(preamble, conditional)
+			preamble    = self(node.preamble)
+			conditional = self(node.conditional)
+			newnode     = node.reconstruct(preamble, conditional)
 		except AssertionError:
 			raise
 			#raise Exception, repr(node) + '\n\n' + repr(self.locals.lut)
@@ -198,7 +167,7 @@ class SSITransformer(StandardVisitor):
 		return newnode
 
 	def visitSwitch(self, node):
-		condition = self.process(node.condition)
+		condition = self(node.condition)
 
 		normal = []
 
@@ -207,33 +176,31 @@ class SSITransformer(StandardVisitor):
 		tf, ff = self.locals.split()
 
 		self.locals = tf
-		t = self.process(node.t)
+		t = self(node.t)
 		tf = self.locals
 		if tf:
 			normal.append((TailInserter(t), tf))
 
 
 		self.locals = ff
-		f = self.process(node.f)
+		f = self(node.f)
 		ff = self.locals
 		if ff:
 			normal.append((TailInserter(f), ff))
 
 		self.locals = mergeFrames(normal)
 
-		newnode = Switch(condition, t, f)
-
-		return newnode
+		return node.reconstruct(condition, t, f)
 
 	def visitAssign(self, node):
 		assert self.locals
 
 		if any([len(self.localuses[lcl]) > 0 for lcl in node.lcls]):
-			expr = self.process(node.expr)
+			expr = self(node.expr)
 
 			assert self.locals, node.expr
 
-			if isinstance(node.expr, Local):
+			if isinstance(node.expr, ast.Local):
 				# Assign local to local.  Nullop for SSA.
 				assert len(node.lcls) == 1
 
@@ -243,7 +210,7 @@ class SSITransformer(StandardVisitor):
 				# Create a merge for exception handling.
 				if self.hasExceptionHandling:
 					el = self.exceptLocal(node.lcls[0])
-					easgn = Assign(expr, el)
+					easgn = ast.Assign(expr, el)
 					easgn.markMerge()
 					return easgn
 				else:
@@ -255,22 +222,22 @@ class SSITransformer(StandardVisitor):
 				for rename in renames:
 					self.defns[rename] = expr
 
-				asgn = Assign(expr, renames)
+				asgn = ast.Assign(expr, renames)
 
 				if self.hasExceptionHandling:
 					# Create a merge for exception handling.
 					output = [asgn]
 					for lcl, rename in zip(node.lcls, renames):
 						el = self.exceptLocal(lcl)
-						easgn = Assign(rename, el)
+						easgn = ast.Assign(rename, el)
 						easgn.markMerge()
 						output.append(easgn)
-					asgn = Suite(output)
+					asgn = ast.Suite(output)
 
 				return asgn
 
 		elif not node.expr.isPure():
-			return Discard(self.process(node.expr))
+			return ast.Discard(self(node.expr))
 		else:
 			return None
 
@@ -284,43 +251,42 @@ class SSITransformer(StandardVisitor):
 		if self.locals:
 			blocks = suite.blocks
 			if blocks:
-				if isinstance(blocks[-1], Break):
+				if isinstance(blocks[-1], ast.Break):
 					handler = self.handlers.breaks
-				elif isinstance(blocks[-1], Continue):
+				elif isinstance(blocks[-1], ast.Continue):
 					handler = self.handlers.continues
-				elif isinstance(blocks[-1], Return):
+				elif isinstance(blocks[-1], ast.Return):
 					handler = self.handlers.returns
-				elif isinstance(blocks[-1], Raise):
+				elif isinstance(blocks[-1], ast.Raise):
 					handler = self.handlers.raises
 				else:
 					handler = None
 
 				self.__register(suite, handler)
 
-
+	@dispatch(ast.Suite)
 	def visitSuite(self, node):
 		blocks = []
 		for block in node.blocks:
 			assert self.locals
-			blocks.append(self.process(block))
+			blocks.append(self(block))
 
-		newnode =  Suite(blocks)
+		newnode = node.reconstruct(blocks)
 		self.registerFrame(newnode)
-
 		return newnode
 
 	def visitExceptionHandler(self, node):
-		preamble = self.process(node.preamble)
-		type = self.process(node.type)
+		preamble = self(node.preamble)
+		type = self(node.type)
 
-		if isinstance(node.value, Local):
+		if isinstance(node.value, ast.Local):
 			value = self.locals.writeLocal(node.value)
 		else:
-			value = self.process(node.value)
+			value = self(node.value)
 
-		body = self.process(node.body)
+		body = self(node.body)
 
-		return ExceptionHandler(preamble, type, value, body)
+		return node.reconstruct(preamble, type, value, body)
 
 	def visitTryExceptFinally(self, node):
 		if node.finally_:
@@ -332,7 +298,7 @@ class SSITransformer(StandardVisitor):
 		r, m, fr, fm = self.annotate[node]
 
 
-		body = self.process(node.body)
+		body = self(node.body)
 
 
 		normal = self.locals
@@ -343,22 +309,22 @@ class SSITransformer(StandardVisitor):
 		handlers = []
 		for handler in node.handlers:
 			self.locals = ef = LocalFrame(ExceptionMerge(self.exceptLocals))
-			h = self.process(handler)
+			h = self(handler)
 			handlers.append(h)
 			merges.append((TailInserter(h.body), self.locals))
 
 
 		self.locals = ef = LocalFrame(ExceptionMerge(self.exceptLocals))
-		default = self.process(node.defaultHandler)
+		default = self(node.defaultHandler)
 		merges.append((TailInserter(default), self.locals))
 
 
 		# Normal
 		self.locals = normal
-		else_ 	= self.process(node.else_)
+		else_ 	= self(node.else_)
 
 		if not else_:
-			else_ = Suite([])
+			else_ = ast.Suite([])
 
 		merges.append((TailInserter(else_), self.locals))
 
@@ -371,14 +337,12 @@ class SSITransformer(StandardVisitor):
 			raises = self.handlers.raises.pop()
 
 		# All paths
-		finally_ = self.process(node.finally_)
+		finally_ = self(node.finally_)
 
-		newnode = TryExceptFinally(body, handlers, default, else_, finally_)
-
-		return newnode
+		return node.reconstruct(body, handlers, default, else_, finally_)
 
 	def makeLoopMerge(self, lcls, read, hot, modify):
-		entrySuite = Suite([]) # Holds the partial merges (entry -> condition)
+		entrySuite = ast.Suite([]) # Holds the partial merges (entry -> condition)
 		loopMerge = LoopMerge(HeadInserter(entrySuite), lcls, read, hot, modify)
 		lcls = LocalFrame(loopMerge)
 		return entrySuite, loopMerge, lcls
@@ -389,7 +353,7 @@ class SSITransformer(StandardVisitor):
 		self.handlers.breaks.new()
 		self.handlers.continues.new()
 
-		body = self.process(node.body)
+		body = self(node.body)
 
 		breaks = self.handlers.breaks.pop()
 		continues = self.handlers.continues.pop()
@@ -404,7 +368,7 @@ class SSITransformer(StandardVisitor):
 
 
 		self.locals = lcls
-		condition = self.process(node.condition)
+		condition = self(node.condition)
 
 		bodylcls, exitlcls = lcls.split()
 
@@ -416,7 +380,7 @@ class SSITransformer(StandardVisitor):
 
 		# Process the normal loop exit into else
 		self.locals = exitlcls
-		else_ = self.process(node.else_)
+		else_ = self(node.else_)
 
 		# Merge in breaks.
 		breaks.append((TailInserter(else_), self.locals))
@@ -424,7 +388,7 @@ class SSITransformer(StandardVisitor):
 
 
 		# Create the ast node
-		newnode = While(condition, body, else_)
+		newnode = node.reconstruct(condition, body, else_)
 
 		# Suite contains entry splits/merges.
 		entrySuite.append(newnode)
@@ -441,16 +405,16 @@ class SSITransformer(StandardVisitor):
 		#	index = self.locals.writeLocal(node.index)
 		#else:
 
-		bodyPreamble = self.process(node.bodyPreamble)
+		bodyPreamble = self(node.bodyPreamble)
 
 		# HACK
 		# The index may not be assigned if it is unused.
 		if not node.index in self.locals.lut:
 			index = node.index
 		else:
-			index 	= self.process(node.index)
+			index 	= self(node.index)
 
-		body = self.process(node.body)
+		body = self(node.body)
 
 		breaks = self.handlers.breaks.pop()
 		continues = self.handlers.continues.pop()
@@ -462,8 +426,8 @@ class SSITransformer(StandardVisitor):
 
 
 	def visitFor(self, node):
-		loopPreamble = self.process(node.loopPreamble)
-		iterator = self.process(node.iterator)
+		loopPreamble = self(node.loopPreamble)
+		iterator = self(node.iterator)
 
 		read, hot, modify, breakmerge = self.annotate[node]
 
@@ -479,7 +443,7 @@ class SSITransformer(StandardVisitor):
 
 		# Process the normal loop exit into else
 		self.locals = exitlcls
-		else_ = self.process(node.else_)
+		else_ = self(node.else_)
 
 		# Merge in breaks.
 		breaks.append((TailInserter(else_), self.locals))
@@ -487,13 +451,15 @@ class SSITransformer(StandardVisitor):
 
 
 		# Create the ast node
-		newnode = For(iterator, index, loopPreamble, bodyPreamble, body, else_)
+		newnode = node.reconstruct(iterator, index, loopPreamble, bodyPreamble, body, else_)
 
 		# Suite contains entry splits/merges.
 		entrySuite.append(newnode)
 		return entrySuite
 
-	def visitCode(self, node):
+	def processCode(self, node):
+		assert isinstance(node, ast.Code), type(node)
+		
 		# Insulate any containing functions.
 		old = self.locals
 
@@ -510,7 +476,7 @@ class SSITransformer(StandardVisitor):
 		vparam = self.locals.writeLocal(p.vparam) if p.vparam else None
 		kparam = self.locals.writeLocal(p.kparam) if p.kparam else None
 
-		ast = self.process(node.ast)
+		body = self(node.ast)
 
 		# Mutate the code
 		selfparam = selfparam
@@ -521,8 +487,8 @@ class SSITransformer(StandardVisitor):
 		kparam = kparam
 		returnparams = p.returnparams
 
-		node.codeparameters = CodeParameters(selfparam, parameters, parameternames, defaults, vparam, kparam, returnparams)
-		node.ast = ast
+		node.codeparameters = node.codeparameters.reconstruct(selfparam, parameters, parameternames, defaults, vparam, kparam, returnparams)
+		node.ast = body
 
 		returns = self.handlers.returns.pop()
 
@@ -538,16 +504,16 @@ class SSITransformer(StandardVisitor):
 
 		self.original = node # HACK for debugging
 
-		return self.process(node)
+		return self.processCode(node)
 
 
 
 def ssiTransform(node):
 	na = NumberAST()
-	na.walk(node)
+	na.process(node)
 
 	pff = PlaceFlowFunctions(na.numbering)
-	pff.walk(node)
+	pff.process(node)
 
 	# HACK
 	if pff.hasExceptionHandling:

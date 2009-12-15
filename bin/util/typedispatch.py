@@ -28,16 +28,30 @@ def dispatch__call__(self, p, *args):
 	func = table.get(t)
 	
 	if func is None:
-		if not self.__concrete__:
-			# Search for a matching superclass
-			# This is slightly inefficient, as it will check the concrete class again.
-			# On the other hand, this inefficiency will occur only once per class.
-			for supercls in t.mro():
-				func = table.get(supercls)
-				if func is not None: break
+		# Search for a matching superclass
+		# This should occur only once per class.
+
+		if self.__concrete__:
+			possible = (t,)
+		else:
+			possible = t.mro()
+			
+		for supercls in possible:
+			func = table.get(supercls)
+			
+			if func is not None:
+				break
+			elif self.__namedispatch__:
+				# The emulates "visitor" dispatch, to allow for evolutionary refactoring
+				name = self.__nameprefix__ + t.__name__
+				func = type(self).__dict__.get(name)
 				
+				if func is not None:
+					break
+
+		# default
 		if func is None:
-			func = table.get(None) # default
+			func = table.get(None) 
 
 		# Cache the function that we found
 		table[t] = func
@@ -102,4 +116,7 @@ class TypeDispatcher(object):
 	__dispatch__     = dispatch__call__
 	__call__         = dispatch__call__
 	exceptionDefault = defaultdispatch(exceptionDefault)
-	__concrete__ = False
+	__concrete__     = False
+
+	__namedispatch__ = False
+	__nameprefix__   = 'visit'

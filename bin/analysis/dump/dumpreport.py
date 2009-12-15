@@ -156,7 +156,7 @@ def dumpFunctionInfo(func, compiler, derived, links, reportDir):
 	# Psedo-python output
 	if func is not None and func.isStandardCode():
 		out.begin('pre')
-		scg.walk(func)
+		scg.process(func)
 		out.end('pre')
 
 	# Pretty printer for debugging

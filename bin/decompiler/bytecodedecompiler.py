@@ -113,7 +113,7 @@ class Decompiler(object):
 
 
 		if trace:
-			SimpleCodeGen(sys.stdout).walk(root)
+			SimpleCodeGen(sys.stdout).process(root)
 
 		return root
 

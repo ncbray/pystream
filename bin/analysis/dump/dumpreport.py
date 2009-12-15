@@ -5,7 +5,6 @@ from asttools.origin import originString
 
 import config
 import os.path
-from util import itergroupings
 from util.io.filesystem import ensureDirectoryExists
 
 from analysis import programculler
@@ -23,6 +22,21 @@ import urllib
 from language.python import ast
 
 from util.async import *
+
+# Filter an iterable into keys and values, and collect
+# values with the same key into groups.
+# Similar to map/reduce 
+def itergroupings(iterable, key, value=lambda v: v):
+	grouping = {}
+	for i in iterable:
+		group = key(i)
+		data  = value(i)
+		if not group in grouping:
+			grouping[group] = [data]
+		else:
+			grouping[group].append(data)
+	return grouping.iteritems()
+
 
 def outputCodeShortName(out, code, links=None, context=None):
 	link = links.codeRef(code, context) if links is not None else None

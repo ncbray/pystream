@@ -10,9 +10,7 @@ from translator.glsl import intrinsics
 from translator.glsl.exceptions import TemporaryLimitation
 
 from . slotstruct import SlotStruct
-from . poolimplementation import PoolImplementation
-
-from util import ensureValidName
+from . poolimplementation import PoolImplementation, ensureValidName
 
 # HACK for debugging
 from language.glsl import codegen

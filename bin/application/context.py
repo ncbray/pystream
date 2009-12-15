@@ -1,4 +1,4 @@
-import util
+from util.python import uniqueSlotName
 
 class Slots(object):
 	def __init__(self):
@@ -9,7 +9,7 @@ class Slots(object):
 		if descriptor in self.cache:
 			return self.cache[descriptor]
 					
-		uniqueName = util.uniqueSlotName(descriptor)
+		uniqueName = uniqueSlotName(descriptor)
 		
 		self.cache[descriptor]   = uniqueName
 		self.reverse[uniqueName] = descriptor

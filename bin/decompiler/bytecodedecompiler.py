@@ -14,7 +14,7 @@ from language.python import ast
 
 import decompiler.errors
 
-from util import moduleForGlobalDict
+from util.python import moduleForGlobalDict
 
 from decompiler.flowblocks import *
 

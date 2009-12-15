@@ -4,6 +4,7 @@ from . slotstruct import SlotStruct
 import re
 invalidNameChar = re.compile('[^\w\d_]')
 
+# HACK does not ensure the first character is not a digit.
 def ensureValidName(name):
 	return re.sub(invalidNameChar, '_', name)
 

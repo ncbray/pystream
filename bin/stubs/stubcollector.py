@@ -4,7 +4,7 @@ from _pystream import cfuncptr
 from util.monkeypatch import xtypes
 from language.python import ast
 
-import util
+from util.python import replaceGlobals
 
 from . import lltranslator
 
@@ -215,7 +215,7 @@ class StubCollector(object):
 	def highLevelStub(self, f):
 		# Let the function use the common global dictionary.
 		# Recreate the function with different globals.
-		f = util.replaceGlobals(f, self.highLevelGlobals)
+		f = replaceGlobals(f, self.highLevelGlobals)
 
 		# Register
 		self.highLevelLUT[f.func_name] = f

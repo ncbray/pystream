@@ -10,7 +10,7 @@ from util.console import Console
 from application.context import CompilerContext
 
 from decompiler.programextractor import Extractor
-from util import replaceGlobals
+from util.python import replaceGlobals
 
 class TestCPA(unittest.TestCase):
 	def assertIn(self, first, second, msg=None):

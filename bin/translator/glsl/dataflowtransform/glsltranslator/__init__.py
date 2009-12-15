@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 from analysis.dataflowIR import graph
 from analysis.cfgIR import cfg
 
@@ -42,7 +42,7 @@ class RewriterWrapper(TypeDispatcher):
 
 	@dispatch(list, tuple)
 	def visitContainer(self, node):
-		return allChildren(self, node)
+		return [self(child) for child in node]
 
 class GLSLTranslator(TypeDispatcher):
 	def __init__(self, code, poolanalysis, intrinsicRewrite, inputLUT, outputLUT):
@@ -276,7 +276,7 @@ class GLSLTranslator(TypeDispatcher):
 
 	@dispatch(list, tuple)
 	def visitContainer(self, node):
-		return allChildren(self, node)
+		return [self(child) for child in node]
 
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node, g):

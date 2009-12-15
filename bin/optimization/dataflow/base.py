@@ -1,5 +1,5 @@
 import copy
-from asttools.transform import *
+from util.typedispatch import *
 
 # HACK should not be dependant on Python?
 from language.python import ast
@@ -25,7 +25,7 @@ class MutateCode(TypeDispatcher):
 	@defaultdispatch
 	def visitCode(self, node):
 		assert node.isCode(), type(node)
-		replaceAllChildren(self.strategy, node)
+		node.replaceChildren(self.strategy)
 		return node
 
 class MutateCodeReversed(TypeDispatcher):
@@ -35,7 +35,7 @@ class MutateCodeReversed(TypeDispatcher):
 	@defaultdispatch
 	def visitCode(self, node):
 		assert node.isCode(), type(node)
-		replaceAllChildrenReversed(self.strategy, node)
+		node.replaceChildrenReversed(self.strategy)
 		return node
 
 class DynamicBase(object):

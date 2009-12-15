@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 import asttools.annotation
 
 from language.python import ast
@@ -51,8 +51,8 @@ def makeCallRewrite(extractor):
 
 
 class FoldRewrite(TypeDispatcher):
-
 	def __init__(self, extractor, storeGraph, code):
+		TypeDispatcher.__init__(self)
 		self.extractor = extractor
 		self.storeGraph = storeGraph
 		self.code = code
@@ -444,10 +444,14 @@ class FoldTraverse(TypeDispatcher):
 		self.strategy = strategy
 		self.code = function
 
+	@dispatch(str, int, type(None))
+	def visitLeaf(self, node):
+		return node
+
 	@defaultdispatch
 	def default(self, node):
 		# Bottom up
-		return self.strategy(allChildren(self, node))
+		return self.strategy(node.rewriteChildren(self))
 
 	@dispatch(ast.CodeParameters)
 	def visitCodeParameters(self, node):
@@ -494,8 +498,7 @@ def evaluateCode(compiler, node):
 		# HACK bypass dataflow analysis, as there's no real "flow"
 		rewrite  = FoldRewrite(compiler.extractor, compiler.storeGraph, node)
 		rewriteS = FoldTraverse(rewrite, node)
-		replaceAllChildren(rewriteS, node)
-
+		node.replaceChildren(rewriteS)
 
 	existing = set(compiler.extractor.desc.objects)
 	newobj = rewrite.created-existing

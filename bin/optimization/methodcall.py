@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 from language.python import annotations
 
@@ -240,9 +240,9 @@ class MethodAnalysis(TypeDispatcher):
 		  ast.Discard, ast.GetIter,
 		  ast.ConvertToBool, ast.Not,
 		  ast.BinaryOp, ast.UnaryPrefixOp,
-		  ast.BuildTuple, list, tuple, ast.Call, ast.DirectCall, ast.MethodCall, ast.GetAttr)
+		  ast.BuildTuple, ast.Call, ast.DirectCall, ast.MethodCall, ast.GetAttr)
 	def visitMayLeak(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 		return node
 
 	@dispatch(ast.Assign)
@@ -336,7 +336,7 @@ class MethodRewrite(TypeDispatcher):
 
 	@dispatch(ast.Assign, ast.Discard)
 	def visitStatement(self, node):
-		return allChildren(self, node)
+		return node.rewriteChildren(self)
 
 def methodMeet(values):
 	prototype = values[0]

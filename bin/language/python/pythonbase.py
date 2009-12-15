@@ -5,6 +5,9 @@ def isPythonAST(ast):
 	return isinstance(ast, PythonASTNode)
 
 class PythonASTNode(ASTNode):
+	def __init__(self):
+		raise NotImplementedError
+	
 	def returnsValue(self):
 		return False
 

@@ -1,17 +1,33 @@
-from asttools.traversal import allChildren, replaceAllChildren
 import optimization.simplify
+from util.typedispatch import *
 
-
-class Rewriter(object):
+class Rewriter(TypeDispatcher):
 	def __init__(self, replacements):
+		TypeDispatcher.__init__(self)
 		self.replacements = replacements
 		self.replaced = set()
 
-	def __call__(self, node):
-		if isinstance(node, list):
-			# Unhashable, can't check for replacement
-			return allChildren(self, node)
+	@dispatch(str, int, type(None))
+	def visitLeaf(self, node):
+		if node in self.replaced:
+			return node
+		
+		if node in self.replacements:
+			oldnode = node
+			self.replaced.add(oldnode)
+			node = self(self.replacements[node])
+			self.replaced.remove(oldnode)
+		
+		return node
 
+	@dispatch(list, tuple)
+	def visitContainer(self, node):
+		# AST nodes may sometimes be replaced with containers,
+		# so unlike most transformations, this will get called.
+		return [self(child) for child in node]
+
+	@defaultdispatch
+	def visitNode(self, node):
 		# Prevent stupid recursion, where the replacement
 		# contains the original.
 		if node in self.replaced:
@@ -20,15 +36,15 @@ class Rewriter(object):
 		if node in self.replacements:
 			oldnode = node
 			self.replaced.add(oldnode)
-			node = allChildren(self, self.replacements[node])
+			node = self(self.replacements[node])
 			self.replaced.remove(oldnode)
 		else:
-			node = allChildren(self, node)
+			node = node.rewriteChildren(self)
 
 		return node
 
 	def processCode(self, code):
-		replaceAllChildren(self, code)
+		code.replaceChildren(self)
 		return code
 
 def rewriteTerm(term, replace):

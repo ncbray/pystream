@@ -236,6 +236,9 @@ class ClassBuilder(object):
 		self.defaultFunc('rewriteChildren', codegeneration.makeRewrite, (self.name, desc), {'reverse':False, 'shared':shared, 'mutate':False, 'vargs':False, 'kargs':False})
 		self.defaultFunc('rewriteChildrenReversed', codegeneration.makeRewrite, (self.name, desc), {'reverse':True, 'shared':shared, 'mutate':False, 'vargs':False, 'kargs':False})
 
+		# Currently rewriteChildren always clones, but this may not be the case in the future.
+		self.copyFunc('rewriteChildren', 'rewriteCloned')
+
 		if self.mutable:
 			self.defaultFunc('replaceChildren', codegeneration.makeRewrite, (self.name, desc), {'reverse':False, 'shared':shared, 'mutate':True, 'vargs':False, 'kargs':False})
 			self.defaultFunc('replaceChildrenReversed', codegeneration.makeRewrite, (self.name, desc), {'reverse':True, 'shared':shared, 'mutate':True, 'vargs':False, 'kargs':False})

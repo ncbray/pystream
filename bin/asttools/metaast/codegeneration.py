@@ -176,7 +176,10 @@ def makeVisit(clsname, desc, reverse=False, shared=False, forced=False, vargs=Fa
 				indent += '\t'
 	
 			if field.repeated:
-				statements.append('%sfor _child in self.%s:\n' % (indent, field.internalname))
+				if reverse:
+					statements.append('%sfor _child in reversed(self.%s):\n' % (indent, field.internalname))
+				else:
+					statements.append('%sfor _child in self.%s:\n' % (indent, field.internalname))
 				indent += '\t'
 				src = '_child'
 			else:
@@ -223,7 +226,10 @@ def makeRewrite(clsname, desc, reverse=False, mutate=False, shared=False, vargs=
 			targets.append(target)
 			
 			if field.repeated:
-				expr = '[_callback(_child%s) for _child in self.%s]' % (additionalargs, field.internalname)
+				if reverse:
+					expr = 'list(reversed([_callback(_child%s) for _child in reversed(self.%s)]))' % (additionalargs, field.internalname)
+				else:
+					expr = '[_callback(_child%s) for _child in self.%s]' % (additionalargs, field.internalname)
 			else:
 				expr = '_callback(self.%s%s)' % (field.internalname, additionalargs)
 	
@@ -234,11 +240,13 @@ def makeRewrite(clsname, desc, reverse=False, mutate=False, shared=False, vargs=
 	
 			if mutate:
 				mutation.append("\tself.%s = %s\n"  % (field.internalname, target))
-	
+				
 		if mutate:
 			statements.extend(mutation)
 			statements.append("\treturn self\n")		
 		else:
+			if reverse: targets.reverse()
+			
 			statements.append("\tresult = %s(%s)\n" % (clsname, ", ".join(targets)))
 			statements.append("\tresult.annotation = self.annotation\n")
 			statements.append("\treturn result\n")

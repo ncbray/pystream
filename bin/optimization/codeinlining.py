@@ -1,11 +1,11 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 
 import optimization.simplify
 
 from analysis.astcollector import getOps
 
-# Determines the technical feasability of inlining
+# Determines the technical feasibility of inlining
 class CodeInliningAnalysis(TypeDispatcher):
 	def __init__(self):
 		self.canInline   = {}
@@ -18,7 +18,7 @@ class CodeInliningAnalysis(TypeDispatcher):
 
 	@dispatch(ast.Suite, list, ast.Condition, ast.Assign, ast.Discard, ast.TypeSwitchCase)
 	def visitOK(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
 	@dispatch(ast.Call, ast.DirectCall, ast.MethodCall, ast.Allocate, ast.Load, ast.Store, ast.Check)
 	def visitOp(self, node):
@@ -26,7 +26,7 @@ class CodeInliningAnalysis(TypeDispatcher):
 
 		invokes = node.annotation.invokes
 		if invokes:
-			# Eliminate duplacate code targets
+			# Eliminate duplicate code targets
 			targets = set()
 			for code, context in invokes[0]:
 				targets.add(code)
@@ -79,7 +79,7 @@ class CodeInliningAnalysis(TypeDispatcher):
 	@dispatch(ast.For, ast.While)
 	def visitControlFlow(self, node):
 		self.level += 1
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 		self.level -= 1
 
 	def process(self, node):
@@ -89,7 +89,7 @@ class CodeInliningAnalysis(TypeDispatcher):
 		# Terminal indicates
 		self.terminal = False
 
-		# Inital value
+		# Initial value
 		callee = node.codeParameters()
 		self.inlinable = node.isStandardCode() and not isinstance(callee.vparam, ast.Local) and not isinstance(callee.kparam, ast.Local) and not node.annotation.descriptive
 
@@ -128,9 +128,13 @@ class OpInliningTransform(TypeDispatcher):
 		assert original is not replacement, original
 		replacement.annotation = original.annotation.contextSubset(self.contextRemap)
 
+	@dispatch(type(None), str, int)
+	def visitLeaf(self, node):
+		return node
+
 	@defaultdispatch
 	def default(self, node):
-		result = allChildren(self, node, clone=True)
+		result = node.rewriteCloned(self)
 		self.transferAnalysisData(node, result)
 		return result
 
@@ -210,7 +214,7 @@ class CodeInliningTransform(TypeDispatcher):
 	# May contain inlinable nodes
 	@dispatch(ast.Suite, list, ast.Condition, ast.Switch, ast.For, ast.While, ast.TypeSwitch, ast.TypeSwitchCase)
 	def visitOK(self, node):
-		return allChildren(self, node)
+		return node.rewriteChildren(self)
 
 	# Contains no inlinable nodes
 	@dispatch(ast.Load, ast.Store, ast.Check, ast.Allocate,

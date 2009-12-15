@@ -1,6 +1,5 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
-from language.python import program
 
 # HACK for debugging
 from asttools import astpprint
@@ -70,7 +69,7 @@ class LLTranslator(TypeDispatcher):
 
 	@dispatch(ast.GetGlobal)
 	def visitGetGlobal(self, node):
-		node = allChildren(self, node)
+		node = node.rewriteChildren(self)
 		namedefn = self.defn[node.name]
 		assert isinstance(namedefn, ast.Existing)
 		name = namedefn.object.pyobj
@@ -84,7 +83,7 @@ class LLTranslator(TypeDispatcher):
 
 	@dispatch(ast.Call)
 	def visitCall(self, node):
-		node = allChildren(self, node)
+		node = node.rewriteChildren(self)
 		original = node
 
 		if node.expr in self.defn:
@@ -179,11 +178,11 @@ class LLTranslator(TypeDispatcher):
 			# It will be a boolean, so don't bother converting...
 			return node.expr
 		else:
-			return allChildren(self, node)
+			return node.rewriteChildren(self)
 
 	@dispatch(ast.BinaryOp, ast.Is, ast.GetAttr, ast.GetSubscript, ast.BuildTuple)
 	def visitExpr(self, node):
-		return allChildren(self, node)
+		return node.rewriteChildren(self)
 
 	@dispatch(ast.Switch)
 	def visitSwitch(self, node):
@@ -214,7 +213,7 @@ class LLTranslator(TypeDispatcher):
 				return ast.Return(newexprs)
 
 		self.setNumReturns(len(node.exprs))
-		return allChildren(self, node)
+		return node.rewriteChildren(self)
 
 	def setNumReturns(self, num):
 		if self.numReturns is None:
@@ -228,9 +227,9 @@ class LLTranslator(TypeDispatcher):
 		else:
 			assert num == self.numReturns
 
-	@dispatch(ast.Suite, list, tuple, ast.Condition)
+	@dispatch(ast.Suite, ast.Condition)
 	def visitOK(self, node):
-		return allChildren(self, node)
+		return node.rewriteChildren(self)
 
 	def process(self, node):
 		self.numReturns = None

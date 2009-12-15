@@ -37,10 +37,19 @@ class ReverseFlowTraverse(TypeDispatcher):
 
 		return result
 
-	@dispatch(ast.Suite, list, tuple, type(None))
-	def visitFlow(self, node):
-		node = allChildrenReversed(self, node)
+	@dispatch(str, type(None))
+	def visitLeaf(self, node):
 		return node
+
+	@dispatch(list, tuple)
+	def visitContainer(self, node):
+		result = [self(child) for child in reversed(node)]
+		result.reverse()
+		return result
+
+	@dispatch(ast.Suite)
+	def visitFlow(self, node):
+		return node.rewriteChildrenReversed(self)
 
 	@dispatch(ast.Condition)
 	def visitCondition(self, node):

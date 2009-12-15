@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 
 from dataflow.reverse import *
@@ -13,6 +13,10 @@ def liveMeet(values):
 
 # Mark a locals in an AST subtree as used.
 class MarkLocals(TypeDispatcher):
+	@dispatch(str, int, type(None))
+	def visitLeaf(self, node):
+		pass
+	
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
 		self.flow.define(node, top)
@@ -20,11 +24,11 @@ class MarkLocals(TypeDispatcher):
 	@dispatch(ast.GetGlobal, ast.SetGlobal)
 	def visitGlobalOp(self, node):
 		self.flow.define(self.selfparam, top)
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
 	@defaultdispatch
 	def default(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
 
 nodesWithNoSideEffects = (ast.GetGlobal, ast.Existing, ast.Local,

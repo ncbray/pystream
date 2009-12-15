@@ -1,23 +1,21 @@
-from asttools.transform import *
-
+from util.typedispatch import *
 from language.python import ast
-from language.python import program
 
 class GetOps(TypeDispatcher):
 	def __init__(self):
 		self.ops    = []
 		self.locals = set()
 
-	@dispatch(str, type(None), ast.Break, ast.Continue, ast.Code, ast.DoNotCare)
-	def visitJunk(self, node):
+	@dispatch(str, int, type(None), ast.Break, ast.Continue, ast.Code, ast.DoNotCare)
+	def visitLeaf(self, node):
 		pass
 
 	@dispatch(ast.Suite, ast.Condition, ast.Assign, ast.Switch, ast.Discard,
 		ast.For, ast.While,
 		ast.CodeParameters,
-		ast.TypeSwitch, ast.TypeSwitchCase)
+		ast.TypeSwitch, ast.TypeSwitchCase, ast.Return)
 	def visitOK(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 
 	@dispatch(ast.Local, ast.Existing)
 	def visitLocal(self, node):
@@ -33,18 +31,12 @@ class GetOps(TypeDispatcher):
 		  ast.ConvertToBool, ast.Not,
 		  ast.BuildTuple, ast.BuildList, ast.GetIter)
 	def visitOp(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 		self.ops.append(node)
-
-	@dispatch(list, tuple, ast.Return)
-	def visitContainer(self, node):
-		visitAllChildren(self, node)
 
 	def process(self, node):
 		# This is a shared node, so force traversal
-		for child in node.children():
-			self(child)
-
+		node.visitChildrenForced(self)
 		return self.ops, self.locals
 
 

@@ -1,4 +1,4 @@
-from asttools.transform import *
+from util.typedispatch import *
 from language.python import ast
 
 from language.python.program import Object
@@ -17,14 +17,9 @@ class CodeContextCuller(TypeDispatcher):
 			self.locals.add(node)
 			node.annotation = node.annotation.contextSubset(self.remap)
 
-	@dispatch(list, tuple)
-	def visitNoAnnotation(self, node):
-		visitAllChildren(self, node)
-
-
 	@defaultdispatch
 	def default(self, node):
-		visitAllChildren(self, node)
+		node.visitChildren(self)
 		if node.annotation is not None:
 			node.annotation = node.annotation.contextSubset(self.remap)
 

@@ -19,9 +19,9 @@ class Existing(Reference):
 
 
 	def __init__(self, o):
-		super(Existing, self).__init__()
 		assert isinstance(o, program.AbstractObject), type(o)
 		self.object = o
+		self.annotation = self.__emptyAnnotation__
 
 	def __repr__(self):
 		return "%s(%r)" % (type(self).__name__, self.object)
@@ -46,8 +46,8 @@ class Local(Reference):
 
 
 	def __init__(self, name=None):
-		super(Local, self).__init__()
 		self.name = name
+		self.annotation = self.__emptyAnnotation__
 
 	def __repr__(self):
 		if self.name:
@@ -80,9 +80,9 @@ class Cell(PythonASTNode):
 	__shared__ = True
 
 	def __init__(self, name):
-		super(Cell, self).__init__()
 		assert isinstance(name, str)
 		self.name = name
+		self.annotation = self.__emptyAnnotation__
 
 	def __eq__(self, other):
 		if isinstance(other, type(self)):
@@ -307,9 +307,9 @@ class Suite(PythonASTNode):
 	__mutable__ = True # HACK not really mutable, just need to be able to assign to blocks.
 
 	def __init__(self, blocks=None):
-		super(Suite, self).__init__()
 		self.blocks = []
 		self.append(blocks)
+		self.annotation = self.__emptyAnnotation__
 
 	def insertHead(self, block):
 		if block != None:
@@ -332,7 +332,7 @@ class Suite(PythonASTNode):
 				for child in block:
 					self.append(child)
 			elif block is not None:
-				assert isinstance(block, Statement), block
+				assert isinstance(block, Statement), type(block)
 				self.blocks.append(block)
 
 	def significant(self):

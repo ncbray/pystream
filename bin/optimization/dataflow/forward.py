@@ -16,7 +16,7 @@ class ForwardFlowTraverse(TypeDispatcher):
 		self.meetF = meetF
 
 	# TODO expose CodeParameters to the strategies?
-	@dispatch(str, ast.CodeParameters)
+	@dispatch(str, type(None), ast.CodeParameters)
 	def visitLeaf(self, node):
 		return node
 
@@ -45,10 +45,13 @@ class ForwardFlowTraverse(TypeDispatcher):
 	def visitOK(self, node):
 		return self.processExpr(node)
 
-	@dispatch(list, tuple, ast.ExceptionHandler, type(None))
+	@dispatch(ast.ExceptionHandler)
 	def visitFlow(self, node):
-		node = allChildren(self, node)
-		return node
+		return node.rewriteChildren(self)
+
+	@dispatch(list, tuple)
+	def visitContainer(self, node):
+		return [self(child) for child in node]
 
 	@dispatch(ast.Suite)
 	def visitSuite(self, node):

@@ -8,9 +8,10 @@ def traceBlame(offset, count):
 			name	 = caller.f_code.co_name
 			lineno   = caller.f_lineno
 			filename = caller.f_code.co_filename
+			del caller # Destroy a circular reference
 
 			lines.append("%s:%d in %s" % (filename, lineno, name))
-		finally:
-			del caller # Destroy a circular reference
+		except:
+                        pass
 
 	return tuple(lines)

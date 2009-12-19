@@ -55,15 +55,22 @@ def allocateObj(dioa, dataflow, subtree, slot, obj):
 	g.setPredicate(predicate)
 	g.addLocalRead(cls, dataflow.getExisting(cls, obj))
 
-	# Build op annotation
-	read         = makeCorrelatedAnnotation(dioa, dioa.set.empty)
-	modify       = makeCorrelatedAnnotation(dioa, dioa.set.empty)
-	allocate     = makeCorrelatedAnnotation(dioa, dioa.set.leaf((obj,)))
-	mask         = dioa.bool.true # HACK
-	annotation   = annotations.DataflowOpAnnotation(read, modify, allocate, mask)
-	g.annotation = annotation
+	# TODO mask?
+	setOpAnnotation(dioa, g, allocate=dioa.set.leaf((obj,)))
 	
 	return addOutput(g, subtree, slot)
+
+def makeStoreOp(dataflow, hyperblock, predicate, exprNode, field, valueNode):
+	name = ast.Existing(field.name)
+	op = ast.Store(exprNode.names[0], field.type, name, valueNode.names[0])
+
+	g = graph.GenericOp(hyperblock, op) 
+	g.setPredicate(predicate)
+	g.addLocalRead(exprNode.names[0], exprNode)
+	g.addLocalRead(name, dataflow.getExisting(name))
+	g.addLocalRead(valueNode.names[0], valueNode)	
+
+	return g
 
 def transformInputSubtree(compiler, dioa, dataflow, subtree, root):
 	hyperblock = dataflow.entry.hyperblock
@@ -94,6 +101,7 @@ def transformInputSubtree(compiler, dioa, dataflow, subtree, root):
 
 	lut = dataflow.entry.modifies
 
+	# Recurse to each field of this node
 	for field, child in subtree.fields.iteritems():
 		# Field the field nodes for the field name
 		fieldNodes = [lut[o.slots[field]] for o in objs if field in o.slots]
@@ -102,38 +110,34 @@ def transformInputSubtree(compiler, dioa, dataflow, subtree, root):
 		
 		# HACK ignore correlated fields
 		#if fieldNode.annotation.values.correlated.tree(): continue
-		
+
+		# Create the dataflow store
 		valueNode = transformInputSubtree(compiler, dioa, dataflow, child, fieldNode)
-		name = ast.Existing(field.name)
-		op = ast.Store(exprNode.names[0], field.type, name, valueNode.names[0])
-
-		g = graph.GenericOp(hyperblock, op) 
-
-		g.setPredicate(predicate)
-		g.addLocalRead(exprNode.names[0], exprNode)
-		g.addLocalRead(name, dataflow.getExisting(name))
-		g.addLocalRead(valueNode.names[0], valueNode)
-
+		
+		g = makeStoreOp(dataflow, hyperblock, predicate, exprNode, field, valueNode)
 
 		for oldField in fieldNodes:
+			# This op should produce a new version of the field
 			newField = oldField.duplicate()
-			newField.annotation = oldField.annotation
-		
 			g.addModify(newField.name, newField)
 			
+			# Reads from this field should come from the store instead
 			oldField.canonical().redirect(newField)
 		
-		modifies = dioa.set.leaf(fieldNodes)
-		
-		read     = makeCorrelatedAnnotation(dioa, dioa.set.empty)
-		modify   = makeCorrelatedAnnotation(dioa, modifies)
-		allocate = makeCorrelatedAnnotation(dioa, dioa.set.empty)
-		mask     = dioa.bool.true # HACK
-
-		annotation = annotations.DataflowOpAnnotation(read, modify, allocate, mask)
-		g.annotation = annotation
+		# TODO mask?
+		setOpAnnotation(dioa, g, modify=dioa.set.leaf(fieldNodes))
 
 	return exprNode
+
+def setOpAnnotation(dioa, g, read=None, modify=None, allocate=None, mask=None):
+	read     = makeCorrelatedAnnotation(dioa, dioa.set.empty if read is None else read)
+	modify   = makeCorrelatedAnnotation(dioa, dioa.set.empty if modify is None else modify)
+	allocate = makeCorrelatedAnnotation(dioa, dioa.set.empty if allocate is None else allocate)
+	mask     = dioa.bool.true if mask is None else mask
+
+	annotation = annotations.DataflowOpAnnotation(read, modify, allocate, mask)
+	g.annotation = annotation
+
 
 def transformInput(compiler, dioa, dataflow, contextIn, root):
 	exprNode = transformInputSubtree(compiler, dioa, dataflow, contextIn, root)
@@ -142,29 +146,34 @@ def transformInput(compiler, dioa, dataflow, contextIn, root):
 	if root.isLocal(): root.canonical().redirect(exprNode)
 
 
-def transformOutputSubtree(compiler, dioa, dataflow, subtree, root):
-	hyperblock = dataflow.exit.hyperblock
-	predicate = dataflow.exit.predicate
-	
+def makeLoadOp(dataflow, hyperblock, predicate, root, field):
 	if isinstance(root, graph.LocalNode):
 		expr = root.names[0]
 	else:
 		assert isinstance(root, graph.ExistingNode)
-		expr = root.name
+		expr = root.name	
+	
+	# Create the dataflow load
+	name = ast.Existing(field.name)
+	nameref = field.name # HACK incorrect
+	op   = ast.Load(expr, field.type, name)
+			
+	g = graph.GenericOp(hyperblock, op) 
+	g.setPredicate(predicate)
+	g.addLocalRead(expr, root)
+	g.addLocalRead(name, dataflow.getExisting(name, nameref))
+	
+	return g
+
+def transformOutputSubtree(compiler, dioa, dataflow, subtree, root):
+	hyperblock = dataflow.exit.hyperblock
+	predicate = dataflow.exit.predicate
 
 	for field, child in subtree.fields.iteritems():
-		
+		# Intrinsic fields will be transfered by copying the object they are attached to
 		if intrinsics.isIntrinsicField(field): continue
 		
-		name = ast.Existing(field.name)
-		nameref = field.name # HACK incorrect
-		op   = ast.Load(expr, field.type, name)
-				
-		g = graph.GenericOp(hyperblock, op) 
-
-		g.setPredicate(predicate)
-		g.addLocalRead(expr, root)
-		g.addLocalRead(name, dataflow.getExisting(name, nameref))
+		g = makeLoadOp(dataflow, hyperblock, predicate, root, field)
 		
 		reads = dioa.set.empty
 		values = dioa.set.empty
@@ -181,18 +190,13 @@ def transformOutputSubtree(compiler, dioa, dataflow, subtree, root):
 			fieldValues = dioa.set.simplify(mask, fieldValues, dioa.set.empty)
 			values = dioa.set.union(values, fieldValues) 
 		
-		read     = makeCorrelatedAnnotation(dioa, reads)
-		modify   = makeCorrelatedAnnotation(dioa, dioa.set.empty)
-		allocate = makeCorrelatedAnnotation(dioa, dioa.set.empty)
-		mask     = dioa.bool.true # HACK
-
-		annotation = annotations.DataflowOpAnnotation(read, modify, allocate, mask)
-		g.annotation = annotation
+		# TODO mask?
+		setOpAnnotation(dioa, g, read=reads)
 		
 		outputNode = addOutput(g, child,  makeCorrelatedAnnotation(dioa, values))
 
-
 		# Expose the local at the output.
+		# HACK assumes the first name is the "canonical" name
 		name = outputNode.names[0]
 		dataflow.exit.addExit(name, outputNode)
 		child.impl = name

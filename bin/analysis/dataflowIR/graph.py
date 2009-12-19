@@ -209,6 +209,7 @@ class LocalNode(FlowSensitiveSlotNode):
 		node = LocalNode(self.hyperblock)
 		# HACK shares the names, so any updates will be seen by all versions of the node.
 		node.names = self.names
+		node.annotation = self.annotation
 		return node
 
 	def __repr__(self):
@@ -226,6 +227,7 @@ class PredicateNode(FlowSensitiveSlotNode):
 
 	def duplicate(self):
 		node = PredicateNode(self.hyperblock, self.name)
+		node.annotation = self.annotation
 		return node
 
 	def __repr__(self):
@@ -342,6 +344,7 @@ class FieldNode(FlowSensitiveSlotNode):
 
 	def duplicate(self):
 		node = FieldNode(self.hyperblock, self.name)
+		node.annotation = self.annotation
 		return node
 
 	def __repr__(self):

@@ -101,6 +101,7 @@ class StandardGrep(object):
 		self.files = 0
 		self.lines = 0
 		self.occurances = 0
+		self.fileOccurances = 0
 
 		self.linesChanged = 0
 		self.filesChanged = 0
@@ -132,6 +133,8 @@ class StandardGrep(object):
 
 		matched = textMatches(matchline)
 
+                self.matched |= matched
+
 		if replaceActive():
 			if matched:
 				newline = textReplace(line)
@@ -158,11 +161,15 @@ class StandardGrep(object):
 
 			self.lineBuffer = []
 			self.changed    = False
+			self.matched    = False
 
 			for line in fh:
 				self.handleLine(fn, lineno, line)
 				lineno += 1
 			fh.close()
+
+                        if self.matched:
+                                self.fileOccurances += 1
 
 			if replaceActive() and self.changed and not options.dryrun:
 				text = "".join(self.lineBuffer)
@@ -174,7 +181,6 @@ class StandardGrep(object):
 			print fn
 
 		self.files += 1
-
 
 	def walk(self, dn, callback):
 		self.callback = callback
@@ -189,15 +195,13 @@ class StandardGrep(object):
 			print
 
 		if self.matchText: 
-			print "%7.1d occurances." % self.occurances
+			print "%7.1d occurances in %d file%s." % (self.occurances, self.fileOccurances, 's' if self.fileOccurances != 1 else '')
 			print "%7.1d lines." % self.lines
 		print "%7.1d files." % self.files
 
 		if replaceActive():
 			print "%7.1d lines rewritten." % self.linesChanged
 			print "%7.1d files changed." % self.filesChanged
-
-
 
 if __name__ == '__main__':
 	try:
@@ -217,7 +221,13 @@ if __name__ == '__main__':
 	# Identifiers are a little strange, as we need to take into account
 	# that they may be at the start or the end of a line.
 	for i in options.identifiers:
-		args.append('(?<![\w\d_])(%s)(?![\w\d_])' % i)
+                # The lookaheads/lookbehinds ensures that the expr starts and ends either
+                # with a non-id character, or adjacent to one.
+                # This allows exprs that can match non-id characters to behave in a reasonable way
+                # Note there are subtle semantic differences between positive and negative
+                # lookaheads/lookbehinds.  Primarily, negative versions can match end of strings.
+                expr = '(?:(?<!\w)|(?=\W))(?:%s)(?:(?!\w)|(?<=\W))' % i
+		args.append(expr)
 
 	matchText = True
 	if len(args) < 1 and len(options.replaces) < 1:

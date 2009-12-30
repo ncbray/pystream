@@ -1,0 +1,2 @@
+class CompilerAbort(Exception):
+	pass

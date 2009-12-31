@@ -1,9 +1,7 @@
 from __future__ import absolute_import
 
 from util.typedispatch import *
-from language.python import ast
-
-import analysis.defuse
+from language.python import ast, defuse
 
 from . localframe import Merge, LoopMerge, Split, LocalFrame, mergeFrames, Inserter, HeadInserter, TailInserter, ExceptionMerge
 
@@ -497,7 +495,7 @@ class SSITransformer(TypeDispatcher):
 		return node
 
 	def transform(self, node):
-		(defines, uses), (globaldefines, globaluses) = analysis.defuse.evaluateCode(None, node)
+		(defines, uses), (globaldefines, globaluses) = defuse.evaluateCode(None, node)
 
 		self.localdefs = defines
 		self.localuses = uses

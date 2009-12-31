@@ -4,8 +4,8 @@ import sys
 from util.typedispatch import *
 from . pythonoutput import PythonOutput
 
-from analysis import defuse
-import analysis.collapser
+from . import defuse
+from . import collapser
 from util.python import opnames
 
 from language.python import ast, program
@@ -724,7 +724,7 @@ class SimpleCodeGen(TypeDispatcher):
 
 		(defines, uses), (globaldefines, globaluses) = defuse.evaluateCode(None, node)
 
-		collapsable = analysis.collapser.evaluateCode(None, node, defines, uses)
+		collapsable = collapser.evaluateCode(None, node, defines, uses)
 		self.collapsable.update(collapsable)
 
 		p = node.codeparameters

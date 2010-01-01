@@ -172,10 +172,7 @@ class ArgumentNormalizationTransform(TypeDispatcher):
 		self.newParams = [ast.Local(None) for i in range(vparamLen)]
 		self.newNames  = [None for i in range(vparamLen)]
 
-		if p.defaults is None:
-			# No code defaults
-			defaults = None
-		elif vparamLen > 0:
+		if vparamLen > 0:
 			# Defaults are never used
 			defaults = ()
 		else:

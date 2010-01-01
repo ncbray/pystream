@@ -10,8 +10,6 @@ from . import program
 import util.python.calling
 
 AbstractObject = program.AbstractObject
-# HACK for CodeParameters.paramnames
-NoneType = type(None)
 
 leafTypes = (str, int, long, bool, float, type(None), AbstractObject) 
 
@@ -371,13 +369,12 @@ ParameterDecl = (Local, DoNotCare)
 class CodeParameters(PythonASTNode):
 	# TODO support paramnames:str?* (different than paramnames:str*?)
 	__fields__ = """selfparam:ParameterDecl?
-			params:ParameterDecl* paramnames:(str,NoneType)* defaults:Existing*?
+			params:ParameterDecl* paramnames:str?* defaults:Existing*
 			vparam:ParameterDecl? kparam:ParameterDecl?
 			returnparams:ParameterDecl*"""
 
 	def codeParameters(self):
-		defaults = self.defaults if self.defaults is not None else ()
-		return util.python.calling.CalleeParams(self.selfparam, self.params, self.paramnames, defaults, self.vparam, self.kparam, self.returnparams)
+		return util.python.calling.CalleeParams(self.selfparam, self.params, self.paramnames, self.defaults, self.vparam, self.kparam, self.returnparams)
 
 
 class Code(BaseCode):

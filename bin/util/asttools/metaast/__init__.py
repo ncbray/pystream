@@ -9,7 +9,7 @@ from .. symbols import SymbolBase
 
 ### The field parser ###
 
-fieldFinder = re.compile('(\w+)(?::(\w+|\([^\)]*\)))?(\*)?(\?)?') # Matches name, type, repeated, optional
+fieldFinder = re.compile('(\w+)(?::(\w+|\([^\)]*\)))?(\?)?(\*)?') # Matches name, type, optional, repeated 
 typeSplitter = re.compile('[,\s]\s*')
 
 def parseFields(s, addSymbolType=True):
@@ -33,8 +33,8 @@ def parseFields(s, addSymbolType=True):
 		if types and addSymbolType and 'SymbolBase' not in types:
 			types.append('SymbolBase')
 		
-		repeated = bool(field[2])
-		optional = bool(field[3])
+		optional = bool(field[2])
+		repeated = bool(field[3])
 		
 		if wrapProperties:
 			internal = '_'+field[0]

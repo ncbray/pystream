@@ -708,7 +708,7 @@ class DestackVisitor(TypeDispatcher):
 	def visitCodeBlock(self, block, stack):
 		assert isinstance(stack, PythonStack), stack
 		outblock, stack = self.handleLinearRegion(block, stack)
-		code = Code('unknown', CodeParameters(Local('internal_self'), (), (), None, None, None, [Local('internal_return')]), outblock)
+		code = Code('unknown', CodeParameters(Local('internal_self'), (), (), (), None, None, [Local('internal_return')]), outblock)
 		return code, stack
 
 

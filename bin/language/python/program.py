@@ -2,7 +2,6 @@
 
 import collections
 import inspect
-
 import types
 
 # HACK types are considered constant

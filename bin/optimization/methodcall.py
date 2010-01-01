@@ -229,8 +229,8 @@ class MethodAnalysis(TypeDispatcher):
 		self.arg(node)
 
 	# ast.Code is a leaf due to direct calls.
-	@dispatch(ast.Existing, str, ast.BuildList, ast.Allocate,
-			ast.GetGlobal, type(None), ast.Code,
+	@dispatch(ast.leafTypes, ast.Existing, ast.BuildList, ast.Allocate,
+			ast.GetGlobal, ast.Code,
 			ast.Break, ast.Continue, ast.DoNotCare, ast.Is)
 	def visitLeaf(self, node):
 		return node

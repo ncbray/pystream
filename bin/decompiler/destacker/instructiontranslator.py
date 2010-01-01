@@ -170,7 +170,7 @@ class InstructionTranslator(object):
 		if isinstance(arg, pythonstack.Definition):
 			# Writing a "definition" into a global, redirect into a local.
 			assert not arg in self.defn
-			lcl = Local()
+			lcl = Local(None)
 			self.defn[arg] = lcl
 			arg = lcl
 
@@ -202,7 +202,7 @@ class InstructionTranslator(object):
 		if isinstance(expr, pythonstack.Definition):
 			# Writing a "definition" into an attribute, redirect into a local.
 			assert not expr in self.defn
-			lcl = Local()
+			lcl = Local(None)
 			self.defn[expr] = lcl
 			expr = lcl
 
@@ -228,7 +228,7 @@ class InstructionTranslator(object):
 		if isinstance(value, pythonstack.Definition):
 			# Writing a "definition" into a local, capture the local instead.
 			assert not value in self.defn
-			lcl = Local()
+			lcl = Local(None)
 			self.defn[value] = lcl
 			value = lcl
 
@@ -500,7 +500,7 @@ class InstructionTranslator(object):
 
 		if isinstance(expr, pythonstack.Definition):
 			# Writing a "definition" into a tuple unpack.
-			lcl = Local()
+			lcl = Local(None)
 			self.defn[expr] = lcl
 			expr = lcl
 
@@ -722,7 +722,7 @@ class InstructionTranslator(object):
 			self.pushOp(bop)
 
 	def newLocal(self):
-		return Local()
+		return Local(None)
 
 	def setOpOrigin(self, op):
 		if not isinstance(op, (Local, Existing)):

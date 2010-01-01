@@ -510,12 +510,12 @@ class FunctionCloner(TypeDispatcher):
 		if not node in self.localMap:
 			lcl = ast.Local(node.name)
 			self.localMap[node] = lcl
-			self.transferLocal(node, lcl)
+			self.transferAnalysisData(node, lcl)
 		else:
 			lcl = self.localMap[node]
 		return lcl
 
-	@dispatch(str, int, type(None))
+	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
 		return node
 
@@ -532,13 +532,6 @@ class FunctionCloner(TypeDispatcher):
 	@dispatch(ast.DoNotCare)
 	def visitDoNotCare(self, node):
 		return ast.DoNotCare()
-
-	# Has internal slots, so as a hack it is "shared", so we must manually rewrite
-	@dispatch(ast.Existing)
-	def visitExisting(self, node):
-		result = ast.Existing(node.object)
-		self.transferLocal(node, result)
-		return result
 
 	@dispatch(ast.DirectCall)
 	def visitDirectCall(self, node):

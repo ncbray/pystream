@@ -39,7 +39,7 @@ class DeferedMerge(OpaqueStackElement):
 
 			# If the merges are chained, try to use the same target?
 			if not target:
-				self.target = Local()
+				self.target = Local(None)
 			else:
 				self.target = target
 

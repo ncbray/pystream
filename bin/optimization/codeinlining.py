@@ -12,7 +12,7 @@ class CodeInliningAnalysis(TypeDispatcher):
 		self.invokeCount = {}
 		self.numOps      = {}
 
-	@dispatch(type(None), str, int, ast.Local, ast.Existing, ast.Code)
+	@dispatch(ast.leafTypes, ast.Local, ast.Existing, ast.Code)
 	def visitLeaf(self, node):
 		pass
 
@@ -120,7 +120,9 @@ class OpInliningTransform(TypeDispatcher):
 		assert original is not replacement, original
 
 		replacement.annotation = original.annotation.contextSubset(self.contextRemap)
-		replacement.rewriteAnnotation(origin=self.originalNode.annotation.origin+replacement.annotation.origin)
+
+		if hasattr(replacement.annotation, 'origin'):
+			replacement.rewriteAnnotation(origin=self.originalNode.annotation.origin+replacement.annotation.origin)
 
 		assert replacement.annotation.compatable(self.dst.annotation)
 
@@ -128,7 +130,7 @@ class OpInliningTransform(TypeDispatcher):
 		assert original is not replacement, original
 		replacement.annotation = original.annotation.contextSubset(self.contextRemap)
 
-	@dispatch(type(None), str, int)
+	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
 		return node
 
@@ -145,13 +147,6 @@ class OpInliningTransform(TypeDispatcher):
 	@dispatch(ast.DoNotCare)
 	def visitDoNotCare(self, node):
 		return ast.DoNotCare()
-
-	# Has internal slots, so as a hack it is "shared", so we must manually rewrite
-	@dispatch(ast.Existing)
-	def visitExisting(self, node):
-		result = ast.Existing(node.object)
-		self.transferLocal(node, result)
-		return result
 
 	@dispatch(ast.Code)
 	def visitCode(self, node):

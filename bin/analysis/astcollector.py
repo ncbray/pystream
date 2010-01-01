@@ -6,7 +6,7 @@ class GetOps(TypeDispatcher):
 		self.ops    = []
 		self.locals = set()
 
-	@dispatch(str, int, type(None), ast.Break, ast.Continue, ast.Code, ast.DoNotCare)
+	@dispatch(ast.leafTypes, ast.Break, ast.Continue, ast.Code, ast.DoNotCare)
 	def visitLeaf(self, node):
 		pass
 

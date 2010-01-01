@@ -9,25 +9,20 @@ from . import program
 # For Code
 import util.python.calling
 
+AbstractObject = program.AbstractObject
 # HACK for CodeParameters.paramnames
 NoneType = type(None)
 
+leafTypes = (str, int, long, bool, float, type(None), AbstractObject) 
+
 class Existing(Reference):
-	__slots__  = 'object'
-	__shared__ = True
+	__fields__  = 'object:AbstractObject'
 	__leaf__   = True
 
-
 	def __init__(self, o):
-		assert isinstance(o, program.AbstractObject), type(o)
+		assert isinstance(o, AbstractObject), type(o)
 		self.object = o
 		self.annotation = self.__emptyAnnotation__
-
-	def __repr__(self):
-		return "%s(%r)" % (type(self).__name__, self.object)
-
-##	def isConstant(self):
-##		return True
 
 	def isPure(self):
 		return True
@@ -38,21 +33,11 @@ class Existing(Reference):
 	def alwaysReturnsBoolean(self):
 		return isinstance(self.constantValue(), bool)
 
-	def clone(self):
-		result = Existing(self.object)
-		result.annotation = self.annotation
-		return result
-
 
 class Local(Reference):
-	__slots__  = 'name'
+	__fields__  = 'name:str?'
 	__shared__ = True
 	__leaf__   = True
-
-
-	def __init__(self, name=None):
-		self.name = name
-		self.annotation = self.__emptyAnnotation__
 
 	def __repr__(self):
 		if self.name:

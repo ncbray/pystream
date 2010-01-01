@@ -38,7 +38,7 @@ class ReadModifyInfo(object):
 		self.heapModify.update(other.heapModify)
 
 class FindMergeSplit(TypeDispatcher):
-	@dispatch(ast.Existing, type(None))
+	@dispatch(ast.Existing, ast.leafTypes)
 	def visitJunk(self, node, info):
 		pass
 
@@ -207,7 +207,7 @@ class BuildDataflowNetwork(TypeDispatcher):
 
 		self.constraints += 1
 
-	@dispatch(str, ast.CodeParameters)
+	@dispatch(ast.leafTypes, ast.CodeParameters)
 	def visitLeaf(self, node):
 		pass
 
@@ -288,7 +288,7 @@ class MarkUses(TypeDispatcher):
 	def __init__(self, bcdf):
 		self.bcdf = bcdf
 
-	@dispatch(ast.Code, type(None), ast.Existing, str, int)
+	@dispatch(ast.Code, ast.Existing, ast.leafTypes)
 	def visitJunk(self, node):
 		pass
 

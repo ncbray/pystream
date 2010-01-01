@@ -13,7 +13,7 @@ def liveMeet(values):
 
 # Mark a locals in an AST subtree as used.
 class MarkLocals(TypeDispatcher):
-	@dispatch(str, int, type(None))
+	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
 		pass
 	

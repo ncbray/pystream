@@ -507,7 +507,7 @@ class SimpleCodeGen(TypeDispatcher):
 				if target == node.expr.right:
 					# Take care of the case Assign(a, BinaryOp(b, inplace, a))
 					# Otherwise the subsequent statement cobbers the right value.
-					temp = ast.Local()
+					temp = ast.Local(None)
 					stmt = "%s = %s" % (self.seg.process(temp), self.seg.process(node.expr.right))
 					self.emitStatement(stmt)
 

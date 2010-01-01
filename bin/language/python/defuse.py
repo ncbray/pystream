@@ -3,8 +3,6 @@ from language.python import ast
 
 import collections
 
-leafs = (str, int, type(None))
-
 class DFS(object):
 	def __init__(self, pre):
 		self.pre = pre
@@ -20,7 +18,7 @@ class DFS(object):
 		self.pre(node)
 
 		# Don't recurse on leaf nodes
-		if isinstance(node, leafs): return
+		if isinstance(node, ast.leafTypes): return
 
 		# Recurse
 
@@ -250,7 +248,7 @@ class DefUseVisitor(TypeDispatcher):
 		ast.ShortCircutAnd, ast.ShortCircutOr,
 		ast.Local, ast.DoNotCare, ast.Existing, ast.Cell, ast.Import, ast.Suite,
 		ast.Code, ast.BuildMap,
-		str, int, float, type(None), list, tuple)
+		ast.leafTypes, list, tuple)
 	def visitLeaf(self, node):
 		pass
 

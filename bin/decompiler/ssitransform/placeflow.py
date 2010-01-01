@@ -1,6 +1,6 @@
 from util.typedispatch import *
 
-from language.python.ast import Local
+from language.python import ast
 
 from . numbering import contains
 
@@ -89,7 +89,7 @@ class PlaceFlowFunctions(TypeDispatcher):
 		self.exceptRead = set()
 		self.hasExceptionHandling = False
 
-	@dispatch(str, int, float, type(None))
+	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
 		pass
 
@@ -133,7 +133,7 @@ class PlaceFlowFunctions(TypeDispatcher):
 		self(node.preamble)
 		self(node.type)
 
-		if isinstance(node.value, Local):
+		if isinstance(node.value, ast.Local):
 			self.frame.normal.modify(node.value)
 		else:
 			self(node.value)

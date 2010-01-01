@@ -3,12 +3,22 @@ __all__ = ['TypeDispatcher', 'defaultdispatch', 'dispatch',
 
 import inspect
 
+def flattenTypesInto(l, result):
+	for child in l:
+		if isinstance(child, (list, tuple)):
+			flattenTypesInto(child, result)
+		else:
+			if not isinstance(child, type):
+				raise TypeDispatchDeclarationError, "Expected a type, got %r instead." % child
+			result.append(child)
+
 def dispatch(*types):
 	def dispatchF(f):
 		def dispatchWrap(*args, **kargs):
 			return f(*args, **kargs)
 		dispatchWrap.__original__ = f
-		dispatchWrap.__dispatch__ = types
+		dispatchWrap.__dispatch__ = []
+		flattenTypesInto(types, dispatchWrap.__dispatch__)
 		return dispatchWrap
 	return dispatchF
 

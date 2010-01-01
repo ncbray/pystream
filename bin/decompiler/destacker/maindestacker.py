@@ -232,7 +232,7 @@ class DestackVisitor(TypeDispatcher):
 			block, stack = self(cond, stack)
 			conditional, framset, (maybeTrue, maybeFalse) = self.getTOS(cond, stack)
 
-			temp = Local()
+			temp = Local(None)
 			assert isinstance(conditional, Expression), conditional
 			assign = Assign(conditional, [temp])
 			block.append(assign)
@@ -251,7 +251,7 @@ class DestackVisitor(TypeDispatcher):
 		conditional, framset, (maybeTrue, maybeFalse) = self.getTOS(block, stack)
 		assert isinstance(conditional, Expression), conditional
 
-		temp = Local()
+		temp = Local(None)
 		assign = Assign(conditional, [temp])
 		block = Suite([assign])
 		condition = Condition(block, temp)
@@ -298,8 +298,8 @@ class DestackVisitor(TypeDispatcher):
 		condition = ShortCircutOr(terms)
 
 		# Convert into a condition.
-		lcl = Local()
-		temp = Local()
+		lcl = Local(None)
+		temp = Local(None)
 
 		preamble = Suite([])
 		preamble.append(Assign(condition, [lcl]))
@@ -347,9 +347,9 @@ class DestackVisitor(TypeDispatcher):
 		condition = ShortCircutAnd(terms)
 
 		# Convert into a condition.
-		lcl = Local()
+		lcl = Local(None)
 		asgn1 = Assign(condition, [lcl])
-		temp = Local()
+		temp = Local(None)
 
 		conv = ConvertToBool(lcl)
 		conv.rewriteAnnotation(origin=block.origin)
@@ -623,7 +623,7 @@ class DestackVisitor(TypeDispatcher):
 
 		mask = {}
 
-		for name in m: mask[name] = Local()
+		for name in m: mask[name] = Local(None)
 
 		return mask
 
@@ -658,7 +658,7 @@ class DestackVisitor(TypeDispatcher):
 		getNext = GetAttr(iterlcl, Existing(self.compiler.extractor.getObject('next')))
 		getNext.rewriteAnnotation(origin=block.origin)
 
-		temp = Local()
+		temp = Local(None)
 		loopPreamble = Suite([Assign(getNext, [temp])])
 
 		iterNext = Call(temp, [], [], None, None)
@@ -690,7 +690,7 @@ class DestackVisitor(TypeDispatcher):
 			condition, tstack, fstack, (maybeTrue, maybeFalse) = self.processCond(block.cond, stack)
 		else:
 			# Sometimes the condition is const-folded out.
-			lcl = Local()
+			lcl = Local(None)
 			condition = Condition(Suite([Assign(Existing(self.compiler.extractor.getObject(True)), [lcl])]), lcl)
 			tstack = stack.duplicate()
 			fstack = stack.duplicate()

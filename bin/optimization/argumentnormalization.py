@@ -39,6 +39,10 @@ class ArgumentNormalizationAnalysis(TypeDispatcher):
 		for child in node:
 			self(child)
 
+	@dispatch(ast.leafTypes, ast.Existing)
+	def visitLeaf(self, node):
+		pass
+
 	@defaultdispatch
 	def visitDefault(self, node):
 		if self.applicable:
@@ -93,9 +97,9 @@ class ArgumentNormalizationTransform(TypeDispatcher):
 	def visitContainer(self, node):
 		return [self(child) for child in node]
 
-	@dispatch(str, int, type(None))
+	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
-		return None
+		return node
 
 	@dispatch(ast.Call)
 	def visitCall(self, node):
@@ -165,7 +169,7 @@ class ArgumentNormalizationTransform(TypeDispatcher):
 		self.code   = node
 		self.vparam = p.vparam
 
-		self.newParams = [ast.Local() for i in range(vparamLen)]
+		self.newParams = [ast.Local(None) for i in range(vparamLen)]
 		self.newNames  = [None for i in range(vparamLen)]
 
 		if p.defaults is None:

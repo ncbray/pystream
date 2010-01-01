@@ -86,11 +86,15 @@ class LiveHeapFinder(TypeDispatcher):
 		TypeDispatcher.__init__(self)
 		self.live = set()
 
-	@dispatch(str, int, type(None))
+	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
 		pass
 
-	@dispatch(ast.Local, ast.Existing)
+	@dispatch(ast.Existing)
+	def visitExisting(self, node):
+		self.live.add(node.object)
+
+	@dispatch(ast.Local)
 	def visitReference(self, node):
 		self.live.update(node.annotation.references.merged)
 

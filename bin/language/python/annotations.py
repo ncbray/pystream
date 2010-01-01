@@ -52,7 +52,7 @@ class CodeAnnotation(Annotation):
 
 		return CodeAnnotation(contexts, descriptive, primitive, staticFold, dynamicFold, origin, live, killed, codeReads, codeModifies, codeAllocates)
 
-	def contextSubset(self, remap):
+	def contextSubset(self, remap, invokeMapper=None):
 		contexts = [self.contexts[i] for i in remap]
 		live     = remapContextual(self.live, remap)
 		killed   = remapContextual(self.killed, remap)
@@ -117,10 +117,14 @@ class SlotAnnotation(Annotation):
 
 		return SlotAnnotation(references)
 
-	def contextSubset(self, remap):
+	def contextSubset(self, remap, invokeMapper=None):
 		references = remapContextual(self.references, remap)
 		return self.rewrite(references=references)
 
+	def compatable(self, codeAnnotation):
+		if self.references is not None:
+			return len(self.references[1]) == len(codeAnnotation.contexts)
+		return True
 
 emptyCodeAnnotation  = CodeAnnotation(None, False, False, None, None, None, None, None, None, None, None)
 emptyOpAnnotation    = OpAnnotation(None, None, None, None, None, None, None, (None,))

@@ -74,10 +74,6 @@ class FoldRewrite(TypeDispatcher):
 		if isinstance(node, ast.Existing):
 			self.created.add(node.object)
 
-	@dispatch(ast.Existing)
-	def visitExisting(self, node):
-		return node
-
 	@dispatch(ast.Call)
 	def visitCall(self, node):
 		func = tools.singleCall(node)
@@ -444,7 +440,7 @@ class FoldTraverse(TypeDispatcher):
 		self.strategy = strategy
 		self.code = function
 
-	@dispatch(str, int, type(None))
+	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
 		return node
 

@@ -1,13 +1,16 @@
 import optimization.simplify
 from util.typedispatch import *
 
+# HACK necessary to get leaf types.  Sadly, it makes this optimization less than generic
+from language.python import ast
+
 class Rewriter(TypeDispatcher):
 	def __init__(self, replacements):
 		TypeDispatcher.__init__(self)
 		self.replacements = replacements
 		self.replaced = set()
 
-	@dispatch(str, int, type(None))
+	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
 		if node in self.replaced:
 			return node

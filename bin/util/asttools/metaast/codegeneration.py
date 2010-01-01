@@ -43,25 +43,25 @@ def makeTypecheckStatement(name, field, tn, optional, repeated, tabs, output):
 		makeScalarTypecheckStatement(name, field, field, tn, optional, tabs, output)
 
 
-def makeInitStatements(clsname, paramnames, fields, types, optional, repeated, dopostinit):
+def makeInitStatements(clsname, desc, dopostinit):
 	inits = []
-	for name, field in zip(paramnames, fields):
-		if name in types:
-			tn = typeName(types[name])
-			makeTypecheckStatement(clsname, name, tn, name in optional, name in repeated, '\t', inits)
-		elif name not in optional:
-			inits.append('\tassert %s is not None, "Field %s.%s is not optional."\n' % (name, clsname, name))
+	for field in desc:
+		if field.type:
+			tn = typeName(field.type)
+			makeTypecheckStatement(clsname, field.name, tn, field.optional, field.repeated, '\t', inits)
+		elif not field.optional:
+			inits.append('\tassert %s is not None, "Field %s.%s is not optional."\n' % (field.name, clsname, field.name))
 
-		inits.append('\tself.%s = %s\n' % (field, name))
+		inits.append('\tself.%s = %s\n' % (field.internalname, field.name))
 
 	if dopostinit:
 		inits.append('\tself.__postinit__()\n')
 
 	return inits
 
-def argsFromParamNames(paramnames):
-	if paramnames:
-		fieldstr = ", ".join(paramnames)
+def argsFromDesc(desc):
+	if desc:
+		fieldstr = ", ".join([field.name for field in desc])
 		args = ", ".join(('self', fieldstr))
 	else:
 		args = 'self'
@@ -73,11 +73,11 @@ def makeBody(code):
 	else:
 		return code
 
-def makeInit(name, paramnames, fields, types, optional, repeated, dopostinit):
-	inits = makeInitStatements(name, paramnames, fields, types, optional, repeated, dopostinit)
+def makeInit(name, desc, dopostinit):
+	inits = makeInitStatements(name, desc, dopostinit)
 	inits.append('\tself.annotation = self.__emptyAnnotation__')
 
-	args = argsFromParamNames(paramnames)
+	args = argsFromDesc(desc)
 
 	# NOTE super.__init__ should be a no-op, as we're initializing all the fields, anyways?
 	#code = "def __init__(%s):\n\tsuper(%s, self).__init__()\n%s" % (args, name, ''.join(inits))
@@ -85,19 +85,19 @@ def makeInit(name, paramnames, fields, types, optional, repeated, dopostinit):
 	return code
 
 
-def makeReplaceChildren(name, paramnames, fields, types, optional, repeated, dopostinit):
-	inits = makeInitStatements(name, paramnames, fields, types, optional, repeated, dopostinit)
+def makeReplaceChildren(name, desc, dopostinit):
+	inits = makeInitStatements(name, desc, dopostinit)
 
-	args = argsFromParamNames(paramnames)
+	args = argsFromDesc(desc)
 
 	body = makeBody(''.join(inits))
 
 	code = "def _replaceChildren(%s):\n%s" % (args, body)
 	return code
 
-def makeRepr(name, fields):
-	interp = ", ".join(['%r']*len(fields))
-	fields = " ".join("self.%s,"%field for field in fields)
+def makeRepr(name, desc):
+	interp = ", ".join(['%r']*len(desc))
+	fields = " ".join("self.%s,"%field.internalname for field in desc)
 
 	code = """def __repr__(self):
 	return "%s(%s)" %% (%s)
@@ -106,7 +106,7 @@ def makeRepr(name, fields):
 	return code
 
 # To prevent possible recursion, shared node do NOT print their children.
-def makeSharedRepr(name, fields):
+def makeSharedRepr(name, desc):
 	code = """def __repr__(self):
 	return "%s(%%d)" %% (id(self),)
 """ % (name)
@@ -121,8 +121,8 @@ def makeAccept(name):
 
 	return code
 
-def makeGetChildren(fields):
-	children = ' '.join(["self.%s," % field for field in fields])
+def makeGetChildren(desc):
+	children = ' '.join(["self.%s," % field.internalname for field in desc])
 	code = """def children(self):
 	return (%s)
 """ % (children)
@@ -130,26 +130,26 @@ def makeGetChildren(fields):
 	return code
 
 
-def makeGetFields(paramnames, fields):
-	children = ' '.join(["(%r, self.%s)," % (name, field) for name, field in zip(paramnames, fields)])
+def makeGetFields(desc):
+	children = ' '.join(["(%r, self.%s)," % (field.name, field.internalname) for field in desc])
 	code = """def fields(self):
 	return (%s)
 """ % (children)
 
 	return code
 
-def makeSetter(clsname, field, slot, types, optional, repeated):
+def makeSetter(clsname, field):
 	inits = []
 
-	tn = typeName(types)
-	makeTypecheckStatement(clsname, field, tn, optional, repeated, '\t', inits)
-	inits.append('\tself.%s = %s\n' % (slot, field))
+	tn = typeName(field.type)
+	makeTypecheckStatement(clsname, field.name, tn, field.optional, field.repeated, '\t', inits)
+	inits.append('\tself.%s = %s\n' % (field.internalname, field.name))
 
-	code = "def __set_%s__(self, %s):\n%s" % (field, field, ''.join(inits))
+	code = "def __set_%s__(self, %s):\n%s" % (field.name, field.name, ''.join(inits))
 	return code
 
-def makeGetter(clsname, field, slot):
-	code = "def __get_%s__(self):\n\treturn self.%s\n" % (field, slot)
+def makeGetter(clsname, desc):
+	code = "def __get_%s__(self):\n\treturn self.%s\n" % (desc.name, desc.internalname)
 	return code
 
 

@@ -1,4 +1,4 @@
-from util.asttools.metaast import ASTNode
+from util.asttools.metaast import *
 from . import annotations
 
 def isPythonAST(ast):

@@ -1,10 +1,49 @@
-__all__ = ['ASTNode',]
+__all__ = ['ASTNode', 'SymbolBase']
 
 # A metaclass for generating AST node classes.
 
 import sys
-
+import re
 from . import codegeneration
+from .. symbols import SymbolBase
+
+### The field parser ###
+
+fieldFinder = re.compile('(\w+)(?::(\w+|\([^\)]*\)))?(\*)?(\?)?') # Matches name, type, repeated, optional
+typeSplitter = re.compile('[,\s]\s*')
+
+def parseFields(s, addSymbolType=True):
+	if isinstance(s, tuple):
+		fields = []
+		for part in s:
+			fields.extend(parseFields(part, addSymbolType))
+		return fields
+		
+	fields = fieldFinder.findall(s)
+	
+	result = []
+	
+	for field in fields:
+		# Break the types apart
+		types = typeSplitter.split(field[1].strip('()'))
+		# Filter out empty strings
+		types = [t for t in types if t]
+		
+		# If the AST supports symbolic matching, and the field is typed, add the symbol type
+		if types and addSymbolType and 'SymbolBase' not in types:
+			types.append('SymbolBase')
+		
+		repeated = bool(field[2])
+		optional = bool(field[3])
+		
+		if wrapProperties:
+			internal = '_'+field[0]
+		else:
+			internal = field[0]
+		
+		result.append(FieldDescriptor(field[0], internal, tuple(types), optional, repeated))
+
+	return result
 
 class FieldDescriptor(object):
 	__slots__ = 'name', 'internalname', 'type', 'optional', 'repeated'
@@ -17,7 +56,7 @@ class FieldDescriptor(object):
 		self.repeated = repeated
 
 	def __repr__(self):
-		return "astfield(%r, %r, %r, %r, %r)" % (self.name, self.internalname, self.type, self.optional, self.repeated)
+		return "astfield(%r, %r, %r, optional=%r, repeated=%r)" % (self.name, self.internalname, self.type, self.optional, self.repeated)
 
 # Enforces mutability, but slows down the program.
 wrapProperties = False
@@ -28,10 +67,6 @@ class ClassBuilder(object):
 		self.name  = name
 		self.bases = bases
 		self.d     = d
-
-		self.types    = {}
-		self.optional = set()
-		self.repeated = set()
 
 	def hasAttr(self, attr):
 		if attr in self.d:
@@ -81,101 +116,25 @@ class ClassBuilder(object):
 				fields = tuple(fields.strip().split())
 				self.d['__fields__'] = fields
 
-		parsedFields = []
-		for field in fields:
-			optional = False
-			repeated = False
-			type     = None
+		return parseFields(fields)
 
-			if field[-1] == '?':
-				optional = True
-				field = field[:-1]
-			else:
-				optional = False
-
-			if field[-1] == '*':
-				repeated = True
-				field = field[:-1]
-			else:
-				repeated = False
-
-
-			parts = field.split(':')
-
-			name = parts[0]
-			parsedFields.append(name)
-
-			# Is the field typed?
-			if len(parts) > 1 and parts[1]:
-				self.types[name] = parts[1]
-
-			# Mark the field as optional?
-			if optional:
-				self.optional.add(name)
-
-			# Mark the field as repeated?
-			if repeated:
-				self.repeated.add(name)
-
-		return tuple(parsedFields)
-
-	def getTypes(self, fields):
-		# Process the field types
-		if '__types__' not in self.d:
-			types = {}
-			self.d['__types__'] = types
-		else:
-			types = self.d['__types__']
-
-		types.update(self.types)
-
-		assert isinstance(types, dict), types
-
-		for k in types.iterkeys():
-			assert k in fields, "Typed field %r is does not exist." % k
-
-		return types
-
-	def getOptional(self, fields):
-		optional = self.d.get('__optional__', ())
-
-		if isinstance(optional, str):
-			optional =  tuple(optional.strip().split())
-
-		optional = frozenset(self.optional.union(optional))
-
-		self.d['__optional__'] = optional
-
-		for k in optional:
-			assert k in fields, "Optional field %s is does not exist." % k
-
-		return optional
-
-	def makeWrappedFieldSlots(self, fields, types, optional):
-		slots = ["_%s" % field for field in fields]
-
-		for field, slot in zip(fields, slots):
-			getter = self.makeFunc(codegeneration.makeGetter, (self.name, field, slot))
+	def makeWrappedFieldSlots(self, desc):
+		for field in desc:
+			getter = self.makeFunc(codegeneration.makeGetter, (self.name, field), {})
 
 			if self.mutable:
-				setter = self.makeFunc(codegeneration.makeSetter, (self.name, field, slot, types.get(field), field in optional, field in self.repeated))
+				setter = self.makeFunc(codegeneration.makeSetter, (self.name, field), {})
 				p = property(getter, setter)
 			else:
 				p = property(getter)
 
-			self.d[field] = p
+			self.d[field.name] = p
 
-		return slots
-
-	def makeDirectFieldSlots(self, fields, types, optional):
-		return [field for field in fields]
-
-	def makeFieldSlots(self, fields, types, optional):
+	def makeFieldSlots(self, desc):
 		# Create slots for the fields.
 		if wrapProperties:
-			return self.makeWrappedFieldSlots(fields, types, optional)
-		else:
-			return self.makeDirectFieldSlots(fields, types, optional)
+			self.makeWrappedFieldSlots(desc)
+		return [field.internalname for field in desc]
 
 	def appendToExistingSlots(self, slots):
 		# Prepend the fields to the existing slots declaration.
@@ -186,7 +145,6 @@ class ClassBuilder(object):
 		slots.extend(existing)
 		self.d['__slots__'] = tuple(slots)
 		return slots
-
 
 	def finalize(self):
 		return type.__new__(self.type, self.name, self.bases, self.d)
@@ -205,22 +163,22 @@ class ClassBuilder(object):
 		if not dst in self.d:
 			self.d[dst] = self.d[src]
 
-	def addDefaultMethods(self, desc, paramnames, fields, types, optional, shared):
+	def addDefaultMethods(self, desc, shared):
 		dopostinit = self.hasAttr('__postinit__')
 
 		# Generate and attach methods.
-		self.defaultFunc('__init__', codegeneration.makeInit, (self.name, paramnames, fields, types, optional, self.repeated, dopostinit))
+		self.defaultFunc('__init__', codegeneration.makeInit, (self.name, desc, dopostinit))
 
 		if shared:
-			self.defaultFunc('__repr__', codegeneration.makeSharedRepr, (self.name, fields))
+			self.defaultFunc('__repr__', codegeneration.makeSharedRepr, (self.name, desc))
 		else:
-			self.defaultFunc('__repr__', codegeneration.makeRepr, (self.name, fields))
+			self.defaultFunc('__repr__', codegeneration.makeRepr, (self.name, desc))
 		self.defaultFunc('accept',   codegeneration.makeAccept, (self.name,))
-		self.defaultFunc('children', codegeneration.makeGetChildren, (fields,))
-		self.defaultFunc('fields',   codegeneration.makeGetFields, (paramnames, fields,))
+		self.defaultFunc('children', codegeneration.makeGetChildren, (desc,))
+		self.defaultFunc('fields',   codegeneration.makeGetFields, (desc,))
 
 		if self.mutable:
-			self.defaultFunc('_replaceChildren', codegeneration.makeReplaceChildren, (self.name, paramnames, fields, types, optional, self.repeated, dopostinit))
+			self.defaultFunc('_replaceChildren', codegeneration.makeReplaceChildren, (self.name, desc, dopostinit))
 
 		self.defaultFunc('visitChildren', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared})
 		self.defaultFunc('visitChildrenReversed', codegeneration.makeVisit, (self.name, desc), {'reverse':True, 'shared':shared})
@@ -247,27 +205,17 @@ class ClassBuilder(object):
 			self.defaultFunc('replaceChildren', codegeneration.makeRewrite, (self.name, desc), {'reverse':False, 'shared':shared, 'mutate':True, 'vargs':False, 'kargs':False})
 			self.defaultFunc('replaceChildrenReversed', codegeneration.makeRewrite, (self.name, desc), {'reverse':True, 'shared':shared, 'mutate':True, 'vargs':False, 'kargs':False})
 
-
-
 	def mutate(self):
 		self.g   = self.getGlobalDict()
 
-		fields   = self.getFields()
-		types    = self.getTypes(fields)
-		optional = self.getOptional(fields)
-
-		shared   = self.getShared()
+		desc   = self.getFields()		
+		shared = self.getShared()
 		self.mutable = self.getMutable(shared)
 
-		slots = self.makeFieldSlots(fields, types, optional)
-		internalNames = list(slots)
-		slots = self.appendToExistingSlots(slots)
+		slots = self.makeFieldSlots(desc)
+		self.appendToExistingSlots(slots)
 
-		desc = []
-		for name, internal in zip(fields, internalNames):
-			desc.append(FieldDescriptor(name, internal, types.get(name), name in optional, name in self.repeated))
-
-		self.addDefaultMethods(desc, fields, internalNames, types, optional, shared)
+		self.addDefaultMethods(desc, shared)
 
 		return self
 

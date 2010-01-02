@@ -31,10 +31,11 @@ def makeScalarTypecheckStatement(name, fieldName, fieldSource, tn, optional, tab
 
 def makeTypecheckStatement(name, field, tn, optional, repeated, tabs, output):
 	if repeated:
-		makeScalarTypecheckStatement(name, field, field, '(list, tuple)', False, tabs, output)
-
-		output.append('%sfor _i in %s:\n' % (tabs, field))
-		makeScalarTypecheckStatement(name, field+'[]', '_i', tn, optional, tabs+'\t', output)
+		output.append('%sif isinstance(%s, (list, tuple)):\n' % (tabs, field))
+		output.append('%s\tfor _i in %s:\n' % (tabs, field))
+		makeScalarTypecheckStatement(name, field+'[]', '_i', tn, optional, tabs+'\t\t', output)
+		output.append('%selif not isinstance(%s, SymbolBase):\n' % (tabs, field))
+		output.append('%s\t%s\n' % (tabs, raiseTypeError(name, '(list, tuple, SymbolBase)', field, field)))
 	else:
 		makeScalarTypecheckStatement(name, field, field, tn, optional, tabs, output)
 
@@ -197,7 +198,10 @@ def makeVisit(clsname, desc, reverse=False, shared=False, forced=False, vargs=Fa
 	return code
 
 
-def makeRewrite(clsname, desc, reverse=False, mutate=False, shared=False, vargs=False, kargs=False):
+def makeRewrite(clsname, desc, reverse=False, mutate=False, shared=False, forced=False, vargs=False, kargs=False):
+	assert not (mutate and forced), clsname
+	assert not forced or shared, clsname
+
 	args = "self, _callback"
 
 	statements = []
@@ -209,7 +213,7 @@ def makeRewrite(clsname, desc, reverse=False, mutate=False, shared=False, vargs=
 		additionalargs += ', **kargs'
 	args += additionalargs
 	
-	if not shared or mutate:
+	if not shared or mutate or forced:
 		iterator = reversed(desc) if reverse else desc
 		
 		uid = 0	
@@ -222,15 +226,22 @@ def makeRewrite(clsname, desc, reverse=False, mutate=False, shared=False, vargs=
 			targets.append(target)
 			
 			if field.repeated:
+				childexpr = '_callback(_child%s)' % (additionalargs,)
+				if field.optional:
+					childexpr += ' if _child is not None else None'
+					
 				if reverse:
-					expr = 'list(reversed([_callback(_child%s) for _child in reversed(self.%s)]))' % (additionalargs, field.internalname)
+					expr = 'list(reversed([%s for _child in reversed(self.%s)]))' % (childexpr, field.internalname)
 				else:
-					expr = '[_callback(_child%s) for _child in self.%s]' % (additionalargs, field.internalname)
+					expr = '[%s for _child in self.%s]' % (childexpr, field.internalname)
+				
+				# Guard against symbols
+				expr = '_callback(self.%s%s) if isinstance(self.%s, SymbolBase) else %s' % (field.internalname, additionalargs, field.internalname, expr)
 			else:
 				expr = '_callback(self.%s%s)' % (field.internalname, additionalargs)
 	
-			if field.optional:
-				expr += " if self.%s is not None else None" % field.internalname
+				if field.optional:
+					expr += " if self.%s is not None else None" % field.internalname
 			
 			statements.append("\t%s = %s\n" % (target, expr))
 	
@@ -256,6 +267,9 @@ def makeRewrite(clsname, desc, reverse=False, mutate=False, shared=False, vargs=
 		
 	if reverse:
 		funcname += 'Reversed'
+
+	if forced:
+		funcname += 'Forced'
 		
 	code = "def %s(%s):\n%s" % (funcname, args, body)
 	

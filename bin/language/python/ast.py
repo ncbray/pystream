@@ -17,11 +17,6 @@ class Existing(Reference):
 	__fields__  = 'object:AbstractObject'
 	__leaf__   = True
 
-	def __init__(self, o):
-		assert isinstance(o, AbstractObject), type(o)
-		self.object = o
-		self.annotation = self.__emptyAnnotation__
-
 	def isPure(self):
 		return True
 

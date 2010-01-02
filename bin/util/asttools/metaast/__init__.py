@@ -177,15 +177,12 @@ class ClassBuilder(object):
 		self.defaultFunc('children', codegeneration.makeGetChildren, (desc,))
 		self.defaultFunc('fields',   codegeneration.makeGetFields, (desc,))
 
-		if self.mutable:
-			self.defaultFunc('_replaceChildren', codegeneration.makeReplaceChildren, (self.name, desc, dopostinit))
-
 		self.defaultFunc('visitChildren', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared})
 		self.defaultFunc('visitChildrenReversed', codegeneration.makeVisit, (self.name, desc), {'reverse':True, 'shared':shared})
 
 		self.defaultFunc('visitChildrenArgs', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared, 'vargs':True})
 
-		if self.mutable:
+		if shared:
 			self.defaultFunc('visitChildrenForced', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared, 'forced':True})
 			self.defaultFunc('visitChildrenReversedForced', codegeneration.makeVisit, (self.name, desc), {'reverse':True, 'shared':shared, 'forced':True})
 			self.defaultFunc('visitChildrenForcedArgs', codegeneration.makeVisit, (self.name, desc), {'reverse':False, 'shared':shared, 'forced':True, 'vargs':True})
@@ -202,8 +199,13 @@ class ClassBuilder(object):
 		self.copyFunc('rewriteChildren', 'rewriteCloned')
 
 		if self.mutable:
+			self.defaultFunc('_replaceChildren', codegeneration.makeReplaceChildren, (self.name, desc, dopostinit))
 			self.defaultFunc('replaceChildren', codegeneration.makeRewrite, (self.name, desc), {'reverse':False, 'shared':shared, 'mutate':True, 'vargs':False, 'kargs':False})
 			self.defaultFunc('replaceChildrenReversed', codegeneration.makeRewrite, (self.name, desc), {'reverse':True, 'shared':shared, 'mutate':True, 'vargs':False, 'kargs':False})
+
+		if shared:
+			self.defaultFunc('rewriteChildrenForced', codegeneration.makeRewrite, (self.name, desc), {'reverse':False, 'shared':shared, 'mutate':False, 'forced':True, 'vargs':False, 'kargs':False})
+
 
 	def mutate(self):
 		self.g   = self.getGlobalDict()

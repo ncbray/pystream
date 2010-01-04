@@ -11,7 +11,7 @@ def name(index):
 				name = self.positionName()
 			else:
 				name = self.getName(node.getChild(index))
-				
+
 			result = func(self, node, name)
 			self.attachOrigin(node, result) # Attach the origin before popping.
 			self.pop()
@@ -36,12 +36,12 @@ class ASTTranslator(object):
 		self.compiler = compiler
 		self.parser   = parser
 		self.filename = filename
-		
+
 		self.namestack = []
-                self.name = None
+		self.name = None
 
 		self.indexstack = []
-		self.index = 0      
+		self.index = 0
 
 		self.origincache = {}
 
@@ -78,7 +78,7 @@ class ASTTranslator(object):
 	def getMethod(self, node):
 		m = getattr(self, 'visit_'+self.nodeName(node), self.default)
 		return m
-	
+
 	def __call__(self, node):
 		if isinstance(node, antlr3.tree.CommonErrorNode):
 			self.generateOutput = False
@@ -115,10 +115,10 @@ class ASTTranslator(object):
 			self.name = name
 		else:
 			self.name = ".".join([self.name, name])
-		
-		self.indexstack.append(self.index)      
+
+		self.indexstack.append(self.index)
 		self.index = 0
 
-	def pop(self):      
+	def pop(self):
 		self.name  = self.namestack.pop()
 		self.index = self.indexstack.pop()

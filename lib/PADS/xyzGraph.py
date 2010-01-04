@@ -25,7 +25,7 @@ def CubicMatchPartitions(G):
     of the three edges of G in the order of the three matchings.
     This function generates a sequence of such representations.
     """
-    
+
     if not isUndirected(G):
         raise ValueError("CubicMatchPartitions: graph is not undirected")
     for v in G:
@@ -47,7 +47,7 @@ def CubicMatchPartitions(G):
             usedpos = [sourcepos[w] for w in source]
             if len(Set(usedpos)) != len(usedpos):
                 # two edges in with same index, doesn't form matching
-                break 
+                break
             elif len(source) == 0:
                 # start vertex, choose one orientation
                 adjlist = list(ST[v])
@@ -66,7 +66,7 @@ def CubicMatchPartitions(G):
             if len(source) == 3:
                 # final vertex of topological ordering, still all consistent
                 yield out
-                
+
 def groupByCycles(G,i,j):
     """
     Collect cycles of G[v][i] and G[v][j] edges,
@@ -94,7 +94,7 @@ def isxyz(points):
             if len(L) != 2:
                 return False
     return True
-        
+
 
 def xyzEmbeddings(G):
     """
@@ -120,4 +120,4 @@ class xyzGraphTest(unittest.TestCase):
         self.assertEqual(len(list(xyzEmbeddings(self.cube))),1)
 
 if __name__ == "__main__":
-    unittest.main()   
+    unittest.main()

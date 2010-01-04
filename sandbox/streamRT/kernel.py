@@ -23,7 +23,7 @@ def getLengths(args):
 def checkStreams(args, config):
 	streams = False
 	length = 0
-	
+
 	for arg, role in zip(args, config.roles):
 		if shouldIterate(arg, role):
 			if not streams:
@@ -47,7 +47,7 @@ class UniformIterator(object):
 
 	def next(self):
 		return self.value
-		
+
 def getStreamIterator(o, role):
 	if shouldIterate(o, role):
 		return iter(o)
@@ -62,7 +62,7 @@ def argiterator(args, config):
 
 class kernel(object):
 	__slots__ = 'f', 'config'
-	
+
 	def __init__(self, f, config):
 		self.f = f
 		self.config = config
@@ -73,7 +73,7 @@ class kernel(object):
 			for iterargs in argiterator(args, self.config):
 				out.append(self.f(*iterargs))
 			return stream(out)
-		else:	
+		else:
 			return self.f(*args)
 
 	def __get__(self, instance, owner):
@@ -81,7 +81,7 @@ class kernel(object):
 
 uniform = 'uniform'
 default = 'default'
-		
+
 
 def getArgnames(f):
 	code = f.func_code
@@ -92,7 +92,7 @@ class KernelConfiguration(object):
 	def __init__(self, unpack, roles):
 		self.unpack = unpack
 		self.roles  = roles
-				
+
 
 
 class KernelConfigAccumulator(object):
@@ -107,7 +107,7 @@ class KernelConfigAccumulator(object):
 
 	def roles(self, **kargs):
 		self._roles = kargs
-		
+
 	def __call__(self, f):
 		assert hasattr(f, '__call__')
 		return kernelcls(f, self.__createConfig(f))
@@ -124,7 +124,7 @@ class KernelConfigAccumulator(object):
 
 		return KernelConfiguration(self._unpack, roleList)
 
-				
+
 
 class KernelDecorator(object):
 	__slots__ = ()
@@ -138,10 +138,10 @@ class KernelDecorator(object):
 		accum = KernelConfigAccumulator()
 		accum.unpack
 		return accum
-		
+
 	def __call__(self, *args, **kargs):
 		accum = KernelConfigAccumulator()
-		
+
 		if len(args) == 1 and len(kargs) == 0 and hasattr(args[0], '__call__'):
 			# decorator called directly on function.
 			return accum(args[0])

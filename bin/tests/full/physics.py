@@ -87,7 +87,7 @@ class SurfaceFragment(object):
 
 	def __init__(self, material, p, n):
 		self.material      = material
-		
+
 		self.diffuseColor  = vec3(1.0)
 		self.specularColor = vec3(1.0)
 
@@ -104,7 +104,7 @@ class SurfaceFragment(object):
 
 	def litColor(self):
 		return self.diffuseColor*self.diffuseLight+self.specularColor*self.specularLight
-	
+
 
 class Material(object):
 	__slots__ = 'diffuseColor', 'specularColor'
@@ -140,7 +140,7 @@ class PhongMaterial(Material):
 	def specularTransfer(self, n, l, e):
 		# Blinn-Phong transfer
 		h = (l+e).normalize()
-		ndh = nldot(n, h)		
+		ndh = nldot(n, h)
 		# Scale by (shinny+8)/8 to approximate energy conservation
 		scale = (self.shinny+8.0)*0.125
 		return (ndh**self.shinny)*scale
@@ -157,7 +157,7 @@ class AmbientLight(Light):
 		self.color0 = color0
 		self.color1 = color1
 
-			
+
 	def accumulate(self, surface, w2c):
 		# Transform the direction into world space
 		dir = self.direction
@@ -166,18 +166,18 @@ class AmbientLight(Light):
 		# Blend the hemispheric colors
 		amt = cdir.dot(surface.n)*0.5+0.5
 		color = self.color1.mix(self.color0, amt)
-		
+
 		# Add directly to diffuse, no transfer functions
 		surface.diffuseLight += color
-	
+
 class PointLight(Light):
 	__slots__ = 'position', 'color', 'attenuation'
-	
+
 	def __init__(self, position, color, attenuation):
 		self.position    = position
 		self.color       = color
 		self.attenuation = attenuation
-			
+
 	def accumulate(self, surface, w2c):
 		p = self.position
 		pos = (w2c*vec4(p, 1.0)).xyz
@@ -186,11 +186,11 @@ class PointLight(Light):
 		dist2  = dir.dot(dir)
 		dist   = dist2**0.5
 		dists  = vec3(1.0, dist, dist2)
-		
+
 		lightAtten = 1.0/dists.dot(self.attenuation)
-		
+
 		surface.accumulateLight(dir/dist, self.color*lightAtten)
-		
+
 
 class Fog(object):
 	__slots__ = 'color', 'density'
@@ -231,16 +231,16 @@ class Shader(object):
 		self.ambient = AmbientLight(vec3(0.0, 1.0, 0.0), vec3(0.25, 0.75, 0.25), vec3(0.75, 0.25, 0.25))
 
 		self.material = Material()
-		
+
 		self.sampler    = None
 		self.normalmap  = None
 
 	def shadeVertex(self, context, pos, normal, tangent, bitangent, texCoord):
 		trans      = self.worldToCamera*self.objectToWorld
 		newpos     = trans*pos
-		
+
 		newnormal  = (trans*vec4(normal, 0.0)).xyz
-		
+
 		newtangent = (trans*vec4(tangent.xyz, 0.0)).xyz
 		#newtangent = vec4(newtangent, tangent.w)
 
@@ -252,15 +252,15 @@ class Shader(object):
 
 	def shadeFragment(self, context, pos, normal, tangent, bitangent, texCoord):
 		n  = normal.normalize()
-				
+
 		t      = tangent.xyz.normalize()
-		b      = bitangent.normalize()	
+		b      = bitangent.normalize()
 		#btsign = tangent.w
 		#b      = (n.cross(t)*btsign).normalize()
 
 		# Look up the tangent space normal and transform it to camera space
 		tsn = self.normalmap.texture(texCoord).xyz*2.0-1.0
-		
+
 		normal = vec3(tsn.x*t.x + tsn.y*b.x + tsn.z*n.x,
 					  tsn.x*t.y + tsn.y*b.y + tsn.z*n.y,
 					  tsn.x*t.z + tsn.y*b.z + tsn.z*n.z)
@@ -272,11 +272,11 @@ class Shader(object):
 
 		# Texture
 		surface.diffuseColor *= self.sampler.texture(texCoord).xyz
-		
+
 		# Accumulate lighting
 		self.ambient.accumulate(surface, self.worldToCamera)
 		self.light.accumulate(surface, self.worldToCamera)
-					
+
 		mainColor = surface.litColor()
 		mainColor = self.fog.apply(mainColor, surface.p)
 		mainColor = self.processOutputColor(mainColor)

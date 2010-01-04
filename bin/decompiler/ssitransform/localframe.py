@@ -273,4 +273,3 @@ class LocalFrame(object):
 	def split(self):
 		split = Split(self)
 		return LocalFrame(split), LocalFrame(split)
-

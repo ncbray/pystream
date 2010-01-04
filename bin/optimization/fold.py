@@ -354,7 +354,7 @@ class FoldRewrite(TypeDispatcher):
 	def visitConvertToBool(self, node):
 		if node.expr.alwaysReturnsBoolean():
 			return self(node.expr)
-			
+
 		if self.descriptive(): return node
 		result = self.annotateFolded(fold.foldBoolAST(self.extractor, node))
 		self.logCreated(result)

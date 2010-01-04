@@ -89,7 +89,7 @@ class FuzzyConstraint(object):
 	def __init__(self, classifier):
 		self.classifier = classifier
 		self.stack = []
-	
+
 	def difficulty(self, var):
 		d = 0.0
 		for v in var.values:
@@ -140,7 +140,7 @@ class FCSPSolver(object):
 	def findMostDifficult(self):
 		if len(self.domains) == 1:
 			return tuple(self.domains)[0]
-		
+
 		worstDiff = 1e20
 		worst = None
 		for d in self.domains:
@@ -158,7 +158,7 @@ class FCSPSolver(object):
 
 	def findBest(self, var):
 		scores = []
-		
+
 		for value in var.values:
 			# Generate an optimistic cost.
 			cc = self.cost(var, value)
@@ -185,14 +185,14 @@ class FCSPSolver(object):
 			for value, score in self.findBest(var):
 				# Bound the exploration.
 				if score <= self.bestScore:
-					break 
-				
+					break
+
 				print "Choose", var.name, value
 
 				self.solution[var] = value
 				self.score = score
 
-				
+
 				old = self.constraints
 				self.constraints = [c.specialize(var, value) for c in self.constraints]
 				self.execute()

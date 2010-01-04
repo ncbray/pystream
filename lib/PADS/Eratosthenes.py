@@ -112,7 +112,7 @@ def PracticalNumbers():
             yield x
 
 # If run standalone, perform unit tests
-class SieveTest(unittest.TestCase):    
+class SieveTest(unittest.TestCase):
     def testPrime(self):
         """Test that the first few primes are generated correctly."""
         G = primes()

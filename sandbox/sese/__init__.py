@@ -8,7 +8,7 @@ from util.canonical import Sentinel
 
 class Searcher(object):
 	def search(self, G, start):
-		"""Perform a depth first search of graph G."""
+		"Perform a depth first search of graph G."
 		dispatch = [self.backedge,self.preorder,self.postorder]
 		for v,w,edgetype in PADS.DFS.search(G, start):
 			dispatch[edgetype](v,w)
@@ -31,7 +31,7 @@ class SESERegion(object):
 		self.children = []
 		self.nodes    = []
 		self.edges    = []
-		
+
 	def addChild(self, node):
 		assert not node.parent
 		node.parent = self
@@ -53,20 +53,20 @@ class SESERegion(object):
 
 		for src, dst in self.edges:
 			print indent+'\t', src, '->', dst
-			
+
 
 class FindRegions(Searcher):
 	def __init__(self, G, head, tail, nodeClass, edgeClass):
 		#assert len(G[start]) == 1
-		
+
 		self.G = G
 		self.head = head
 		self.tail = tail
 
 		self.dummyHead = Sentinel('<head>')
 		self.dummyTail = Sentinel('<tail>')
-		
-		
+
+
 		self.start = 'start'
 		self.nodeClass = nodeClass
 		self.edgeClass = edgeClass
@@ -91,7 +91,7 @@ class FindRegions(Searcher):
 				r = SESERegion(edgein[1], edgeout[0])
 				self.entryRegion[edgein] = r
 				self.exitRegion[edgeout] = r
-##				
+##
 ##				print "REGION", edge, r
 ##			else:
 ##				print "INIT", edge
@@ -104,7 +104,7 @@ class FindRegions(Searcher):
 		if parent != child:
 			edge = (parent, child)
 			self.handleEdge(edge)
-	
+
 	def backedge(self, source, dest):
 		self.handleEdge((source, dest))
 
@@ -125,7 +125,7 @@ class FindRegions(Searcher):
 		else:
 			# HACK
 			return top
-		
+
 	def visit(self, node, region):
 		assert region
 		if not node in self.processed:
@@ -152,9 +152,9 @@ class FindRegions(Searcher):
 ##		print '\t', region
 ##		print '\t', r1
 ##		print '\t', r2
-		
+
 		rn = region
-		
+
 		if region == r1 or region == r2:
 ##			print "BACK", region, r1, r2
 			assert region.parent, (node, region)
@@ -171,7 +171,7 @@ class FindRegions(Searcher):
 			rn = r1
 
 
-		# May be parented to the current region, or the parrent region.					
+		# May be parented to the current region, or the parrent region.
 		if r2 is not None and r2 != region:
 			assert not r2 in self.depth
 			assert rn in self.depth
@@ -185,7 +185,7 @@ class FindRegions(Searcher):
 
 		n1 = node
 		r1 = region
-		
+
 		n2 = next
 		r2 = rn
 
@@ -212,7 +212,7 @@ class FindRegions(Searcher):
 
 def findCycleEquivalences(G, head, tail):
 	start = 'start'
-	
+
 	s = cycleequivalence.CycleEquivalenceSearcher(G, head, tail)
 	nodeClass, edgeClass = s.NQClass, s.CEClass
 

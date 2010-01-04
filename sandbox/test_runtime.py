@@ -66,7 +66,7 @@ class TestSimpleKernel(unittest.TestCase):
 	def testStreamMul(self):
 		out = self.a*self.b
 		self.assertEqual(out.elements, [2, 6, 12, 20])
-		
+
 class TestKernelMethod(unittest.TestCase):
 	def setUp(self):
 		self.a = stream([1, 2, 3, 4])

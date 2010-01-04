@@ -52,19 +52,19 @@ class DataflowFlattener(TypeDispatcher):
 
 	def iterFieldIndexes(self, name):
 		return range(self.dioa.getCount(name.object))
-	
+
 	def connect(self, name, src, dst, index):
 		assert isinstance(src, graph.FieldNode), src
 		assert isinstance(dst, graph.FieldNode), dst
 
 		_srcName, srcNode = self(src, index, name)
 		_dstName, dstNode = self(dst, index, name)
-	
+
 		# Modify the cache
 		self.nodes[(dst, index)] = srcNode
-	
+
 		dstNode.canonical().redirect(srcNode)
-	
+
 	@dispatch(type(None))
 	def visitNone(self, node, index, name=None):
 		if name is not None:
@@ -76,25 +76,25 @@ class DataflowFlattener(TypeDispatcher):
 	def visitPredicateNode(self, node, index, name=None):
 		node = node.canonical()
 		key = (node, index)
-		
+
 		if key not in self.nodes:
 			result = graph.PredicateNode(node.hyperblock, node.name)
 			self.translateSlotAnnotations(key, result)
 			self.nodes[key] = result
 		else:
 			result = self.nodes[key]
-		
+
 		if name is not None:
 			return name, result
 		else:
 			return result
-		
+
 
 	@dispatch(graph.FieldNode)
 	def visitFieldNode(self, node, index, name=None):
 		node = node.canonical()
-		key = (node, index)		
-		
+		key = (node, index)
+
 		if key not in self.nodes:
 			assert name is not None
 			newfieldslot = self.replacementFieldSlot(name, index)
@@ -112,15 +112,15 @@ class DataflowFlattener(TypeDispatcher):
 	@dispatch(graph.LocalNode)
 	def visitLocalNode(self, node, index, name=None):
 		node = node.canonical()
-		key = (node, index)		
-		
+		key = (node, index)
+
 		if key not in self.nodes:
 			result = graph.LocalNode(node.hyperblock, node.names)
 			self.translateSlotAnnotations(key, result)
 			self.nodes[key] = result
 		else:
 			result = self.nodes[key]
-				
+
 		if name is not None:
 			return name, result
 		else:
@@ -131,14 +131,14 @@ class DataflowFlattener(TypeDispatcher):
 		node  = node.canonical()
 		key   = node.name
 		cache = self.dout.existing
-		
+
 		if key not in cache:
 			result = graph.ExistingNode(node.name, node.ref)
 			self.translateSlotAnnotations((node, index), result)
 			cache[key] = result
 		else:
 			result = cache[key]
-				
+
 		if name is not None:
 			return name, result
 		else:
@@ -155,21 +155,21 @@ class DataflowFlattener(TypeDispatcher):
 	@dispatch(graph.Entry)
 	def processEntry(self, node):
 		result = self.dout.entry
-				
+
 		for name, childnode in node.modifies.iteritems():
 			for index in self.iterIndexes(childnode):
 				newname, newnode = self(childnode, index, name)
 				result.addEntry(newname, newnode)
-		
+
 		self.translateOpAnnotations(node, result)
-		
+
 	@dispatch(graph.Exit)
-	def processExit(self, node):		
+	def processExit(self, node):
 		result = graph.Exit(node.hyperblock)
-		
+
 		pred = self(node.predicate, 0)
 		result.setPredicate(pred)
-			
+
 		for name, childnode in node.reads.iteritems():
 			for index in self.iterIndexes(childnode):
 				newname, newnode = self(childnode, index, name)
@@ -198,11 +198,11 @@ class DataflowFlattener(TypeDispatcher):
 	@dispatch(graph.Merge)
 	def processMerge(self, node):
 		for index in self.iterIndexes(node.modify):
-			result = graph.Merge(node.hyperblock) 
-			
+			result = graph.Merge(node.hyperblock)
+
 			for read in node.reads:
 				result.addRead(self(read, index))
-			
+
 			result.addModify(self(node.modify, index))
 
 	@dispatch(graph.GenericOp)
@@ -229,13 +229,13 @@ class DataflowFlattener(TypeDispatcher):
 		reads    = self.dioa.set.flatten(self.dioa.opReads[g])
 		modifies = self.dioa.set.flatten(self.dioa.opModifies[g])
 
-		if trace: 
+		if trace:
 			print "READ  ", reads
 			print "MODIFY", modifies
 
 		for name, node in g.heapReads.iteritems():
 			node = node.canonical()
-			for index in self.iterFieldIndexes(name):				
+			for index in self.iterFieldIndexes(name):
 				if (node, index) in reads:
 					newname, newnode = self(node, index, name)
 					result.addRead(newname, newnode)
@@ -248,7 +248,7 @@ class DataflowFlattener(TypeDispatcher):
 			for index in self.iterFieldIndexes(name):
 				if (modnode, index) in modifies:
 					newname, newnode = self(node, index, name)
-					
+
 					# HACK a psedo read for field on a unique, allocated object can be eliminated if it resolves to the entry.
 					if newnode.isEntryNode():
 						obj = node.name.object
@@ -256,7 +256,7 @@ class DataflowFlattener(TypeDispatcher):
 						allocated = not self.dioa.objectIsPreexisting(obj, index)
 						if unique and allocated:
 							newnode = self.dout.null
-					
+
 					result.addPsedoRead(newname, newnode)
 				else:
 					self.connect(name, node, modnode, index)
@@ -265,12 +265,12 @@ class DataflowFlattener(TypeDispatcher):
 		for name, node in g.heapModifies.iteritems():
 			node = node.canonical()
 			for index in self.iterFieldIndexes(name):
-				if (node, index) in modifies:				
+				if (node, index) in modifies:
 					newname, newnode = self(node, index, name)
 					result.addModify(newname, newnode)
 				else:
 					if trace: print "kill mod", node, index
-					
+
 		if trace: print
 
 		self.translateOpAnnotations(g, result)
@@ -286,7 +286,7 @@ class DataflowFlattener(TypeDispatcher):
 		if value:
 			result = frozenset([self.replacementObject(*obj) for obj in value])
 		else:
-			result = value			
+			result = value
 		return result
 
 	def makeCorrelatedAnnotation(self, data):
@@ -295,47 +295,47 @@ class DataflowFlattener(TypeDispatcher):
 	def translateSlotAnnotations(self, slot, result):
 		values = self.dioa.getValue(*slot)
 
-		# Predicates will have binary values, so skip remapping them		
+		# Predicates will have binary values, so skip remapping them
 		if not slot[0].isPredicate():
 			values = self.objMapper(values)
-		
+
 		values = self.makeCorrelatedAnnotation(values)
 		unique = self.dioa.isUniqueSlot(*slot)
-				
+
 		annotation = annotations.DataflowSlotAnnotation(values, unique)
 
 		result.annotation = annotation
-		
+
 	def translateOpAnnotations(self, g, result):
 		reads     = self.makeCorrelatedAnnotation(self.fieldMapper(self.dioa.opReads[g]))
 		modifies  = self.makeCorrelatedAnnotation(self.fieldMapper(self.dioa.opModifies[g]))
 		allocates = self.makeCorrelatedAnnotation(self.objMapper(self.dioa.opAllocates[g]))
-		
+
 		mask      = self.dioa.opMask(g)
-		
+
 		annotation = annotations.DataflowOpAnnotation(reads, modifies, allocates, mask)
-		
+
 		result.annotation = annotation
-	
+
 	def translateObjectAnnotations(self, obj, result):
 		preexisting = self.dioa.objectIsPreexisting(*obj)
 		unique      = self.dioa.isUniqueObject(*obj)
 		mask        = self.dioa.objectExistanceMask[obj]
 		final       = False
-		
+
 		annotation = annotations.DataflowObjectAnnotation(preexisting, unique, mask, final)
-		
+
 		result.annotation = annotation
-									
+
 	def process(self):
 		_epn, ep = self(self.dataflow.entryPredicate, 0, '*')
 		self.dout.entryPredicate = ep
-		
+
 		for op in self.order:
 			self(op)
-		
+
 		# TODO Information about correlations?
-			
+
 		return self.dout
 
 # Correlated analysis gives different versions

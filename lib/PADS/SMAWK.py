@@ -19,7 +19,7 @@ def ConcaveMinima(RowIndices,ColIndices,Matrix):
     Search for the minimum value in each column of a matrix.
     The return value is a dictionary mapping ColIndices to pairs
     (value,rowindex). We break ties in favor of earlier rows.
-    
+
     The matrix is defined implicitly as a function, passed
     as the third argument to this routine, where Matrix(i,j)
     gives the matrix value at row index i and column index j.
@@ -28,7 +28,7 @@ def ConcaveMinima(RowIndices,ColIndices,Matrix):
     for every i<i' and j<j'; that is, in every submatrix of
     the input matrix, the positions of the column minima
     must be monotonically nondecreasing.
-    
+
     The rows and columns of the matrix are labeled by the indices
     given in order by the first two arguments. In most applications,
     these arguments can simply be integer ranges.
@@ -36,7 +36,7 @@ def ConcaveMinima(RowIndices,ColIndices,Matrix):
 
     # Base case of recursion
     if not ColIndices: return {}
-    
+
     # Reduce phase: make number of rows at most equal to number of cols
     stack = []
     for r in RowIndices:
@@ -47,7 +47,7 @@ def ConcaveMinima(RowIndices,ColIndices,Matrix):
         if len(stack) != len(ColIndices):
             stack.append(r)
     RowIndices = stack
-    
+
     # Recursive call to search for every odd column
     minima = ConcaveMinima(RowIndices,
                 [ColIndices[i] for i in xrange(1,len(ColIndices),2)],
@@ -74,20 +74,20 @@ def ConcaveMinima(RowIndices,ColIndices,Matrix):
 class OnlineConcaveMinima:
     """
     Online concave minimization algorithm of Galil and Park.
-    
+
     OnlineConcaveMinima(Matrix,initial) creates a sequence of pairs
     (self.value(j),self.index(j)), where
         self.value(0) = initial,
         self.value(j) = min { Matrix(i,j) | i < j } for j > 0,
     and where self.index(j) is the value of j that provides the minimum.
     Matrix(i,j) must be concave, in the same sense as for ConcaveMinima.
-    
+
     We never call Matrix(i,j) until value(i) has already been computed,
     so that the Matrix function may examine previously computed values.
     Calling value(i) for an i that has not yet been computed forces
     the sequence to be continued until the desired index is reached.
     Calling iter(self) produces a sequence of (value,index) pairs.
-    
+
     Matrix(i,j) should always return a value, rather than raising an
     exception, even for j larger than the range we expect to compute.
     If j is out of range, a suitable value to return that will not
@@ -95,7 +95,7 @@ class OnlineConcaveMinima:
     to return a flag value such as None for large j, because the ties
     formed by the equalities among such flags may violate concavity.
     """
-    
+
     def __init__(self,Matrix,initial):
         """Initialize a OnlineConcaveMinima object."""
 
@@ -158,7 +158,7 @@ class OnlineConcaveMinima:
                     self._values[col],self._indices[col] = minima[col]
             self._finished = i
             return
-        
+
         # Second case: the new column minimum is on the diagonal.
         # All subsequent ones will be at least as low,
         # so we can clear out all our work from higher rows.
@@ -170,14 +170,14 @@ class OnlineConcaveMinima:
             self._indices[i] = self._base = i-1
             self._tentative = self._finished = i
             return
-        
+
         # Third case: row i-1 does not supply a column minimum in
         # any column up to tentative. We simply advance finished
         # while maintaining the invariant.
         if self._matrix(i-1,self._tentative) >= self._values[self._tentative]:
             self._finished = i
             return
-        
+
         # Fourth and final case: a new column minimum at self._tentative.
         # This allows us to make progress by incorporating rows
         # prior to finished into the base.  The base invariant holds

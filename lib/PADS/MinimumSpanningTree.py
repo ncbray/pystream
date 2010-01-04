@@ -12,7 +12,7 @@ def MinimumSpanningTree(G):
     length of edge u,v, and G[u][v] should always equal G[v][u].
     The tree is returned as a list of edges.
     """
-    
+
     # Kruskal's algorithm: sort edges by weight, and add them one at a time.
     # We use Kruskal's algorithm, first because it is very simple to
     # implement once UnionFind exists, and second, because the only slow
@@ -25,4 +25,4 @@ def MinimumSpanningTree(G):
         if subtrees[u] != subtrees[v]:
             tree.append((u,v))
             subtrees.union(u,v)
-    return tree        
+    return tree

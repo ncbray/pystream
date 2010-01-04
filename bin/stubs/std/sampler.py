@@ -12,7 +12,7 @@ def makeSamplerFunc(collector):
 	replaceObject = collector.replaceObject
 	replaceAttr   = collector.replaceAttr
 	attachPtr     = collector.attachPtr
-	
+
 	@export
 	@replaceAttr(sampler.sampler2D, 'texture')
 	@llfunc(descriptive=True)

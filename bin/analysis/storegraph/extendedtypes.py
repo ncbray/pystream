@@ -98,7 +98,7 @@ class ContextObjectType(ExtendedObjectType):
 
 	def __repr__(self):
 		return "<context %d %r>" % (id(self.context), self.obj)
-	
+
 # Wraps another extended type
 # Used for splitting objects
 class IndexedObjectType(ExtendedObjectType):

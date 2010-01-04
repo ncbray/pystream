@@ -36,11 +36,11 @@ def getExistingStr(node):
 		obj = node.object
 		if hasattr(obj,' pyobj'):
 			obj = obj.pyobj
-		
+
 		return "|[%r]|" % obj
 
 class SimpleExprGen(TypeDispatcher):
-	__namedispatch__ = True # HACK emulates old visitor	
+	__namedispatch__ = True # HACK emulates old visitor
 	def __init__(self, parent):
 		TypeDispatcher.__init__(self)
 
@@ -339,11 +339,11 @@ def protect(text, inner, outer, right=False):
 
 
 class SimpleCodeGen(TypeDispatcher):
-	__namedispatch__ = True # HACK emulates old visitor	
-	
+	__namedispatch__ = True # HACK emulates old visitor
+
 	def __init__(self, out=None):
 		TypeDispatcher.__init__(self)
-		
+
 		if out is None:
 			out = PythonOutput(sys.stdout)
 		elif not isinstance(out, PythonOutput):
@@ -376,7 +376,7 @@ class SimpleCodeGen(TypeDispatcher):
 				return
 
 		self.out.emitStatement(stmt)
-	
+
 	def processNoEmit(self, node):
 		self.enterSupress()
 		ret = self(node)
@@ -734,7 +734,7 @@ class SimpleCodeGen(TypeDispatcher):
 			self.seg.setLocalName(lcl, pname)
 
 		args = [self.seg.process(param) for param in p.params]
-		
+
 		if p.defaults:
 			print "DEFAULTS", p.defaults
 			defaults = [self.seg.process(d) for d in p.defaults]
@@ -760,7 +760,7 @@ class SimpleCodeGen(TypeDispatcher):
 	def visitFunctionDef(self, node):
 		assert not node.decorators
 		self.visitCode(node.code, node.name)
-		
+
 	def visitClassDef(self, node):
 		assert not node.decorators
 		bases = [self.seg.process(base) for base in node.bases]

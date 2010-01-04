@@ -42,44 +42,44 @@ def init(compiler):
 	global initialized
 	if initialized: return
 	initialized = True
-	
+
 	def uniqueAttrName(type, name):
 		return compiler.slots.uniqueSlotName(type.__dict__[name])
-	
+
 	def addName(type, name, fields):
 		un = uniqueAttrName(type, name)
 		fields[un] = name
-	
+
 	def components(cls, ctype, cnum):
 		key = ctype, cnum
-		
-		# HACK (float, 4) -> vec4 and mat2?  
+
+		# HACK (float, 4) -> vec4 and mat2?
 		if key not in componentTypes:
 			typeComponents[cls] = key
 			componentTypes[key] = cls
 			componentTypeNodes[key] = intrinsicTypeNodes[cls]
-	
+
 	components(float, float, 1)
-	
+
 	components(vec.vec2, float, 2)
 	addName(vec.vec2, 'x', fields)
 	addName(vec.vec2, 'y', fields)
-	
+
 	components(vec.vec3, float, 3)
 	addName(vec.vec3, 'x', fields)
 	addName(vec.vec3, 'y', fields)
 	addName(vec.vec3, 'z', fields)
-	
+
 	components(vec.vec4, float, 4)
 	addName(vec.vec4, 'x', fields)
 	addName(vec.vec4, 'y', fields)
 	addName(vec.vec4, 'z', fields)
 	addName(vec.vec4, 'w', fields)
-	
+
 	components(vec.mat2, float, 4)
 	components(vec.mat3, float, 9)
 	components(vec.mat4, float, 16)
-	
+
 	components(int, int, 1)
 	components(bool, bool, 1)
 
@@ -113,7 +113,7 @@ def getSingleType(node):
 def coerceArgs(self, arg0, arg1):
 	arg0type = getSingleType(arg0)
 	if arg0type is None: return None
-	
+
 	arg1type = getSingleType(arg1)
 	if arg1type is None: return None
 
@@ -420,7 +420,7 @@ def floatPowRewrite(self, node):
 		return True
 	else:
 		args = coerceArgs(self, *node.args)
-		if args is None: return None		
+		if args is None: return None
 		return glsl.IntrinsicOp('pow', args)
 
 
@@ -431,15 +431,15 @@ def samplerTextureRewrite(self, node):
 		return True
 	else:
 		return glsl.IntrinsicOp('texture', [self(arg) for arg in node.args])
-	
+
 
 def makeIntrinsicRewriter(extractor):
 	init(extractor.compiler)
-	
+
 	rewriter = DirectCallRewriter(extractor)
 
 	rewriter.addRewrite('prim_float_add', floatAddRewrite)
-	rewriter.addRewrite('prim_float_sub', floatSubRewrite)	
+	rewriter.addRewrite('prim_float_sub', floatSubRewrite)
 	rewriter.addRewrite('prim_float_mul', floatMulRewrite)
 	rewriter.addRewrite('prim_float_div', floatDivRewrite)
 	rewriter.addRewrite('prim_float_pow', floatPowRewrite)
@@ -469,7 +469,7 @@ def makeIntrinsicRewriter(extractor):
 	for v in fvecs: rewriter.attribute(v, '__mul__', mulRewrite)
 	for v in fvecs: rewriter.attribute(v, '__rmul__', rmulRewrite)
 
-	for m in (vec.mat2, vec.mat3, vec.mat4): 
+	for m in (vec.mat2, vec.mat3, vec.mat4):
 		rewriter.attribute(m, '__mul__', mulRewrite)
 		#rewriter.attribute(m, '__rmul__', rmulRewrite)
 

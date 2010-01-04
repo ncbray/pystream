@@ -13,4 +13,3 @@ def loadPairs(fn):
 	f.close()
 
 	return count+1, edges
-

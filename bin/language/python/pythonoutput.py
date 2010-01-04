@@ -25,6 +25,6 @@ class PythonOutput(object):
 			self.emitStatement('pass')
 		self.emitedStack.pop()
 		self.indent -= 1
-		
+
 	def newline(self):
 		self.out.write('\n')

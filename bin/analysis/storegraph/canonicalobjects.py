@@ -144,4 +144,4 @@ class CanonicalObjects(object):
 		if index is None:
 			index = self.index
 			self.index += 1
-		return self.cache[extendedtypes.IndexedObjectType(obj, index)] 
+		return self.cache[extendedtypes.IndexedObjectType(obj, index)]

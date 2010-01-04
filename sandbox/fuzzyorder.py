@@ -48,7 +48,7 @@ class RelativeOrderConstraint(object):
 
 	def specialize(self, x, c):
 		situation = 0
-		
+
 		if x == self.a:
 			situation += 1
 		elif x == self.b:
@@ -138,7 +138,7 @@ class Constraints(object):
 	def __le__(self, other):
 		#return self.optimisticScore() >= other.optimisticScore()
 		return self.pessimisticScore() >= other.pessimisticScore()
-	
+
 class IsomorphismCache(object):
 	def __init__(self):
 		self.cache = {}
@@ -148,7 +148,7 @@ class IsomorphismCache(object):
 	def check(self, c):
 		state = tuple(c.constraints)
 		existing = self.cache.get(state)
-		
+
 		if existing is None:
 			self.cache[state] = c
 			return True
@@ -160,7 +160,7 @@ class IsomorphismCache(object):
 			else:
 				self.kills += 1
 				return False
-			
+
 
 class Searcher(object):
 	def __init__(self, similar, tolerance):
@@ -187,13 +187,13 @@ class Searcher(object):
 		return self.best
 
 	def handleNode(self, c):
-		optimistic = c.optimisticScore()		
+		optimistic = c.optimisticScore()
 		if not self.worthChecking(optimistic):
 			return
 
 		self.checked += 1
 
-		
+
 		if self.checked%1000 == 0:
 			print self.lowerbound, len(c.order), c.optimisticScore(), c.pessimisticScore()
 			print self.lowerbound/self.optimistic
@@ -204,7 +204,7 @@ class Searcher(object):
 		if self.checked%10000 == 0 and self.best:
 			self.best.dump()
 
-			
+
 		if not c.constraints:
 			if optimistic >= self.lowerbound:
 				self.best = c
@@ -223,11 +223,11 @@ class Searcher(object):
 
 	def generateChildren(self, c):
 		optimistic = c.optimisticScore()
-		
+
 		for symbol in self.order(c):
 			if not self.worthChecking(optimistic):
 				break
-				
+
 			child = c.specialize(symbol)
 			child = self.contractTrivial(child)
 			if self.iso.check(child):
@@ -247,10 +247,10 @@ class Searcher(object):
 			return self.contractTrivial(c)
 		else:
 			return c
-		
+
 	def handleChild(self, c):
 		self.handleNode(c)
-	
+
 	def order(self, c):
 		if False:
 			if c.order:
@@ -264,8 +264,8 @@ class Searcher(object):
 			h.sort(key=lambda e: c.loss[e]-c.gain[e])
 			h.extend(c.hot)
 			h.extend(c.active)
-			
-		else:		
+
+		else:
 			h = list(c.hot)
 			h.sort(key=lambda e: c.loss[e]-c.gain[e])
 			h.extend(c.active)
@@ -292,7 +292,7 @@ def fuseOrderedRenames(data, diffs, numNames):
 
 	for d in diffs:
 		handleDif(d)
-	
+
 	for rank, renames in data.iteritems():
 		for rename in renames:
 			# Original
@@ -301,7 +301,7 @@ def fuseOrderedRenames(data, diffs, numNames):
 
 			#handleDif(a)
 			#handleDif(b)
-							
+
 			for ax, bx in zip(a, b):
 				if ax == bx: continue
 				if ax > bx: ax, bx = bx, ax
@@ -326,12 +326,12 @@ def fuseOrderedRenames(data, diffs, numNames):
 			runningscore = 0.0
 
 			lbound = lbounds[i]
-			
+
 			for p in reversed(range(0, i)):
 				if p <= lbound:
 					break
 
-				# Calculate the effect of adding p to the partition.								
+				# Calculate the effect of adding p to the partition.
 				for dest, value in weights[p].iteritems():
 					if dest <= i:
 						runningscore += value
@@ -346,9 +346,9 @@ def fuseOrderedRenames(data, diffs, numNames):
 				total = score+runningscore
 				if total >= best[1]:
 					best = (p, total)
-					
+
 			partitions.append(best)
-					
+
 
 
 	# Collect the partitions.
@@ -371,7 +371,7 @@ def fuseOrderedRenames(data, diffs, numNames):
 		groupLUT[b] = groupLUT.get(a, a)
 
 	unique = 0
-	
+
 	for a, b in out:
 		unique += 1
 		for x in range(a, b+1):
@@ -379,12 +379,12 @@ def fuseOrderedRenames(data, diffs, numNames):
 ##			if not x in groupLUT:
 ##				unique += 1
 ##				groupLUT[x] = x
-##			
+##
 ##			for target, weight in weights[x].iteritems():
 ##				if target <= b:
 ##					groupLUT[target] = groupLUT[x]
 
-	
+
 	totalscore = partitions[-1][1]
 	print "Collapse score", totalscore/totalweight
 	print "Unique names", unique, unique/float(numNames)
@@ -430,7 +430,7 @@ def createInfo(data, defs):
 				different[a].add(b)
 				different[b].add(a)
 			l = l[1:]
-		
+
 	for defn in defs:
 		for a in defn:
 			for b in defn:
@@ -438,24 +438,24 @@ def createInfo(data, defs):
 					different[a].add(b)
 					different[b].add(a)
 		remaining.update(defn)
-	
+
 	for rank, renames in data.iteritems():
 		for rename in renames:
 			addPartialOrder(sorted(rename.iterkeys()))
 			#b = [rename[x] for x in a]
 			addPartialOrder(sorted(rename.itervalues()))
 
-			
+
 			for k, v in rename.iteritems():
 				# Why is this nessisary?
 				remaining.add(k)
-				remaining.add(v) 
-				
+				remaining.add(v)
+
 				assert k in remaining, k
 				assert v in remaining, v
 				similar[k].add(v)
 				similar[v].add(k)
-	
+
 	current = set()
 	for x in remaining:
 		if not precedes[x]:
@@ -483,7 +483,7 @@ def collapseRenames2(data, defs):
 				assert not k in groupdifferent
 				choice = k
 				best = v
-			
+
 		if choice is None:
 			possible = current-groupdifferent
 			if possible:
@@ -491,7 +491,7 @@ def collapseRenames2(data, defs):
 
 		if choice is not None:
 			assert not choice in groupdifferent
-			
+
 			remaining.remove(choice)
 			current.remove(choice)
 
@@ -542,7 +542,7 @@ def makeClosure(lut, domain):
 	closure   = {}
 	for r in domain:
 		closure[r] = set()
-	
+
 	for p, s in lut.iteritems():
 		closure[p].update(s)
 
@@ -560,7 +560,7 @@ def makeClosure(lut, domain):
 	# Check consistancy
 	for p, s in closure.iteritems():
 		for n in s:
-			assert closure[n].issubset(s)	
+			assert closure[n].issubset(s)
 
 	return closure
 
@@ -628,7 +628,7 @@ class Fuser(object):
 
 			self.update(a)
 			self.update(b)
-			
+
 			self.follows[new]   = self.follows[a].union(self.follows[b])
 			self.precedes[new]  = self.precedes[a].union(self.precedes[b])
 			self.different[new] = self.different[a].union(self.different[b])
@@ -650,7 +650,7 @@ class Fuser(object):
 
 	def makeOrder(self, domain):
 		#print "Ordering"
-		
+
 		newdomain = set()
 		for d in domain:
 			newdomain.add(self.union[d])
@@ -686,7 +686,7 @@ class Fuser(object):
 
 						if opprotunistic:
 							exemplars.add(d)
-						
+
 					current.add(d)
 
 
@@ -700,10 +700,10 @@ class Fuser(object):
 		print "Ranks: %d" % rank
 
 		return order
-			
+
 	def makeMapping(self, domain):
 		order = self.makeOrder(domain)
-		
+
 		mapping ={}
 		for d in domain:
 			mapping[d] = order[self.union[d]]
@@ -718,11 +718,11 @@ class Fuser(object):
 ##		assert isinstance(next, set)
 ##		assert isinstance(current, set)
 ##
-##		
+##
 ##		for c in current:
 ##			remaining.remove(c)
 ##			mapping[c] = gen
-##			
+##
 ##			for follow in follows[c]:
 ##				precedes[follow].remove(c)
 ##				if not precedes[follow]:
@@ -773,12 +773,12 @@ def collapseRenames(data, defs, boundry=1000000000):
 
 	print "Fuse easy"
 	for rank in ranks:
-		renames = data[rank]		
+		renames = data[rank]
 		for rename in renames:
 			a, b = flattenRename(rename)
 			if isSwap(b) or isDegenerate(b):
 				broken.append(rename)
-			else:			
+			else:
 				for k, v in rename.iteritems():
 					# Can we completely fuse?
 					if not fuser.canFuse(k, v):
@@ -813,7 +813,7 @@ def translateData(data, lut):
 			for k, v in rename.iteritems():
 				tk = lut[k]
 				tv = lut[v]
-				
+
 				assert tk not in new, ("Degenerate key?", rename)
 
 				new[tk] = tv
@@ -875,7 +875,7 @@ def printViolations(data):
 
 	pure = 0
 	total = 0
-	
+
 	for rank, renames in data.iteritems():
 		for rename in renames:
 			#rename = simplifyRename(rename)
@@ -897,7 +897,7 @@ def printViolations(data):
 
 def similarSets(data):
 	similar = collections.defaultdict(set)
-	
+
 	for rank, renames in data.iteritems():
 		for rename in renames:
 			for k, v in rename.iteritems():
@@ -978,7 +978,7 @@ def findBestOrder(data, domain, tol=0.95):
 		orderLUT[d] = i
 
 	#print "Boundry: %d/%d" % (boundry, len(order))
-	
+
 
 	return order, orderLUT
 
@@ -992,7 +992,7 @@ def remap(data, defs, tol=0.95):
 		domain.update(defn)
 
 
-	
+
 	order, orderLUT = findBestOrder(data, domain, tol)
 
 	data, defs = translate(data, defs, orderLUT)
@@ -1025,7 +1025,7 @@ def remap(data, defs, tol=0.95):
 		data, defs = translate(data, defs, groupLUT)
 		result = composeMappings(result, groupLUT)
 
-		
+
 		clut = collapseNames(data)
 		data, defs = translate(data, defs, clut)
 		result = composeMappings(result, clut)

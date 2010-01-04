@@ -27,7 +27,7 @@ class TestPathInformationBase(unittest.TestCase):
 		self.x, self.xn, self.xnn = self.makeExprs('x')
 		self.y, self.yn, self.ynn = self.makeExprs('y')
 		self.z, self.zn, self.znn = self.makeExprs('z')
-		self.w, self.wn, self.wnn = self.makeExprs('w')	
+		self.w, self.wn, self.wnn = self.makeExprs('w')
 
 
 class TestPathInformation(TestPathInformationBase):
@@ -185,7 +185,7 @@ class TestPathInfoSplit(PathInfoBase):
 		self.et = self.canonical.extendedParameter(self.t)
 		self.etr = self.canonical.extendedParameter(self.tr)
 		self.etrl = self.canonical.extendedParameter(self.trl)
-	
+
 		self.paths = self.makeBase()
 
 
@@ -200,7 +200,7 @@ class TestPathInfoSplit(PathInfoBase):
 	def extendBase(self):
 		parameterSlots = set((self.t.slot,))
 		self.extendedParams = self.paths.extendParameters(self.canonical, parameterSlots)
-		
+
 	def testHits(self):
 		self.assertEqual(self.paths.hit(self.xf),  TVLTrue)
 		self.assertEqual(self.paths.hit(self.yrl), TVLTrue)
@@ -226,7 +226,7 @@ class TestPathInfoSplit(PathInfoBase):
 			return slot in accessed
 
 		self.assert_(self.paths.mustAlias(self.yr, self.zf))
-		
+
 		accessed, hidden = self.paths.split(self.extendedParams, accessedCallback)
 
 		self.assert_(accessed.mustAlias(self.tr, self.etr))
@@ -234,7 +234,7 @@ class TestPathInfoSplit(PathInfoBase):
 		self.assert_(not accessed.mustAlias(self.y, self.et))
 
 		self.assert_(not accessed.mustAlias(self.yr, self.zf))
-		
+
 
 		self.assert_(hidden.mustAlias(self.zf, self.etr))
 		self.assert_(hidden.mustAlias(self.xf, self.etrl))
@@ -259,7 +259,7 @@ class TestUglyPathInfoSplit(PathInfoBase):
 		self.yrr  = self.makeExpr(self.y, self.r, self.r)
 		self.yrrr  = self.makeExpr(self.y, self.r, self.r, self.r)
 
-	
+
 		self.paths = self.makeBase()
 
 
@@ -272,7 +272,7 @@ class TestUglyPathInfoSplit(PathInfoBase):
 	def extendBase(self):
 		parameterSlots = set()
 		self.extendedParams = self.paths.extendParameters(self.canonical, parameterSlots)
-		
+
 	def testHits(self):
 		self.assertEqual(self.paths.hit(self.xlrr),  TVLTrue)
 		self.assertEqual(self.paths.hit(self.yrrr), TVLTrue)
@@ -305,7 +305,7 @@ class TestUglyPathInfoSplit(PathInfoBase):
 		self.assertEqual(hidden.hit(self.xlrr),  TVLMaybe)
 		self.assertEqual(hidden.hit(self.yrrr), TVLTrue)
 		self.assert_(not hidden.mustAlias(self.xlr, self.yrr))
-	
+
 ##		accessed.dump()
 ##		print "="*80
 ##		hidden.dump()

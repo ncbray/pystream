@@ -36,7 +36,7 @@ class TupleSet(object):
 
 	def add(self, *args):
 		self.schema.validate(args)
-		self.data.add(args)	
+		self.data.add(args)
 
 	def remove(self, *args):
 		self.schema.validate(args)

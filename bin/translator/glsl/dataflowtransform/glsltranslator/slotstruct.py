@@ -15,20 +15,20 @@ from language.glsl import codegen
 
 class SlotStruct(object):
 	def __init__(self, objs):
-		
+
 		self.poolinfo = objs
-		
+
 		self.singleType = objs.singleType()
-		
+
 		self.type  = False
 		self.ref   = False
 		self.count = {float:0, int:0, bool:0}
-		
+
 		if objs.objects:
 			self.ref = True
-		
+
 		intrinsicType = None
-		
+
 		for group in (objs.intrinsics, objs.constants):
 			for obj in group:
 				t = obj.xtype.obj.pythonType()
@@ -36,11 +36,11 @@ class SlotStruct(object):
 					intrinsicType = t
 				elif intrinsicType is not t:
 					self.type = True
-				
+
 				ct, cn = intrinsics.typeComponents[t]
 				self.count[ct] = max(self.count.get(ct, 0), cn)
 
-		self.type = self.type or intrinsicType and self.ref  
+		self.type = self.type or intrinsicType and self.ref
 
 		self._signature = (self.type, self.ref, self.count[float], self.count[int], self.count[bool])
 
@@ -58,7 +58,7 @@ class SlotStruct(object):
 		else:
 			# This slot is a union of fields, and will be implemented using a struct.
 			fields = []
-			
+
 			if self.type:
 				fields.append(glsl.VariableDecl(intrinsics.intrinsicTypeNodes[int], 't', None))
 			if self.ref:
@@ -78,12 +78,12 @@ class SlotStruct(object):
 
 	def assign(self, src, dst, filter=None):
 		assert filter is None
-		
-		
+
+
 
 	def dump(self):
 		print "="*60
-		
+
 		self.poolinfo.dump()
 
 		print "t", self.type

@@ -34,7 +34,7 @@ class Mapping(object):
 
 	def __getitem__(self, key):
 		self.schema.validateKey(key)
-		
+
 		if not key in self.data:
 			result = self.schema.valueschema.missing()
 			self.data[key] = result

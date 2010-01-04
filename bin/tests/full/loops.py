@@ -48,7 +48,7 @@ def buildListSwitch(size):
 
 	while size > 0:
 		a, b = LL(b), LL(a)
-		size = size-1 
+		size = size-1
 
 	# TODO make tuple?
 	return Pair(a, b)
@@ -69,7 +69,7 @@ def buildListSwitch(size):
 def isPrime(num):
 	if num == 2:	return True
 	if num%2 == 0:	return False
-	
+
 	test = 3
 	prime = True
 	while test < num:

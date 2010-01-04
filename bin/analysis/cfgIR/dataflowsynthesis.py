@@ -74,7 +74,7 @@ class CFGResynthesis(object):
 		if op.isPredicateOp(): return
 
 		cp = op.canonicalpredicate
-		
+
 		# Entry point and merges have no predicates, so fake it.
 		if cp is None:
 			# Note this is the entryPredicate for the current hyperblock,

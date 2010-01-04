@@ -14,7 +14,7 @@ def moduleForGlobalDict(glbls):
 			assert module.__file__ == glbls['__file__']
 			return (name, module)
 	assert False
-	
+
 # Note that the unique name may change between runs, as it takes the id of a type.
 def uniqueSlotName(descriptor):
 	# HACK GetSetDescriptors are not really slots?

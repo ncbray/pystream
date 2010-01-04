@@ -54,4 +54,3 @@ def indexNoFold():
 
 def indexInt(i):
 	return (1, 2, 3)[i]
-

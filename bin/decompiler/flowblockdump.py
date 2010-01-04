@@ -213,7 +213,7 @@ class FlowBlockDump(TypeDispatcher):
 		for term in block.terms:
 			self.makeEdge(block, term)
 			self.enqueue(term)
-			
+
 	@dispatch(flowblocks.CheckStack)
 	def visitCheckStack(self, block):
 		self.makeNode(block, self.pointStyle(block))

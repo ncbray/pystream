@@ -11,7 +11,7 @@ class SimpleShader(Shader):
 	__slots__ = 'project'
 	def __init__(self, project):
 		self.project = project
-	
+
 	def shadeVertex(self, pos, color):
 		self.projected(self.project*vec4(pos.x, pos.y, pos.z, 1.0))
 		return color

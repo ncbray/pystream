@@ -81,4 +81,4 @@ class BipartitenessTest(unittest.TestCase):
             self.assertEqual(isBipartite(self.cycle(i)), False)
 
 if __name__ == "__main__":
-    unittest.main()   
+    unittest.main()

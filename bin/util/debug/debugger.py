@@ -6,7 +6,7 @@ def conditional(cond, func):
 	else:
 		def passthroughTemp(func):
 			return func
-		return passthroughTemp		
+		return passthroughTemp
 
 
 # Decorator that starts a debugger if an exception is thrown

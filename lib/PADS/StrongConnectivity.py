@@ -80,10 +80,10 @@ class StronglyConnectedComponents(DFS.Searcher):
 class StrongConnectivityTest(unittest.TestCase):
     G1 = { 0:[1], 1:[2,3], 2:[4,5], 3:[4,5], 4:[6], 5:[], 6:[] }
     C1 = [[0],[1],[2],[3],[4],[5],[6]]
-    
+
     G2 = { 0:[1], 1:[2,3,4], 2:[0,3], 3:[4], 4:[3] }
     C2 = [[0,1,2],[3,4]]
-    
+
     knownpairs = [(G1,C1),(G2,C2)]
 
     def testStronglyConnectedComponents(self):
@@ -105,4 +105,4 @@ class StrongConnectivityTest(unittest.TestCase):
                         self.assertEqual(w in graph[v] and w in C, w in C[v])
 
 if __name__ == "__main__":
-    unittest.main()   
+    unittest.main()

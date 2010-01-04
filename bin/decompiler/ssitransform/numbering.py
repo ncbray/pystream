@@ -13,12 +13,12 @@ class NumberAST(TypeDispatcher):
 	@dispatch(str, int, float, type(None))
 	def visitLeaf(self, node):
 		return node
-	
+
 	@defaultdispatch
 	def default(self, node):
 		pre = self.uid
 		self.uid += 1
-		
+
 		node.visitChildren(self)
 
 		post = self.uid
@@ -30,7 +30,7 @@ class NumberAST(TypeDispatcher):
 	@dispatch(ast.Local, ast.Cell, ast.Existing)
 	def visitRef(self, node):
 		self.handleShared(node)
-			
+
 	def handleShared(self, node):
 		pre = self.uid
 		self.uid += 1
@@ -41,7 +41,7 @@ class NumberAST(TypeDispatcher):
 		if node in self.numbering:
 			pre = min(pre, self.numbering[node][0])
 			post = max(post, self.numbering[node][1])
-			
+
 		self.numbering[node] = (pre, post)
 
 	def process(self, node):

@@ -72,7 +72,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testIndex4(self):
-		self.assign(self.xExpr, self.tExpr)		
+		self.assign(self.xExpr, self.tExpr)
 		# tn -> n
 		argument = (self.tnRef, None, None)
 		results = [
@@ -81,7 +81,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testIndex5(self):
-		self.assign(self.xExpr, self.tExpr)		
+		self.assign(self.xExpr, self.tExpr)
 		# n -> n
 		argument = (self.nRef, None, None)
 		results = [
@@ -90,7 +90,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testIndex6(self):
-		self.assign(self.xExpr, self.tExpr)		
+		self.assign(self.xExpr, self.tExpr)
 		# yn -> yn
 		argument = (self.ynRef, None, None)
 		results = [
@@ -99,7 +99,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testIndex7(self):
-		self.assign(self.xExpr, self.tExpr)		
+		self.assign(self.xExpr, self.tExpr)
 		# ytn -> yn
 		argument = (self.ytnRef, None, None)
 		results = [
@@ -108,7 +108,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTNX1(self):
-		self.assign(self.tnExpr, self.xExpr)		
+		self.assign(self.tnExpr, self.xExpr)
 		# yz -> yz
 		argument = (self.yzRef, None, None)
 		results = [
@@ -117,7 +117,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTNX2(self):
-		self.assign(self.tnExpr, self.xExpr)		
+		self.assign(self.tnExpr, self.xExpr)
 		# z -> z
 		argument = (self.zRef, None, None)
 		results = [
@@ -126,7 +126,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTNX3(self):
-		self.assign(self.tnExpr, self.xExpr)		
+		self.assign(self.tnExpr, self.xExpr)
 		# xt -> t
 		argument = (self.xtRef, None, None)
 		results = [
@@ -135,7 +135,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTNX4(self):
-		self.assign(self.tnExpr, self.xExpr)		
+		self.assign(self.tnExpr, self.xExpr)
 		# n -> n, xn
 		argument = (self.nRef, None, None)
 		results = [
@@ -145,7 +145,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTNX5(self):
-		self.assign(self.tnExpr, self.xExpr)		
+		self.assign(self.tnExpr, self.xExpr)
 		# yn -> yn, xyn
 		argument = (self.ynRef, None, None)
 		results = [
@@ -155,7 +155,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testYNTN1(self):
-		self.assign(self.ynExpr, self.tnExpr)		
+		self.assign(self.ynExpr, self.tnExpr)
 		# yz -> yz
 		argument = (self.yzRef, None, None)
 		results = [
@@ -164,7 +164,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testYNTN2(self):
-		self.assign(self.ynExpr, self.tnExpr)		
+		self.assign(self.ynExpr, self.tnExpr)
 		# z -> z
 		argument = (self.xRef, None, None)
 		results = [
@@ -173,7 +173,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testYNTN3(self):
-		self.assign(self.ynExpr, self.tnExpr)		
+		self.assign(self.ynExpr, self.tnExpr)
 		# t -> t
 		argument = (self.tRef, None, None)
 		results = [
@@ -182,7 +182,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testYNTN4(self):
-		self.assign(self.ynExpr, self.tnExpr)		
+		self.assign(self.ynExpr, self.tnExpr)
 		# n -> n, nn
 		argument = (self.nRef, None, (self.tnExpr,))
 		results = [
@@ -192,7 +192,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testYNTN5(self):
-		self.assign(self.ynExpr, self.tnExpr)		
+		self.assign(self.ynExpr, self.tnExpr)
 		# yn -> yn, ynn
 		argument = (self.ynRef, None, (self.tnExpr,))
 		results = [
@@ -202,7 +202,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testYNTN6(self):
-		self.assign(self.ynExpr, self.tnExpr)		
+		self.assign(self.ynExpr, self.tnExpr)
 		# xn -> x, xn
 		argument = (self.xnRef, (self.tnExpr,),  None)
 		results = [
@@ -212,7 +212,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testYNTN7(self):
-		self.assign(self.ynExpr, self.tnExpr)		
+		self.assign(self.ynExpr, self.tnExpr)
 		# xyn -> xy, xyn
 		argument = (self.xynRef, (self.tnExpr,), None)
 		results = [
@@ -222,7 +222,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTYN1(self):
-		self.assign(self.tExpr, self.ynExpr)		
+		self.assign(self.tExpr, self.ynExpr)
 		# t -> tn
 		argument = (self.tRef, None, None)
 		results = [
@@ -231,7 +231,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTYN2(self):
-		self.assign(self.tExpr, self.ynExpr)		
+		self.assign(self.tExpr, self.ynExpr)
 		# nn -> n
 		argument = (self.nnRef, (self.tnExpr, self.ynExpr), None)
 		results = [
@@ -240,7 +240,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTYN3(self):
-		self.assign(self.tExpr, self.ynExpr)		
+		self.assign(self.tExpr, self.ynExpr)
 		# n -> n
 		argument = (self.nRef, None, (self.tnExpr, self.ynExpr))
 		results = [
@@ -249,7 +249,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTYN4(self):
-		self.assign(self.tExpr, self.ynExpr)		
+		self.assign(self.tExpr, self.ynExpr)
 		# yn -> yn
 		argument = (self.ynRef, None, (self.tnExpr, self.ynExpr))
 		results = [
@@ -258,7 +258,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTYN5(self):
-		self.assign(self.tExpr, self.ynExpr)		
+		self.assign(self.tExpr, self.ynExpr)
 		# ynn -> yn
 		argument = (self.ynnRef, (self.tnExpr, self.ynExpr), None)
 		results = [
@@ -267,7 +267,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTYN6(self):
-		self.assign(self.tExpr, self.ynExpr)		
+		self.assign(self.tExpr, self.ynExpr)
 		# xn -> x
 		argument = (self.xnRef, (self.tnExpr, self.ynExpr), None)
 		results = [
@@ -276,7 +276,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTYN7(self):
-		self.assign(self.tExpr, self.ynExpr)		
+		self.assign(self.tExpr, self.ynExpr)
 		# x -> x
 		argument = (self.xRef, None, None)
 		results = [
@@ -286,7 +286,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 
 
 	def testTYN8(self):
-		self.assign(self.tExpr, self.ynExpr)		
+		self.assign(self.tExpr, self.ynExpr)
 		# xyn -> xy
 		argument = (self.xynRef, (self.tnExpr, self.ynExpr), None)
 		results = [
@@ -295,7 +295,7 @@ class TestLocalAssignConstraint(FirstExampleBase):
 		self.checkTransfer(argument, results)
 
 	def testTYN9(self):
-		self.assign(self.tExpr, self.ynExpr)		
+		self.assign(self.tExpr, self.ynExpr)
 		# xy -> xy
 		argument = (self.xyRef, None, None)
 		results = [

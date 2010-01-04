@@ -16,7 +16,7 @@ class MarkLocals(TypeDispatcher):
 	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
 		pass
-	
+
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
 		self.flow.define(node, top)
@@ -138,5 +138,3 @@ def evaluateCode(compiler, node, initialLive=None):
 	result = t(node)
 
 	return result
-
-

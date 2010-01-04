@@ -19,7 +19,7 @@ class SlotRef(object):
 	def __init__(self, ref, struct):
 		assert isinstance(ref, glsl.GLSLASTNode) or ref is None, ref
 		assert isinstance(struct, SlotStruct), struct
-		
+
 		self.ref    = ref
 		self.struct = struct
 
@@ -76,12 +76,12 @@ class GLSLTranslator(TypeDispatcher):
 		if not info in self.poolname:
 			base = 'p%d' % self.uid
 			self.uid += 1
-			
+
 			impl = PoolImplementation(info, base)
 			self.poolname[info] = impl
 		else:
 			impl = self.poolname[info]
-			
+
 		return impl
 
 	def getPoolImpl(self, slot):
@@ -144,24 +144,24 @@ class GLSLTranslator(TypeDispatcher):
 
 	def localNodeRef(self, lcl):
 		assert isinstance(lcl, (graph.LocalNode, graph.ExistingNode)), lcl
-		lcl = lcl.canonical()				
+		lcl = lcl.canonical()
 		indexName = self.uniqueLocalForSlot(lcl)
 		return indexName
 
 	def assignmentTransfer(self, src, g):
 		assert isinstance(src, SlotRef), src
-		
+
 		if len(g.localModifies) == 0:
 			return [] # GLSL has no side effects?
 		elif len(g.localModifies) == 1:
 			target = g.localModifies[0]
-			
+
 			slot     = target.canonical()
 			poolImpl = self.getPoolImpl(slot)
 
 			suggestion = target.names[0].name if target.names else None
 			index = self.uniqueLocalForSlot(target, suggestion)
-			
+
 			dst = SlotRef(index, poolImpl.struct)
 
 			return self.transfer(src, dst)
@@ -188,29 +188,29 @@ class GLSLTranslator(TypeDispatcher):
 
 	def fieldRef(self, node, slot, g):
 		exprSlot = g.localReads[node.expr].canonical()
-		
+
 		expr     = self.localRef(node.expr, g)
 		exprImpl = self.getPoolImpl(exprSlot)
-		
+
 		field    = slot.name.slotName
 		slotinfo = self.getSlotInfo(slot)
-			
+
 		# Force creation.
 		self.getPoolImpl(slot)
-		
+
 		fieldOp  = exprImpl.getField(expr, field, slotinfo)
-		
+
 		return self.slotRef(fieldOp, slot)
 
 	def valueRef(self, lcl, g):
 		node     = g.localReads[lcl]
 		slot     = node.canonical()
-		expr     = self.localNodeRef(node)	
+		expr     = self.localNodeRef(node)
 		exprImpl = self.getPoolImpl(slot)
-		
+
 		# HACK no type
 		op = exprImpl.getValue(expr, None)
-		
+
 		return self.slotRef(op, node.canonical())
 
 	@dispatch(ast.Load)
@@ -220,21 +220,21 @@ class GLSLTranslator(TypeDispatcher):
 		if intrinsics.isIntrinsicMemoryOp(node):
 			expr   = self.valueRef(node.expr, g)
 			field  = intrinsics.fields[node.name.object.pyobj]
-			src    = self.slotRef(glsl.Load(expr.ast(), field), slot)			
+			src    = self.slotRef(glsl.Load(expr.ast(), field), slot)
 		else:
-			src  = self.fieldRef(node, slot, g)	
+			src  = self.fieldRef(node, slot, g)
 
 		return self.assignmentTransfer(src, g)
-		
+
 	@dispatch(ast.Store)
-	def visitStore(self, node, g):		
+	def visitStore(self, node, g):
 		# Source
 		src = self(node.value, g)
 
 		slot   = self.getSingleSlot(g.annotation.modify.flat)
 
 		# Destination
-		if intrinsics.isIntrinsicMemoryOp(node):		
+		if intrinsics.isIntrinsicMemoryOp(node):
 			expr   = self.valueRef(node.expr, g)
 			field  = intrinsics.fields[node.name.object.pyobj]
 			dst    = self.slotRef(glsl.Load(expr.ast(), field), slot)
@@ -250,20 +250,20 @@ class GLSLTranslator(TypeDispatcher):
 
 		slot = g.localModifies[0].canonical()
 		info = self.getPoolInfoForSlot(slot)
-		
+
 		if False:
 			if not info.isSingleUnique():
 				info.dump()
-				
+
 			assert info.isSingleUnique(), node
-		
+
 		impl = self.getPoolImpl(slot)
 		return impl.allocate(self, slot, g)
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node, g):
 		slot = g.localReads[node].canonical()
-		lcl  = self.localRef(node, g)				
+		lcl  = self.localRef(node, g)
 		return SlotRef(lcl, self.slotStruct(slot))
 
 	@dispatch(ast.Existing)
@@ -293,17 +293,17 @@ class GLSLTranslator(TypeDispatcher):
 			return language.glsl.tools.assign(translated, None)
 
 		assert len(g.localModifies) == 1
-			
+
 		# HACK use assignment target slot.
 		target   = g.localModifies[0]
 		slot     = target.canonical()
 		poolimpl = self.getPoolImpl(slot)
-		
+
 		targetInfo = self.getSlotInfo(slot)
-		
+
 #		if not targetInfo.canUnbox():
 #			pi = targetInfo.poolinfo
-#			assert False, (pi.types, pi.objects, pi.nonfinal) 
+#			assert False, (pi.types, pi.objects, pi.nonfinal)
 #		assert targetInfo.canUnbox(), (slot, g.op)
 
 		src = SlotRef(translated, poolimpl.struct)
@@ -328,18 +328,18 @@ class GLSLTranslator(TypeDispatcher):
 	@dispatch(graph.Gate)
 	def visitGate(self, node):
 		srcSlot = node.read.canonical()
-		
-		
+
+
 		if srcSlot.isExisting():
 			lcl = self.makeConstant(srcSlot.name.pyobj)
 		else:
 			lcl  = self.localNodeRef(srcSlot)
-							
-		src = SlotRef(lcl, self.slotStruct(srcSlot))	
+
+		src = SlotRef(lcl, self.slotStruct(srcSlot))
 
 		dstSlot = self.getGateTarget(node)
-		lcl  = self.localNodeRef(dstSlot)				
-		dst = SlotRef(lcl, self.slotStruct(dstSlot))	
+		lcl  = self.localNodeRef(dstSlot)
+		dst = SlotRef(lcl, self.slotStruct(dstSlot))
 
 		return self.transfer(src, dst)
 
@@ -350,25 +350,25 @@ class GLSLTranslator(TypeDispatcher):
 		for name, node in node.modifies.iteritems():
 			tree = self.inputLUT.get(name)
 			if tree is None: continue
-			
+
 			if node.isExisting():
 				lcl = self.makeConstant(node.name.pyobj)
 			else:
 				lcl = self.localNodeRef(node)
-			
+
 			# What should the output be named?
 			base = tree.treetype
-				
+
 			name = tree.name
 			if not name:
 				name = "%s_%d" % (base, uid)
 				uid += 1
 				tree.name = name
-			
+
 			if tree.treetype == 'uniform':
 				decl   = glsl.UniformDecl(tree.builtin, lcl.type, name, None)
 				input  = glsl.Uniform(decl)
-				
+
 				# HACK don't copy the uniforms.  Samplers cannot be copied
 				# Inputs are still copied due to inout WAR hazards.
 				self.replaceLocal(node, input)
@@ -376,9 +376,9 @@ class GLSLTranslator(TypeDispatcher):
 			else:
 				decl   = glsl.InputDecl(None, False, tree.builtin, lcl.type, name)
 				input  = glsl.Input(decl)
-			
+
 			prologue.append(glsl.Assign(input, lcl))
-			
+
 		return prologue
 
 	def generateEpilogue(self, node):
@@ -388,24 +388,24 @@ class GLSLTranslator(TypeDispatcher):
 		for name, node in node.reads.iteritems():
 			tree = self.outputLUT.get(name)
 			if tree is None: continue
-			
+
 			# What should the output be named?
 			name = tree.name
 			if not name:
 				name = "out_%d" % uid
 				uid += 1
-			
+
 			# Send data to the output
 			if node.isExisting():
 				lcl = self.makeConstant(node.name.pyobj)
 			else:
 				lcl = self.localNodeRef(node)
-			
+
 			decl   = glsl.OutputDecl(None, False, False, tree.builtin, lcl.type, name)
 			output = glsl.Output(decl)
-			
+
 			epilogue.append(glsl.Assign(lcl, output))
-			
+
 		return epilogue
 
 	@dispatch(graph.Entry)
@@ -426,18 +426,18 @@ class GLSLTranslator(TypeDispatcher):
 	@dispatch(cfg.CFGTypeSwitch)
 	def visitCFGTypeSwitch(self, node):
 		#op = node.switch.op
-		
+
 		cases = [self(case) for case in node.cases]
 
 		current = cases.pop()
-		
+
 		while cases:
 			case = cases.pop()
 			condition = glsl.Local(intrinsics.intrinsicTypeNodes[bool], 'bogus')
 			current = glsl.Switch(condition, case, current)
 
 		#node.merge
-		
+
 		return current
 
 	@dispatch(cfg.CFGBlock)
@@ -464,7 +464,7 @@ multiLineComments = re.compile('/\*([^*]|\*(?!/))*\*/')
 def compressGLSL(code):
 	code = singleLineComments.sub('', multiLineComments.sub('', code))
 	return multipleReturns.sub('\n', unessisarySpace.sub('', multipleSpace.sub(' ', code))).strip()
-	
+
 
 def process(context):
 	rewriter = intrinsics.makeIntrinsicRewriter(context.compiler.extractor)

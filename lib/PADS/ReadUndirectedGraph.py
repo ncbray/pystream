@@ -42,7 +42,7 @@ def graphNum(s):
 def graph():
 	"""Create a new empty graph."""
 	return {}
-	
+
 def vertex(G, v):
 	"""Add new vertex v to graph G."""
 	if v in G:
@@ -94,7 +94,7 @@ def readMALF(lines):
 # ==========================================================================
 #		Edge list format
 # ==========================================================================
-	
+
 def readEdgeList(lines):
 	"""Read undirected graph in edge list format."""
 	G = graph()
@@ -119,7 +119,7 @@ def readEdgeList(lines):
 # ==========================================================================
 #		Node edge list format
 # ==========================================================================
-	
+
 def readNodeEdgeList(lines):
 	"""Read undirected graph in node edge list format."""
 	G = graph()
@@ -140,24 +140,24 @@ def readNodeEdgeList(lines):
 
 	def anonEdge(line):
 		return addEdge(line, numEdges[0]+1)
-		
+
 	def namedEdge(line):
 		id = line
 		if id in EdgeNames:
 			raise GraphFormatError, 'Edge name "%s" used twice in node edge list' % id
 		addEdge(lines.next(), id)
 		EdgeNames[id] = id
-		
+
 	def noActionYet(line):
 		raise GraphFormatError, 'No section yet in node edge list'
-		
+
 	actions = {
 		'nodes': addVertex,
 		'edges': anonEdge,
 		'named edges': namedEdge,
 	}
 	action = noActionYet
-	
+
 	for line in lines:
 		if line.startswith('// '):
 			try:
@@ -173,14 +173,14 @@ def readNodeEdgeList(lines):
 # ==========================================================================
 #		GraphML format
 # ==========================================================================
-	
+
 def readGraphML(lines):
 	"""Read undirected graph in GraphML format."""
 	context = []
 	G = graph()
 	edgecounter = [0]
 	defaultDirectedness = ['true']
-	
+
 	def start_element(name,attrs):
 		context.append(name)
 		if len(context) == 1:
@@ -203,11 +203,11 @@ def readGraphML(lines):
 			if attrs.get('directed', defaultDirectedness[0]) != 'false':
 				raise GraphFormatError, 'Directed edge in GraphML'
 			edge(G, attrs['source'], attrs['target'], edgecounter[0])
-			edgecounter[0] += 1			
-		
+			edgecounter[0] += 1
+
 	def end_element(name):
 		context.pop()
-	
+
 	import xml.parsers.expat
 	p = xml.parsers.expat.ParserCreate()
 	p.StartElementHandler = start_element
@@ -221,14 +221,14 @@ def readGraphML(lines):
 # ==========================================================================
 #		Graph6 and Sparse6 format
 # ==========================================================================
-	
+
 def graph6data(str):
 	"""Convert graph6 character sequence to 6-bit integers."""
 	v = [ord(c)-63 for c in str]
 	if min(v) < 0 or max(v) > 63:
 		return None
 	return v
-	
+
 def graph6n(data):
 	"""Read initial one or four-unit value from graph6 sequence.  Return value, rest of seq."""
 	if data[0] <= 62:
@@ -250,7 +250,7 @@ def readGraph6(str):
 		for d in data:
 			for i in [5,4,3,2,1,0]:
 				yield (d>>i)&1
-				
+
 	nEdges = 0
 	G = graph()
 	for i in range(n):
@@ -262,7 +262,7 @@ def readGraph6(str):
 			nEdges += 1
 
 	return G
-					
+
 def readSparse6(str):
 	"""Read undirected graph in sparse6 format."""
 	if str.startswith('>>sparse6<<'):
@@ -273,7 +273,7 @@ def readSparse6(str):
 	k = 1
 	while 1<<k < n:
 		k += 1
-	
+
 	def parseData():
 		"""Return stream of pairs b[i], x[i] for sparse6 format."""
 		chunks = iter(data)
@@ -286,7 +286,7 @@ def readSparse6(str):
 				dLen = 6
 			dLen -= 1
 			b = (d>>dLen) & 1	# grab top remaining bit
-			
+
 			x = d & ((1<<dLen)-1) 	# partially built up value of x
 			xLen = dLen				# how many bits included so far in x
 			while xLen < k:			# now grab full chunks until we have enough
@@ -297,7 +297,7 @@ def readSparse6(str):
 			x = (x >> (xLen - k))	# shift back the extra bits
 			dLen = xLen - k
 			yield b,x
-	
+
 	v = 0
 	G = graph()
 	nEdges = 0
@@ -318,13 +318,13 @@ def readSparse6(str):
 # ==========================================================================
 #		LEDA.GRAPH format
 # ==========================================================================
-	
+
 def ledaLines(lines):
 	"""Filter sequence of lines to keep only the relevant ones for LEDA.GRAPH"""
 	def relevant(line):
 		return line and not line.startswith('#')
 	return filter(relevant, lines)
-	
+
 def readLeda(lines):
 	"""Parse filtered LEDA.GRAPH format file."""
 	lines = iter(lines)
@@ -336,7 +336,7 @@ def readLeda(lines):
 	for i in range(n):
 		vertex(G, i+1)
 		lines.next()			# skip LEDA data
-	
+
 	m = graphNum(lines.next())	# number of edges
 	for i in range(m):
 		words = lines.next().split()
@@ -349,7 +349,7 @@ def readLeda(lines):
 			raise GraphFormatError, 'Edge %d is directed in LEDA.GRAPH' % (i+1)
 		if source < target:
 			edge(G, source, target, i+1)
-	
+
 	return G
 
 
@@ -370,7 +370,7 @@ def readUndirectedGraph(arg):
 
 	# Test out different possible formats,
 	# ordered from more distinctive to more ambiguous.
-	
+
 	# Graph6 and Sparse6
 	if len(lines) == 1:
 		line = lines[0]
@@ -379,7 +379,7 @@ def readUndirectedGraph(arg):
 		elif line.startswith('>>sparse6<<') or \
 				(line.startswith(':') and graph6data(line[1:])):
 			return readSparse6(line)
-			
+
 	# LEDA.GRAPH
 	leda = ledaLines(lines)
 	if leda and leda[0] == 'LEDA.GRAPH':
@@ -388,11 +388,11 @@ def readUndirectedGraph(arg):
 	# GraphML
 	if lines[0].startswith("<"):
 		return readGraphML(lines)
-		
+
 	# Node edge list
 	if lines[0].startswith("//"):
 		return readNodeEdgeList(lines)
-		
+
 	# MALF
 	if '#' in lines:
 		return readMALF(lines)

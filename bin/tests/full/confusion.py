@@ -44,5 +44,5 @@ def confuseMethods(a, b, c, d, e, f):
 		vc = va.cross(vb)
 	else:
 		vc = vb.cross(va)
-		
+
 	return vc.dot(vc)

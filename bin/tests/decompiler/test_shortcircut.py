@@ -16,9 +16,9 @@ if not config.skipKnownProblems:
 
 
 if not config.skipKnownProblems:
-	class TestCompareConstChainDeompile(TestDecompiler):	
+	class TestCompareConstChainDeompile(TestDecompiler):
 		s = """
-	def f(a):		
+	def f(a):
 		return 0.0 < a < 2.0
 	"""
 		inputs = [[0], [1], [-1], [2]]
@@ -28,7 +28,7 @@ if not config.skipKnownProblems:
 	class TestDirectOrDeompile(TestDecompiler):
 		trace = True
 		s = """
-	def directOr(a, b, c):		
+	def directOr(a, b, c):
 		return a or b or c
 	"""
 		inputs = [[0, 0, 0], [1, 0, 0], [0, 2, 0], [0, 0, 3], [1, 0, 3], [0, 2, 3], [1, 2, 0], [1, 2, 3]]
@@ -50,7 +50,7 @@ def testnot(a):
 """
 	inputs =[[False], [True], [0], [1]]
 
-	
+
 class TestOrDecompile(TestDecompiler):
 	s = """
 def testor(a, b):
@@ -114,7 +114,7 @@ def testmajority32(a, b, c):
 		]
 
 # AN ugly case.
-	
+
 ##class TestCompareChainCondition(TestDecompiler):
 ##	trace = True
 ##

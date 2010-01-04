@@ -69,7 +69,7 @@ def partitionRenames(data, domain, mapping):
 					partition[mapping[k]].append(k)
 				else:
 					link.append(k)
-					
+
 			# Build a rename for each group
 			for g, p in partition.iteritems():
 				newrename = {}
@@ -81,7 +81,7 @@ def partitionRenames(data, domain, mapping):
 
 				if not rank in new[g]:
 					new[g][rank] = []
-					
+
 				new[g][rank].append(newrename)
 
 			# Build renames that link partitions
@@ -92,9 +92,9 @@ def partitionRenames(data, domain, mapping):
 				external[mapping[v]].add(v)
 			if not rank in links:
 				links[rank] = []
-				
+
 			links[rank].append(newrename)
-				
+
 	return new, links, external
 
 def graphFromRenames(data, domain, keepOne=False):
@@ -121,7 +121,7 @@ for defs in different:
 
 # Merging partitions should be conflict free.
 # Find and kill conflicts in the root partiton.
-# Merging 
+# Merging
 
 def process(data, domain, external, level=0):
 
@@ -152,7 +152,7 @@ def process(data, domain, external, level=0):
 		orderLUT = {}
 		for i, d in enumerate(order):
 			orderLUT[d] = i
-			
+
 		orderLUT = fuzzyorder.composeMappings(mapping, orderLUT)
 
 		mapping = tryCollapse(data, domain, external, orderLUT)
@@ -202,7 +202,7 @@ def extractInconsistancies(rank, rename, orderLUT, level):
 
 
 	#print a, b
-	oa, ob = [orderLUT[x] for x in a], [orderLUT[x] for x in b] 
+	oa, ob = [orderLUT[x] for x in a], [orderLUT[x] for x in b]
 	if fuzzyorder.isSwap(ob) or fuzzyorder.isDegenerate(ob):
 		print '\t'*level, "inconsistant", rank, rename
 
@@ -213,7 +213,7 @@ def extractInconsistancies(rank, rename, orderLUT, level):
 def registerPair(precedes, follows, x):
 	precedes[x[1]].add(x[0])
 	follows[x[0]].add(x[1])
-	
+
 
 def extractOrderSubranges(precedes, follows, a, b, orderLUT):
 	if len(a) > 1:
@@ -234,7 +234,7 @@ def extractOrder(precedes, follows, rename, orderLUT):
 	a = sorted(rename.iterkeys(), key=lambda e:orderLUT[e])
 	b = [rename[x] for x in a]
 
-	oa, ob = [orderLUT[x] for x in a], [orderLUT[x] for x in b] 
+	oa, ob = [orderLUT[x] for x in a], [orderLUT[x] for x in b]
 ##	if fuzzyorder.isSwap(ob) or fuzzyorder.isDegenerate(ob):
 ##		print '\t'*level, "inconsistant", rank, rename
 
@@ -290,7 +290,7 @@ def tryCollapse(data, domain, external, orderLUT):
 				break
 	skipped = []
 	for rank in ranks:
-		renames = data[rank]		
+		renames = data[rank]
 		for rename in renames:
 			# TODO skip problematic?
 			for k, v in rename.iteritems():
@@ -329,7 +329,7 @@ def makeAnalogies(data, orderLUT):
 	out = []
 	for rank, renames in data.iteritems():
 		for rename in renames:
-			
+
 
 			a = sorted(rename.iterkeys(), key=lambda e:orderLUT[e])
 			b = [rename[x] for x in a]
@@ -338,7 +338,7 @@ def makeAnalogies(data, orderLUT):
 	return out
 
 def handleLeaf(data, domain, external, G, level):
-	
+
 ##	print
 ##	print
 ##
@@ -352,7 +352,7 @@ def handleLeaf(data, domain, external, G, level):
 ##		print rank
 ##		for rename in data[rank]:
 ##			print '\t', rename
-	
+
 
 	if data:
 ##		for scc in filteredSCC(graphFromRenames(data, domain, True)):
@@ -387,13 +387,13 @@ def handleLeaf(data, domain, external, G, level):
 
 			fo.close()
 
-		
+
 		return list(order), mapping
 	else:
 		mapping = {}
 		for d in domain:
 			mapping[d] = d
-			
+
 		return list(domain), mapping
 
 order, mapping = process(data, domain, set())
@@ -494,7 +494,7 @@ for rank, renames in data.iteritems():
 	for rename in renames:
 		partition = collections.defaultdict(list)
 
-		# Group the rename terms		
+		# Group the rename terms
 		for k in rename.iterkeys():
 			partition[groupmap[k]].append(k)
 
@@ -502,7 +502,7 @@ for rank, renames in data.iteritems():
 		for g, p in partition.iteritems():
 			if len(p) > 1:
 				a = Analogy(p, [rename[x] for x in p], rank)
-				analogies[g].append(a)			
+				analogies[g].append(a)
 
 
 print "Analogies"
@@ -548,6 +548,3 @@ for g, al in analogies.iteritems():
 
 ##	for n, s in sgroups.iteritems():
 ##		print '\t', n, len(s)
-
-
-

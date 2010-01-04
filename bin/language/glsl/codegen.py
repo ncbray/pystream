@@ -97,7 +97,7 @@ class GLSLCodeGen(TypeDispatcher):
 	def visitUniformDecl(self, node):
 		initialize = '' if node.initializer is None else (" = " +self(node.initializer))
 		stmt = "uniform %s %s%s" % (self.typename(node.type), node.name, initialize)
-		if node.builtin: stmt = "//" + stmt		
+		if node.builtin: stmt = "//" + stmt
 		return stmt
 
 	@dispatch(ast.StructureType)
@@ -216,10 +216,10 @@ class GLSLCodeGen(TypeDispatcher):
 	@dispatch(ast.Switch)
 	def visitSwitch(self, node):
 		condition = self(node.condition)
-		
+
 		t = self(node.t)
 		f = self(node.f)
-		
+
 		return "%sif(%s)\n%s{\n%s%s}\n%selse\n%s{\n%s%s}\n" % (self.indent, condition, self.indent, t, self.indent, self.indent, self.indent, f, self.indent)
 
 	@dispatch(ast.Suite)
@@ -244,14 +244,14 @@ class GLSLCodeGen(TypeDispatcher):
 	@dispatch(ast.InputDecl)
 	def visitInputDecl(self, node):
 		stmt = "in %s %s" % (self.typename(node.type), self.visitLocal(node))
-		if node.builtin: stmt = "//" + stmt		
+		if node.builtin: stmt = "//" + stmt
 		return stmt
 
 
 	@dispatch(ast.OutputDecl)
 	def visitOutputDecl(self, node):
 		stmt = "out %s %s" % (self.typename(node.type), self.visitLocal(node))
-		if node.builtin: stmt = "//" + stmt		
+		if node.builtin: stmt = "//" + stmt
 		return stmt
 
 
@@ -276,7 +276,7 @@ class GLSLCodeGen(TypeDispatcher):
 
 		inputdecl   = self.makeDecl(finder.inputs)
 		if inputdecl: parts.append(inputdecl)
-		
+
 		outputdecl  = self.makeDecl(finder.outputs)
 		if outputdecl: parts.append(outputdecl)
 

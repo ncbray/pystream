@@ -98,12 +98,12 @@ def binary_partitions(n):
             partition.append(pow)
             sum += pow
         pow >>= 1
-    
+
     # Find all partitions of numbers up to n into powers of two > 1,
     # in revlex order, by repeatedly splitting the smallest nonunit power,
     # and replacing the following sequence of 1's by the first revlex
     # partition with maximum power less than the result of the split.
-    
+
     # Time analysis:
     #
     # Each outer iteration increases len(partition) by at most one
@@ -121,7 +121,7 @@ def binary_partitions(n):
     # of such inner iterations is <= sum_k k*X/2^{k-1} = O(X).
     #
     # Therefore the overall average time per output is constant.
-    
+
     last_nonunit = len(partition) - 1 - (n&1)
     while True:
         yield partition
@@ -150,7 +150,7 @@ def fixed_length_partitions(n,L):
     The algorithm follows Knuth v4 fasc3 p38 in rough outline;
     Knuth credits it to Hindenburg, 1779.
     """
-    
+
     # guard against special cases
     if L == 0:
         if n == 0:
@@ -200,7 +200,7 @@ def conjugate(p):
             j -= 1
             if j == 0:
                 return result
-    
+
 # If run standalone, perform unit tests
 
 class PartitionTest(unittest.TestCase):
@@ -222,7 +222,7 @@ class PartitionTest(unittest.TestCase):
                 self.assertEqual(n,sum(p))
             for p in lex_partitions(n):
                 self.assertEqual(n,sum(p))
-    
+
     def testRevLex(self):
         """Check that the revlex generators' outputs are in revlex order."""
         for n in range(len(self.counts)):
@@ -257,7 +257,7 @@ class PartitionTest(unittest.TestCase):
             for p in revlex_partitions(n):
                 for x in p:
                     self.assert_(0 < x <= n)
-    
+
     def testFixedLength(self):
         """Check that the fixed length partition outputs are correct."""
         for n in range(len(self.counts)):
@@ -270,7 +270,7 @@ class PartitionTest(unittest.TestCase):
                 np += len(pnL)
                 self.assertEqual(pnL,[p for p in pn if len(p) == L])
             self.assertEqual(np,len(pn))
-                
+
     def testConjugatePartition(self):
         """Check that conjugating a partition forms another partition."""
         for n in range(len(self.counts)):

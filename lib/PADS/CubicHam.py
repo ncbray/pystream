@@ -334,4 +334,4 @@ class CubicHamTest(unittest.TestCase):
             self.check(G,3)
 
 if __name__ == "__main__":
-    unittest.main()   
+    unittest.main()

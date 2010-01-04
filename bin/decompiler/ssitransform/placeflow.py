@@ -77,8 +77,8 @@ def mergeFramesParallel(frames):
 	return outp
 
 class PlaceFlowFunctions(TypeDispatcher):
-	__namedispatch__ = True # HACK emulates old visitor	
-	
+	__namedispatch__ = True # HACK emulates old visitor
+
 	def __init__(self, numbering):
 		super(PlaceFlowFunctions, self).__init__()
 		self.frame = PlaceFrame()

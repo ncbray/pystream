@@ -165,8 +165,8 @@ class GenericOpFunction(TypeDispatcher):
 						key = (slot, index)
 						if key in self.inputlut:
 							self.get(slot, index)
-					
-			
+
+
 		# Write all fields on output objects
 		for name, index in self.outputlut.iterkeys():
 			if isinstance(name, ast.Local):
@@ -282,7 +282,7 @@ class GenericOpFunction(TypeDispatcher):
 
 	def correlationFixup(self, analysis, g):
 		# TODO functions can't inject new correlations, so we must fix it up afterwards?
-		
+
 		# Type switch fixup
 		if isinstance(g.op, ast.TypeSwitch):
 			# Creates a new correlation for the type switch (g.op)
@@ -291,7 +291,7 @@ class GenericOpFunction(TypeDispatcher):
 			for mask, pnode, enode in zip(correlation.mask.itervalues(), g.predicates, g.localModifies):
 				# Mask the predicate
 				analysis.maskSetValue(pnode, 0, mask)
-				
+
 				# Mask the local, if present
 				if enode is not None: analysis.maskSetValue(enode, 0, mask)
 
@@ -511,7 +511,7 @@ class DataflowIOAnalysis(TypeDispatcher):
 			mask = self.bool.maybeTrue(self.getValue(p, 0))
 		else:
 			mask = self.bool.true
-		
+
 		return mask
 
 	def dumpMasked(self, out, values, mask):
@@ -606,9 +606,9 @@ class DataflowIOAnalysis(TypeDispatcher):
 				for key, mask in self.objectExistanceMask.iteritems():
 					with out.scope('p'):
 						assert isinstance(key, tuple), key
-						
+
 						obj, index = key
-						
+
 						out.write(obj)
 						out.write(' - ')
 						out.write(index)

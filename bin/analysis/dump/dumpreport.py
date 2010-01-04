@@ -25,7 +25,7 @@ from util.application.async import *
 
 # Filter an iterable into keys and values, and collect
 # values with the same key into groups.
-# Similar to map/reduce 
+# Similar to map/reduce
 def itergroupings(iterable, key, value=lambda v: v):
 	grouping = {}
 	for i in iterable:

@@ -46,7 +46,7 @@ def f(inc):
 			out = a
 		if out:
 			out = out*2
-			
+
 		a = a+inc
 	return out
 """
@@ -54,7 +54,7 @@ def f(inc):
 	inputs = [[1], [2], [3], [4], [5], [6], [7]]
 
 
-class TestIsPrimeDecompile(TestDecompiler):	
+class TestIsPrimeDecompile(TestDecompiler):
 	s = """
 def f(num):
 	if num <= 3: return True
@@ -65,7 +65,7 @@ def f(num):
 		if num%test == 0:
 			return False
 		test = test + 2
-		
+
 	return True
 """
 
@@ -143,7 +143,7 @@ class TestForBreak2(TestDecompiler):
 def f(limit):
 	if limit < 2:
 		return 1
-		
+
 	for i in range(2, 100):
 		if limit%i == 0:
 			break
@@ -158,7 +158,7 @@ def f(limit):
 	a = 0
 	while a<limit:
 		b = 0
-		a += 1		
+		a += 1
 		while b<limit:
 			count += 1
 			b += 1
@@ -217,7 +217,7 @@ class TestForElseBreak(TestDecompiler):
 def forelsebreak(a, b):
 	for i in range(a, b+1):
 		if i%2==0: continue
-		
+
 		for j in range(3, i, 2):
 			if i%j==0: break
 		else:
@@ -471,7 +471,7 @@ class TestForSubscript(TestDecompiler):
 def foraub(l, known):
 
 	temp = [0]
-	
+
 	outp = []
 	for temp[0] in l:
 		if temp[0] not in known:

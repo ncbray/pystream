@@ -12,11 +12,11 @@ class TestFunctionKernel(unittest.TestCase):
 		d = 'd'
 		e = 'e'
 		f = 'f'
-		
+
 		self.G = {a:(b,c,), b:(d,f,), c:(d,e,), d:(), e:(f,), f:()}
 
 		self.lattice = util.lattice.Lattice(self.G, a)
-		
+
 	def testGLB1(self):
 		glb = self.lattice.glb('b', 'c')
 		self.assertEqual(glb, ('a',))

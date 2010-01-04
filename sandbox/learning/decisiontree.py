@@ -2,7 +2,7 @@ import math
 import random
 import collections
 
-chisquared99 = [0.0, 0.000157, 0.0201, 0.115, 0.297, 0.554, 0.872, 1.239, 1.646, 2.088, 2.558] 
+chisquared99 = [0.0, 0.000157, 0.0201, 0.115, 0.297, 0.554, 0.872, 1.239, 1.646, 2.088, 2.558]
 
 
 class DecisionTreeNode(object):
@@ -41,7 +41,7 @@ def mostProbable(lut):
 			bestCls = cls
 			bestProb = prob
 	return bestCls
-		
+
 class DecisionTreeLeaf(object):
 	def __init__(self, lut):
 		assert len(lut) > 0
@@ -73,11 +73,11 @@ class BaggedClassifier(object):
 
 			# Vote
 			#p[mostProbable(newp)] += scale
-			
+
 			# Average
 			for k, v in newp.iteritems():
 				p[k] += v*scale
-				
+
 		return p
 
 	def enum(self, attr, l):
@@ -112,7 +112,7 @@ def countClassifications(partition):
 
 	return clsCount
 
-def information(partition):	
+def information(partition):
 	clsCount = countClassifications(partition)
 
 	totalCount = len(partition)
@@ -163,7 +163,7 @@ def findBestAttribute(bins, attributes, clsCount0, size0, original):
 			if subpartition:
 				clsCount = countClassifications(subpartition)
 				weight = float(len(subpartition))/size0
-				
+
 				# Calcuate out confidence that this attribute is significant.
 				chi2 += significance(clsCount, clsCount0, weight)
 
@@ -174,12 +174,12 @@ def findBestAttribute(bins, attributes, clsCount0, size0, original):
 				iv -= weight*math.log(weight, 2.0)
 
 		# Pruning
-		accept = chisquared99[len(bin)-1] < chi2 
+		accept = chisquared99[len(bin)-1] < chi2
 
 		#accept = True
 
 		if accept:
-			# Find the attribute with the best information gain.			
+			# Find the attribute with the best information gain.
 			gain = (original - e)/max(iv, 0.0000001) # Gain ratio
 
 			if gain > bestGain:
@@ -190,7 +190,7 @@ def findBestAttribute(bins, attributes, clsCount0, size0, original):
 
 def buildTree(partition, attributes, classes):
 	assert len(classes) >= 2
-	
+
 	bins = binByAttributes(partition, attributes)
 	clsCount0 = countClassifications(partition)
 	size0 = float(len(partition))
@@ -249,7 +249,7 @@ if __name__ == '__main__':
 		def __repr__(self):
 			return repr(self.data)
 
-	
+
 	trials = []
 
 	trials.append(Trial(('sunny', 'hot', 'high', 'false'), 'n'))

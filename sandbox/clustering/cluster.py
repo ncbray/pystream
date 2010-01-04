@@ -161,7 +161,7 @@ def addEdge(a, b):
 
 	parent = classifyEdge(e)
 	parent.edges.append(e)
-		
+
 
 
 clsMatrix = ((-1, 0, 2), (0, -1, 1), (2, 1, -1))
@@ -216,7 +216,7 @@ def pivot(n, explore=1.0):
 	p1 = calculatePartialH(c0, c2, e2)
 	p2 = calculatePartialH(c0+c2, c1, e0+e1)
 	possible = -(p1+p2)
-	
+
 	delta = possible-original
 
 	if accept(delta, explore):
@@ -257,12 +257,12 @@ def cluster(l, n):
 		for i in range(iterations):
 			explore = 1.0-i/float(iterations)
 			#explore = 1.0
-			
+
 			choice = random.choice(n)
-			
+
 			# Must be an internal node.
 			while choice.parent == None: choice = random.choice(n)
-			
+
 			pivot(choice, explore)
 
 	end = time.clock()

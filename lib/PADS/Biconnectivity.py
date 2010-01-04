@@ -149,7 +149,7 @@ class stOrienter(DFS.Searcher):
         self._low = {}
         self._down = {} # down[v] = child we're currently exploring from v
         self._lowv = {} # lowv[n] = vertex with low number n
-        
+
         # The main data structure!
         # a dictionary mapping edges to lists of edges
         # each of which should be oriented the same as the key.
@@ -211,7 +211,7 @@ def stOrientation(G):
         if not orientable:
             break
         source,dest = orientable.pop()
-    
+
     return G
 
 # If run as "python Biconnectivity.py", run tests on various small graphs
@@ -252,7 +252,7 @@ class BiconnectivityTest(unittest.TestCase):
             comp.sort()
         CV.sort()
         self.assertEqual(CV,[[0,2,5],[1,3,6,8],[2,3],[4,7]])
-    
+
     def testSTOrientation(self):
         STO = stOrientation(self.G1)
         L = list(TopologicalOrder(STO))
@@ -265,4 +265,4 @@ class BiconnectivityTest(unittest.TestCase):
         self.assertEqual(len([v for v in self.G1 if outdegree[v] == 0]), 1)
 
 if __name__ == "__main__":
-    unittest.main()   
+    unittest.main()

@@ -29,7 +29,7 @@ class Subgraph(object):
 		self.nodes = []
 		self.edges = []
 		self.nameLUT = {}
-		
+
 		self.nodetype = nodetype
 		self.edgetype = edgetype
 
@@ -57,7 +57,7 @@ class Subgraph(object):
 			out.write("%snode" % indent)
 			dumpAttr(self.nodetype, out)
 			out.write(";\n")
-			
+
 		self.nodes.sort(key=lambda n: n.style)
 		currentStyle = None
 		for n in self.nodes:
@@ -120,9 +120,9 @@ class Subgraph(object):
 		self.registerNode(name, n)
 		return n
 
-	def getNode(self, n):		
+	def getNode(self, n):
 		if isinstance(n, Node) or isinstance(n, Subgraph):
-			return n		
+			return n
 		else:
 			n = str(n)
 			assert n in self.nameLUT, "Cannot find node " + str(n) + '\n\n' + str(self.nameLUT)
@@ -144,7 +144,7 @@ class Subgraph(object):
 
 class Node(object):
 	__slots__ = ('name', 'attr', 'parent', 'style')
-	
+
 	validattr = ['bottomlabel', 'color', 'comment', 'distortion', 'fillcolor',
 		     'fixedsize', 'fontcolor', 'fontname', 'fontsize', 'group',
 		     'height', 'label', 'layer', 'orientation', 'peripheries',
@@ -165,7 +165,7 @@ class Node(object):
 
 class Edge(object):
 	__slots__ = ('nodes', 'attr', 'style')
-	
+
 	def __init__(self, nodes, edgetype=None, **attr):
 		assert len(nodes) >= 2
 		self.nodes = nodes
@@ -233,12 +233,12 @@ if __name__ == '__main__':
 	boxish = Style(shape='box')
 	dotted = Style(style='dotted', color='red')
 
-	
+
 	g = Digraph('G', edgetype=dotted)
 	c1 = g.cluster('sg1')
 	c1.node('n1', nodetype=boxish, label='!!!!')
 	c1.node('n2')
-	
+
 	c2 = g.cluster('sg2')
 	c2.node('n3')
 	c2.node('n4')

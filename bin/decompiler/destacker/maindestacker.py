@@ -66,7 +66,7 @@ class SSADefinitions(object):
 
 class DestackVisitor(TypeDispatcher):
 	__namedispatch__ = True # HACK emulates old visitor
-	
+
 	def __init__(self, code, mname, compiler, callback, trace=False):
 		TypeDispatcher.__init__(self)
 		self.ssa = SSADefinitions()

@@ -92,7 +92,7 @@ def imperfections(graph):
     Find edges that do not belong to any perfect matching of G.
     The input format is the same as for matching(), and the output
     is a subgraph of the input graph in the same format.
-    
+
     For each edge v->w in the output subgraph, imperfections[v][w]
     is itself a subgraph of the input, induced by a set of
     vertices that must be matched to each other, including w but
@@ -126,5 +126,5 @@ def imperfections(graph):
         imperfections[v] = dict([(w,components[w,False]) for w in graph[v]
                                  if M[w] != v and
                                  components[v,True] != components[w,False]])
-    
+
     return imperfections

@@ -41,4 +41,3 @@ def shader(t):
 	cls = ShaderDecl(t)
 	classes[t] = cls
 	return cls
-	

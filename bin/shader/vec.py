@@ -73,7 +73,7 @@ class vec2(object):
 		k = 1.0-eta*eta*(1.0-ndi*ndi)
 		if k < 0:
 			return vec2(0.0)
-		else:	
+		else:
 			return self*eta-normal*(eta*ndi+k**0.5)
 
 
@@ -497,7 +497,7 @@ class vec3(object):
 		k = 1.0-eta*eta*(1.0-ndi*ndi)
 		if k < 0:
 			return vec3(0.0)
-		else:	
+		else:
 			return self*eta-normal*(eta*ndi+k**0.5)
 
 
@@ -1546,7 +1546,7 @@ class vec4(object):
 		k = 1.0-eta*eta*(1.0-ndi*ndi)
 		if k < 0:
 			return vec4(0.0)
-		else:	
+		else:
 			return self*eta-normal*(eta*ndi+k**0.5)
 
 
@@ -3998,4 +3998,3 @@ class mat4(object):
 			return mat4(self.m00*other, self.m01*other, self.m02*other, self.m03*other, self.m10*other, self.m11*other, self.m12*other, self.m13*other, self.m20*other, self.m21*other, self.m22*other, self.m23*other, self.m30*other, self.m31*other, self.m32*other, self.m33*other)
 		else:
 			return NotImplemented
-

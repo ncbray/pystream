@@ -1,5 +1,7 @@
-__all__ = ['TypeDispatcher', 'defaultdispatch', 'dispatch',
-           'TypeDispatchError', 'TypeDispatchDeclarationError']
+__all__ = [
+		'TypeDispatcher', 'defaultdispatch', 'dispatch',
+		'TypeDispatchError', 'TypeDispatchDeclarationError'
+		]
 
 import inspect
 
@@ -36,7 +38,7 @@ def dispatch__call__(self, p, *args):
 	table = self.__typeDispatchTable__
 
 	func = table.get(t)
-	
+
 	if func is None:
 		# Search for a matching superclass
 		# This should occur only once per class.
@@ -45,23 +47,23 @@ def dispatch__call__(self, p, *args):
 			possible = (t,)
 		else:
 			possible = t.mro()
-			
+
 		for supercls in possible:
 			func = table.get(supercls)
-			
+
 			if func is not None:
 				break
 			elif self.__namedispatch__:
 				# The emulates "visitor" dispatch, to allow for evolutionary refactoring
 				name = self.__nameprefix__ + t.__name__
 				func = type(self).__dict__.get(name)
-				
+
 				if func is not None:
 					break
 
 		# default
 		if func is None:
-			func = table.get(None) 
+			func = table.get(None)
 
 		# Cache the function that we found
 		table[t] = func

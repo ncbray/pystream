@@ -210,4 +210,3 @@ class ReferenceCount(object):
 		newradius = frozenset(newradius)
 
 		return sys.canonical.rcm.getCanonical(newcounts, newradius)
-

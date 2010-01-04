@@ -6,7 +6,7 @@ from .. import basic
 # Also creates directed "back" edges, which guarentees the search will find all nodes.
 def orderedUndirected(G, start):
 	rG = basic.reverseDirectedGraph(G)
-	
+
 	nG = {}
 
 	for n1, v in G.iteritems():
@@ -32,7 +32,7 @@ class UndirectedTransformationSearcher(object):
 
 		#G, startX = orderedUndirected(G, start)
 		self.expanded = G
-		
+
 		self.processed = set()
 
 		self.head(startX)
@@ -77,7 +77,7 @@ class UndirectedTransformationSearcher(object):
 
 	def __process(self, node):
 		#assert node not in self.processed, node
-		
+
 		self.processed.add(node)
 
 		for child in self.children(node):
@@ -90,7 +90,7 @@ class UndirectedTransformationSearcher(object):
 
 	def head(self, node):
 		pass
-	
+
 	def preorder(self,parent,child):
 		pass
 
@@ -107,19 +107,19 @@ class CycleEquivalenceSearcher(UndirectedTransformationSearcher):
 
 		#self.head = head
 		#self.tail = tail
-		
+
 		self.originalStart = 'start'
 		self.originalG = G
 
 		# HACK
 		start = self.originalStart
-		
+
 		self.current = 0
 		self.number = {}
 		self.node = {}
 		self.queue = []
 
-		# Forward edge or back edge?		
+		# Forward edge or back edge?
 		self.edges = {}
 
 		self.backto 	= collections.defaultdict(set)
@@ -160,7 +160,7 @@ class CycleEquivalenceSearcher(UndirectedTransformationSearcher):
 
 	def head(self, node):
 		self.numberNode(node)
-		
+
 	def preorder(self,parent,child):
 		self.numberNode(child)
 		self.queue.append(child)
@@ -172,13 +172,13 @@ class CycleEquivalenceSearcher(UndirectedTransformationSearcher):
 	def backedge(self,source,destination):
 		self.markEdge(source, destination, False)
 
-	
+
 
 	def classifyEdges(self, n):
 		nnum = self.number[n]
 		for child in self.children(n):
 			cnum = self.number[child]
-		
+
 			if not self.classify(n, child):
 				if cnum < nnum:
 					self.backfrom[n].add(child)
@@ -194,10 +194,10 @@ class CycleEquivalenceSearcher(UndirectedTransformationSearcher):
 	def findCap(self, n):
 		smallestL = []
 		largestL  = []
-	
+
 		for back in self.backfrom[n]:
 			smallestL.append(self.number[back])
-		
+
 		for child in self.child[n]:
 			smallestL.append(self.high[child])
 			largestL.append(self.high[child])
@@ -210,7 +210,7 @@ class CycleEquivalenceSearcher(UndirectedTransformationSearcher):
 		else:
 			# There may be no children...
 			largest = None
-		
+
 		return largest
 
 	# Caching brackets
@@ -251,10 +251,10 @@ class CycleEquivalenceSearcher(UndirectedTransformationSearcher):
 		if len(self.child[n]) > 1:
 			assert cap != None
 			br = self.bracket(n, cap)
-			bl.push(br)				
+			bl.push(br)
 			self.recentsize[br] = -1
 			self.capping[cap].add(n)
-			
+
 		return bl
 
 	def classifyEdge(self, (a, b), cls):
@@ -264,14 +264,14 @@ class CycleEquivalenceSearcher(UndirectedTransformationSearcher):
 		# Make the order match the original graph.
 		if not b in self.originalG[a]:
 			a, b = b, a
-			
+
 		self.CEClass[(a, b)] = cls
 
 	def classifyNode(self, n, cls):
 		assert n in self.originalG, n
 		self.NQClass[n] = cls
 
-	def classifyBracket(self, n, bl):		
+	def classifyBracket(self, n, bl):
 		if bl.size():
 			top = bl.top()
 			if self.recentsize[top] != bl.size():
@@ -292,9 +292,9 @@ class CycleEquivalenceSearcher(UndirectedTransformationSearcher):
 				edge = (top.data[0][0], top.data[1][0])
 				self.classifyEdge(edge, cls)
 
-			# Only classify "original" nodes		
+			# Only classify "original" nodes
 			if n[1] == '0':
-				self.classifyNode(n[0], cls)				
+				self.classifyNode(n[0], cls)
 
 
 	def process(self):
@@ -307,11 +307,11 @@ class CycleEquivalenceSearcher(UndirectedTransformationSearcher):
 		self.currentclass = 0
 
 		self.CEClass = {}
-		
+
 		self.queue.reverse() # HACK?
 
 		for n in self.queue:
-			self.classifyEdges(n)			
+			self.classifyEdges(n)
 			bl = self.makeBracketList(n)
 			assert isinstance(bl, bracket.BracketList)
 			self.classifyBracket(n, bl)
@@ -334,4 +334,3 @@ class CycleEquivalenceSearcher(UndirectedTransformationSearcher):
 				print k
 				for e in d[k]:
 					print '\t',e
-			

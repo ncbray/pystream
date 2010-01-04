@@ -161,17 +161,17 @@ def makeVisit(clsname, desc, reverse=False, shared=False, forced=False, vargs=Fa
 	args += additionalargs
 
 	statements = []
-	
+
 	if not shared or forced:
 		iterator = reversed(desc) if reverse else desc
-		
+
 		for field in iterator:
 			indent = '\t'
-			
+
 			if field.optional:
 				statements.append('%sif self.%s is not None:\n' % (indent, field.internalname))
 				indent += '\t'
-	
+
 			if field.repeated:
 				if reverse:
 					statements.append('%sfor _child in reversed(self.%s):\n' % (indent, field.internalname))
@@ -181,7 +181,7 @@ def makeVisit(clsname, desc, reverse=False, shared=False, forced=False, vargs=Fa
 				src = '_child'
 			else:
 				src = 'self.' + field.internalname
-	
+
 			statements.append('%s_callback(%s%s)\n' % (indent, src, additionalargs))
 
 	body = makeBody(''.join(statements))
@@ -194,7 +194,7 @@ def makeVisit(clsname, desc, reverse=False, shared=False, forced=False, vargs=Fa
 		funcname += 'Forced'
 
 	code = "def %s(%s):\n%s" % (funcname, args, body)
-		
+
 	return code
 
 
@@ -205,72 +205,72 @@ def makeRewrite(clsname, desc, reverse=False, mutate=False, shared=False, forced
 	args = "self, _callback"
 
 	statements = []
-	
+
 	additionalargs = ''
 	if vargs:
 		additionalargs += ', *vargs'
 	if kargs:
 		additionalargs += ', **kargs'
 	args += additionalargs
-	
+
 	if not shared or mutate or forced:
 		iterator = reversed(desc) if reverse else desc
-		
-		uid = 0	
+
+		uid = 0
 		targets = []
 		mutation = []
-		
+
 		for field in iterator:
 			target = "_%d" % uid
 			uid += 1
 			targets.append(target)
-			
+
 			if field.repeated:
 				childexpr = '_callback(_child%s)' % (additionalargs,)
 				if field.optional:
 					childexpr += ' if _child is not None else None'
-					
+
 				if reverse:
 					expr = 'list(reversed([%s for _child in reversed(self.%s)]))' % (childexpr, field.internalname)
 				else:
 					expr = '[%s for _child in self.%s]' % (childexpr, field.internalname)
-				
+
 				# Guard against symbols
 				expr = '_callback(self.%s%s) if isinstance(self.%s, SymbolBase) else %s' % (field.internalname, additionalargs, field.internalname, expr)
 			else:
 				expr = '_callback(self.%s%s)' % (field.internalname, additionalargs)
-	
+
 				if field.optional:
 					expr += " if self.%s is not None else None" % field.internalname
-			
+
 			statements.append("\t%s = %s\n" % (target, expr))
-	
+
 			if mutate:
 				mutation.append("\tself.%s = %s\n"  % (field.internalname, target))
-				
+
 		if mutate:
 			statements.extend(mutation)
-			statements.append("\treturn self\n")		
+			statements.append("\treturn self\n")
 		else:
 			if reverse: targets.reverse()
-			
+
 			statements.append("\tresult = %s(%s)\n" % (clsname, ", ".join(targets)))
 			statements.append("\tresult.annotation = self.annotation\n")
 			statements.append("\treturn result\n")
 	else:
 		# rewriting a shared node, but not mutating it... do nothing.
-		statements.append("\treturn self\n")		
+		statements.append("\treturn self\n")
 
 	body = makeBody(''.join(statements))
 
 	funcname = "replaceChildren" if mutate else "rewriteChildren"
-		
+
 	if reverse:
 		funcname += 'Reversed'
 
 	if forced:
 		funcname += 'Forced'
-		
+
 	code = "def %s(%s):\n%s" % (funcname, args, body)
-	
+
 	return code

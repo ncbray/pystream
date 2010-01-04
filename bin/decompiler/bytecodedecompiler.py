@@ -49,26 +49,26 @@ def decompile(compiler, func, trace=False, ssa=True, descriptive=False):
 
 	# HACK mutate the AST node
 	code.codeparameters.defaults = defaults
-	
+
 	return code
 
 def decompileCode(compiler, code, mname, trace=False, ssa=True, descriptive=False):
 	return Decompiler(compiler).disassemble(code, mname, trace=trace, ssa=ssa, descriptive=descriptive)
 
 def getargs(co):
-    nargs = co.co_argcount
-    args = list(co.co_varnames[:nargs])
+	nargs = co.co_argcount
+	args = list(co.co_varnames[:nargs])
 
-    vargs, kargs = None, None
+	vargs, kargs = None, None
 
-    if co.co_flags & inspect.CO_VARARGS:
-        vargs = co.co_varnames[nargs]
-        nargs += 1
+	if co.co_flags & inspect.CO_VARARGS:
+		vargs = co.co_varnames[nargs]
+		nargs += 1
 
-    if co.co_flags & inspect.CO_VARKEYWORDS:
-        kargs = co.co_varnames[nargs]
+	if co.co_flags & inspect.CO_VARKEYWORDS:
+		kargs = co.co_varnames[nargs]
 
-    return args, vargs, kargs
+	return args, vargs, kargs
 
 class Decompiler(object):
 	def __init__(self, compiler):

@@ -10,7 +10,7 @@ class Schema(object):
 	"""
 
 	__slots__ = ()
-	
+
 	def __call__(self):
 		return self.instance()
 

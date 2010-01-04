@@ -5,7 +5,7 @@ class Sampler(object):
 
 class sampler2D(Sampler):
 	__slots__ = 'textureData',
-	
+
 	def size(self, lod):
 		# TODO ivec?
 		return vec.vec2(1.0, 1.0)

@@ -12,6 +12,6 @@ def traceBlame(offset, count):
 
 			lines.append("%s:%d in %s" % (filename, lineno, name))
 		except:
-                        pass
+			pass
 
 	return tuple(lines)

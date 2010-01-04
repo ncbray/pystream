@@ -76,7 +76,7 @@ def f():
 
 
 
-class TestFoldInplaceDeompile(TestDecompiler):	
+class TestFoldInplaceDeompile(TestDecompiler):
 	s = """
 def f():
 	a = 1.0
@@ -411,7 +411,7 @@ def dummyAttr():
 	s.v = 7
 	t = Dummy()
 	t.v = 11
-	
+
 	o = Dummy()
 	o.x = Dummy()
 	o.x.y = (s, t)
@@ -468,7 +468,7 @@ def f(o, v):
 	return o.y.y.x
 """
 	inputs = [[Dummy(), 1], [Dummy(), 1.0], [Dummy(), True], [Dummy(), 'foo']]
-		
+
 
 class TestDeleteAttr(TestDecompiler):
 	s = """
@@ -477,7 +477,7 @@ def f(o):
 	a = hasattr(o, 'x')
 	del o.x
 	b = hasattr(o, 'x')
-	
+
 	return a, b
 """
 	inputs = [[Dummy()]]
@@ -539,13 +539,13 @@ def testprint():
 			self.assertEqual(example, test)
 		finally:
 			sys.stdout = oldstdout
-	
+
 	inputs = []
 
 def dummySet(o, v):
 	o.x = v
 
-class TestDiscardDecompile(TestDecompiler):	
+class TestDiscardDecompile(TestDecompiler):
 	s = """
 def f(o, v, f):
 	f(o, v)

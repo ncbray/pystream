@@ -101,5 +101,5 @@ def foldIsAST(extractor, node):
 		# Known objects
 		obj = extractor.getObject(left.object is right.object)
 		return ast.Existing(obj)
-		
+
 	return node

@@ -8,5 +8,3 @@ s.vertex(vec3, vec3)
 
 s.method('__init__', mat4)
 s.slot('project', mat4)
-
-

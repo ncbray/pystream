@@ -9,26 +9,26 @@ class TestTVLTruth(unittest.TestCase):
 		self.assertEqual(tvl.TVLTrue.maybeTrue(),   True)
 		self.assertEqual(tvl.TVLTrue.maybeFalse(),  False)
 		self.assertEqual(tvl.TVLTrue.mustBeFalse(), False)
-		
+
 		self.assertRaises(TypeError, bool, tvl.TVLTrue)
-		
+
 
 	def testTVLFalse(self):
 		self.assertEqual(tvl.TVLFalse.mustBeTrue(),  False)
 		self.assertEqual(tvl.TVLFalse.maybeTrue(),   False)
 		self.assertEqual(tvl.TVLFalse.maybeFalse(),  True)
 		self.assertEqual(tvl.TVLFalse.mustBeFalse(), True)
-		
+
 		self.assertRaises(TypeError, bool, tvl.TVLFalse)
-		
+
 	def testTVLMaybe(self):
 		self.assertEqual(tvl.TVLMaybe.mustBeTrue(),  False)
 		self.assertEqual(tvl.TVLMaybe.maybeTrue(),   True)
 		self.assertEqual(tvl.TVLMaybe.maybeFalse(),  True)
 		self.assertEqual(tvl.TVLMaybe.mustBeFalse(), False)
-		
+
 		self.assertRaises(TypeError, bool, tvl.TVLMaybe)
-		
+
 
 class TestTVLInvert(unittest.TestCase):
 	def testTVLTrue(self):
@@ -39,7 +39,7 @@ class TestTVLInvert(unittest.TestCase):
 
 	def testTVLMaybe(self):
 		self.assertEqual(~tvl.TVLMaybe, tvl.TVLMaybe)
-		
+
 class TestTVLAnd(unittest.TestCase):
 	def testTVLTrue(self):
 		self.assertEqual(tvl.TVLTrue&tvl.TVLTrue,  tvl.TVLTrue)

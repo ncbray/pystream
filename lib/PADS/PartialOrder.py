@@ -86,7 +86,7 @@ def MinimumChainDecomposition(G):
     a directed acyclic graph, not necessarily transitively closed.
     """
     return MinimumPathDecomposition(TransitiveClosure(G))
-    
+
 def MaximumAntichain(G):
     """
     Find a maximum antichain in the given directed acyclic graph.
@@ -102,24 +102,24 @@ class PartialOrderTest(unittest.TestCase):
     for i in range(16):
         for b in (1,2,4,8):
             cube[min(i,i^b)].append(max(i,i^b))
-            
+
     def testHypercubeAcyclic(self):
         self.assert_(isAcyclic(self.cube))
-        
+
     def testHypercubeClosure(self):
         TC = TransitiveClosure(self.cube)
         for i in range(16):
             self.assertEqual(TC[i],
                 set([j for j in range(16) if i & j == i and i != j]))
 
-    def testHypercubeAntichain(self):        
+    def testHypercubeAntichain(self):
         A = MaximumAntichain(self.cube)
         self.assertEqual(A,set((3,5,6,9,10,12)))
-        
+
     def testHypercubeDilworth(self):
         CD = list(MinimumChainDecomposition(self.cube))
         print CD
         self.assertEqual(len(CD),6)
 
 if __name__ == "__main__":
-    unittest.main()   
+    unittest.main()

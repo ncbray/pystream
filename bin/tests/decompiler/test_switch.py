@@ -127,7 +127,7 @@ def cc8(s):
 """
 	inputs = [[False], [True]]
 
-	
+
 class TestSwitch1Deompile(TestDecompiler):
 	s = """
 def f(a):

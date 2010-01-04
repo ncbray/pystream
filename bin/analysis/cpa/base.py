@@ -34,7 +34,7 @@ def calleeSlotsFromContext(sys, context):
 	parameters  = tuple([localSlot(sys, code, p, context) for p in callee.params])
 	if callee.defaults:
 		defaults = callee.defaults # HACK?
-		#defualts = tuple([localSlot(sys, code, d, context) for d in callee.defaults])		
+		#defualts = tuple([localSlot(sys, code, d, context) for d in callee.defaults])
 	else:
 		defaults    = ()
 	vparam      = localSlot(sys, code, callee.vparam, context)
@@ -139,7 +139,7 @@ class AnalysisContext(CanonicalObject):
 		# Bind the positional parameters
 		numArgs  = len(sig.params)
 		numParam = len(callee.params)
-		
+
 		for arg, cpaType, param in zip(caller.args[:numParam], sig.params[:numParam], callee.params):
 			self.initalizeParameter(sys, param, cpaType, arg)
 
@@ -149,15 +149,15 @@ class AnalysisContext(CanonicalObject):
 			defaultOffset = len(callee.params)-len(callee.defaults)
 			for i in range(numArgs, numParam):
 				obj = callee.defaults[i-defaultOffset].object
-				
+
 				# Create an initialize an existing object
 				name = sys.canonical.existingName(sig.code, obj, self)
 				slot = self.group.root(name)
 				slot.initializeType(sys.canonical.existingType(obj))
-					
+
 				# Transfer the default
 				sys.createAssign(slot, callee.params[i])
-			
+
 
 		# An op context for implicit allocation
 		cop = sys.canonical.opContext(sig.code, None, self)

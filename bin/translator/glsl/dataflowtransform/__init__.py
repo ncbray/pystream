@@ -20,7 +20,7 @@ def makePathMatcher(compiler):
 	for path, name, _input, _output in compiler.interface.glsl.attr:
 		current = root
 
-		#path = reverse(path)		
+		#path = reverse(path)
 		for part in path[:-1]:
 			if part not in current:
 				current[part] = {}
@@ -31,48 +31,48 @@ def makePathMatcher(compiler):
 	return root
 
 def findIOTrees(context):
-	
+
 	compiler = context.compiler
 	dioa = context.dioa
 	code = context.code
 	dataflow = context.dataflow
-	
+
 	trees = IOTrees()
 	context.trees = trees
-	
+
 	# Find the inputs / uniforms
 	# param 0  -> uniforms
 	# param 1  -> context object
 	# param 2+ -> inputs
-			
-	params     = code.codeparameters.params		
+
+	params     = code.codeparameters.params
 	lut        = dataflow.entry.modifies
 	exist      = dataflow.entry.annotation.mask
 	contextObj = iotree.getSingleObject(dioa, lut, params[1])
-	
+
 	trees.uniformIn = iotree.evaluateLocal(dioa, lut, exist, params[0], 'uniform')
 	trees.contextIn = iotree.evaluateContextObject(dioa, lut, exist, params[1], contextObj, 'in')
 	trees.inputs    = [iotree.evaluateLocal(dioa, lut, exist, p, 'in') for p in params[2:]]
-	
+
 	# Find the outputs
 	lut   = dataflow.exit.reads
 	exist = dataflow.exit.annotation.mask
-	
+
 	# Context object
 	trees.contextOut = iotree.evaluateContextObject(dioa, lut, exist, params[1], contextObj, 'out')
-	
+
 	# Return values
 	returns = code.codeparameters.returnparams
 	assert len(returns) == 1, returns
 	trees.returnOut = iotree.evaluateLocal(dioa, lut, exist, returns[0], 'out')
-	
+
 	# Find the builtin fields
 	trees.match(makePathMatcher(compiler))
-	
+
 	# Transform the trees
-	# NOTE the output is done first, as it references a local which 
+	# NOTE the output is done first, as it references a local which
 	# will later be transformed / eliminated by the input transform.
-	
+
 	def transformOutput(context, tree, lut):
 		if tree is not None and tree.impl is not None:
 			node = lut[tree.impl]
@@ -83,28 +83,28 @@ def findIOTrees(context):
 			node = lut[tree.impl]
 			iotransform.transformInput(context.compiler, context.dioa, context.dataflow, tree, node)
 
-	
+
 	### OUTPUT ###
 	# Transform the output context object
 	transformOutput(context, trees.contextOut, dataflow.entry.modifies)
 
 	# Transform the return value
 	transformOutput(context, trees.returnOut, dataflow.exit.reads)
-	
+
 	### INPUT ###
 	# Transform self
 	transformInput(context, trees.uniformIn, dataflow.entry.modifies)
-	
+
 	# Transform input context object
 	transformInput(context, trees.contextIn, dataflow.entry.modifies)
 
 	# Transform the input parameters
 	for tree in trees.inputs:
-		transformInput(context, tree, dataflow.entry.modifies)	
-	
+		transformInput(context, tree, dataflow.entry.modifies)
+
 	iotransform.killNonintrinsicIO(compiler, dataflow)
 	trees.buildLUTs()
-	
+
 def harmonizeUniformTrees(name, uid, tree0, tree1):
 	nodename = "%s_%d"  % (name, uid)
 	uid += 1
@@ -123,7 +123,7 @@ def nameTree(name, uid, tree):
 	if not tree.name:
 		nodename = "%s_%d"  % (name, uid)
 		uid += 1
-	
+
 		tree.name = nodename
 
 	for field, child in tree.fields.iteritems():
@@ -154,25 +154,25 @@ class IOTrees(object):
 		self.contextIn.buildImplementationLUT(self.inputLUT)
 		for inp in self.inputs:
 			inp.buildImplementationLUT(self.inputLUT)
-		
+
 		self.outputLUT = {}
 		self.contextOut.buildImplementationLUT(self.outputLUT)
 		self.returnOut.buildImplementationLUT(self.outputLUT)
-		
+
 
 class DataflowTransformContext(object):
 	def __init__(self, compiler, code):
 		self.compiler = compiler
 		self.code     = code
 		self.trees    = None
-	
+
 	def convert(self):
 		self.dataflow = analysis.dataflowIR.convert.evaluateCode(self.compiler, self.code)
-	
+
 	def analyze(self):
 		self.dioa = correlatedanalysis.evaluateDataflow(self.compiler, self.dataflow)
 		self.dataflow = self.dioa.flat
-		
+
 		findIOTrees(self)
 
 	def synthesize(self):
@@ -181,10 +181,10 @@ class DataflowTransformContext(object):
 
 		# Find pools
 		self.pa = poolanalysis.process(self.compiler, self.dataflow, self.dioa)
-	
+
 		# Translate CFG + pools into GLSL
 		self.shaderCode = glsltranslator.process(self)
-		
+
 	def dump(self):
 		self.dioa.debugDump(self.code.codeName())
 		analysis.dataflowIR.dump.evaluateDataflow(self.dataflow, 'summaries\dataflow', self.code.codeName())
@@ -201,16 +201,16 @@ class DataflowTransformContext(object):
 		for field, node in tree.fields.iteritems():
 			if field.type == 'Array':
 				index = field.name.pyobj
-				indexLUT[index] = node		
+				indexLUT[index] = node
 		return [indexLUT[i] for i in range(len(indexLUT))]
 
 	def link(self, other):
 		# Break apart the output tuple.
 		outputs = self.splitTuple(self.trees.returnOut)
 		inputs  = other.trees.inputs
-		
-		assert len(inputs) == len(outputs), "I/O mismatch" 
-		
+
+		assert len(inputs) == len(outputs), "I/O mismatch"
+
 		uid = 0
 		for outp, inp in zip(outputs, inputs):
 			uid = outp.makeLinks(inp, uid)
@@ -231,7 +231,7 @@ class DataflowTransformContext(object):
 		for name in node.names():
 			if name in lut:
 				live.add(name)
-			
+
 		for field in node.fields.itervalues():
 			self.findLive(field, lut, live)
 
@@ -249,27 +249,27 @@ def evaluateCode(compiler, vscode, fscode):
 
 	with compiler.console.scope('link'):
 		harmonizeUniformTrees('common', 0, vscontext.uniformTree(), fscontext.uniformTree())
-		
+
 		# HACK avoid name conflicts by explicitly naming the trees
 		nameTree('uniform_vs', 0, vscontext.uniformTree())
 		nameTree('uniform_fs', 0, fscontext.uniformTree())
 
 		vscontext.link(fscontext)
-		
+
 		iotransform.killUnusedOutputs(fscontext)
 		fscontext.simplify()
 
 		# TODO load eliminate uniform -> varying
 
 		# Find the live I/O
-		live = set()		
+		live = set()
 		lut = fscontext.dataflow.entry.modifies
 		for inp in fscontext.trees.inputs:
 			fscontext.findLiveLinked(inp, lut, live)
-			
+
 		lut = vscontext.dataflow.exit.reads
 		vscontext.findLive(vscontext.trees.contextOut, lut, live)
-				
+
 		# Remove the dead outputs from the vertex shader
 		def filterLive(name, slot):
 			return name in live

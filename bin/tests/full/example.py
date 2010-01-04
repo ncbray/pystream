@@ -9,7 +9,7 @@ def factorial(n):
 		return 1
 
 def either(a, b):
-	return a or b	
+	return a or b
 
 def add(a, b):
 	return a+b

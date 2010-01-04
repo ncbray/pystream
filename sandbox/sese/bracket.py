@@ -7,7 +7,7 @@ class Bracket(object):
 	def delete(self):
 		assert not self.isOrphaned()
 
-		
+
 		self.prev.next = self.next
 		self.next.prev = self.prev
 
@@ -16,7 +16,7 @@ class Bracket(object):
 
 	def insertAfter(self, other):
 		assert other.isOrphaned()
-		
+
 		other.prev = self
 		other.next = self.next
 

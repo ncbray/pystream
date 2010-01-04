@@ -286,4 +286,3 @@ def makeLLFunc(collector):
 	@llfunc
 	def min_stub(a, b):
 		return a if a < b else b
-

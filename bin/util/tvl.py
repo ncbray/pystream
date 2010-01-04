@@ -20,7 +20,7 @@ class TVLTrueType(TVLType):
 	def mustBeFalse(self): return False
 	def __repr__(self):    return 'TVLTrue'
 	def __invert__(self):  return TVLFalse
-	
+
 	def __and__(self, other):
 		return other
 
@@ -51,7 +51,7 @@ class TVLFalseType(TVLType):
 
 	def __and__(self, other):
 		return self
-		
+
 	def __rand__(self, other):
 		return self
 

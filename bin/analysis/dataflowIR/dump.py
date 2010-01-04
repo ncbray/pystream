@@ -143,9 +143,9 @@ class DataflowToDot(TypeDispatcher):
 		# If this is not the canonical representative of a slot cluster, skip it
 		if not self.cluster.isCanonical(slot.canonical()):
 			return
-		
+
 		color = self.lineColor(slot)
-		
+
 		srcnode = self.node(src, dst)
 		dstnode = self.node(dst, src)
 		self.g.add_edge(pydot.Edge(srcnode, dstnode, color=color, style=style))
@@ -188,7 +188,7 @@ class DataflowToDot(TypeDispatcher):
 			for reverse in node.reverse():
 				assert reverse.isUse(node)
 				self.edge(reverse, node)
-	
+
 		for forward in node.forward():
 			assert forward.isDefn(node)
 			if self.showSplits: self.edge(node, forward)
@@ -288,20 +288,20 @@ class IntersectionFind(object):
 
 	def update(self, nodes):
 		nodes = set(nodes)
-	
+
 		newNodes = []
-	
+
 		while nodes:
 			current = nodes.pop()
-			
+
 			if current not in self.lut:
 				newNodes.append(current)
 			else:
 				cluster = self.lut[current]
-				
+
 				keep    = []
 				discard = []
-	
+
 				for other in cluster:
 					if other is current:
 						keep.append(other)
@@ -310,11 +310,11 @@ class IntersectionFind(object):
 						nodes.remove(other)
 					else:
 						discard.append(other)
-	
+
 				if discard:
 					self._updateCluster(keep)
 					self._updateCluster(discard)
-		
+
 		if newNodes:
 			# Join the newly discovered nodes
 			self._updateCluster(newNodes)
@@ -336,12 +336,12 @@ class ClusterNodes(object):
 		# Make the nodes canonical
 		nodes = [node.canonical() for node in nodes]
 		self.cluster.update(nodes)
-	
+
 	def handleNode(self, node):
 		if node.isOp() and not node.isSplit():
 			self.handleGroup(node.reverse())
-			self.handleGroup(node.forward()) 
-	
+			self.handleGroup(node.forward())
+
 	def process(self, dataflow):
 		pending = set(dataflow.entry.modifies.itervalues())
 		processed = set()
@@ -351,9 +351,9 @@ class ClusterNodes(object):
 		while pending:
 			current = pending.pop()
 			processed.add(current)
-			
+
 			self.handleNode(current)
-			
+
 			for next in current.forward():
 				if next not in processed:
 					pending.add(next)
@@ -377,7 +377,7 @@ def dumpGraph(directory, name, format, g, prog='dot'):
 @async_limited(2)
 def evaluateDataflow(dataflow, directory, name):
 	cluster = ClusterNodes().process(dataflow)
-	
+
 	g = pydot.Dot(graph_type='digraph')
 	dtd = DataflowToDot(g, cluster)
 	dtd.process(dataflow)

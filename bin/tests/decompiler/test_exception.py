@@ -377,9 +377,9 @@ def makeMod2():
 class TestComplexListComprehension(TestDecompiler):
 	s = """
 def complexlistcomp(module):
-    try:
-        return list(module.__all__)
-    except AttributeError:
-        return [n for n in dir(module) if n[0] != '_']
+	try:
+		return list(module.__all__)
+	except AttributeError:
+		return [n for n in dir(module) if n[0] != '_']
 """
 	inputs = [[makeMod1()], [makeMod2()]]

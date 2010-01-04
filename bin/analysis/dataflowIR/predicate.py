@@ -13,50 +13,50 @@ class PredicateGraph(object):
 		self.reverse = {}
 		self.tree  = None
 		self.idom  = None
-	
+
 	def _declare(self, pred):
 		if pred not in self.forward:
-			self.forward[pred] = []	
-			self.reverse[pred] = []	
-	
+			self.forward[pred] = []
+			self.reverse[pred] = []
+
 	def depends(self, src, dst):
 		src = src.canonical()
 		dst = dst.canonical()
-		
+
 		assert src.isPredicate(), src
 		assert dst.isPredicate(), dst
-		
+
 		self._declare(src)
 		self._declare(dst)
-		
+
 		self.forward[src].append(dst)
 		self.reverse[dst].append(src)
-	
+
 	def finalize(self):
 		# For simple graphs, there may be no dependencies,
 		# so make sure the entry is declared
 		self._declare(self.entry)
-		
+
 		# Generate predicate domination information
 		self.tree, self.idom = dominatorTree(self.forward, self.entry)
-	
+
 	def dominates(self, src, dst):
 		src = src.canonical()
 		dst = dst.canonical()
 
 		if src is dst:
 			return True
-		
+
 		if dst in self.idom:
 			return self.dominates(src, self.idom[dst])
-		
+
 		return False
-	
+
 class PredicateGraphBuilder(TypeDispatcher):
 	def __init__(self):
 		TypeDispatcher.__init__(self)
 		self.pg = PredicateGraph()
-	
+
 	@dispatch(graph.Entry, graph.Split, graph.Gate,
 			graph.FieldNode, graph.LocalNode,
 			graph.NullNode, graph.ExistingNode,
@@ -83,7 +83,7 @@ class PredicateGraphBuilder(TypeDispatcher):
 				assert isinstance(prev.defn, graph.Gate), prev.defn
 				src = prev.defn.read
 				self.pg.depends(src, dst)
-	
+
 	def process(self, dataflow):
 		self.pg.entry = dataflow.entryPredicate.canonical()
 		dfs(dataflow, self)

@@ -75,7 +75,7 @@ for s in sqrs:
             m &=~ b1
             b2 = m &~ (m-1)
             b3 = m &~ b2
-            alignments[b1|b2]=alignments[b1|b3]=alignments[b2|b3]=(s,g)   
+            alignments[b1|b2]=alignments[b1|b3]=alignments[b2|b3]=(s,g)
 
 triads = []
 for square in sqrs:
@@ -155,47 +155,47 @@ class Sudoku:
     def __init__(self,initial_placements = None):
         """
         Initialize a new Sudoku grid.
-        
+
         If an argument is given, it should either be a sequence of 81
         digits 0-9 (0 meaning a not-yet-filled cell), or a sequence
         of (digit,cell) pairs.
-        
+
         The main state we use for the solver is an array contents[]
         of 81 cells containing digits 0-9 (0 for an unfilled cell)
         and an array locations[] indexed by the digits 1-9, containing
         bitmasks of the cells still available to each digit.
-        
+
         We also store additional fields:
 
         - progress is a boolean, set whenever one of our methods
           changes the state of the puzzle, and used by step() to tell
           whether one of its rules fired.
-          
+
         - rules_used is a set of the rule names that have made progress.
-        
+
         - pairs is a dictionary mapping bitmasks of pairs of cells to
           lists of digits that must be located in that pair, as set up
           by the pair rule and used by other later rules.
-          
+
         - bilocation is a NonrepetitiveGraph representing paths and
           cycles among bilocated digits, as constructed by the bilocal
           rule and used by the repeat and conflict rules.
-        
+
         - bivalues is a NonrepetitiveGraph representing paths and
           cycles among bivalued cells, as constructed by the bivalue
           rule and used by the repeat and conflict rules.
-          
+
         - otherbv maps pairs (cell,digit) in the bivalue graph to the
           other digit available at the same cell
-        
+
         - logstream is a stream on which to log verbose descriptions
           of the steps made by the solver (typically sys.stderr), or
           None if verbose descriptions are not to be logged.
-        
+
         - steps is used to count how many solver passes we've made so far.
-        
+
         - original_cells is a bitmask of cells that were originally nonempty.
-        
+
         - assume_unique should be set true to enable solution rules
           based on the assumption that there exists a unique solution
         """
@@ -221,7 +221,7 @@ class Sudoku:
                     self.place(digit,cell)
                     self.original_cells |= 1L << cell
                 cell += 1
-        
+
     def __iter__(self):
         """
         If we are asked to loop over the items in a grid
@@ -230,12 +230,12 @@ class Sudoku:
         known cell contents of the grid.
         """
         return iter(self.contents)
-    
+
     def mark_progress(self):
         """Set progress True and clear fields that depended on old state."""
         self.progress = True
         self.pairs = None
-        
+
     def log(self,items,explanation=None):
         """
         Send a message for verbose output.
@@ -720,7 +720,7 @@ def subproblem(grid):
                             break
                 if not entailed:
                     break
-                    
+
             # Here with imp[d] mapping d to some unplaceable cells.
             # We build up a bitmap of those cells, as we do collecting
             # the sets of digits and cells that must be matched to each
@@ -734,7 +734,7 @@ def subproblem(grid):
                     force = imp[d][cell]
                     if force not in forces:
                         forces.append(force)
-                        
+
             # Now that we have both the bitmap and the subgraphs describing
             # why each bit is in that bitmap, we are ready to make and
             # explain our unplacement decision.
@@ -770,7 +770,7 @@ bilocal_explanation = \
     "each two successive cells belong to a common row, column, or square," \
     " and are the only two cells in that row, column, or square where one" \
     " of the digits may be placed"
-    
+
 incyclic = "In the cyclic sequence of cells"
 inpath = "In the sequence of cells"
 
@@ -798,7 +798,7 @@ def bilocal(grid):
             v = unmask[bit]
             w = unmask[pair]
             graph[v][w] = graph[w][v] = digs
-    
+
     # Apply repetitivity analysis to collect cyclic labels at each cell
     grid.bilocation = nrg = NonrepetitiveGraph(graph)
     forced = [set() for i in range(81)]
@@ -848,7 +848,7 @@ def bivalue(grid):
     not be placed in any other cell of the row, column, or square
     containing the edge.
     """
-    
+
     # Find and make bitmask per digit of bivalued cells
     graph = {}
     grid.otherbv = otherbv = {}
@@ -862,7 +862,7 @@ def bivalue(grid):
             otherbv[c,ch[0]] = ch[1]
             otherbv[c,ch[1]] = ch[0]
     edgegroup = {}
-    
+
     # Form edges and map back to their groups
     for g in groups:
         for d in digits:
@@ -1049,7 +1049,7 @@ def explain_conflict_path(grid,cell,d,why,reached,dd):
             "in order to make allow the remaining",plural(len(path)-1,"cell"),
             "of the sequence to be filled by the remaining",
             plural(len(path)-1,"digit")+"."]
-    
+
 
 def explain_conflict(grid,cell,d,why,reached,dd):
     """Concoct explanation for pair of conflicting paths, one to reached."""
@@ -1312,7 +1312,7 @@ output_formats = {
     "svg": svg_format,
     "s": svg_format,
 }
-    
+
 # ======================================================================
 #   Backtracking search for all solutions
 # ======================================================================
@@ -1327,20 +1327,20 @@ def all_solutions(grid, fastrules = True):
             grid.log("A contradiction was found,"
                      " so this branch has no solutions.")
             return  # no solutions
-    
+
         # if they finished off the puzzle, there's only one solution
         if grid.complete():
             grid.log("A solution to the puzzle has been found.")
             yield grid
             return
-        
+
         # find a cell with few remaining possibilities
         def choices(c):
             ch = grid.choices(c)
             if len(ch) < 2: return (10,0,0)
             return (len(ch),c,ch[0])
         L,c,d = min([choices(c) for c in range(81)])
-        
+
         # try it both ways
         branch = Sudoku(grid)
         grid.log("Failed to progress, "
@@ -1428,7 +1428,7 @@ if __name__ == '__main__':
     if args:
         print >>sys.stderr, "Unrecognized command line syntax, use --help for input documentation"
         sys.exit(0)
-    
+
     if options.show_rules:
         print """This solver knows the following rules.  Rules occurring later
 in the list are attempted only when all earlier rules have failed
@@ -1453,7 +1453,7 @@ find the solution.
         if options.generate:
             print "Can not simultaneously generate and translate puzzles."
             sys.exit(0)
-    
+
     try:
         outputter = output_formats[options.format.lower()]
     except KeyError:
@@ -1499,7 +1499,7 @@ def random_puzzle(generate_symmetric = True):
             grid = Sudoku()
             continue
         break
-    
+
     # find redundant information in initial state
     q = 0
     while q < len(puzzle):
@@ -1547,10 +1547,10 @@ if __name__ == '__main__':
     print_level = True
     if print_puzzle:
         print_level = outputter(puzzle)
-        
+
     if options.output_both and print_level:
         print
-    
+
     if options.backtrack:
         solns = all_solutions(puzzle,False)
     else:
@@ -1558,7 +1558,7 @@ if __name__ == '__main__':
         solns = [puzzle]
 
     nsolns = 0
-    for soln in solns:    
+    for soln in solns:
         if print_solution:
             print_level = outputter(soln)
         nsolns += 1

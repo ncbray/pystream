@@ -27,7 +27,7 @@ def PartialCubeEdgeLabeling(G):
     set representing edges in the original graph that have been contracted
     to the single edge v-w.
     """
-    
+
     # Some simple sanity checks
     if not isUndirected(G):
         raise Medium.MediumError("graph is not undirected")
@@ -42,7 +42,7 @@ def PartialCubeEdgeLabeling(G):
     UF = UnionFind()
     CG = dict([(v,dict([(w,(v,w)) for w in G[v]])) for v in G])
     NL = len(CG)-1
-    
+
     # Initial sanity check: are there few enough edges?
     # Needed so that we don't try to use union-find on a dense
     # graph and incur superquadratic runtimes.
@@ -52,7 +52,7 @@ def PartialCubeEdgeLabeling(G):
         raise Medium.MediumError("graph has too many edges")
 
     # Main contraction loop in place of the original algorithm's recursion
-    while len(CG) > 1:    
+    while len(CG) > 1:
         if not isBipartite(CG):
             raise Medium.MediumError("graph is not bipartite")
 
@@ -113,7 +113,7 @@ def PartialCubeEdgeLabeling(G):
                         UF.union(NG[vi][wi],CG[v][w])
                     else:
                         NG[vi][wi] = CG[v][w]
-        
+
         CG = NG
 
     # Here with all edge equivalence classes represented by UF.
@@ -162,7 +162,7 @@ class PartialCubeTest(unittest.TestCase):
         G = Medium.StateTransitionGraph(M)
         I = isPartialCube(G)
         self.assertEqual(I,True)
-    
+
     def testK4(self):
         G = dict([(i,[j for j in range(4) if j != i]) for i in range(4)])
         self.assertEqual(isPartialCube(G),False)

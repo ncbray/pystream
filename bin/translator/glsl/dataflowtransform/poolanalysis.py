@@ -215,7 +215,7 @@ class PoolAnalysis(TypeDispatcher):
 			self._initSlotInfo(slot, info)
 		else:
 			info = self.slot[slot]
-		
+
 		info = info.forward()
 		self.slot[slot] = info
 		return info
@@ -237,7 +237,7 @@ class PoolAnalysis(TypeDispatcher):
 	def makeCanonical(self, slots):
 		for slot in slots:
 			assert not isinstance(slot, tuple), slot
-			
+
 		return [slot.canonical() for slot in slots]
 
 	def unionSlots(self, *slots):
@@ -360,7 +360,7 @@ class PoolAnalysis(TypeDispatcher):
 			info.accumulateType(obj, preexisting)
 		else:
 			info = self.info[obj]
-			
+
 		info = info.forward()
 		self.info[obj] = info
 		return info
@@ -435,7 +435,7 @@ class PoolAnalysis(TypeDispatcher):
 		for obj in self.info.iterkeys():
 			if obj not in self.nonfinal:
 				obj.annotation = obj.annotation.rewrite(final = True)
-		
+
 		# Process pool information
 		for pool in self.infoList():
 			pool.uniqueCount    = 0

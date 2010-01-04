@@ -324,4 +324,4 @@ class LCATest(unittest.TestCase):
             self.assertEqual(L[p][q],v)
 
 if __name__ == "__main__":
-    unittest.main()   
+    unittest.main()

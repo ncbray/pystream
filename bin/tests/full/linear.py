@@ -34,7 +34,7 @@ def doDynamicSwitch(s):
 		b = 2
 	else:
 		a = 1
-		b = 1		
+		b = 1
 	return a+b
 
 def doSwitchReturn(s):
@@ -123,7 +123,7 @@ def attrMunge(s2, v, a, b):
 	if s2:
 		v.x = a.x
 	else:
-		v.x = b.x	
+		v.x = b.x
 
 def vecAttrSwitch(s):
 	a = vec3(11.0, 11.0, 11.0)
@@ -150,7 +150,7 @@ def groupCorrelation(s):
 	# Should return 24 and 80
 	# With self but without group correlation, returns 24, 40, 48 and 80
 	# Without either, returns 24, 36(x4), 48(x6), 60(x2), 64(x2), 80
-	# Without correlation, grows as ~O(ntypes^nargs) 
+	# Without correlation, grows as ~O(ntypes^nargs)
 	return i*j
 
 
@@ -170,7 +170,7 @@ class VecSetter(object):
 ##	__slots__ = ()
 ##	def __init__(self):
 ##		pass
-##	
+##
 ##	def setter(self, v):
 ##		v.x = 3.0
 ##		v.y = 3.0
@@ -180,7 +180,7 @@ class VecSetter(object):
 ##	__slots__ = ()
 ##	def __init__(self):
 ##		pass
-##	
+##
 ##	def setter(self, v):
 ##		v.x = 5.0
 ##		v.y = 5.0
@@ -217,5 +217,5 @@ def assignMerge(s):
 		c = b
 
 	c.x = 7.0
-	
+
 	return c.x

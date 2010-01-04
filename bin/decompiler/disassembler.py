@@ -62,7 +62,7 @@ class Instruction(object):
 
 	def __eq__(self, other):
 		return type(self) == type(other) and self.opcode == other.opcode and self.arg == other.arg
-										
+
 def disassemble(co):
 	linestarts = dict(findlinestarts(co))
 
@@ -78,7 +78,7 @@ def disassemble(co):
 
 	offsetLUT = {}
 	fixup = []
-	
+
 	while i < n:
 		if i in linestarts:
 			line = linestarts[i]
@@ -87,17 +87,17 @@ def disassemble(co):
 		op = ord(c)
 		offset = i
 		i = i+1
-		
+
 		if op >= HAVE_ARGUMENT:
 			needsFixup = False
 			oparg = ord(code[i]) + ord(code[i+1])*256 + extended_arg
 			extended_arg = 0
 			i = i+2
-			
+
 			if op == EXTENDED_ARG:
 				assert False, "Cannot handle extended arguments: never encountered before."
 				extended_arg = oparg*65536L
-				
+
 			if op in hasconst:
 				arg = co.co_consts[oparg]
 			elif op in hasname:
@@ -117,7 +117,7 @@ def disassemble(co):
 				arg = free[oparg]
 			else:
 				arg = oparg
-				
+
 			newi = Instruction(line, offset, op, arg)
 			if needsFixup: fixup.append(newi)
 
@@ -125,12 +125,12 @@ def disassemble(co):
 			newi = Instruction(line, offset, op)
 
 		offsetLUT[offset] = len(inst)
-			
+
 		inst.append(newi)
 
 	targets = []
 	for fix in fixup:
 		fix.arg = offsetLUT[fix.arg]
-		targets.append(fix.arg) 
+		targets.append(fix.arg)
 
 	return inst, targets

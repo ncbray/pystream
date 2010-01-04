@@ -9,7 +9,7 @@ from .. symbols import SymbolBase
 
 ### The field parser ###
 
-fieldFinder = re.compile('(\w+)(?::(\w+|\([^\)]*\)))?(\?)?(\*)?') # Matches name, type, optional, repeated 
+fieldFinder = re.compile('(\w+)(?::(\w+|\([^\)]*\)))?(\?)?(\*)?') # Matches name, type, optional, repeated
 typeSplitter = re.compile('[,\s]\s*')
 
 def parseFields(s, addSymbolType=True):
@@ -18,36 +18,36 @@ def parseFields(s, addSymbolType=True):
 		for part in s:
 			fields.extend(parseFields(part, addSymbolType))
 		return fields
-		
+
 	fields = fieldFinder.findall(s)
-	
+
 	result = []
-	
+
 	for field in fields:
 		# Break the types apart
 		types = typeSplitter.split(field[1].strip('()'))
 		# Filter out empty strings
 		types = [t for t in types if t]
-		
+
 		# If the AST supports symbolic matching, and the field is typed, add the symbol type
 		if types and addSymbolType and 'SymbolBase' not in types:
 			types.append('SymbolBase')
-		
+
 		optional = bool(field[2])
 		repeated = bool(field[3])
-		
+
 		if wrapProperties:
 			internal = '_'+field[0]
 		else:
 			internal = field[0]
-		
+
 		result.append(FieldDescriptor(field[0], internal, tuple(types), optional, repeated))
 
 	return result
 
 class FieldDescriptor(object):
 	__slots__ = 'name', 'internalname', 'type', 'optional', 'repeated'
-	
+
 	def __init__(self, name, internalname, t, optional, repeated):
 		self.name = name
 		self.internalname = internalname
@@ -210,7 +210,7 @@ class ClassBuilder(object):
 	def mutate(self):
 		self.g   = self.getGlobalDict()
 
-		desc   = self.getFields()		
+		desc   = self.getFields()
 		shared = self.getShared()
 		self.mutable = self.getMutable(shared)
 

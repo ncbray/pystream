@@ -22,7 +22,7 @@ class NonrepetitiveGraph:
     of the edge from v to w, then NonrepetitiveGraph(G) allows
     us to find paths in G, with a choice of label per edge of
     the path, such that no two consecutive labels are equal.
-    
+
     If NR is a NonrepetitiveGraph instance, then
     - iter(NR) lists the vertices in NR
     - NR[v] lists the labels incident to vertex v
@@ -34,7 +34,7 @@ class NonrepetitiveGraph:
     - shortest(v,label,w,label) finds a shortest path between
       the given vertex,label pairs.
     """
-    
+
     def __init__(self,G):
         """
         Initialize from a given graph instance.  The graph G
@@ -42,7 +42,7 @@ class NonrepetitiveGraph:
         of the labels on edges from v to w; this allows us to
         represent multigraphs with differing labels on their
         multiedges.
-        
+
         Data stored in fields of this instance:
         - self.nrg is a transformed unlabeled graph in which paths
           represent nonrepetitive paths in G
@@ -65,7 +65,7 @@ class NonrepetitiveGraph:
             for w in G[v]:
                 for L in G[v][w]:
                     self.nrg[v,L,False].add((w,L,True))
-    
+
     def __getitem__(self,v):
         """x.__getitem__(y) <==> x[y]"""
         return self.labels[v]

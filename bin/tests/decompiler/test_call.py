@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from . decompiler_common import TestDecompiler
 
-##class TestDiscardDecompile(TestDecompiler):	
+##class TestDiscardDecompile(TestDecompiler):
 ##	s = """
 ##def f(o, v, f):
 ##	f(o, v)
@@ -34,7 +34,7 @@ def fkargs(kargs):
 	inputs = [[{'a':1, 'b':2, 'c':3}]]
 
 
-class TestCallStdDecompile(TestDecompiler):	
+class TestCallStdDecompile(TestDecompiler):
 	s = """
 def callstd(f):
 	return f(1, 2, 3)

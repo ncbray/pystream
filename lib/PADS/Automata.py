@@ -612,4 +612,4 @@ class RegExpTest(unittest.TestCase):
                                     self.languages[j][0])
 
 if __name__ == "__main__":
-    unittest.main()   
+    unittest.main()

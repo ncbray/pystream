@@ -85,14 +85,14 @@ def makeInterpreterStubs(collector):
 		assert isinstance(name, str), name
 		assert isinstance(attr, str), attr
 		assert isinstance(argnames, (tuple, list)), argnames
-		
-		
+
+
 		template = """def %(name)s(%(args)s):
 	clsDict = load(load(%(self)s, 'type'), 'dictionary')
 	meth = loadDict(clsDict, %(attr)r)
 	return meth(%(args)s)
 """ % {'name':name, 'attr':attr, 'self':argnames[0], 'args':", ".join(argnames)}
-		
+
 		f = compileFunction(template, '<generated - %s>' % name)
 		return interpfunc(f)
 
@@ -100,11 +100,11 @@ def makeInterpreterStubs(collector):
 		assert isinstance(name, str), name
 		assert isinstance(attr, str), attr
 		assert isinstance(rattr, str), rattr
-		
-		
+
+
 		template = """def %(name)s(self, other):
 	result = NotImplemented
-	
+
 	clsDict = load(load(self, 'type'), 'dictionary')
 	if checkDict(clsDict, %(attr)r):
 		meth = loadDict(clsDict, %(attr)r)
@@ -115,10 +115,10 @@ def makeInterpreterStubs(collector):
 		if checkDict(clsDict, %(rattr)r):
 			meth = loadDict(clsDict, %(rattr)r)
 			result = meth(other, self)
-		
+
 	return result
 """ % {'name':name, 'attr':attr, 'rattr':rattr}
-		
+
 		f = compileFunction(template, '<generated - %s>' % name)
 		return interpfunc(f)
 
@@ -127,17 +127,17 @@ def makeInterpreterStubs(collector):
 		assert isinstance(iattr, str), iattr
 		assert isinstance(attr, str), attr
 		assert isinstance(rattr, str), rattr
-		
-		
+
+
 		template = """def %(name)s(self, other):
 	result = NotImplemented
-	
+
 	clsDict = load(load(self, 'type'), 'dictionary')
 	if checkDict(clsDict, %(iattr)r):
 		meth = loadDict(clsDict, %(iattr)r)
-		result = meth(self, other)	
+		result = meth(self, other)
 
-	if result is NotImplemented:	
+	if result is NotImplemented:
 		if checkDict(clsDict, %(attr)r):
 			meth = loadDict(clsDict, %(attr)r)
 			result = meth(self, other)
@@ -147,10 +147,10 @@ def makeInterpreterStubs(collector):
 		if checkDict(clsDict, %(rattr)r):
 			meth = loadDict(clsDict, %(rattr)r)
 			result = meth(other, self)
-		
+
 	return result
 """ % {'name':name, 'iattr':iattr, 'attr':attr, 'rattr':rattr}
-		
+
 		f = compileFunction(template, '<generated - %s>' % name)
 		return interpfunc(f)
 
@@ -281,7 +281,7 @@ def makeInterpreterStubs(collector):
 			iname = opnames.inplace[op]
 			i = simpleInplaceBinaryOp('interpreter%s' % iname, iname, name, rname)
 
-	for op in opnames.opLUT.keys():		
+	for op in opnames.opLUT.keys():
 		declare(op, False)
 
 	for op in opnames.compare.keys():

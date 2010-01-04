@@ -75,4 +75,3 @@ class TestSESE(unittest.TestCase):
 		result = findCycleEquivalences(G, head, tail)
 		self.assertEqual(result.entry, head)
 		self.assertEqual(result.exit, tail)
-

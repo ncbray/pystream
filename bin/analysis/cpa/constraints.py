@@ -56,7 +56,7 @@ class Constraint(object):
 			for slot in bad:
 				console.output("\t%r" % slot)
 				if hasattr(slot.slotName, 'context'):
-					console.output("\t%r" % slot.slotName.context)				
+					console.output("\t%r" % slot.slotName.context)
 			console.output('')
 
 class CachedConstraint(Constraint):
@@ -146,12 +146,12 @@ class IsConstraint(CachedConstraint):
 		if not self.t:
 			self.t = True
 			self.emitConstant(True)
-			
+
 	def emitFalse(self):
 		if not self.f:
 			self.f = True
 			self.emitConstant(False)
-		
+
 	def emitConstant(self, pyobj):
 		obj  = self.sys.extractor.getObject(pyobj)
 		xtype = self.sys.canonical.existingType(obj)
@@ -161,10 +161,10 @@ class IsConstraint(CachedConstraint):
 
 	def concreteUpdate(self, leftType, rightType):
 		if self.t and self.f: return
-		
+
 		lpt = leftType.obj.pythonType()
 		rpt = rightType.obj.pythonType()
-		
+
 		if lpt is not rpt:
 			#print "type mismatch"
 			self.emitFalse()
@@ -172,7 +172,7 @@ class IsConstraint(CachedConstraint):
 			if leftType.obj is rightType.obj:
 				#print "existing match"
 				self.emitTrue()
-			else:					
+			else:
 				#print "existing mismatch"
 				self.emitFalse()
 		elif isinstance(lpt, xtypes.ConstantTypes):
@@ -182,9 +182,9 @@ class IsConstraint(CachedConstraint):
 			self.emitFalse()
 		elif leftType is rightType:
 			# More that one of this object may be created...
-			# print "ambiguous xtype match" 
+			# print "ambiguous xtype match"
 			self.emitTrue()
-			self.emitFalse()					
+			self.emitFalse()
 		else:
 			# Not the same object, will not be pooled.
 			#print "xtype mistpatch"

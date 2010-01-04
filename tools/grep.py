@@ -133,7 +133,7 @@ class StandardGrep(object):
 
 		matched = textMatches(matchline)
 
-                self.matched |= matched
+		self.matched |= matched
 
 		if replaceActive():
 			if matched:
@@ -168,8 +168,8 @@ class StandardGrep(object):
 				lineno += 1
 			fh.close()
 
-                        if self.matched:
-                                self.fileOccurances += 1
+			if self.matched:
+				self.fileOccurances += 1
 
 			if replaceActive() and self.changed and not options.dryrun:
 				text = "".join(self.lineBuffer)
@@ -194,7 +194,7 @@ class StandardGrep(object):
 		if self.lastFile != None:
 			print
 
-		if self.matchText: 
+		if self.matchText:
 			print "%7.1d occurances in %d file%s." % (self.occurances, self.fileOccurances, 's' if self.fileOccurances != 1 else '')
 			print "%7.1d lines." % self.lines
 		print "%7.1d files." % self.files
@@ -221,12 +221,12 @@ if __name__ == '__main__':
 	# Identifiers are a little strange, as we need to take into account
 	# that they may be at the start or the end of a line.
 	for i in options.identifiers:
-                # The lookaheads/lookbehinds ensures that the expr starts and ends either
-                # with a non-id character, or adjacent to one.
-                # This allows exprs that can match non-id characters to behave in a reasonable way
-                # Note there are subtle semantic differences between positive and negative
-                # lookaheads/lookbehinds.  Primarily, negative versions can match end of strings.
-                expr = '(?:(?<!\w)|(?=\W))(?:%s)(?:(?!\w)|(?<=\W))' % i
+		# The lookaheads/lookbehinds ensures that the expr starts and ends either
+		# with a non-id character, or adjacent to one.
+		# This allows exprs that can match non-id characters to behave in a reasonable way
+		# Note there are subtle semantic differences between positive and negative
+		# lookaheads/lookbehinds.  Primarily, negative versions can match end of strings.
+		expr = '(?:(?<!\w)|(?=\W))(?:%s)(?:(?!\w)|(?<=\W))' % i
 		args.append(expr)
 
 	matchText = True
@@ -248,7 +248,7 @@ if __name__ == '__main__':
 	# Match the filetype
 	if not options.filetypes:
 		# default filetype
-		options.filetypes.append('py') 
+		options.filetypes.append('py')
 
 	if len(options.filetypes) > 1:
 		tf = '\.(%s)$' % '|'.join(options.filetypes)

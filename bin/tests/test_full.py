@@ -21,7 +21,7 @@ pystone   = False
 
 
 class FullTestBase(unittest.TestCase):
-	
+
 	@conditionalDebugOnFailiure(config.debugOnFailiure)
 	def setUp(self):
 		# The makefile is relitive to this module.

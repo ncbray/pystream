@@ -9,7 +9,7 @@ As a very brief introduction to media theory:
 - Each token t has a "reverse" r such that St = V != S iff Vr = S != V.
 - Any two states can be connected by a sequence of actions that
   uses each token at most once and does not use both a token and its reverse.
-- In any sequence of effective actions taking a state back to itself, 
+- In any sequence of effective actions taking a state back to itself,
   the tokens can be matched up in token-reverse pairs.
 
 The resulting theory is equivalent to that for partial cubes (graphs that
@@ -26,7 +26,7 @@ try:
     set
 except NameError:
     from sets import Set as set
-    
+
 import BFS,DFS
 from Graphs import isUndirected
 import unittest
@@ -36,14 +36,14 @@ class MediumError(ValueError): pass
 class Medium:
     """
     Base class for media.
-    
+
     A medium is defined by four instance methods:
     - M.states() lists the states of M
     - M.tokens() lists the tokens of M
     - M.reverse(token) finds the token with opposite action to its argument
     - M.action(state,token) gives the result of applying that token
     These should be defined in subclasses; the base does not define them.
-    
+
     In addition, we define methods (that may possibly be overridden):
     - iter(M) is a synonym for M.states()
     - len(M) is a synonym for len(M.states())
@@ -55,7 +55,7 @@ class Medium:
     def __iter__(self):
         """Generate sequence of medium states."""
         return self.states()
-    
+
     def __len__(self):
         """Return number of states in the medium."""
         i = 0
@@ -111,12 +111,12 @@ class ExplicitMedium(Medium):
 class BitvectorMedium(Medium):
     """
     Medium defined by a set of bitvectors.
-    
+
     The tokens of the medium are pairs (i,b) where i is an index
     into a bitvector and b is a bit; the action of a token on a bitvector
     is to change the i'th bit to b, if the result is part of the set,
     and if not to leave the bitvector unchanged.
-    
+
     We assume but do not verify that the bitvectors do form a medium;
     that is, that one can transform any bitvector in the set into any
     other via a sequence of actions of length equal to the Hamming
@@ -127,7 +127,7 @@ class BitvectorMedium(Medium):
         """Initialize medium for set states and bitvector length L."""
         self._states = set(states)
         self._veclen = L
-    
+
     def states(self):
         return iter(self._states)
 
@@ -215,7 +215,7 @@ class LabeledGraphMedium(Medium):
 
     def action(self,S,t):
         return self._action[S].get(t,S)
-    
+
     def __len__(self):
         return len(self._action)
 
@@ -227,7 +227,7 @@ def RoutingTable(M):
     By following successive tokens from this table, we can find
     a path in the medium that uses each token at most once
     and involves no token-reverse pairs.
-    
+
     We use the O(n^2) time algorithm from arxiv:cs.DS/0206033.
     This is also a key step of the partial cube recognition algorithm
     from arxiv:0705.1025 -- as part of that algorithm, if we
@@ -251,7 +251,7 @@ def RoutingTable(M):
     # rest of data structure: point from states to list and list to states
     activeForState = dict([(S,-1) for S in M])
     statesForPos = [[] for i in activeTokens]
-    
+
     def scan(S):
         """Find the next token that is effective for s."""
         i = activeForState[S]
@@ -263,7 +263,7 @@ def RoutingTable(M):
                 activeForState[S] = i
                 statesForPos[i].append(S)
                 return
-    
+
     # set initial active states
     for S in M:
         if S != current:
@@ -276,12 +276,12 @@ def RoutingTable(M):
         if prev != current and edgetype != DFS.nontree:
             if edgetype == DFS.reverse:
                 prev,current = current,prev
-            
+
             # add token to end of list, point to it from old state
             activeTokens.append(G[prev][current])
             activeForState[prev] = len(activeTokens) - 1
             statesForPos.append([prev])
-            
+
             # inactivate reverse token, find new token for its states
             activeTokens[activeForState[current]] = inactivated
             for S in statesForPos[activeForState[current]]:
@@ -333,7 +333,7 @@ class MediumTest(unittest.TestCase):
         L2 = MediumTest.twobits + MediumTest.threebits
         L2.sort()
         self.assertEqual(L1,L2)
-    
+
     def testTokens(self):
         """Check that Medium.tokens() generates the correct set of tokens."""
         M = MediumTest.M523
@@ -342,7 +342,7 @@ class MediumTest(unittest.TestCase):
         for t in toks:
             i,b = t
             self.assertEqual(M.reverse(t),(i,not b))
-    
+
     def testAction(self):
         """Check that the action of the tokens is what we expect."""
         M = MediumTest.M523
@@ -355,8 +355,8 @@ class MediumTest(unittest.TestCase):
                     self.assertEqual(x,y)
                 else:
                     self.assertEqual(y,x^(1<<i))
-    
-    def testRouting(self): 
+
+    def testRouting(self):
         """Check that RoutingTable finds paths that decrease Hamming dist."""
         M = MediumTest.M523
         R = RoutingTable(M)
@@ -366,8 +366,8 @@ class MediumTest(unittest.TestCase):
                     i,b = R[x,y]
                     self.assertEqual((x^y)&(1<<i),1<<i)
                     self.assertEqual((x>>i)&1, not b)
-    
-    def testExplicit(self):            
+
+    def testExplicit(self):
         """Check that ExplicitMedium looks the same as its argument."""
         M = MediumTest.M523
         E = ExplicitMedium(M)
@@ -392,7 +392,7 @@ class MediumTest(unittest.TestCase):
             return d
         for x in M:
             for y in M:
-                self.assertEqual(ham(x,y),ham(E[x],E[y]))     
+                self.assertEqual(ham(x,y),ham(E[x],E[y]))
 
     def testGraph(self):
         """Check that LabeledGraphMedium(StateTransitionGraph(M)) = M."""
@@ -408,4 +408,3 @@ class MediumTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

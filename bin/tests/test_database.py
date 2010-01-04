@@ -236,4 +236,3 @@ class TestMapMapForget(unittest.TestCase):
 
 		f = m.forget().forget()
 		self.assertEqual(f, set((1, 2, 3, 4, 5)))
-

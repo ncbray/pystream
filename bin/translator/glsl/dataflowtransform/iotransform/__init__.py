@@ -32,7 +32,7 @@ def addOutput(g, subtree, original):
 		values = original.annotation.values
 	else:
 		values = original
-	
+
 	node = createLocalNode(g.hyperblock, getName(subtree, original), values)
 
 	g.addLocalModify(node.names[0], node)
@@ -51,24 +51,24 @@ def allocateObj(dioa, dataflow, subtree, slot, obj):
 	cls      = ast.Existing(obj.xtype.obj.type)
 	allocate = ast.Allocate(cls)
 	g = graph.GenericOp(hyperblock, allocate)
-	
+
 	g.setPredicate(predicate)
 	g.addLocalRead(cls, dataflow.getExisting(cls, obj))
 
 	# TODO mask?
 	setOpAnnotation(dioa, g, allocate=dioa.set.leaf((obj,)))
-	
+
 	return addOutput(g, subtree, slot)
 
 def makeStoreOp(dataflow, hyperblock, predicate, exprNode, field, valueNode):
 	name = ast.Existing(field.name)
 	op = ast.Store(exprNode.names[0], field.type, name, valueNode.names[0])
 
-	g = graph.GenericOp(hyperblock, op) 
+	g = graph.GenericOp(hyperblock, op)
 	g.setPredicate(predicate)
 	g.addLocalRead(exprNode.names[0], exprNode)
 	g.addLocalRead(name, dataflow.getExisting(name))
-	g.addLocalRead(valueNode.names[0], valueNode)	
+	g.addLocalRead(valueNode.names[0], valueNode)
 
 	return g
 
@@ -86,14 +86,14 @@ def transformInputSubtree(compiler, dioa, dataflow, subtree, root):
 		name = exprNode.names[0]
 		dataflow.entry.addEntry(name, exprNode)
 		subtree.impl = name
-	else:	
+	else:
 		assert len(objs) == 1
 		if intrinsics.isIntrinsicObject(obj):
 			exprNode = createLocalNode(hyperblock, getName(subtree, root), root.annotation.values)
 			name = exprNode.names[0]
 			dataflow.entry.addEntry(name, exprNode)
 			subtree.impl = name
-			
+
 			# Prevent the fields of this object from being transformed
 			return exprNode
 		else:
@@ -105,25 +105,25 @@ def transformInputSubtree(compiler, dioa, dataflow, subtree, root):
 	for field, child in subtree.fields.iteritems():
 		# Field the field nodes for the field name
 		fieldNodes = [lut[o.slots[field]] for o in objs if field in o.slots]
-		
+
 		fieldNode = fieldNodes[0] # HACK
-		
+
 		# HACK ignore correlated fields
 		#if fieldNode.annotation.values.correlated.tree(): continue
 
 		# Create the dataflow store
 		valueNode = transformInputSubtree(compiler, dioa, dataflow, child, fieldNode)
-		
+
 		g = makeStoreOp(dataflow, hyperblock, predicate, exprNode, field, valueNode)
 
 		for oldField in fieldNodes:
 			# This op should produce a new version of the field
 			newField = oldField.duplicate()
 			g.addModify(newField.name, newField)
-			
+
 			# Reads from this field should come from the store instead
 			oldField.canonical().redirect(newField)
-		
+
 		# TODO mask?
 		setOpAnnotation(dioa, g, modify=dioa.set.leaf(fieldNodes))
 
@@ -151,18 +151,18 @@ def makeLoadOp(dataflow, hyperblock, predicate, root, field):
 		expr = root.names[0]
 	else:
 		assert isinstance(root, graph.ExistingNode)
-		expr = root.name	
-	
+		expr = root.name
+
 	# Create the dataflow load
 	name = ast.Existing(field.name)
 	nameref = field.name # HACK incorrect
 	op   = ast.Load(expr, field.type, name)
-			
-	g = graph.GenericOp(hyperblock, op) 
+
+	g = graph.GenericOp(hyperblock, op)
 	g.setPredicate(predicate)
 	g.addLocalRead(expr, root)
 	g.addLocalRead(name, dataflow.getExisting(name, nameref))
-	
+
 	return g
 
 def transformOutputSubtree(compiler, dioa, dataflow, subtree, root):
@@ -172,27 +172,27 @@ def transformOutputSubtree(compiler, dioa, dataflow, subtree, root):
 	for field, child in subtree.fields.iteritems():
 		# Intrinsic fields will be transfered by copying the object they are attached to
 		if intrinsics.isIntrinsicField(field): continue
-		
+
 		g = makeLoadOp(dataflow, hyperblock, predicate, root, field)
-		
+
 		reads = dioa.set.empty
 		values = dioa.set.empty
-		
+
 		for obj, mask in subtree.objMasks.iteritems():
 			slot = obj.knownField(field)
 			node = dataflow.exit.reads[slot]
-		
+
 			g.addRead(slot, node)
-			
-			reads = dioa.set.union(reads, dioa.set.ite(mask, dioa.set.leaf((node,)), dioa.set.empty)) 
-			
+
+			reads = dioa.set.union(reads, dioa.set.ite(mask, dioa.set.leaf((node,)), dioa.set.empty))
+
 			fieldValues = node.annotation.values.correlated
 			fieldValues = dioa.set.simplify(mask, fieldValues, dioa.set.empty)
-			values = dioa.set.union(values, fieldValues) 
-		
+			values = dioa.set.union(values, fieldValues)
+
 		# TODO mask?
 		setOpAnnotation(dioa, g, read=reads)
-		
+
 		outputNode = addOutput(g, child,  makeCorrelatedAnnotation(dioa, values))
 
 		# Expose the local at the output.
@@ -200,7 +200,7 @@ def transformOutputSubtree(compiler, dioa, dataflow, subtree, root):
 		name = outputNode.names[0]
 		dataflow.exit.addExit(name, outputNode)
 		child.impl = name
-				
+
 		transformOutputSubtree(compiler, dioa, dataflow, child, outputNode)
 
 def transformOutput(compiler, dioa, dataflow, contextOut, root):
@@ -231,6 +231,5 @@ def killUnusedOutputs(context):
 		else:
 			return True
 
-	node = context.dataflow.exit	
+	node = context.dataflow.exit
 	node.filterUses(callback)
-	

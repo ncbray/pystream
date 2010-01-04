@@ -14,13 +14,13 @@ class Rewriter(TypeDispatcher):
 	def visitLeaf(self, node):
 		if node in self.replaced:
 			return node
-		
+
 		if node in self.replacements:
 			oldnode = node
 			self.replaced.add(oldnode)
 			node = self(self.replacements[node])
 			self.replaced.remove(oldnode)
-		
+
 		return node
 
 	@dispatch(list, tuple)

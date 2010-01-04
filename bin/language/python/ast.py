@@ -11,7 +11,7 @@ import util.python.calling
 
 AbstractObject = program.AbstractObject
 
-leafTypes = (str, int, long, bool, float, type(None), AbstractObject) 
+leafTypes = (str, int, long, bool, float, type(None), AbstractObject)
 
 class Existing(Reference):
 	__fields__  = 'object:AbstractObject'
@@ -427,11 +427,10 @@ class Check(LLExpression):
 		return True
 
 ### Definitions ###
-# These are used when generating code, not during compilation 
+# These are used when generating code, not during compilation
 
 class FunctionDef(CompoundStatement):
 	__fields__ = 'name:str code:Code decorators:Expression*'
 
 class ClassDef(CompoundStatement):
 	__fields__ = 'name:str bases:Expression* body:Suite decorators:Expression*'
-	

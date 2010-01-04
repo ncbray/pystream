@@ -12,7 +12,7 @@ def findLoadSrc(g):
 def isLocalSubset(defn, use):
 	defn = defn.canonical()
 	use = use.canonical()
-		
+
 	if defn is use:
 		return True
 	elif use.defn.isOp() and use.defn.isTypeSwitch():
@@ -26,13 +26,13 @@ def attemptTransform(g, pg):
 	# Is the load unused or invalid?
 	if len(g.localModifies) != 1:
 		return False
-	
+
 	defn = findLoadSrc(g)
 
-	if isinstance(defn, graph.GenericOp) and defn.isStore():		
+	if isinstance(defn, graph.GenericOp) and defn.isStore():
 		# Make sure the load / store parameters are identical
 		# expr
-		if not isLocalSubset(defn.localReads[defn.op.expr].canonical(), g.localReads[g.op.expr].canonical()): 
+		if not isLocalSubset(defn.localReads[defn.op.expr].canonical(), g.localReads[g.op.expr].canonical()):
 			return False
 
 		# field type
@@ -40,7 +40,7 @@ def attemptTransform(g, pg):
 			return False
 
 		# field name
-		if not g.localReads[g.op.name].canonical() == defn.localReads[defn.op.name].canonical(): 
+		if not g.localReads[g.op.name].canonical() == defn.localReads[defn.op.name].canonical():
 			return False
 
 		# Make sure the store predicate dominates the load predicate
@@ -49,17 +49,17 @@ def attemptTransform(g, pg):
 
 
 		# Make sure the heap read / modify is identical
-		
+
 		reads = frozenset([node.canonical() for node in g.heapReads.itervalues()])
 		modifies = frozenset([node.canonical() for node in defn.heapModifies.itervalues()])
 
 		if reads != modifies:
 			return False
-		
+
 		# It's sound to bypass the load.
 		src = defn.localReads[defn.op.value]
 		dst = g.localModifies[0]
-				
+
 		dst.canonical().redirect(src)
 		g.localModifies = []
 
@@ -70,25 +70,25 @@ def attemptTransform(g, pg):
 
 def collectLoads(dataflow):
 	loads = set()
-	
+
 	def collect(node):
 		if isinstance(node, graph.GenericOp) and node.isLoad():
 			loads.add(node)
-	
+
 	dfs(dataflow, collect)
-	
+
 	return loads
 
 
 def evaluateDataflow(dataflow):
 	pg = predicate.buildPredicateGraph(dataflow)
-	
+
 	loads = collectLoads(dataflow)
-	
+
 	print "LOADS", len(loads)
-	
+
 	eliminated = 0
-	
+
 	# HACK keep evaluating each load until no further transforms are possible.
 	changed = True
 	while changed:
@@ -96,6 +96,6 @@ def evaluateDataflow(dataflow):
 		for load in loads:
 			if attemptTransform(load, pg):
 				eliminated += 1
-				changed = True 
-	
+				changed = True
+
 	print "ELIMINATED", eliminated

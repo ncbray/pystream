@@ -17,7 +17,7 @@ class TestClosure2Decompile(TestDecompiler):
 def closure2(i):
 	a = i
 	a += 1
-	
+
 	def g():
 		return a
 	return g(), g.func_name

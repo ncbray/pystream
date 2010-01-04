@@ -30,7 +30,7 @@ class DataflowNode(object):
 
 	def getAnnotation(self):
 		return self._annotation
-	
+
 	def setAnnotation(self, value):
 		self._annotation = value
 
@@ -137,7 +137,7 @@ class FlowSensitiveSlotNode(SlotNode):
 
 	def redirect(self, other):
 		other = other.canonical()
-		
+
 		if self.use is not None and self.use.isSplit():
 			# Reach past the split
 			# Copy, just in case
@@ -188,7 +188,7 @@ class FlowSensitiveSlotNode(SlotNode):
 
 	def getAnnotation(self):
 		return self.canonical()._annotation
-	
+
 	def setAnnotation(self, value):
 		self.canonical()._annotation = value
 
@@ -398,9 +398,9 @@ class PredicatedOpNode(OpNode):
 
 		if self.predicate is not None:
 			self.predicate.removeUse(self)
-			
+
 		self.predicate = p
-		
+
 		if self.predicate is not None:
 			self.predicate = self.predicate.addUse(self)
 
@@ -471,7 +471,7 @@ class Exit(PredicatedOpNode):
 	def replaceUse(self, original, replacement):
 		assert original is not None
 		assert replacement is not None
-		
+
 		if self.predicate is original:
 			self.predicate = replacement
 		else:
@@ -484,13 +484,13 @@ class Exit(PredicatedOpNode):
 			self.reads[name] = replacement
 
 	def filterUses(self, callback):
-		reads = {}		
+		reads = {}
 		for name, slot in self.reads.iteritems():
 			if callback(name, slot):
 				reads[name] = slot
 			else:
 				slot.removeUse(self)
-		self.reads = reads		
+		self.reads = reads
 
 
 class Gate(PredicatedOpNode):
@@ -513,7 +513,7 @@ class Gate(PredicatedOpNode):
 		assert self.modify is None
 		slot = slot.addDefn(self)
 		assert self.modify is None
-		self.modify = slot	
+		self.modify = slot
 
 	def replaceUse(self, original, replacement):
 		if self.predicate is original:
@@ -700,7 +700,7 @@ class GenericOp(PredicatedOpNode):
 			self.predicate = replacement
 		elif isinstance(original, (LocalNode, ExistingNode)):
 			assert isinstance(replacement, (LocalNode, ExistingNode)), replacement
-			
+
 			# We can't simply check the game, as bizarre transforms may result in mis-named nodes.
 			for name, value in self.localReads.iteritems():
 				if value is original:
@@ -805,7 +805,7 @@ class DataflowGraph(object):
 		self.exit     = None # Defer creation, as we don't know the hyperblock.
 		self.existing = {}
 		self.null     = NullNode()
-		
+
 		self.entryPredicate = None
 
 	# Separated from __init__ method, as transformation passes may want to do this manually.

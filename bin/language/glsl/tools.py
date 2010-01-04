@@ -5,7 +5,7 @@ class MakeAssign(TypeDispatcher):
 	@dispatch(type(None))
 	def visitNone(self, dst, src):
 		return glsl.Discard(src)
-	
+
 	@dispatch(glsl.Local)
 	def visitLocal(self, dst, src):
 		return glsl.Assign(src, dst)
@@ -13,7 +13,7 @@ class MakeAssign(TypeDispatcher):
 	@dispatch(glsl.GetSubscript)
 	def visitSetSubscript(self, dst, src):
 		return glsl.SetSubscript(src, dst.expr, dst.subscript)
-	
+
 	@dispatch(glsl.GetAttr)
 	def visitGetAttr(self, dst, src):
 		return glsl.SetAttr(src, dst.expr, dst.name)

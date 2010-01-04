@@ -39,8 +39,8 @@ class Handlers(object):
 
 
 class SSITransformer(TypeDispatcher):
-	__namedispatch__ = True # HACK emulates old visitor		
-	
+	__namedispatch__ = True # HACK emulates old visitor
+
 	def __init__(self, annotate, readExcept, hasExceptionHandling):
 		super(SSITransformer, self).__init__()
 		self.locals = LocalFrame()
@@ -457,7 +457,7 @@ class SSITransformer(TypeDispatcher):
 
 	def processCode(self, node):
 		assert isinstance(node, ast.Code), type(node)
-		
+
 		# Insulate any containing functions.
 		old = self.locals
 

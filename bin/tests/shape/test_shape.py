@@ -23,11 +23,11 @@ class TestExpressions(TestConstraintBase):
 		self.zero_b_a = self.expr(self.zero, self.fieldb, self.fielda)
 		self.zero_b_b = self.expr(self.zero, self.fieldb, self.fieldb)
 
-		self.one     = self.sys.canonical.localExpr(self.localo)		
+		self.one     = self.sys.canonical.localExpr(self.localo)
 		self.one_a   = self.expr(self.one, self.fielda)
 		self.one_a_a = self.expr(self.one, self.fielda, self.fielda)
 		self.one_a_b = self.expr(self.one, self.fielda, self.fieldb)
-		
+
 		self.one_b   = self.expr(self.one, self.fieldb)
 		self.one_b_a = self.expr(self.one, self.fieldb, self.fielda)
 		self.one_b_b = self.expr(self.one, self.fieldb, self.fieldb)
@@ -92,7 +92,7 @@ class TestExpressions(TestConstraintBase):
 
 		self.checkHitMiss(newPaths, expectedHits, expectedMisses)
 
-		
+
 
 	def testUpdateHitMiss2(self):
 		# zero = zero.a
@@ -161,7 +161,7 @@ class TestReferenceCounts(TestConstraintBase):
 	def scalarIncrement(self, rc, slot):
 		next = self.sys.canonical.incrementRef(rc, slot)
 		self.assertEqual(len(next), 1)
-		return next[0]	
+		return next[0]
 
 	def testIncrementSaturate(self):
 		current = None
@@ -177,9 +177,9 @@ class TestReferenceCounts(TestConstraintBase):
 			for cslot, count in next.counts.iteritems():
 				self.assertEqual(cslot, slot)
 				self.assertEqual(count, i+1)
-			
+
 			current = next
-	
+
 		next = self.scalarIncrement(current, slot)
 		self.assertEqual(current, next)
 
@@ -191,10 +191,10 @@ class TestReferenceCounts(TestConstraintBase):
 		inc3 = self.scalarIncrement(inc2, slot)
 
 		# Decrementing infinity can yield two different configurations
-		dec2 = self.sys.canonical.decrementRef(inc3, slot)		
+		dec2 = self.sys.canonical.decrementRef(inc3, slot)
 		self.assertEqual(set(dec2), set((inc2,inc3)))
 
-		# Decrementing an "intermediate" value will result in a single 
+		# Decrementing an "intermediate" value will result in a single
 		dec1 = self.sys.canonical.decrementRef(inc2, slot)
 		self.assertEqual(dec1, (inc1,))
 
@@ -329,7 +329,7 @@ class TestLoadAssignConstraint(TestConstraintBase):
 
 		self.axExpr  = self.expr(self.aExpr, self.xAttr)
 		self.axxExpr = self.expr(self.aExpr, self.xAttr, self.xAttr)
-		
+
 		self.bxExpr  = self.expr(self.bExpr, self.xAttr)
 
 
@@ -345,7 +345,7 @@ class TestLoadAssignConstraint(TestConstraintBase):
 		# b = a.x
 		self.setConstraint(analysis.shape.constraints.AssignmentConstraint(self.sys, self.inputPoint, self.outputPoint, self.axExpr, self.bExpr))
 
-	
+
 
 	def testTargetAlias(self):
 		# b -> nil
@@ -381,7 +381,7 @@ class TestLoadAssignConstraint(TestConstraintBase):
 
 	def testAttrMustNotAlias(self):
 		# x(a.x.x|a.x) -> x(a.x.x, b.x|a.x)
-		
+
 		argument = (self.xRef, (self.axxExpr,), (self.axExpr,))
 		results = [
 			(self.xRef, (self.axxExpr, self.bxExpr), (self.axExpr,)),
@@ -450,7 +450,7 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		results = [
 			(self.xRef, None, (self.bxExpr,)),
 			]
-		self.checkTransfer(argument, results)		
+		self.checkTransfer(argument, results)
 
 
 	def testHeapMustAliasChild(self):
@@ -461,7 +461,7 @@ class TestStoreAssignConstraint(TestConstraintBase):
 			#(self.xRef, (self.axExpr,self.bxxExpr), (self.bxExpr,)),
 			(self.xRef, (), (self.bxExpr,)),
 			]
-		self.checkTransfer(argument, results)	
+		self.checkTransfer(argument, results)
 
 
 	def testNoAffect(self):
@@ -470,14 +470,14 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		results = [
 			(self.axRef, (self.bxExpr,self.bxxExpr), None),
 			]
-		self.checkTransfer(argument, results)	
+		self.checkTransfer(argument, results)
 
 	def testHeapMustAlias(self):
 		# x(b.x|) -> null
 		argument = (self.xRef, (self.bxExpr,), None)
 		results = [
 			]
-		self.checkTransfer(argument, results)	
+		self.checkTransfer(argument, results)
 
 	def testHeapLocalMustAlias(self):
 		# bx(b.x|) -> b
@@ -487,7 +487,7 @@ class TestStoreAssignConstraint(TestConstraintBase):
 			# HACK bxExpr should not be a miss, as it is trivially computable...
 			(self.bRef, None, None),
 			]
-		self.checkTransfer(argument, results)	
+		self.checkTransfer(argument, results)
 
 	def testHeap2LocalMustAlias(self):
 		# bxx(b.x|) -> bx(|b.x)
@@ -495,4 +495,4 @@ class TestStoreAssignConstraint(TestConstraintBase):
 		results = [
 			(self.bxRef, None, (self.bxExpr,)),
 			]
-		self.checkTransfer(argument, results)	
+		self.checkTransfer(argument, results)

@@ -30,13 +30,24 @@ class UniformDecl(GLSLASTNode):
 	__fields__    = 'builtin:bool type:Type name:str initializer:(Constant,Constructor)?'
 	__shared__    = True
 
+	def __repr__(self):
+		return "%s(%s)" % (type(self).__name__, self.name)
+
 class InputDecl(GLSLASTNode):
 	__fields__    = 'interpolation:str? centroid:bool builtin:bool type:Type name:str'
 	__shared__    = True
 
+	def __repr__(self):
+		return "%s(%s)" % (type(self).__name__, self.name)
+
+
 class OutputDecl(GLSLASTNode):
 	__fields__    = 'interpolation:str? centroid:bool invariant:bool builtin:bool type:Type name:str'
 	__shared__    = True
+
+	def __repr__(self):
+		return "%s(%s)" % (type(self).__name__, self.name)
+
 
 #interpolation: (smooth, nonperspective, flat)
 
@@ -92,15 +103,15 @@ class Local(Expression):
 
 class Uniform(Expression):
 	__fields__ = 'decl:UniformDecl'
-	__shared__ = True
+	__shared__ = False
 
 class Input(Expression):
 	__fields__ = 'decl:InputDecl'
-	__shared__ = True
+	__shared__ = False
 
 class Output(Expression):
 	__fields__ = 'decl:OutputDecl'
-	__shared__ = True
+	__shared__ = False
 
 # HACK lcl can be output?
 class Assign(Statement):

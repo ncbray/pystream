@@ -4,12 +4,21 @@
 *.log-psyco
 *.prof
 
+# Used in resource processing
+*.cache
+
 # vi
 *.swp
+
+# Windows
+Thumbs.db
 
 # Generic temp files
 *.bak
 *.tmp
+
+# LyX temp file
+*.lyx~
 
 # Eclipse files
 .project

@@ -18,6 +18,7 @@ class PoolImplementation(object):
 
 		self.basename = basename
 		self.stores   = {}
+		self.types    = {}
 
 		self.struct = SlotStruct(poolinfo)
 
@@ -44,6 +45,12 @@ class PoolImplementation(object):
 			return ref
 		else:
 			return glsl.GetSubscript(ref, index)
+
+	def getType(self, index):
+		assert self.poolinfo.typeTaken
+		#assert False, "hack"
+
+		return glsl.Load(index, 'type')
 
 	def getField(self, index, field, slotinfo):
 		assert slotinfo.isSlotInfo(), slotinfo

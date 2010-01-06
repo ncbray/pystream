@@ -15,6 +15,7 @@ from . poolimplementation import PoolImplementation, ensureValidName
 # HACK for debugging
 from language.glsl import codegen
 
+
 class SlotRef(object):
 	def __init__(self, ref, struct):
 		assert isinstance(ref, glsl.GLSLASTNode) or ref is None, ref
@@ -33,6 +34,7 @@ class SlotRef(object):
 
 class RewriterWrapper(TypeDispatcher):
 	def __init__(self, translator):
+		TypeDispatcher.__init__(self)
 		self.translator = translator
 
 	@dispatch(ast.Local, ast.Existing)
@@ -46,6 +48,8 @@ class RewriterWrapper(TypeDispatcher):
 
 class GLSLTranslator(TypeDispatcher):
 	def __init__(self, code, poolanalysis, intrinsicRewrite, inputLUT, outputLUT):
+		TypeDispatcher.__init__(self)
+
 		self.code         = code
 		self.poolanalysis = poolanalysis
 
@@ -185,6 +189,14 @@ class GLSLTranslator(TypeDispatcher):
 
 	def slotRef(self, op, slot):
 		return SlotRef(op, self.slotStruct(slot))
+
+	def typeRef(self, lcl, g):
+		exprSlot = g.localReads[lcl].canonical()
+
+		expr     = self.localRef(lcl, g)
+		exprImpl = self.getPoolImpl(exprSlot)
+
+		return exprImpl.getType(expr)
 
 	def fieldRef(self, node, slot, g):
 		exprSlot = g.localReads[node.expr].canonical()
@@ -344,6 +356,9 @@ class GLSLTranslator(TypeDispatcher):
 		return self.transfer(src, dst)
 
 	def generatePrologue(self, node):
+		# Output a flattened version of the input image,
+		# and copies volatile inouts
+
 		prologue = []
 
 		uid = 0
@@ -370,14 +385,18 @@ class GLSLTranslator(TypeDispatcher):
 				input  = glsl.Uniform(decl)
 
 				# HACK don't copy the uniforms.  Samplers cannot be copied
-				# Inputs are still copied due to inout WAR hazards.
+				# Inputs are still copied due to inout RAW hazards.
 				self.replaceLocal(node, input)
-				continue
 			else:
 				decl   = glsl.InputDecl(None, False, tree.builtin, lcl.type, name)
 				input  = glsl.Input(decl)
+				prologue.append(glsl.Assign(input, lcl))
 
-			prologue.append(glsl.Assign(input, lcl))
+		print
+		print "IN"
+		for stmt in prologue:
+			print stmt
+		print
 
 		return prologue
 
@@ -406,6 +425,13 @@ class GLSLTranslator(TypeDispatcher):
 
 			epilogue.append(glsl.Assign(lcl, output))
 
+
+		print
+		print "OUT"
+		for stmt in epilogue:
+			print stmt
+		print
+
 		return epilogue
 
 	@dispatch(graph.Entry)
@@ -425,20 +451,44 @@ class GLSLTranslator(TypeDispatcher):
 
 	@dispatch(cfg.CFGTypeSwitch)
 	def visitCFGTypeSwitch(self, node):
-		#op = node.switch.op
+		g = node.switch.op
+
+		conditional = g.op.conditional
+
+		condNode = g.localReads[conditional].canonical()
+
+
+		values     = condNode.annotation.values
+		flat       = values.flat
+		correlated = values.correlated
+
+		print
+		print "SWITCH", g
+		print conditional
+		print condNode
+		print
+
+		condInfo = self.getSlotInfo(condNode)
 
 		cases = [self(case) for case in node.cases]
 
 		current = cases.pop()
 
+		conditionSrc = self.typeRef(conditional, g)
+
+		condition = glsl.Local(intrinsics.intrinsicTypeNodes[int], 'tempType')
+
+		condAssign = glsl.Assign(conditionSrc, condition)
+
 		while cases:
 			case = cases.pop()
-			condition = glsl.Local(intrinsics.intrinsicTypeNodes[bool], 'bogus')
+
+			#condition = glsl.Local(intrinsics.intrinsicTypeNodes[bool], 'bogus')
 			current = glsl.Switch(condition, case, current)
 
 		#node.merge
 
-		return current
+		return [condAssign, current]
 
 	@dispatch(cfg.CFGBlock)
 	def visitCFGBlock(self, node):
@@ -474,6 +524,7 @@ def process(context):
 
 	# HACK for debugging
 	s = codegen.evaluateCode(context.compiler, result)
-	print s
+	if context.show:
+		print s
 
 	return compressGLSL(s)

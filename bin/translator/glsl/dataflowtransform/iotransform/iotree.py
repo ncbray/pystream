@@ -127,6 +127,37 @@ class IOTreeObj(object):
 
 		return result
 
+	# Give the tree default names
+	def nameTree(self, name, uid=0):
+		if not self.name:
+			nodename = "%s_%d"  % (name, uid)
+			uid += 1
+
+			self.name = nodename
+
+		for child in self.fields.itervalues():
+			uid = child.nameTree(name, uid)
+
+		return uid
+
+	# Give matching nodes the same name
+	# Used so the corresponding uniforms of two shaders are named the same.
+	def harmonize(self, other, name, uid=0):
+		nodename = "%s_%d"  % (name, uid)
+		uid += 1
+
+		self.name  = nodename
+		other.name = nodename
+
+		# Recurse into matching children.
+		for field, child in self.fields.iteritems():
+			otherchild = other.fields.get(field)
+			if otherchild is not None:
+				print "HARMONIZE", field
+				uid = child.harmonize(otherchild, name, uid)
+
+		return uid
+
 def handleObj(dioa, obj, lut, exist, mask, tobj):
 	# Does this field actually exist?
 	if mask is dioa.bool.false: return

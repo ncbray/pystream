@@ -15,6 +15,8 @@ from .iotransform import serialize
 
 import analysis.dataflowIR.convert
 
+# Make a multi-level dictionary that terminates with names as its leaves.
+# matcher[a][b] -> the name of path a.b
 def makePathMatcher(compiler):
 	root = {}
 	for path, name, _input, _output in compiler.interface.glsl.attr:
@@ -105,33 +107,6 @@ def findIOTrees(context):
 	iotransform.killNonintrinsicIO(compiler, dataflow)
 	trees.buildLUTs()
 
-def harmonizeUniformTrees(name, uid, tree0, tree1):
-	nodename = "%s_%d"  % (name, uid)
-	uid += 1
-
-	tree0.name = nodename
-	tree1.name = nodename
-
-	for field in tree0.fields.iterkeys():
-		if field not in tree1.fields: continue
-		print "HARMONIZE", field
-		uid = harmonizeUniformTrees(name, uid, tree0.fields[field], tree1.fields[field])
-
-	return uid
-
-def nameTree(name, uid, tree):
-	if not tree.name:
-		nodename = "%s_%d"  % (name, uid)
-		uid += 1
-
-		tree.name = nodename
-
-	for field, child in tree.fields.iteritems():
-		uid = nameTree(name, uid, child)
-
-	return uid
-
-
 class IOTrees(object):
 	def __init__(self):
 		self.uniformIn = None
@@ -165,6 +140,7 @@ class DataflowTransformContext(object):
 		self.compiler = compiler
 		self.code     = code
 		self.trees    = None
+		self.show     = False
 
 	def convert(self):
 		self.dataflow = analysis.dataflowIR.convert.evaluateCode(self.compiler, self.code)
@@ -215,7 +191,7 @@ class DataflowTransformContext(object):
 		for outp, inp in zip(outputs, inputs):
 			uid = outp.makeLinks(inp, uid)
 
-	def findLiveLinked(self, node, lut, live):
+	def _findLiveLinked(self, node, lut, live):
 		if node.link:
 			for name in node.names():
 				if name in lut:
@@ -225,15 +201,27 @@ class DataflowTransformContext(object):
 				node.unlink()
 
 		for field in node.fields.itervalues():
-			self.findLiveLinked(field, lut, live)
+			self._findLiveLinked(field, lut, live)
 
-	def findLive(self, node, lut, live):
+	# Find what inputs are both live and linked to another shader.
+	def findLiveLinkedInputs(self):
+		live = set()
+
+		lut = self.dataflow.entry.modifies
+		for inp in self.trees.inputs:
+			self._findLiveLinked(inp, lut, live)
+
+		return live
+
+	def findLive(self, node, live):
+		lut = self.dataflow.exit.reads
+
 		for name in node.names():
 			if name in lut:
 				live.add(name)
 
 		for field in node.fields.itervalues():
-			self.findLive(field, lut, live)
+			self.findLive(field, live)
 
 def evaluateCode(compiler, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, vscode)
@@ -248,33 +236,32 @@ def evaluateCode(compiler, vscode, fscode):
 		fscontext.analyze()
 
 	with compiler.console.scope('link'):
-		harmonizeUniformTrees('common', 0, vscontext.uniformTree(), fscontext.uniformTree())
+		# Ensure that identical uniforms are named the same
+		vsuniforms = vscontext.uniformTree()
+		fsuniforms = fscontext.uniformTree()
+		vsuniforms.harmonize(fsuniforms, 'common')
 
+		# Name the rest of the tree nodes
 		# HACK avoid name conflicts by explicitly naming the trees
-		nameTree('uniform_vs', 0, vscontext.uniformTree())
-		nameTree('uniform_fs', 0, fscontext.uniformTree())
+		vsuniforms.nameTree('uniform_vs')
+		fsuniforms.nameTree('uniform_fs')
 
+		# Link the shaders together and see what is unused.
 		vscontext.link(fscontext)
-
 		iotransform.killUnusedOutputs(fscontext)
 		fscontext.simplify()
 
 		# TODO load eliminate uniform -> varying
 
 		# Find the live I/O
-		live = set()
-		lut = fscontext.dataflow.entry.modifies
-		for inp in fscontext.trees.inputs:
-			fscontext.findLiveLinked(inp, lut, live)
+		live = fscontext.findLiveLinkedInputs()
 
-		lut = vscontext.dataflow.exit.reads
-		vscontext.findLive(vscontext.trees.contextOut, lut, live)
+		vscontext.findLive(vscontext.trees.contextOut, live)
 
 		# Remove the dead outputs from the vertex shader
 		def filterLive(name, slot):
 			return name in live
 		vscontext.dataflow.exit.filterUses(filterLive)
-
 		vscontext.simplify()
 
 	with compiler.console.scope('synthesize'):

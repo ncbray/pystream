@@ -206,7 +206,7 @@ def transformOutputSubtree(compiler, dioa, dataflow, subtree, root):
 def transformOutput(compiler, dioa, dataflow, contextOut, root):
 	transformOutputSubtree(compiler, dioa, dataflow, contextOut, root)
 
-def killNonintrinsicIO(compiler, dataflow):
+def killNonintrinsicIO(dataflow):
 	def callback(name, slot):
 		if slot.isField():
 			# Kill non-intrinsic fields.

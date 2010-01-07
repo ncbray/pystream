@@ -227,11 +227,6 @@ class PoolAnalysis(TypeDispatcher):
 		return list(infos)
 
 	def handleSlots(self):
-		# Initialize all slots
-#		for slot in self.analysis._values.iterkeys():
-#			if not slot[0].isPredicate() and not slot[0].isExisting() and not slot[0].isNull():
-#				self.getSlotInfo(slot)
-
 		analysis.dataflowIR.traverse.dfs(self.dataflow, self)
 
 	def makeCanonical(self, slots):
@@ -418,7 +413,7 @@ class PoolAnalysis(TypeDispatcher):
 
 		# Find interference graph
 		if len(group) > 1:
-			# n^2... ugly?
+			# HACK n^2... ugly?
 			for a, b in itertools.combinations(group, 2):
 				if self.objectsInterfere(a, b):
 					interference[a].add(b)
@@ -430,40 +425,47 @@ class PoolAnalysis(TypeDispatcher):
 		coloring, grouping, _numColors = colorGraph(interference)
 		return coloring, grouping
 
-	def postProcess(self):
-		# Annotate final objects
+	def markFinalObjects(self):
 		for obj in self.info.iterkeys():
 			if obj not in self.nonfinal:
 				obj.annotation = obj.annotation.rewrite(final = True)
+	
+	def subgroupUniqueness(self, subgroup):
+		assert subgroup, objs
+
+		unique    = False
+		nonunique = False
+
+		for obj in subgroup:
+			if obj.annotation.unique:
+				unique = True
+			else:
+				nonunique = True
+
+		return unique, nonunique
+				
+	def processPool(self, pool):
+		pool.uniqueCount    = 0
+		pool.nonuniqueCount = 0
+
+		objs = pool.allObjects()
+		assert objs, objs
+
+		pool.coloring, groupings = self.colorGroup(objs)
+		assert groupings, objs
+		
+		for subgroup in groupings:
+			unique, nonunique = self.subgroupUniqueness(subgroup)
+			if unique:    pool.uniqueCount += 1
+			if nonunique: pool.nonuniqueCount += 1		
+
+	def postProcess(self):
+		# Annotate final objects
+		self.markFinalObjects()
 
 		# Process pool information
 		for pool in self.infoList():
-			pool.uniqueCount    = 0
-			pool.nonuniqueCount = 0
-
-			objs = pool.allObjects()
-
-			assert objs, objs
-
-			pool.coloring, grouping = self.colorGroup(objs)
-
-			assert grouping, objs
-			for subgroup in grouping:
-				assert subgroup, objs
-
-				unique    = False
-				nonunique = False
-
-				for obj in subgroup:
-					if obj.annotation.unique:
-						unique = True
-					else:
-						nonunique = True
-
-				assert unique or nonunique, subgroup
-
-				if unique:    pool.uniqueCount += 1
-				if nonunique: pool.nonuniqueCount += 1
+			self.processPool(pool)
 
 	def process(self):
 		self.handleSlots()

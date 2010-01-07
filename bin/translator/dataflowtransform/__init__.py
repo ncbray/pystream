@@ -32,60 +32,23 @@ def makePathMatcher(compiler):
 
 	return root
 
-def findIOTrees(context):
 
-	compiler = context.compiler
-	dioa = context.dioa
-	code = context.code
+def transformOutput(context, tree, lut):
+	if tree is not None and tree.impl is not None:
+		node = lut[tree.impl]
+		iotransform.transformOutput(context.compiler, context.dioa, context.dataflow, tree, node)
+
+def transformInput(context, tree, lut):
+	if tree is not None and tree.impl is not None:
+		node = lut[tree.impl]
+		iotransform.transformInput(context.compiler, context.dioa, context.dataflow, tree, node)
+
+def transformIO(context):
+	trees = context.trees
 	dataflow = context.dataflow
-
-	trees = IOTrees()
-	context.trees = trees
-
-	# Find the inputs / uniforms
-	# param 0  -> uniforms
-	# param 1  -> context object
-	# param 2+ -> inputs
-
-	params     = code.codeparameters.params
-	lut        = dataflow.entry.modifies
-	exist      = dataflow.entry.annotation.mask
-	contextObj = iotree.getSingleObject(dioa, lut, params[1])
-
-	trees.uniformIn = iotree.evaluateLocal(dioa, lut, exist, params[0], 'uniform')
-	trees.contextIn = iotree.evaluateContextObject(dioa, lut, exist, params[1], contextObj, 'in')
-	trees.inputs    = [iotree.evaluateLocal(dioa, lut, exist, p, 'in') for p in params[2:]]
-
-	# Find the outputs
-	lut   = dataflow.exit.reads
-	exist = dataflow.exit.annotation.mask
-
-	# Context object
-	trees.contextOut = iotree.evaluateContextObject(dioa, lut, exist, params[1], contextObj, 'out')
-
-	# Return values
-	returns = code.codeparameters.returnparams
-	assert len(returns) == 1, returns
-	trees.returnOut = iotree.evaluateLocal(dioa, lut, exist, returns[0], 'out')
-
-	# Find the builtin fields
-	trees.match(makePathMatcher(compiler))
-
-	# Transform the trees
-	# NOTE the output is done first, as it references a local which
-	# will later be transformed / eliminated by the input transform.
-
-	def transformOutput(context, tree, lut):
-		if tree is not None and tree.impl is not None:
-			node = lut[tree.impl]
-			iotransform.transformOutput(context.compiler, context.dioa, context.dataflow, tree, node)
-
-	def transformInput(context, tree, lut):
-		if tree is not None and tree.impl is not None:
-			node = lut[tree.impl]
-			iotransform.transformInput(context.compiler, context.dioa, context.dataflow, tree, node)
-
-
+	# NOTE the outputs are done first, as it references a local which
+	# will later be transformed / eliminated by the input transform.	
+	
 	### OUTPUT ###
 	# Transform the output context object
 	transformOutput(context, trees.contextOut, dataflow.entry.modifies)
@@ -104,8 +67,42 @@ def findIOTrees(context):
 	for tree in trees.inputs:
 		transformInput(context, tree, dataflow.entry.modifies)
 
-	iotransform.killNonintrinsicIO(compiler, dataflow)
-	trees.buildLUTs()
+def findIOTrees(context):
+	dioa = context.dioa
+	dataflow = context.dataflow
+
+	trees = IOTrees()
+
+	# Find the inputs / uniforms
+	# param 0  -> uniforms
+	# param 1  -> context object
+	# param 2+ -> inputs
+
+	params     = context.code.codeparameters.params
+	lut        = dataflow.entry.modifies
+	exist      = dataflow.entry.annotation.mask
+	contextObj = iotree.getSingleObject(dioa, lut, params[1])
+
+	trees.uniformIn = iotree.evaluateLocal(dioa, lut, exist, params[0], 'uniform')
+	trees.contextIn = iotree.evaluateContextObject(dioa, lut, exist, params[1], contextObj, 'in')
+	trees.inputs    = [iotree.evaluateLocal(dioa, lut, exist, p, 'in') for p in params[2:]]
+
+	# Find the outputs
+	lut   = dataflow.exit.reads
+	exist = dataflow.exit.annotation.mask
+
+	# Context object
+	trees.contextOut = iotree.evaluateContextObject(dioa, lut, exist, params[1], contextObj, 'out')
+
+	# Return values
+	returns = context.code.codeparameters.returnparams
+	assert len(returns) == 1, returns
+	trees.returnOut = iotree.evaluateLocal(dioa, lut, exist, returns[0], 'out')
+
+	# Find the builtin fields
+	trees.match(makePathMatcher(context.compiler))
+
+	return trees
 
 class IOTrees(object):
 	def __init__(self):
@@ -149,7 +146,15 @@ class DataflowTransformContext(object):
 		self.dioa = correlatedanalysis.evaluateDataflow(self.compiler, self.dataflow)
 		self.dataflow = self.dioa.flat
 
-		findIOTrees(self)
+		self.trees = findIOTrees(self)
+		self.flattenTrees()
+
+	def flattenTrees(self):
+		# Transform the trees
+		transformIO(self)	
+		iotransform.killNonintrinsicIO(self.dataflow)
+		self.trees.buildLUTs()
+
 
 	def synthesize(self):
 		# Reconstruct the CFG from the dataflow graph

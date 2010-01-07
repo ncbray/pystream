@@ -6,8 +6,8 @@ from language.python import ast
 from language.glsl import ast as glsl
 import language.glsl.tools
 
-from translator.glsl import intrinsics
-from translator.glsl.exceptions import TemporaryLimitation
+from translator import intrinsics
+from translator.exceptions import TemporaryLimitation
 
 from . slotstruct import SlotStruct
 from . poolimplementation import PoolImplementation, ensureValidName

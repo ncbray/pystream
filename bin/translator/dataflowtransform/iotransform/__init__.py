@@ -2,7 +2,7 @@ from language.python import ast
 from analysis.dataflowIR import graph
 from analysis.dataflowIR import annotations
 
-from translator.glsl import intrinsics
+from translator import intrinsics
 
 def makeCorrelatedAnnotation(dioa, data):
 	return annotations.CorrelatedAnnotation(dioa.set.flatten(data), data)

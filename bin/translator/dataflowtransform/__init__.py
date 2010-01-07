@@ -3,7 +3,7 @@ import analysis.dataflowIR.convert
 from analysis.dataflowIR.transform import loadelimination
 from analysis.dataflowIR.transform import dce
 
-from  translator.glsl.dataflowtransform import correlatedanalysis
+from  translator.dataflowtransform import correlatedanalysis
 
 from . import poolanalysis
 from analysis.cfgIR import dataflowsynthesis
@@ -273,3 +273,15 @@ def evaluateCode(compiler, vscode, fscode):
 	with compiler.console.scope('dump'):
 		vscontext.dump()
 		fscontext.dump()
+
+
+from language.python.shaderprogram import ShaderProgram
+
+def translate(compiler):
+	with compiler.console.scope('translate to glsl'):
+		for code in compiler.interface.entryCode():
+			if isinstance(code, ShaderProgram):
+				vs = code.vertexShaderCode()
+				fs = code.fragmentShaderCode()
+
+				evaluateCode(compiler, vs, fs)

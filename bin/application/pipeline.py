@@ -18,7 +18,7 @@ import optimization.loadelimination
 import optimization.storeelimination
 
 import analysis.fsdf
-import translator.glsl
+import translator.dataflowtransform
 
 import config
 import threading
@@ -101,7 +101,7 @@ def evaluate(compiler, name):
 
 			if True:
 				# Translate abstract shader programs into code.
-				translator.glsl.translate(compiler)
+				translator.dataflowtransform.translate(compiler)
 		finally:
 			if config.doDump:
 				try:

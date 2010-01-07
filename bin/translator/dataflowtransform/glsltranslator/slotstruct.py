@@ -1,4 +1,4 @@
-from translator.glsl import intrinsics
+from translator import intrinsics
 from language.glsl import ast as glsl
 
 # HACK for debugging

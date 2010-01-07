@@ -365,7 +365,7 @@ class CodeInliningTransform(TypeDispatcher):
 			self.code = None
 			self.trace.remove(node)
 
-import translator.glsl.intrinsics
+import translator.intrinsics
 
 def evaluate(compiler):
 	with compiler.console.scope('code inlining'):
@@ -373,7 +373,7 @@ def evaluate(compiler):
 		for code in compiler.liveCode:
 			analysis.process(code)
 
-		intrinsics = translator.glsl.intrinsics.makeIntrinsicRewriter(compiler.extractor)
+		intrinsics = translator.intrinsics.makeIntrinsicRewriter(compiler.extractor)
 
 		transform = CodeInliningTransform(analysis, compiler, intrinsics)
 		for code in compiler.interface.entryCode():

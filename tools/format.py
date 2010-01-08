@@ -22,11 +22,34 @@ def buildParser():
 	parser.add_option_group(group)
 
 	group = optparse.OptionGroup(parser, "File Filters")
+	group.add_option('-t', dest='filetypes', action='append', default=[], help="matches the file type", metavar="TYPE")
 	group.add_option('-f', dest='filefilters', action='append', default=[], help="matches the file name", metavar="FILTER")
 	group.add_option('-g', dest='excludefilefilters', action='append', default=[], help="excludes file name", metavar="FILTER")
 	parser.add_option_group(group)
 
 	return parser
+
+class CascadingMatcher(object):
+	def __init__(self):
+		self.positivePatterns = []
+		self.negativePatterns = []
+
+	def require(self, p):
+		self.positivePatterns.append(p)
+
+	def exclude(self, p):
+		self.negativePatterns.append(p)
+
+	def matches(self, s):
+		for p in self.positivePatterns:
+			if not p.search(s):
+				return False
+
+		for p in self.negativePatterns:
+			if p.search(s):
+				return False
+
+		return True
 
 possibleMultilineString = re.compile('"""|\'\'\'')
 
@@ -155,17 +178,56 @@ def handleFile(fn):
 
 	if title:
 		print
+		return True
+	else:
+		return False
 
-def run(dir):
+def run(dir, fileMatcher):
 	for path, dirs, files in os.walk(dir):
 		for fn in files:
-			base, ext = os.path.splitext(fn)
-			if ext == '.py':
-				fullname = os.path.join(path, fn)
+			fullname = os.path.join(path, fn)
+			if fileMatcher.matches(fullname):
 				handleFile(fullname)
 
+
+def fileTypeExpression(options):
+	# default filetype
+	if not options.filetypes:
+		options.filetypes.append('py')
+
+	if len(options.filetypes) > 1:
+		tf = '\.(%s)$' % '|'.join(options.filetypes)
+	else:
+		tf = '\.%s$' % options.filetypes[0]
+
+	return tf
+
+def makeFileMatcher(options, flags):
+	fileMatcher = CascadingMatcher()
+
+	# Match the filetype
+
+	tf = fileTypeExpression(options)
+
+	print "+file: %s" % tf
+	fileMatcher.require(re.compile(tf, flags))
+
+	# Match the full file name
+	for ff in options.filefilters:
+		print "+file: %s" % ff
+		fileMatcher.require(re.compile(ff, flags))
+
+	# Antimatch the full file name
+	for ff in options.excludefilefilters:
+		print "-file: %s" % ff
+		fileMatcher.exclude(re.compile(ff, flags))
+
+	return fileMatcher
 
 parser = buildParser()
 options, args = parser.parse_args()
 
-run(options.directory)
+fileMatcher = makeFileMatcher(options, 0)
+print
+
+run(options.directory, fileMatcher)

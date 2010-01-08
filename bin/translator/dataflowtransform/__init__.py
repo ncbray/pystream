@@ -11,7 +11,7 @@ from . import glsltranslator
 
 from . iotransform import iotree
 from . import iotransform
-from .iotransform import serialize
+from . import bind
 
 import analysis.dataflowIR.convert
 
@@ -273,7 +273,7 @@ def evaluateCode(compiler, vscode, fscode):
 		vscontext.synthesize()
 		fscontext.synthesize()
 
-		serialize.generateBindingClass(vscontext, fscontext)
+		bind.generateBindingClass(vscontext, fscontext)
 
 	with compiler.console.scope('dump'):
 		vscontext.dump()

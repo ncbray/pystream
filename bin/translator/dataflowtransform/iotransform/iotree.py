@@ -158,6 +158,21 @@ class IOTreeObj(object):
 
 		return uid
 
+	def _dump(self):
+		print self.path
+		print self.objMasks
+	
+		for next in self.fields.itervalues():
+			next._dump()
+	
+	
+	def dump(self, name):
+		print
+		print name
+		print self.treetype
+		self._dump()
+		print
+
 def handleObj(dioa, obj, lut, exist, mask, tobj):
 	# Does this field actually exist?
 	if mask is dioa.bool.false: return
@@ -196,23 +211,7 @@ def handleCTree(dioa, ctree, lut, exist, mask, tobj):
 
 		# Recurse
 		handleObj(dioa, obj, lut, exist, omask, tobj)
-
-
-def printNode(tobj):
-	print tobj.path
-	print tobj.objMasks
-
-	for next in tobj.fields.itervalues():
-		printNode(next)
-
-
-def dump(name, tobj):
-	print
-	print name
-	print tobj.treetype
-	printNode(tobj)
-	print
-
+		
 
 # Used for getting the context object.
 def getSingleObject(dioa, lut, lcl):
@@ -228,14 +227,15 @@ def evaluateContextObject(dioa, lut, exist, lcl, obj, treetype):
 	mask = dioa.bool.true
 	handleObj(dioa, obj, lut, exist, mask, tobj)
 
-	if False: dump('context', tobj)
+	if False: tobj.dump('context')
 
 	return tobj
 
 
 def evaluateLocal(dioa, lut, exist, lcl, treetype):
-	if lcl is None: return None
+	assert lcl is not None, lcl
 
+	# The local may be unused, but still a formal parameter
 	if lcl.isDoNotCare() or lcl not in lut:
 		return IOTreeObj((), None, treetype)
 
@@ -248,6 +248,6 @@ def evaluateLocal(dioa, lut, exist, lcl, treetype):
 
 	handleCTree(dioa, ctree, lut, exist, dioa.bool.true, tobj)
 
-	if False: dump(lcl, tobj)
+	if False: tobj.dump(lcl)
 
 	return tobj

@@ -12,18 +12,24 @@ def content(s):
 	return xmlRE.sub(convert, str(s))
 
 class xmlscope(object):
-	__slots__ = 'out', 'name'
+	__slots__ = 'out', 'name', 'kargs', 'parent'
 
-	def __init__(self, out, name):
+	def __init__(self, out, name, kargs, parent=None):
 		self.out  = out
 		self.name = name
+		self.kargs = kargs
+		self.parent = parent
 
 	def __enter__(self):
-		pass
+		if self.parent: self.parent.__enter__()
+		self.out.begin(self.name, **self.kargs)
 
 	def __exit__(self, type, value, tb):
 		self.out.end(self.name)
+		if self.parent: self.parent.__exit__(type, value, tb)
 
+	def scope(self, s, **kargs):
+		return xmlscope(self.out, s, kargs, self)
 
 class XMLOutput(object):
 	def __init__(self, f):
@@ -74,8 +80,8 @@ class XMLOutput(object):
 		return self
 
 	def scope(self, s, **kargs):
-		self.begin(s, **kargs)
-		return xmlscope(self, s)
+		return xmlscope(self, s, kargs)
 
 	def endl(self):
 		self.__out('\n')
+		return self

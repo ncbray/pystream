@@ -161,11 +161,11 @@ class IOTreeObj(object):
 	def _dump(self):
 		print self.path
 		print self.objMasks
-	
+
 		for next in self.fields.itervalues():
 			next._dump()
-	
-	
+
+
 	def dump(self, name):
 		print
 		print name
@@ -211,7 +211,7 @@ def handleCTree(dioa, ctree, lut, exist, mask, tobj):
 
 		# Recurse
 		handleObj(dioa, obj, lut, exist, omask, tobj)
-		
+
 
 # Used for getting the context object.
 def getSingleObject(dioa, lut, lcl):

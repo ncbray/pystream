@@ -429,7 +429,7 @@ class PoolAnalysis(TypeDispatcher):
 		for obj in self.info.iterkeys():
 			if obj not in self.nonfinal:
 				obj.annotation = obj.annotation.rewrite(final = True)
-	
+
 	def subgroupUniqueness(self, subgroup):
 		assert subgroup, objs
 
@@ -443,7 +443,7 @@ class PoolAnalysis(TypeDispatcher):
 				nonunique = True
 
 		return unique, nonunique
-				
+
 	def processPool(self, pool):
 		pool.uniqueCount    = 0
 		pool.nonuniqueCount = 0
@@ -453,11 +453,11 @@ class PoolAnalysis(TypeDispatcher):
 
 		pool.coloring, groupings = self.colorGroup(objs)
 		assert groupings, objs
-		
+
 		for subgroup in groupings:
 			unique, nonunique = self.subgroupUniqueness(subgroup)
 			if unique:    pool.uniqueCount += 1
-			if nonunique: pool.nonuniqueCount += 1		
+			if nonunique: pool.nonuniqueCount += 1
 
 	def postProcess(self):
 		# Annotate final objects
@@ -472,6 +472,7 @@ class PoolAnalysis(TypeDispatcher):
 		self.postProcess()
 
 		if False:
+			print ">"*80
 			print
 			print "=== Slot Groups ==="
 			for info in self.slotList():
@@ -481,6 +482,13 @@ class PoolAnalysis(TypeDispatcher):
 				poolinfo = info.getPoolInfo()
 				poolinfo.dump()
 			print
+
+			print "=== Final Objects ==="
+			for obj in self.info.iterkeys():
+				print obj
+				print obj.annotation
+
+			print "<"*80
 
 
 def process(compiler, dataflow, analysis):

@@ -52,6 +52,9 @@ class EntryPoint(object):
 	def name(self):
 		return self.code.codeName()
 
+	def __repr__(self):
+		return "EntryPoint(%r, %d)" % (self.code, len(self.args))
+
 class InterfaceDeclaration(object):
 	__slots__ = 'func', 'cls', 'attr', 'entryPoint', 'translated', 'glsl'
 

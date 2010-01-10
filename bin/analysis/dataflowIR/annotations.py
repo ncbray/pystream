@@ -50,3 +50,6 @@ class DataflowObjectAnnotation(DataflowAnnotation):
 		self.unique      = unique
 		self.mask        = mask
 		self.final       = final
+
+	def __repr__(self):
+		return "%s(preexisting=%r, unique=%r, mask=%r, final=%r)" % (type(self).__name__, self.preexisting, self.unique, self.mask, self.final)

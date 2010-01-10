@@ -249,7 +249,7 @@ class DataflowFlattener(TypeDispatcher):
 				if (modnode, index) in modifies:
 					newname, newnode = self(node, index, name)
 
-					# HACK a psedo read for field on a unique, allocated object can be eliminated if it resolves to the entry.
+					# HACK a pseudo read for field on a unique, allocated object can be eliminated if it resolves to the entry.
 					if newnode.isEntryNode():
 						obj = node.name.object
 						unique = self.dioa.isUniqueObject(obj, index)

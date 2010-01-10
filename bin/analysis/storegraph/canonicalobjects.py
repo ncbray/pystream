@@ -140,8 +140,12 @@ class CanonicalObjects(object):
 	def contextType(self, sig, obj, op):
 		return self.cache[extendedtypes.ContextObjectType(sig, obj, op)]
 
-	def indexedType(self, obj, index=None):
-		if index is None:
-			index = self.index
-			self.index += 1
-		return self.cache[extendedtypes.IndexedObjectType(obj, index)]
+	def indexedType(self, xtype):
+		# Remove indexed object wrappers
+		while isinstance(xtype, extendedtypes.IndexedObjectType):
+			xtype = xtype.xtype
+
+		index = self.index
+		self.index += 1
+
+		return self.cache[extendedtypes.IndexedObjectType(xtype, index)]

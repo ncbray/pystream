@@ -131,19 +131,19 @@ class DummyMaterial(Material):
 	pass
 
 class PhongMaterial(Material):
-	__slots__ = 'shinny'
+	__slots__ = 'shiny'
 
-	def __init__(self, shinny):
+	def __init__(self, shiny):
 		Material.__init__(self)
-		self.shinny = shinny
+		self.shiny = shiny
 
 	def specularTransfer(self, n, l, e):
 		# Blinn-Phong transfer
 		h = (l+e).normalize()
 		ndh = nldot(n, h)
-		# Scale by (shinny+8)/8 to approximate energy conservation
-		scale = (self.shinny+8.0)*0.125
-		return (ndh**self.shinny)*scale
+		# Scale by (shiny+8)/8 to approximate energy conservation
+		scale = (self.shiny+8.0)*0.125
+		return (ndh**self.shiny)*scale
 
 
 class Light(object):

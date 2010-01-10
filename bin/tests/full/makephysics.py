@@ -70,7 +70,7 @@ attr(inst(physics.Shader),  'material',  inst(physics.LambertMaterial))
 attr(inst(physics.Material), 'diffuseColor',    inst(vec.vec3))
 attr(inst(physics.Material), 'specularColor',   inst(vec.vec3))
 
-attr(inst(physics.PhongMaterial),   'shinny',     inst(float))
+attr(inst(physics.PhongMaterial),   'shiny',     inst(float))
 
 # HACK don't the declarations from the base class take effect?
 attr(inst(physics.PhongMaterial), 'diffuseColor',    inst(vec.vec3))
@@ -107,6 +107,6 @@ for i in range(8):
 	glsl.output(attrslot(inst(FSContext), 'colors').arrayslot(i), 'gl_FragData[%d]' % i);
 glsl.output(attrslot(inst(FSContext), 'depth'), 'gl_FragDepth');
 
-### Declare  the shader entrypoint ###
+### Declare  the shader entry point ###
 
 glsl.shader(physics.Shader, inst(vec.vec4), inst(vec.vec3), inst(vec.vec3), inst(vec.vec3), inst(vec.vec2))

@@ -47,8 +47,8 @@ def transformIO(context):
 	trees = context.trees
 	dataflow = context.dataflow
 	# NOTE the outputs are done first, as it references a local which
-	# will later be transformed / eliminated by the input transform.	
-	
+	# will later be transformed / eliminated by the input transform.
+
 	### OUTPUT ###
 	# Transform the output context object
 	transformOutput(context, trees.contextOut, dataflow.entry.modifies)
@@ -151,7 +151,7 @@ class DataflowTransformContext(object):
 
 	def flattenTrees(self):
 		# Transform the trees
-		transformIO(self)	
+		transformIO(self)
 		iotransform.killNonintrinsicIO(self.dataflow)
 		self.trees.buildLUTs()
 

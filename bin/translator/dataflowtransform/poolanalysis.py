@@ -9,7 +9,7 @@ import analysis.dataflowIR.traverse
 from analysis.dataflowIR import graph
 from language.python import ast
 
-leafTypes = (float, int, bool)
+#leafTypes = (float, int, bool)
 
 
 def objectType(obj):
@@ -111,13 +111,15 @@ class PoolInfo(Mergable):
 
 		return self
 
-	def accumulateType(self, obj, pre):
+	def accumulateType(self, obj, pre, final):
 		self.types.add(objectType(obj))
 
 		if pre:
 			self.preexisting = True
 		else:
 			self.allocated   = True
+
+		self.nonfinal |= not final
 
 
 	def allObjects(self):
@@ -186,8 +188,6 @@ class PoolAnalysis(TypeDispatcher):
 		self.info = {}
 		self.slot = {}
 
-		self.nonfinal = set()
-
 	def _initSlotInfo(self, slot, slotinfo):
 		assert slot.annotation, slot
 		values = slot.annotation.values.flat
@@ -198,7 +198,7 @@ class PoolAnalysis(TypeDispatcher):
 
 		for c in const:
 			poolinfo.constants.add(c)
-			poolinfo.accumulateType(c, c.annotation.preexisting)
+			poolinfo.accumulateType(c, c.annotation.preexisting, c.annotation.final)
 
 		for subgroup in (intrinsic, user):
 			for obj in subgroup:
@@ -258,21 +258,6 @@ class PoolAnalysis(TypeDispatcher):
 				if not rnode.isNull():
 						self.unionSlots(rnode, mnode)
 
-	def markNonfinal(self, obj):
-		self.nonfinal.add(obj)
-		self.getPoolInfo(obj).nonfinal = True
-
-	def findNonfinal(self, g):
-		alloc = g.annotation.allocate.flat
-		mod   = g.annotation.modify.flat
-
-		# Find
-		for slot in mod:
-			obj = slot.name.object
-			nonfinal = obj not in alloc
-			if nonfinal:
-				self.markNonfinal(obj)
-
 	@dispatch(ast.DirectCall, ast.Allocate)
 	def visitOpJunk(self, node, g):
 		pass
@@ -314,12 +299,18 @@ class PoolAnalysis(TypeDispatcher):
 		info = self.getSlotInfo(read)
 		info.poolinfo.typeTaken = True
 
-	@dispatch(graph.Entry, graph.Exit,
-	graph.LocalNode, graph.FieldNode, graph.PredicateNode,
-	graph.NullNode, graph.ExistingNode,
-	graph.Split,)
+	@dispatch(graph.Entry, graph.Exit, graph.PredicateNode,
+	graph.NullNode, graph.Split,)
 	def visitJunk(self, node):
 		pass
+
+	@dispatch(graph.FieldNode,)
+	def visitField(self, node):
+		pass
+
+	@dispatch(graph.LocalNode, graph.ExistingNode,)
+	def visitSlot(self, node):
+		self.getSlotInfo(node.canonical())
 
 	@dispatch(graph.GenericOp)
 	def visitOp(self, node):
@@ -327,7 +318,6 @@ class PoolAnalysis(TypeDispatcher):
 		# What about obviously unique, fields?
 		self(node.op, node)
 		self.linkHeap(node)
-		self.findNonfinal(node)
 
 	@dispatch(graph.Gate)
 	def visitGate(self, node):
@@ -352,7 +342,8 @@ class PoolAnalysis(TypeDispatcher):
 				info.objects.add(obj)
 
 			preexisting = obj.annotation.preexisting
-			info.accumulateType(obj, preexisting)
+			final = obj.annotation.final
+			info.accumulateType(obj, preexisting, final)
 		else:
 			info = self.info[obj]
 
@@ -425,11 +416,6 @@ class PoolAnalysis(TypeDispatcher):
 		coloring, grouping, _numColors = colorGraph(interference)
 		return coloring, grouping
 
-	def markFinalObjects(self):
-		for obj in self.info.iterkeys():
-			if obj not in self.nonfinal:
-				obj.annotation = obj.annotation.rewrite(final = True)
-
 	def subgroupUniqueness(self, subgroup):
 		assert subgroup, objs
 
@@ -459,17 +445,13 @@ class PoolAnalysis(TypeDispatcher):
 			if unique:    pool.uniqueCount += 1
 			if nonunique: pool.nonuniqueCount += 1
 
-	def postProcess(self):
-		# Annotate final objects
-		self.markFinalObjects()
+	def process(self):
+		self.handleSlots()
 
 		# Process pool information
 		for pool in self.infoList():
 			self.processPool(pool)
 
-	def process(self):
-		self.handleSlots()
-		self.postProcess()
 
 		if False:
 			print ">"*80

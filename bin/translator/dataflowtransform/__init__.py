@@ -6,6 +6,7 @@ from analysis.dataflowIR.transform import dce
 from  translator.dataflowtransform import correlatedanalysis
 
 from . import poolanalysis
+from . import finalobjectanalysis
 from analysis.cfgIR import dataflowsynthesis
 from . import glsltranslator
 
@@ -146,19 +147,21 @@ class DataflowTransformContext(object):
 		self.dioa = correlatedanalysis.evaluateDataflow(self.compiler, self.dataflow)
 		self.dataflow = self.dioa.flat
 
-		self.trees = findIOTrees(self)
-		self.flattenTrees()
+		finalobjectanalysis.process(self.compiler, self.dataflow)
 
-	def flattenTrees(self):
+	def findAndFlattenTrees(self):
 		# Transform the trees
+		self.trees = findIOTrees(self)
 		transformIO(self)
 		iotransform.killNonintrinsicIO(self.dataflow)
 		self.trees.buildLUTs()
 
+	def reconstructCFG(self, dump=True):
+		# Reconstruct the CFG from the dataflow graph
+		self.cfg = dataflowsynthesis.process(self.compiler, self.dataflow, self.code.codeName(), dump=dump)
 
 	def synthesize(self):
-		# Reconstruct the CFG from the dataflow graph
-		self.cfg = dataflowsynthesis.process(self.compiler, self.dataflow, self.code.codeName(), dump=True)
+		self.reconstructCFG()
 
 		# Find pools
 		self.pa = poolanalysis.process(self.compiler, self.dataflow, self.dioa)
@@ -239,6 +242,10 @@ def evaluateCode(compiler, vscode, fscode):
 	with compiler.console.scope('analyze'):
 		vscontext.analyze()
 		fscontext.analyze()
+
+	with compiler.console.scope('flatten trees'):
+		vscontext.findAndFlattenTrees()
+		fscontext.findAndFlattenTrees()
 
 	with compiler.console.scope('link'):
 		# Ensure that identical uniforms are named the same

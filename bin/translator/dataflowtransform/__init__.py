@@ -7,6 +7,7 @@ from  translator.dataflowtransform import correlatedanalysis
 
 from . import poolanalysis
 from . import finalobjectanalysis
+from . import fieldtransform
 from analysis.cfgIR import dataflowsynthesis
 from . import glsltranslator
 
@@ -15,6 +16,8 @@ from . import iotransform
 from . import bind
 
 import analysis.dataflowIR.convert
+
+from util.application import compilerexceptions
 
 # Make a multi-level dictionary that terminates with names as its leaves.
 # matcher[a][b] -> the name of path a.b
@@ -242,6 +245,20 @@ def evaluateCode(compiler, vscode, fscode):
 	with compiler.console.scope('analyze'):
 		vscontext.analyze()
 		fscontext.analyze()
+
+	if False:
+		with compiler.console.scope('field transform'):
+			fieldtransform.process(compiler, vscontext.dataflow)
+			fieldtransform.process(compiler, fscontext.dataflow)
+
+
+		with compiler.console.scope('debug dump'):
+			analysis.dataflowIR.dump.evaluateDataflow(vscontext.dataflow, 'summaries\dataflow', vscontext.code.codeName())
+			analysis.dataflowIR.dump.evaluateDataflow(fscontext.dataflow, 'summaries\dataflow', fscontext.code.codeName())
+			vscontext.reconstructCFG()
+			fscontext.reconstructCFG()
+
+		raise compilerexceptions.CompilerAbort, "testing"
 
 	with compiler.console.scope('flatten trees'):
 		vscontext.findAndFlattenTrees()

@@ -422,6 +422,10 @@ class Entry(OpNode):
 		self.modifies[name] = slot
 		#self.sanityCheck()
 
+	def removeEntry(self, name, slot):
+		slot.removeDefn(self)
+		del self.modifies[name]
+
 	def __repr__(self):
 		return "entry()"
 
@@ -451,6 +455,10 @@ class Exit(PredicatedOpNode):
 		slot = slot.addUse(self)
 		self.reads[name] = slot
 		#self.sanityCheck()
+
+	def removeExit(self, name, slot):
+		slot.removeUse(self)
+		del self.reads[name]
 
 	def __repr__(self):
 		return "exit()"
@@ -669,11 +677,13 @@ class GenericOp(PredicatedOpNode):
 	__slots__ = 'op', 'localReads', 'localModifies', 'heapReads', 'heapModifies', 'heapPsedoReads', 'predicates'
 	def __init__(self, hyperblock, op):
 		PredicatedOpNode.__init__(self, hyperblock)
-		self.predicate      = None
 		self.op             = op
+		self.reset()
 
+	def reset(self):
+		# Inputs
+		self.predicate = None
 		self.localReads     = {}
-
 		self.heapReads      = {}
 		self.heapModifies   = {}
 		self.heapPsedoReads = {}
@@ -681,6 +691,31 @@ class GenericOp(PredicatedOpNode):
 		# Outputs
 		self.localModifies  = []
 		self.predicates     = []
+
+
+	def destroy(self):
+		self.predicate.removeUse(self)
+
+		for slot in self.localReads.itervalues():
+			slot.removeUse(self)
+
+		for slot in self.heapReads.itervalues():
+			slot.removeUse(self)
+
+		for slot in self.heapPsedoReads.itervalues():
+			slot.removeUse(self)
+
+
+		for slot in self.localModifies:
+			slot.removeDefn(self)
+
+		for slot in self.heapModifies.itervalues():
+			slot.removeDefn(self)
+
+		for slot in self.predicates:
+			slot.removeDefn(self)
+
+		self.reset()
 
 	def isBranch(self):
 		return isinstance(self.op, (ast.TypeSwitch, ast.Switch))

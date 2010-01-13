@@ -22,13 +22,6 @@ class ExistingWrapper(ArgumentWrapper):
 	def get(self, dataflow):
 		return dataflow.getExistingSlot(self.pyobj)
 
-class ReturnWrapper(ArgumentWrapper):
-	def __init__(self, ep):
-		self.ep = ep
-
-	def get(self, dataflow):
-		return dataflow.getReturnSlot(self.ep)
-
 # Used when an argument, such as varg or karg, is not present.
 class NullWrapper(ArgumentWrapper):
 	def get(self, dataflow):

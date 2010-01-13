@@ -8,7 +8,6 @@ class ClassDeclaration(object):
 		self._init   = []
 		self._attr   = []
 		self._method = {}
-		self._shader = []
 
 	def init(self, *args):
 		self._init.append(args)
@@ -21,9 +20,6 @@ class ClassDeclaration(object):
 			self._method[name] = []
 
 		self._method[name].append(args)
-
-	def shader(self, *args):
-		self._shader.append(args)
 
 
 class EntryPoint(object):
@@ -147,16 +143,6 @@ class InterfaceDeclaration(object):
 				for args in arglist:
 					ep = self.createEntryPoint(code, selfarg, (inst,)+args, [], nullWrapper, nullWrapper, group)
 					if group is None: group = ep
-
-			vsGroup = None
-			fsGroup = None
-
-			for args in cls._shader:
-				selfarg, code = self.getMethCode(cls, 'shadeVertex', extractor)
-				vep = self.createEntryPoint(code, selfarg, (inst,)+args, [], nullWrapper, nullWrapper, vsGroup)
-
-				selfarg, code = self.getMethCode(cls, 'shadeFragment', extractor)
-				fep = self.createEntryPoint(code, selfarg, (inst,), [], ReturnWrapper(vep), nullWrapper, fsGroup)
 
 	def _extractAttr(self, extractor):
 		attrs = []

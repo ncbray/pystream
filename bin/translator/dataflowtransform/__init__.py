@@ -5,6 +5,7 @@ from analysis.dataflowIR.transform import dce
 
 from  translator.dataflowtransform import correlatedanalysis
 
+from . import treetransform
 from . import poolanalysis
 from . import finalobjectanalysis
 from . import fieldtransform
@@ -238,6 +239,10 @@ def evaluateCode(compiler, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, vscode)
 	fscontext = DataflowTransformContext(compiler, fscode)
 
+	with compiler.console.scope('tree transform'):
+		treetransform.process(compiler, vscontext.code)
+		treetransform.process(compiler, fscontext.code)
+
 	with compiler.console.scope('convert'):
 		vscontext.convert()
 		fscontext.convert()
@@ -246,19 +251,18 @@ def evaluateCode(compiler, vscode, fscode):
 		vscontext.analyze()
 		fscontext.analyze()
 
-	if False:
-		with compiler.console.scope('field transform'):
-			fieldtransform.process(compiler, vscontext.dataflow)
-			fieldtransform.process(compiler, fscontext.dataflow)
+	with compiler.console.scope('field transform'):
+		fieldtransform.process(compiler, vscontext.dataflow)
+		fieldtransform.process(compiler, fscontext.dataflow)
 
 
-		with compiler.console.scope('debug dump'):
-			analysis.dataflowIR.dump.evaluateDataflow(vscontext.dataflow, 'summaries\dataflow', vscontext.code.codeName())
-			analysis.dataflowIR.dump.evaluateDataflow(fscontext.dataflow, 'summaries\dataflow', fscontext.code.codeName())
-			vscontext.reconstructCFG()
-			fscontext.reconstructCFG()
+	with compiler.console.scope('debug dump'):
+		analysis.dataflowIR.dump.evaluateDataflow(vscontext.dataflow, 'summaries\dataflow', vscontext.code.codeName())
+		analysis.dataflowIR.dump.evaluateDataflow(fscontext.dataflow, 'summaries\dataflow', fscontext.code.codeName())
+		vscontext.reconstructCFG()
+		fscontext.reconstructCFG()
 
-		raise compilerexceptions.CompilerAbort, "testing"
+	raise compilerexceptions.CompilerAbort, "testing"
 
 	with compiler.console.scope('flatten trees'):
 		vscontext.findAndFlattenTrees()

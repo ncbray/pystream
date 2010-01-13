@@ -10,10 +10,10 @@ class ReversePostorderCrawler(object):
 		self.processed = set((self.head,))
 		self.order = []
 
-		for next in self.G[self.head]:
-			self(next)
+		for nextNode in self.G[self.head]:
+			self(nextNode)
 
-		# Look for inaccesable cycles
+		# Look for inaccessible cycles
 		remaining = self.all-self.processed
 		while remaining:
 			newEntry = remaining.pop()
@@ -35,7 +35,7 @@ class ReversePostorderCrawler(object):
 		self.processed.add(node)
 		stack = [(node, iter(self.G.get(node, ())))]
 		while stack:
-			parent,children = stack[-1]
+			_parent,children = stack[-1]
 			try:
 				child = children.next()
 				if child not in self.processed:
@@ -66,12 +66,12 @@ def dominatorTree(G, head):
 		forward[node] = i
 		reverse[i] = node
 
-	# Find the predicesors, in reverse postorder space.
+	# Find the predecessors, in reverse postorder space.
 	pred = {}
 	for node, nexts in G.iteritems():
 		i = forward[node]
-		for next in nexts:
-			n = forward[next]
+		for nextNode in nexts:
+			n = forward[nextNode]
 
 			# Eliminate self-cycles.
 			if i == n: continue
@@ -88,12 +88,12 @@ def dominatorTree(G, head):
 	# Special case the head
 	doms[0] = 0
 
-	# Calculate a fixedpoint solution
+	# Calculate a fixed point solution
 	changed = True
 	while changed:
 		changed = False
 		for node in range(1, count):
-			# Find an inital value for the immediate dominator
+			# Find an initial value for the immediate dominator
 			if doms[node] is None:
 				new_idom = min(pred[node])
 				assert new_idom < node
@@ -101,7 +101,7 @@ def dominatorTree(G, head):
 				new_idom = doms[node]
 
 			# Refine the immediate dominator,
-			# make it consistant with the predicesors.
+			# make it consistent with the predecessors.
 			for p in pred[node]:
 				if doms[p] is not None:
 					new_idom = intersect(doms, new_idom, p)
@@ -137,8 +137,11 @@ def makeSingleHead(G, head):
 
 
 if __name__ == '__main__':
-	G = {0:(1, 2), 1:(3,), 2:(3,), 3:(4, 5), 4:(6,), 5:(6,)}
+	def test():
+		G = {0:(1, 2), 1:(3,), 2:(3,), 3:(4, 5), 4:(6,), 5:(6,)}
 
-	head = None
-	makeSingleHead(G, head)
-	print dominatorTree(G, head)
+		head = None
+		makeSingleHead(G, head)
+		print dominatorTree(G, head)
+
+	test()

@@ -42,7 +42,7 @@ class TreeAnalysis(object):
 				objs = self.handleSlot(extpath, slot)
 				objectInfo.field[slot.slotName].update(objs)
 
-	def getAbstractInstance(self, example):
+	def ensureLoaded(self, example):
 		# HACK sometimes constant folding neglects this.
 		if not hasattr(example, 'type'):
 			self.compiler.extractor.ensureLoaded(example)
@@ -51,7 +51,9 @@ class TreeAnalysis(object):
 		if not hasattr(t, 'typeinfo'):
 			self.compiler.extractor.ensureLoaded(t)
 
-		return t.typeinfo.abstractInstance
+	def getAbstractInstance(self, example):
+		self.ensureLoaded(example)
+		return example.type.typeinfo.abstractInstance
 
 	# The policy for object cloning
 	def objectUID(self, obj, path):

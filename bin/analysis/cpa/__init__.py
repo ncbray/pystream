@@ -2,14 +2,14 @@ import collections
 import itertools
 from util.io import formatting
 
-import base
+from . import base, simpleimagebuilder
 
 from analysis.storegraph import storegraph, canonicalobjects, extendedtypes
 import analysis.cpasignature
 
-from constraintextractor import ExtractDataflow
+from . constraintextractor import ExtractDataflow
 
-from constraints import AssignmentConstraint, DirectCallConstraint
+from . constraints import AssignmentConstraint, DirectCallConstraint
 
 # Only used for creating return variables
 from language.python import ast
@@ -49,10 +49,10 @@ def foldFunctionIR(extractor, func, vargs=(), kargs={}):
 ###############################
 
 class InterproceduralDataflow(object):
-	def __init__(self, console, extractor, opPathLength=0):
+	def __init__(self, compiler, graph, opPathLength=0):
 		self.decompileTime = 0
-		self.console   = console
-		self.extractor = extractor
+		self.console   = compiler.console
+		self.extractor = compiler.extractor
 
 		# Has the context been constructed?
 		self.liveContexts = set()
@@ -65,7 +65,7 @@ class InterproceduralDataflow(object):
 		# The worklist
 		self.dirty = collections.deque()
 
-		self.canonical = canonicalobjects.CanonicalObjects()
+		self.canonical = graph.canonical
 		self._canonicalContext = util.canonical.CanonicalCache(base.AnalysisContext)
 
 		# Controls how many previous ops are remembered by a context.
@@ -81,7 +81,7 @@ class InterproceduralDataflow(object):
 
 		self.codeContexts     = collections.defaultdict(set)
 
-		self.storeGraph = storegraph.StoreGraph(self.extractor, self.canonical)
+		self.storeGraph = graph
 
 		# Setup the "external" context, used for creaing bogus slots.
 		self.externalOp  = util.canonical.Sentinel('<externalOp>')
@@ -102,7 +102,6 @@ class InterproceduralDataflow(object):
 		self.ensureLoaded(self.dictionaryClass)
 
 		self.entryPointOp = {}
-		self.entryPointReturn = {}
 
 	def initialOpPath(self):
 		if self.opPathLength == 0:
@@ -277,15 +276,6 @@ class InterproceduralDataflow(object):
 			if self.initializeContext(targetcontext):
 				targetcontext.bindParameters(self, caller)
 
-	def addAttr(self, src, attrName, dst):
-		srcxtype = self.canonical.externalType(src)
-		fieldName = self.canonical.fieldName(*attrName)
-		dstxtype = self.canonical.externalType(dst)
-
-		obj = self.storeGraph.regionHint.object(srcxtype)
-		field = obj.field(fieldName, self.storeGraph.regionHint)
-		field.initializeType(dstxtype)
-
 	def makeExternalSlot(self, name):
 		code    = self.externalFunction
 		context = self.externalFunctionContext
@@ -304,33 +294,22 @@ class InterproceduralDataflow(object):
 		self.entryPointOp[entryPoint] = cop
 		return cop
 
-	def getExistingSlot(self, pyobj):
-		obj  = self.extractor.getObject(pyobj)
-		slot = self.makeExternalSlot('dummy_exist')
-		slot.initializeType(self.canonical.existingType(obj))
+	def getArgSlot(self, xtypes):
+		if not xtypes: return None
+		slot = self.makeExternalSlot('arg')
+		slot.initializeTypes(xtypes)
 		return slot
 
-	def getInstanceSlot(self, typeobj):
-		obj = self.extractor.getInstance(typeobj)
-		slot = self.makeExternalSlot('dummy_inst')
-		slot.initializeType(self.canonical.externalType(obj))
-		return slot
-
-	def getReturnSlot(self, ep):
-		if ep not in self.entryPointReturn:
-			self.entryPointReturn[ep] = self.makeExternalSlot('return_%s' % ep.name())
-		return self.entryPointReturn[ep]
-
-	def addEntryPoint(self, entryPoint):
+	def addEntryPoint(self, entryPoint, args):
 		# The call point
 		cop = self.createEntryOp(entryPoint)
 
-		selfSlot = entryPoint.selfarg.get(self)
-		argSlots = [arg.get(self) for arg in entryPoint.args]
+		selfSlot = self.getArgSlot(args.selfarg)
+		argSlots = [self.getArgSlot(arg) for arg in args.args]
 		kwds = []
-		varg = entryPoint.varg.get(self)
-		karg = entryPoint.karg.get(self)
-		returnSlots = [self.getReturnSlot(entryPoint)]
+		varg = self.getArgSlot(args.vargs)
+		karg = self.getArgSlot(args.kargs)
+		returnSlots = [self.makeExternalSlot('return_%s' % entryPoint.name())]
 
 		# Create the initial constraint
 		DirectCallConstraint(self, cop, entryPoint.code, selfSlot, argSlots, kwds, varg, karg, returnSlots)
@@ -492,16 +471,14 @@ class InterproceduralDataflow(object):
 		console.output("Solve:         %s" % formatting.elapsedTime(self.solveTime))
 		console.output('')
 
-def evaluate(compiler, opPathLength=0, firstPass=True):
+
+def evaluateWithImage(compiler, graph, eps, opPathLength=0, firstPass=True):
 	with compiler.console.scope('cpa analysis'):
-		dataflow = InterproceduralDataflow(compiler.console, compiler.extractor, opPathLength)
+		dataflow = InterproceduralDataflow(compiler, graph, opPathLength)
 		dataflow.firstPass = firstPass # HACK for debugging
 
-		for src, attrName, dst in compiler.interface.attr:
-			dataflow.addAttr(src, attrName, dst)
-
-		for entryPoint in compiler.interface.entryPoint:
-			dataflow.addEntryPoint(entryPoint)
+		for entryPoint, args in eps:
+			dataflow.addEntryPoint(entryPoint, args)
 
 		try:
 			with compiler.console.scope('solve'):
@@ -521,3 +498,7 @@ def evaluate(compiler, opPathLength=0, firstPass=True):
 			compiler.liveCode   = dataflow.liveCode
 
 		return dataflow
+
+def evaluate(compiler, opPathLength=0, firstPass=True):
+	graph, eps = simpleimagebuilder.build(compiler)
+	return evaluateWithImage(compiler, graph, eps, opPathLength, firstPass)

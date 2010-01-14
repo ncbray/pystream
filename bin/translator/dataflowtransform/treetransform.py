@@ -4,6 +4,9 @@ from language.python import ast
 from .. import intrinsics
 
 from util.monkeypatch import xcollections
+from util.python.calling import CallerArgs
+
+from analysis import cpa
 
 class ObjectInfo(object):
 	def __init__(self, uid):
@@ -119,18 +122,34 @@ class TreeAnalysis(object):
 		return self.handleSlot(path, refs)
 
 
+	def handleParam(self, param, pathname=None):
+		if param is None: return None
+		if param.isDoNotCare(): return None # TODO is this correct?
+		if pathname is None: pathname = param
+		return self.handleLocal(param, (pathname,))
+
+
 	def process(self, code):
 		codeParams = code.codeParameters()
 
+		selfparam = self.handleParam(codeParams.selfparam)
+
+
+		params = []
+
 		# Give the self parameter a special name, so we can
 		# easily merge it between shaders
-		path = ('uniform',)
-		self.handleLocal(codeParams.params[0], path)
+		objs = self.handleParam(codeParams.params[0], 'uniform')
+
+		params.append(objs)
 
 		for param in codeParams.params[1:]:
-			path = (param,)
-			self.handleLocal(param, path)
+			params.append(self.handleParam(param))
 
+		vparam = self.handleParam(codeParams.vparam)
+		kparam = self.handleParam(codeParams.kparam)
+
+		return CallerArgs(selfparam, params, [], vparam, kparam, None)
 
 	def dumpObjectInfo(self, objectInfo):
 		print objectInfo.uid
@@ -150,6 +169,11 @@ from analysis.storegraph import storegraph
 from analysis.storegraph import canonicalobjects
 from util.graphalgorithim.dominator import dominatorTree
 
+
+class DummyEntryPoint(object):
+	def name(self):
+		return "dummy"
+
 class TreeResynthesis(object):
 	def __init__(self, compiler, analysis):
 		self.compiler = compiler
@@ -157,6 +181,8 @@ class TreeResynthesis(object):
 		self.cache = {}
 
 	def processObject(self, obj):
+		if obj is None: return None
+
 		if obj not in self.cache:
 
 			example = obj.example
@@ -181,7 +207,7 @@ class TreeResynthesis(object):
 					childxtype = self.processObject(child)
 					graphfield.initializeType(childxtype)
 
-					self.G[xtype].add(childxtype)
+					self.G[xtype].add(childxtype) # debugging
 
 			result = xtype
 		else:
@@ -195,8 +221,14 @@ class TreeResynthesis(object):
 			count[objInfo.example] = count.get(objInfo.example, 0)+1
 		return count
 
-	def process(self, code):
-		self.G = xcollections.defaultdict(set)
+	def translateObjs(self, objs):
+		if objs is None:
+			return None
+		else:
+			return [self.processObject(obj) for obj in objs]
+
+	def process(self, code, args):
+		self.G = xcollections.defaultdict(set) # debugging
 
 		self.count = self.countInstances()
 
@@ -206,16 +238,32 @@ class TreeResynthesis(object):
 		# Rewrite memory image
 		for obj in self.analysis.root:
 			xtype = self.processObject(obj)
-
-			self.G[None].add(xtype)
+			self.G[None].add(xtype) # debugging
 
 		# Rewrite entry point
 		codeParams = code.codeParameters()
-		for param in codeParams.params:
-			pass
 
+		self.entryPoints = []
+
+		argobjs = args.map(self.translateObjs)
+
+		print "="*60
+		print argobjs.selfarg
+		for arg in argobjs.args:
+			print '\t', arg
+		print argobjs.vargs
+		print argobjs.kargs
+		print
+
+		ep = DummyEntryPoint()
+		ep.code = code
+
+		self.entryPoints.append((ep, argobjs))
+
+		self.dump() # debugging
+
+	def dump(self):
 		tree, idoms = dominatorTree(self.G, None)
-
 		self.dumpTree(None, tree, '')
 
 	def dumpTree(self, node, tree, tabs):
@@ -227,12 +275,12 @@ class TreeResynthesis(object):
 def process(compiler, code):
 	with compiler.console.scope('analysis'):
 		analysis = TreeAnalysis(compiler)
-		analysis.process(code)
+		args = analysis.process(code)
 		#analysis.dump()
 
 	with compiler.console.scope('resynthesis'):
 		resynthesis = TreeResynthesis(compiler, analysis)
-		resynthesis.process(code)
+		resynthesis.process(code, args)
 
 	with compiler.console.scope('reanalysis'):
-		pass
+		cpa.evaluateWithImage(compiler, resynthesis.storeGraph, resynthesis.entryPoints)

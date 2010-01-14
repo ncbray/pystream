@@ -1,7 +1,14 @@
 import util.canonical
 
 Any  = util.canonical.Sentinel('<Any>')
-DoNotCare  = util.canonical.Sentinel('<DoNotCare>')
+
+class DoNotCareType(object):
+	def isDoNotCare(self):
+		return True
+	def __repr__(self):
+		return '<DoNotCare>'
+
+DoNotCare = DoNotCareType()
 
 # A canonical name for a CPAed parameter list.
 class CPASignature(util.canonical.CanonicalObject):

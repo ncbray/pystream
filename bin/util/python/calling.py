@@ -19,6 +19,19 @@ class CallerArgs(object):
 	def __repr__(self):
 		return "args(self=%r, args=%r, kwds=%r, vargs=%r, kargs=%r)" % (self.selfarg, self.args, self.kwds, self.vargs, self.kargs)
 
+	def map(self, callback):
+		selfarg = callback(self.selfarg)
+		args = [callback(arg) for arg in self.args]
+		assert not self.kwds
+		kwds = []
+		vargs = callback(self.vargs)
+		kargs = callback(self.kargs)
+
+		# HACK returnargs are by nature different?
+		returnargs = self.returnargs
+
+		return CallerArgs(selfarg, args, kwds, vargs, kargs, returnargs)
+
 class CalleeParams(object):
 	__slots__ = 'selfparam', 'params', 'paramnames', 'defaults', 'vparam', 'kparam', 'returnparams'
 
@@ -134,6 +147,9 @@ def bindDefaults(callee, info):
 		if bound.maybeFalse():
 			info.defaults.add(i)
 
+def isDoNotCare(node):
+	return hasattr(node, 'isDoNotCare') and node.isDoNotCare() # HACK oh my, yes.
+
 def callStackToParamsInfo(callee, selfarg, numArgs, uncertainVArgs, certainKwds, isUncertainKwds):
 	assert isinstance(callee, CalleeParams), callee
 	assert isinstance(numArgs, int) and numArgs >= 0, numArgs
@@ -142,7 +158,9 @@ def callStackToParamsInfo(callee, selfarg, numArgs, uncertainVArgs, certainKwds,
 
 	info = CallInfo()
 
-	if callee.selfparam and selfarg:
+	if isDoNotCare(callee.selfparam):
+		info.selfTransfer = False
+	elif callee.selfparam and selfarg:
 		info.selfTransfer = True
 	elif callee.selfparam is None and not selfarg:
 		info.selfTransfer = False

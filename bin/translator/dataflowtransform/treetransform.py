@@ -6,7 +6,7 @@ from .. import intrinsics
 from util.monkeypatch import xcollections
 from util.python.calling import CallerArgs
 
-from analysis import cpa
+from analysis import cpa, lifetimeanalysis
 
 from application.program import Program
 
@@ -283,5 +283,10 @@ def process(compiler, code):
 		resynthesis = TreeResynthesis(compiler, analysis)
 		resynthesis.process(code, args)
 
+	prgm = resynthesis.shaderprgm
+
 	with compiler.console.scope('reanalysis'):
-		cpa.evaluateWithImage(compiler, resynthesis.shaderprgm)
+		cpa.evaluateWithImage(compiler, prgm, clone=True)
+		lifetimeanalysis.evaluate(compiler, prgm)
+
+	return resynthesis.shaderprgm

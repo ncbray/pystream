@@ -11,6 +11,8 @@ from . constraintextractor import ExtractDataflow
 
 from . constraints import AssignmentConstraint, DirectCallConstraint
 
+from . import codecloner
+
 # Only used for creating return variables
 from language.python import ast
 from language.python import program
@@ -49,10 +51,11 @@ def foldFunctionIR(extractor, func, vargs=(), kargs={}):
 ###############################
 
 class InterproceduralDataflow(object):
-	def __init__(self, compiler, graph, opPathLength=0):
+	def __init__(self, compiler, graph, opPathLength, clone):
 		self.decompileTime = 0
 		self.console   = compiler.console
 		self.extractor = compiler.extractor
+		self.clone = clone # Should we copy the code before annotating it?
 
 		# Has the context been constructed?
 		self.liveContexts = set()
@@ -125,7 +128,7 @@ class InterproceduralDataflow(object):
 
 		return self.cache.setdefault(path, path)
 	def ensureLoaded(self, obj):
-		# TODO the timing is no longer guarenteed, as the store graph bypasses this...
+		# TODO the timing is no longer guaranteed, as the store graph bypasses this...
 		start = time.clock()
 		self.extractor.ensureLoaded(obj)
 		self.decompileTime += time.clock()-start
@@ -336,9 +339,7 @@ class InterproceduralDataflow(object):
 
 		return data
 
-	def collectRMA(self, code, op):
-		contexts = code.annotation.contexts
-
+	def collectRMA(self, code, contexts, op):
 		creads     = [annotations.annotationSet(self.opReads[(code, op, context)]) for context in contexts]
 		reads     = annotations.makeContextualAnnotation(creads)
 
@@ -355,38 +356,51 @@ class InterproceduralDataflow(object):
 
 		return reads, modifies, allocates
 
-	def annotateCode(self, code, contexts):
-		code.rewriteAnnotation(contexts=tuple(contexts))
+	def annotateCode(self, code, contexts, cloner):
+		newcode = cloner.code(code)
+
+		contexts = tuple(contexts)
+		newcode.rewriteAnnotation(contexts=contexts)
 
 		# Creating vparam and kparam objects produces side effects...
 		# Store them in the code annotation
-		reads, modifies, allocates = self.collectRMA(code, None)
-		code.rewriteAnnotation(codeReads=reads, codeModifies=modifies, codeAllocates=allocates)
+		reads, modifies, allocates = self.collectRMA(code, contexts, None)
+		newcode.rewriteAnnotation(codeReads=reads, codeModifies=modifies, codeAllocates=allocates)
 
-	def mergeAbstractCode(self, code):
+		return contexts
+
+	def mergeAbstractCode(self, code, cloner):
+		newcode = cloner.code(code)
+
 		# This is done after the ops and locals are annotated as the "abstractReads", etc. may depends on the annotations.
-		reads     = annotations.mergeContextualAnnotation(code.annotation.codeReads, code.abstractReads())
-		modifies  = annotations.mergeContextualAnnotation(code.annotation.codeModifies, code.abstractModifies())
-		allocates = annotations.mergeContextualAnnotation(code.annotation.codeAllocates, code.abstractAllocates())
+		reads     = annotations.mergeContextualAnnotation(newcode.annotation.codeReads, newcode.abstractReads())
+		modifies  = annotations.mergeContextualAnnotation(newcode.annotation.codeModifies, newcode.abstractModifies())
+		allocates = annotations.mergeContextualAnnotation(newcode.annotation.codeAllocates, newcode.abstractAllocates())
 
 		reads     = self.annotationCache.setdefault(reads, reads)
 		modifies  = self.annotationCache.setdefault(modifies, modifies)
 		allocates = self.annotationCache.setdefault(allocates, allocates)
 		self.annotationCount += 3
 
-		code.rewriteAnnotation(codeReads=reads, codeModifies=modifies, codeAllocates=allocates)
+		newcode.rewriteAnnotation(codeReads=reads, codeModifies=modifies, codeAllocates=allocates)
 
-	def reindexAnnotations(self):
-		# Find the contexts that a given entrypoint invokes
+	def annotateEntryPoints(self, cloner):
+		# TODO redirect code?
+
+		# Find the contexts that a given entryPoint invokes
 		for entryPoint, op in self.entryPointOp.iteritems():
+			entryPoint.code = cloner.code(entryPoint.code)
 			contexts = [ccontext.context for ccontext in self.opInvokes[op]]
 			entryPoint.contexts = contexts
 
+	def reindexAnnotations(self, cloner):
 		# Re-index the invocations
 		invokeLUT = collections.defaultdict(lambda: collections.defaultdict(set))
 		for srcop, dsts in self.opInvokes.iteritems():
 			for dst in dsts:
-				invokeLUT[(srcop.code, srcop.op)][srcop.context].add((dst.code, dst.context))
+				newdstcode = cloner.code(dst.code)
+				invokeLUT[(srcop.code, srcop.op)][srcop.context].add((newdstcode, dst.context))
+		self.invokeLUT = invokeLUT
 
 		# Re-index the locals
 		lclLUT = collections.defaultdict(lambda: collections.defaultdict(set))
@@ -396,42 +410,63 @@ class InterproceduralDataflow(object):
 				lclLUT[(name.code, name.local)][name.context] = slot
 			elif name.isExisting():
 				lclLUT[(name.code, name.object)][name.context] = slot
+		self.lclLUT = lclLUT
 
-		return invokeLUT, lclLUT
+	def annotateOps(self, code, contexts, ops, cloner):
+		for op in ops:
+			invokes = self.collectContexts(self.invokeLUT[(code, op)], contexts)
+			reads, modifies, allocates = self.collectRMA(code, contexts, op)
+
+			newop = cloner.op(op)
+
+			newop.rewriteAnnotation(
+				invokes=invokes,
+				opReads=reads,
+				opModifies=modifies,
+				opAllocates=allocates,
+				)
+
+	def annotateLocals(self, code, contexts, lcls, cloner):
+		for lcl in lcls:
+			if isinstance(lcl, ast.Existing):
+				contextLclLUT = self.lclLUT[(code, lcl.object)]
+				newlcl = cloner.op(lcl) # HACK?
+			else:
+				contextLclLUT = self.lclLUT[(code, lcl)]
+				newlcl = cloner.lcl(lcl)
+			references = self.collectContexts(contextLclLUT, contexts)
+
+			newlcl.rewriteAnnotation(references=references)
 
 	def annotate(self):
+		if self.clone:
+			cloner = codecloner.FunctionCloner(self.codeContexts.iterkeys())
+
+			# Translate the live code
+			self.liveCode = set([cloner.code(code) for code in self.liveCode])
+		else:
+			cloner = codecloner.NullCloner(self.codeContexts.iterkeys())
+
 		self.annotationCount = 0
 		self.annotationCache = {}
 
-		invokeLUT, lclLUT = self.reindexAnnotations()
+		self.reindexAnnotations(cloner)
+
+		self.annotateEntryPoints(cloner)
 
 		for code, contexts in self.codeContexts.iteritems():
-			self.annotateCode(code, contexts)
+			if code is self.externalFunction: continue
 
-			contexts = code.annotation.contexts
+			cloner.process(code)
+
+			contexts = self.annotateCode(code, contexts, cloner)
+
 			ops, lcls = getOps(code)
 
-			for op in ops:
-				invokes = self.collectContexts(invokeLUT[(code, op)], contexts)
-				reads, modifies, allocates = self.collectRMA(code, op)
+			self.annotateOps(code, contexts, ops, cloner)
+			self.annotateLocals(code, contexts, lcls, cloner)
 
-				op.rewriteAnnotation(
-					invokes=invokes,
-					opReads=reads,
-					opModifies=modifies,
-					opAllocates=allocates,
-					)
-
-			for lcl in lcls:
-				if isinstance(lcl, ast.Existing):
-					contextLclLUT = lclLUT[(code, lcl.object)]
-				else:
-					contextLclLUT = lclLUT[(code, lcl)]
-
-				references = self.collectContexts(contextLclLUT, contexts)
-				lcl.rewriteAnnotation(references=references)
-
-			self.mergeAbstractCode(code)
+			self.mergeAbstractCode(code, cloner)
 
 		self.console.output("Annotation compression %f - %d" % (float(len(self.annotationCache))/max(self.annotationCount, 1), self.annotationCount))
 
@@ -472,9 +507,9 @@ class InterproceduralDataflow(object):
 		console.output('')
 
 
-def evaluateWithImage(compiler, prgm, opPathLength=0, firstPass=True):
+def evaluateWithImage(compiler, prgm, opPathLength=0, firstPass=True, clone=False):
 	with compiler.console.scope('cpa analysis'):
-		dataflow = InterproceduralDataflow(compiler, prgm.storeGraph, opPathLength)
+		dataflow = InterproceduralDataflow(compiler, prgm.storeGraph, opPathLength, clone)
 		dataflow.firstPass = firstPass # HACK for debugging
 
 		for entryPoint, args in prgm.entryPoints:

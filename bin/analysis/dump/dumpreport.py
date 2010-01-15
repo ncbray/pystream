@@ -654,7 +654,7 @@ class DerivedData(object):
 	def handleReads(self, code, reads):
 		if reads is not None:
 			contexts = code.annotation.contexts
-			assert len(reads.context) == len(contexts), (reads, len(contexts))
+			assert len(reads.context) == len(contexts), (code, len(reads.context), len(contexts))
 			for cindex, context in enumerate(contexts):
 				creads = reads.context[cindex]
 				self.funcReads[code][context].update(creads)

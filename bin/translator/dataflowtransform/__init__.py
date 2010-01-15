@@ -20,6 +20,8 @@ import analysis.dataflowIR.convert
 
 from util.application import compilerexceptions
 
+from analysis.dump import dumpreport # DEBUGGING
+
 # Make a multi-level dictionary that terminates with names as its leaves.
 # matcher[a][b] -> the name of path a.b
 def makePathMatcher(prgm):
@@ -236,14 +238,22 @@ class DataflowTransformContext(object):
 		for field in node.fields.itervalues():
 			self.findLive(field, live)
 
+	def prgmDump(self):
+		dumpreport.evaluate(self.compiler, self.prgm, self.code.codeName())
+
+
 def evaluateCode(compiler, prgm, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, prgm, vscode)
 	fscontext = DataflowTransformContext(compiler, prgm, fscode)
 
 	if False:
 		with compiler.console.scope('tree transform'):
-			treetransform.process(compiler, vscontext.code)
-			treetransform.process(compiler, fscontext.code)
+			vscontext.prgm = treetransform.process(compiler, vscontext.code)
+			fscontext.prgm = treetransform.process(compiler, fscontext.code)
+
+		with compiler.console.scope('dump'):
+			vscontext.prgmDump()
+			fscontext.prgmDump()
 
 		raise compilerexceptions.CompilerAbort, "testing"
 

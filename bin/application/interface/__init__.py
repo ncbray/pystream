@@ -160,7 +160,6 @@ class InterfaceDeclaration(object):
 
 
 	def entryCode(self):
-		assert self.translated
 		return frozenset([point.code for point in self.entryPoint])
 
 	def entryContexts(self):

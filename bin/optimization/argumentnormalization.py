@@ -193,12 +193,12 @@ class ArgumentNormalizationTransform(TypeDispatcher):
 		node.codeparameters = ast.CodeParameters(selfparam, parameters, parameternames, defaults, vparam, kparam, returnparams)
 		node.ast = self(node.ast)
 
-def evaluate(compiler):
+def evaluate(compiler, prgm):
 	with compiler.console.scope('argument normalization'):
-		analysis  = ArgumentNormalizationAnalysis(compiler.storeGraph)
-		transform = ArgumentNormalizationTransform(compiler.storeGraph)
+		analysis  = ArgumentNormalizationAnalysis(prgm.storeGraph)
+		transform = ArgumentNormalizationTransform(prgm.storeGraph)
 
-		for code in compiler.liveCode:
+		for code in prgm.liveCode:
 			applicable, vparamLen = analysis.process(code)
 			if applicable:
 				transform.process(code, vparamLen)

@@ -8,6 +8,8 @@ from util.python.calling import CallerArgs
 
 from analysis import cpa
 
+from application.program import Program
+
 class ObjectInfo(object):
 	def __init__(self, uid):
 		self.uid     = uid
@@ -170,14 +172,12 @@ from analysis.storegraph import canonicalobjects
 from util.graphalgorithim.dominator import dominatorTree
 
 
-class DummyEntryPoint(object):
-	def name(self):
-		return "dummy"
-
 class TreeResynthesis(object):
 	def __init__(self, compiler, analysis):
 		self.compiler = compiler
 		self.analysis = analysis
+		self.shaderprgm = Program()
+
 		self.cache = {}
 
 	def processObject(self, obj):
@@ -235,15 +235,16 @@ class TreeResynthesis(object):
 		self.canonical  = canonicalobjects.CanonicalObjects()
 		self.storeGraph = storegraph.StoreGraph(self.compiler.extractor, self.canonical)
 
+		self.shaderprgm.storeGraph = self.storeGraph
+
+
 		# Rewrite memory image
 		for obj in self.analysis.root:
 			xtype = self.processObject(obj)
 			self.G[None].add(xtype) # debugging
 
-		# Rewrite entry point
-		codeParams = code.codeParameters()
-
-		self.entryPoints = []
+		# Create an entry point
+		self.shaderprgm.entryPoints = []
 
 		argobjs = args.map(self.translateObjs)
 
@@ -255,10 +256,10 @@ class TreeResynthesis(object):
 		print argobjs.kargs
 		print
 
-		ep = DummyEntryPoint()
-		ep.code = code
+		# The arguments for this entry points are bogus.
+		ep = self.shaderprgm.interface.createEntryPoint(code, None, None, None, None, None, None)
 
-		self.entryPoints.append((ep, argobjs))
+		self.shaderprgm.entryPoints.append((ep, argobjs))
 
 		self.dump() # debugging
 
@@ -283,4 +284,4 @@ def process(compiler, code):
 		resynthesis.process(code, args)
 
 	with compiler.console.scope('reanalysis'):
-		cpa.evaluateWithImage(compiler, resynthesis.storeGraph, resynthesis.entryPoints)
+		cpa.evaluateWithImage(compiler, resynthesis.shaderprgm)

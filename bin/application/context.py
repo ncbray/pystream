@@ -17,12 +17,9 @@ class Slots(object):
 		return uniqueName
 
 class CompilerContext(object):
-	__slots__ = 'console', 'extractor', 'interface', 'storeGraph', 'liveCode', 'slots'
+	__slots__ = 'console', 'extractor', 'slots'
 
 	def __init__(self, console):
 		self.console    = console
 		self.extractor  = None
-		self.interface  = None
-		self.storeGraph = None
-		self.liveCode   = None
 		self.slots      = Slots()

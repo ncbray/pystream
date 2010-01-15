@@ -22,9 +22,9 @@ from util.application import compilerexceptions
 
 # Make a multi-level dictionary that terminates with names as its leaves.
 # matcher[a][b] -> the name of path a.b
-def makePathMatcher(compiler):
+def makePathMatcher(prgm):
 	root = {}
-	for path, name, _input, _output in compiler.interface.glsl.attr:
+	for path, name, _input, _output in prgm.interface.glsl.attr:
 		current = root
 
 		#path = reverse(path)
@@ -105,7 +105,7 @@ def findIOTrees(context):
 	trees.returnOut = iotree.evaluateLocal(dioa, lut, exist, returns[0], 'out')
 
 	# Find the builtin fields
-	trees.match(makePathMatcher(context.compiler))
+	trees.match(makePathMatcher(context.prgm))
 
 	return trees
 
@@ -138,9 +138,10 @@ class IOTrees(object):
 
 
 class DataflowTransformContext(object):
-	def __init__(self, compiler, code):
+	def __init__(self, compiler, prgm, code):
 		self.compiler = compiler
 		self.code     = code
+		self.prgm     = prgm
 		self.trees    = None
 		self.show     = False
 
@@ -148,7 +149,7 @@ class DataflowTransformContext(object):
 		self.dataflow = analysis.dataflowIR.convert.evaluateCode(self.compiler, self.code)
 
 	def analyze(self):
-		self.dioa = correlatedanalysis.evaluateDataflow(self.compiler, self.dataflow)
+		self.dioa = correlatedanalysis.evaluateDataflow(self.compiler, self.prgm, self.dataflow)
 		self.dataflow = self.dioa.flat
 
 		finalobjectanalysis.process(self.compiler, self.dataflow)
@@ -235,34 +236,39 @@ class DataflowTransformContext(object):
 		for field in node.fields.itervalues():
 			self.findLive(field, live)
 
-def evaluateCode(compiler, vscode, fscode):
-	vscontext = DataflowTransformContext(compiler, vscode)
-	fscontext = DataflowTransformContext(compiler, fscode)
+def evaluateCode(compiler, prgm, vscode, fscode):
+	vscontext = DataflowTransformContext(compiler, prgm, vscode)
+	fscontext = DataflowTransformContext(compiler, prgm, fscode)
 
-	with compiler.console.scope('tree transform'):
-		treetransform.process(compiler, vscontext.code)
-		treetransform.process(compiler, fscontext.code)
+	if False:
+		with compiler.console.scope('tree transform'):
+			treetransform.process(compiler, vscontext.code)
+			treetransform.process(compiler, fscontext.code)
 
-	with compiler.console.scope('convert'):
-		vscontext.convert()
-		fscontext.convert()
+		raise compilerexceptions.CompilerAbort, "testing"
 
-	with compiler.console.scope('analyze'):
-		vscontext.analyze()
-		fscontext.analyze()
+	if True:
+		with compiler.console.scope('convert'):
+			vscontext.convert()
+			fscontext.convert()
 
-	with compiler.console.scope('field transform'):
-		fieldtransform.process(compiler, vscontext.dataflow)
-		fieldtransform.process(compiler, fscontext.dataflow)
+		with compiler.console.scope('analyze'):
+			vscontext.analyze()
+			fscontext.analyze()
+
+	if False:
+		with compiler.console.scope('field transform'):
+			fieldtransform.process(compiler, vscontext.dataflow)
+			fieldtransform.process(compiler, fscontext.dataflow)
 
 
-	with compiler.console.scope('debug dump'):
-		analysis.dataflowIR.dump.evaluateDataflow(vscontext.dataflow, 'summaries\dataflow', vscontext.code.codeName())
-		analysis.dataflowIR.dump.evaluateDataflow(fscontext.dataflow, 'summaries\dataflow', fscontext.code.codeName())
-		vscontext.reconstructCFG()
-		fscontext.reconstructCFG()
+		with compiler.console.scope('debug dump'):
+			analysis.dataflowIR.dump.evaluateDataflow(vscontext.dataflow, 'summaries\dataflow', vscontext.code.codeName())
+			analysis.dataflowIR.dump.evaluateDataflow(fscontext.dataflow, 'summaries\dataflow', fscontext.code.codeName())
+			vscontext.reconstructCFG()
+			fscontext.reconstructCFG()
 
-	raise compilerexceptions.CompilerAbort, "testing"
+		raise compilerexceptions.CompilerAbort, "testing"
 
 	with compiler.console.scope('flatten trees'):
 		vscontext.findAndFlattenTrees()
@@ -310,11 +316,11 @@ def evaluateCode(compiler, vscode, fscode):
 
 from language.python.shaderprogram import ShaderProgram
 
-def translate(compiler):
+def translate(compiler, prgm):
 	with compiler.console.scope('translate to glsl'):
-		for code in compiler.interface.entryCode():
+		for code in prgm.interface.entryCode():
 			if isinstance(code, ShaderProgram):
 				vs = code.vertexShaderCode()
 				fs = code.fragmentShaderCode()
 
-				evaluateCode(compiler, vs, fs)
+				evaluateCode(compiler, prgm, vs, fs)

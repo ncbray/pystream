@@ -7,7 +7,8 @@ from analysis import programculler
 
 # Eliminates all unreferenced code from a given program
 class CodeContextCuller(TypeDispatcher):
-	@dispatch(ast.leafTypes)
+	# Critical: code references in direct calls must NOT have their annotations rewritten.
+	@dispatch(ast.leafTypes, ast.Code)
 	def visitLeaf(self, node):
 		pass
 
@@ -19,6 +20,7 @@ class CodeContextCuller(TypeDispatcher):
 
 	@defaultdispatch
 	def default(self, node):
+		assert not node.__shared__, type(node)
 		node.visitChildren(self)
 		if node.annotation is not None:
 			node.annotation = node.annotation.contextSubset(self.remap)
@@ -26,27 +28,34 @@ class CodeContextCuller(TypeDispatcher):
 	def process(self, code, contexts):
 		self.locals = set()
 		self.remap  = []
+
 		for cindex, context in enumerate(code.annotation.contexts):
 			if context in contexts:
 				self.remap.append(cindex)
 
 		code.annotation = code.annotation.contextSubset(self.remap)
 
-		self(code.codeparameters)
-		self(code.ast)
+		code.visitChildrenForced(self)
 
 
-def evaluate(compiler):
+def evaluateCode(code, contexts, ccc):
+	# Check invariant
+	for context in contexts:
+		assert context in code.annotation.contexts, (code, id(context))
+
+	if len(code.annotation.contexts) != len(contexts):
+		ccc.process(code, contexts)
+
+	# Check invariant
+	for context in contexts:
+		assert context in code.annotation.contexts, (code, id(context))
+
+def evaluate(compiler, prgm):
 	with compiler.console.scope('cull'):
+		liveContexts = programculler.findLiveContexts(prgm)
+
 		ccc = CodeContextCuller()
-		liveContexts = programculler.findLiveContexts(compiler.interface)
-
 		for code, contexts in liveContexts.iteritems():
-			if len(code.annotation.contexts) != len(contexts):
-				ccc.process(code, contexts)
+			evaluateCode(code, contexts, ccc)
 
-		compiler.liveCode = set(liveContexts.iterkeys())
-
-		# TODO cull objects
-		# Object culling is complicated by implicit read/writes in function
-		# call resolution, etc.
+		prgm.liveCode = set(liveContexts.iterkeys())

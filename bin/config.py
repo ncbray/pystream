@@ -9,6 +9,7 @@ base, junk = os.path.split(__file__)
 outputDirectory = os.path.normpath(os.path.join(base, '..', 'summaries'))
 
 doDump = False
+maskDumpErrors = False
 doThreadCleanup = False
 
 if True:

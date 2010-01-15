@@ -736,7 +736,6 @@ class SimpleCodeGen(TypeDispatcher):
 		args = [self.seg.process(param) for param in p.params]
 
 		if p.defaults:
-			print "DEFAULTS", p.defaults
 			defaults = [self.seg.process(d) for d in p.defaults]
 			args[-len(defaults):] = ["%s=%s" % pair for pair in zip(args[-len(defaults):], defaults)]
 

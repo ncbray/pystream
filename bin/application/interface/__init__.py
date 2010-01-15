@@ -89,9 +89,9 @@ class InterfaceDeclaration(object):
 		if varg is None: varg = nullWrapper
 		if karg is None: karg = nullWrapper
 
-		return self.createEntryPointRaw(code, selfarg, args, kwds, varg, karg, group)
+		return self._createEntryPoint(code, selfarg, args, kwds, varg, karg, group)
 
-	def createEntryPointRaw(self, code, selfarg, args, kwds, varg, karg, group):
+	def _createEntryPoint(self, code, selfarg, args, kwds, varg, karg, group):
 		ep = EntryPoint(code, selfarg, args, kwds, varg, karg)
 		ep.group = group if group is not None else ep
 

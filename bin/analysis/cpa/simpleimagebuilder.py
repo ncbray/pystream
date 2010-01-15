@@ -2,8 +2,10 @@ from analysis.storegraph import storegraph, canonicalobjects
 from util.python.calling import CallerArgs
 
 class ImageBuilder(object):
-	def __init__(self, compiler):
+	def __init__(self, compiler, prgm):
 		self.compiler = compiler
+		self.prgm = prgm
+
 		self.canonical  = canonicalobjects.CanonicalObjects()
 		self.storeGraph = storegraph.StoreGraph(self.compiler.extractor, self.canonical)
 		self.entryPoints = []
@@ -62,7 +64,7 @@ class ImageBuilder(object):
 		return CallerArgs(selfarg, args, kwds, varg, karg, None)
 
 	def process(self):
-		interface = self.compiler.interface
+		interface = self.prgm.interface
 
 		for src, attrName, dst in interface.attr:
 			self.addAttr(src, attrName, dst)
@@ -72,7 +74,9 @@ class ImageBuilder(object):
 
 			self.entryPoints.append((entryPoint, args))
 
-def build(compiler):
-	ib = ImageBuilder(compiler)
+def build(compiler, prgm):
+	ib = ImageBuilder(compiler, prgm)
 	ib.process()
-	return ib.storeGraph, ib.entryPoints
+
+	prgm.storeGraph  = ib.storeGraph
+	prgm.entryPoints = ib.entryPoints

@@ -20,7 +20,7 @@ class CodeAnnotation(Annotation):
 		'codeReads', 'codeModifies', 'codeAllocates']
 
 	def __init__(self, contexts, descriptive, primitive, staticFold, dynamicFold, origin, live, killed, codeReads, codeModifies, codeAllocates):
-		self.contexts    = contexts
+		self.contexts    = tuple(contexts) if contexts is not None else None
 		self.descriptive = descriptive
 		self.primitive   = primitive
 		self.staticFold  = staticFold

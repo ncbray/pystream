@@ -472,12 +472,12 @@ class InterproceduralDataflow(object):
 		console.output('')
 
 
-def evaluateWithImage(compiler, graph, eps, opPathLength=0, firstPass=True):
+def evaluateWithImage(compiler, prgm, opPathLength=0, firstPass=True):
 	with compiler.console.scope('cpa analysis'):
-		dataflow = InterproceduralDataflow(compiler, graph, opPathLength)
+		dataflow = InterproceduralDataflow(compiler, prgm.storeGraph, opPathLength)
 		dataflow.firstPass = firstPass # HACK for debugging
 
-		for entryPoint, args in eps:
+		for entryPoint, args in prgm.entryPoints:
 			dataflow.addEntryPoint(entryPoint, args)
 
 		try:
@@ -494,11 +494,10 @@ def evaluateWithImage(compiler, graph, eps, opPathLength=0, firstPass=True):
 			with compiler.console.scope('annotate'):
 				dataflow.annotate()
 
-			compiler.storeGraph = dataflow.storeGraph
-			compiler.liveCode   = dataflow.liveCode
+			prgm.liveCode   = dataflow.liveCode
 
 		return dataflow
 
-def evaluate(compiler, opPathLength=0, firstPass=True):
-	graph, eps = simpleimagebuilder.build(compiler)
-	return evaluateWithImage(compiler, graph, eps, opPathLength, firstPass)
+def evaluate(compiler, prgm, opPathLength=0, firstPass=True):
+	simpleimagebuilder.build(compiler, prgm)
+	return evaluateWithImage(compiler, prgm, opPathLength, firstPass)

@@ -193,13 +193,14 @@ class OpInliningTransform(TypeDispatcher):
 # Performs depth-first traversal of call graph,
 # inlines code in reverse postorder.
 class CodeInliningTransform(TypeDispatcher):
-	def __init__(self, analysis, compiler, intrinsics):
-		self.analysis  = analysis
-		self.compiler  = compiler
+	def __init__(self, analysis, compiler, prgm, intrinsics):
+		self.analysis   = analysis
+		self.compiler   = compiler
+		self.prgm       = prgm
 		self.intrinsics = intrinsics
-		self.opinline = OpInliningTransform(analysis)
-		self.processed = set()
-		self.trace     = set()
+		self.opinline   = OpInliningTransform(analysis)
+		self.processed  = set()
+		self.trace      = set()
 
 		self.maxInvokes       = 1
 		self.maxOps           = 4
@@ -354,9 +355,9 @@ class CodeInliningTransform(TypeDispatcher):
 				result = self(node.ast)
 				if self.modified:
 					node.ast = result
-					# Always done imediately after inlining, so if we inline
+					# Always done immediately after inlining, so if we inline
 					# this function, less needs to be processed.
-					optimization.simplify.evaluateCode(self.compiler, node)
+					optimization.simplify.evaluateCode(self.compiler, self.prgm, node)
 			else:
 				ops, lcls = getOps(node)
 				for op in ops:
@@ -367,21 +368,19 @@ class CodeInliningTransform(TypeDispatcher):
 
 import translator.intrinsics
 
-def evaluate(compiler):
+def evaluate(compiler, prgm):
 	with compiler.console.scope('code inlining'):
 		analysis  = CodeInliningAnalysis()
-		for code in compiler.liveCode:
+		for code in prgm.liveCode:
 			analysis.process(code)
 
 		intrinsics = translator.intrinsics.makeIntrinsicRewriter(compiler.extractor)
 
-		transform = CodeInliningTransform(analysis, compiler, intrinsics)
-		for code in compiler.interface.entryCode():
-			if True:
-				try:
-					transform.process(code)
-				except:
-					compiler.console.output('Failed to transform %r' % code)
-					raise
-			else:
+		transform = CodeInliningTransform(analysis, compiler, prgm, intrinsics)
+
+		for code in prgm.interface.entryCode():
+			try:
 				transform.process(code)
+			except:
+				compiler.console.output('Failed to transform %r' % code)
+				raise

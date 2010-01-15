@@ -179,15 +179,15 @@ class ProgramCloner(object):
 
 		# Create context -> group mapping
 		self.groupLUT = {}
-		numGroups = 0
+		self.numGroups = 0
 		for func, groups in self.groups.iteritems():
 			for group in groups:
-				numGroups += 1
+				self.numGroups += 1
 				for context in group:
 					assert not context in self.groupLUT, context
 					self.groupLUT[context] = id(group) # HACK, as sets are not hashable.
 
-		return numGroups
+		return self.numGroups
 
 	def makeFuncGroups(self, code):
 		pack = []
@@ -455,7 +455,7 @@ class ProgramCloner(object):
 
 		ep.code = newcode
 
-	def rewriteProgram(self, compiler):
+	def rewriteProgram(self, compiler, prgm):
 		newfunc = self.createNewCodeNodes()
 
 		# Clone all of the functions.
@@ -465,11 +465,11 @@ class ProgramCloner(object):
 
 				fc = FunctionCloner(newfunc, self.groupLUT, newcode, group)
 				fc.process()
-				optimization.simplify.evaluateCode(compiler, newcode)
+				optimization.simplify.evaluateCode(compiler, prgm, newcode)
 
 		# Entry points are considered to be "indirect"
 		# As there is only one indirect function, we know it is the entry point.
-		for entryPoint in compiler.interface.entryPoint:
+		for entryPoint in prgm.interface.entryPoint:
 			self.retargetEntryPoint(entryPoint, newfunc)
 
 		# Rewrite the callLUT
@@ -486,6 +486,11 @@ class ProgramCloner(object):
 			funcs.extend(groups.itervalues())
 		return funcs
 
+	def originalNumGroups(self):
+		return len(self.liveFunctions)
+
+	def clonedNumGroups(self):
+		return self.numGroups
 
 
 class FunctionCloner(TypeDispatcher):
@@ -585,31 +590,33 @@ class FunctionCloner(TypeDispatcher):
 	def process(self):
 		self.code.replaceChildren(self)
 
-def evaluate(compiler):
+def rewriteProgram(compiler, prgm, cloner):
+	liveCode = cloner.liveFunctions
+
+	# Is cloning worthwhile?
+	if cloner.clonedNumGroups() > cloner.originalNumGroups():
+		with compiler.console.scope('rewrite'):
+			cloner.rewriteProgram(compiler, prgm)
+			liveCode = cloner.newLive
+
+	prgm.liveCode = liveCode
+
+def evaluate(compiler, prgm):
 	with compiler.console.scope('clone'):
 		with compiler.console.scope('analysis'):
 
-			liveContexts = programculler.findLiveContexts(compiler.interface)
+			liveContexts = programculler.findLiveContexts(prgm)
 
 			cloner = ProgramCloner(liveContexts)
 
-			cloner.unifyContexts(compiler.interface)
+			cloner.unifyContexts(prgm.interface)
 			cloner.findInitialConflicts()
 			cloner.process()
-			numGroups = cloner.makeGroups()
-			originalNumGroups = len(cloner.liveFunctions)
+			cloner.makeGroups()
 
 			compiler.console.output("=== Split ===")
 			cloner.listGroups(compiler.console)
-			compiler.console.output("Num groups %d / %d" %  (numGroups, originalNumGroups))
+			compiler.console.output("Num groups %d / %d" %  (cloner.clonedNumGroups(), cloner.originalNumGroups()))
 			compiler.console.output('')
 
-		liveCode = cloner.liveFunctions
-
-		# Is cloning worthwhile?
-		if numGroups > originalNumGroups:
-			with compiler.console.scope('rewrite'):
-				cloner.rewriteProgram(compiler)
-				liveCode = cloner.newLive
-
-		compiler.liveCode = liveCode
+		rewriteProgram(compiler, prgm, cloner)

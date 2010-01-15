@@ -239,7 +239,7 @@ class LLTranslator(TypeDispatcher):
 		self.code = None
 
 		optimization.convertboolelimination.evaluateCode(self.compiler, node)
-		optimization.simplify.evaluateCode(self.compiler, node)
+		optimization.simplify.evaluateCode(self.compiler, None, node)
 
 		#astpprint.pprint(node)
 		return node

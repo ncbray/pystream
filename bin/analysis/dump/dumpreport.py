@@ -496,7 +496,7 @@ def makeHeapTree(liveHeap, heapContexts):
 	tree, _idoms = util.graphalgorithim.dominator.dominatorTree(points, head)
 	return tree, head
 
-def dumpReport(name, compiler, derived, liveInvocations, liveHeap, heapContexts):
+def dumpReport(name, compiler, prgm, derived, liveInvocations, liveHeap, heapContexts):
 	reportDir = makeReportDirectory(name)
 
 	links = dumputil.LinkManager()
@@ -559,7 +559,6 @@ def dumpReport(name, compiler, derived, liveInvocations, liveHeap, heapContexts)
 	out << "Object Index"
 	out.end('h2')
 
-
 	tree, head = makeHeapTree(liveHeap, heapContexts)
 	nodes = set()
 	def printHeapChildren(node):
@@ -608,24 +607,26 @@ def dumpReport(name, compiler, derived, liveInvocations, liveHeap, heapContexts)
 
 	out.close()
 
-	for func in compiler.liveCode:
-		dumpFunctionInfo(func, compiler, derived, links, reportDir)
+	with compiler.console.scope('function reports'):
+		for func in prgm.liveCode:
+			dumpFunctionInfo(func, compiler, derived, links, reportDir)
 
+	with compiler.console.scope('heap reports'):
+		for heap in liveHeap:
+			dumpHeapInfo(heap, compiler, heapContexts, links, reportDir)
 
-	for heap in liveHeap:
-		dumpHeapInfo(heap, compiler, heapContexts, links, reportDir)
-
-	dumpgraphs.dump(compiler, liveInvocations, links, reportDir)
+	with compiler.console.scope('graphs'):
+		dumpgraphs.dump(compiler, liveInvocations, links, reportDir)
 
 
 class DerivedData(object):
-	def __init__(self, context):
+	def __init__(self, liveCode):
 		self.invokeDestination = collections.defaultdict(set)
 		self.invokeSource      = collections.defaultdict(set)
 		self.funcReads         = collections.defaultdict(lambda: collections.defaultdict(set))
 		self.funcModifies      = collections.defaultdict(lambda: collections.defaultdict(set))
 
-		for code in context.liveCode:
+		for code in liveCode:
 			self.handleReads(code, code.annotation.codeReads)
 			self.handleModifies(code, code.annotation.codeModifies)
 
@@ -677,14 +678,11 @@ class DerivedData(object):
 		return self.invokeDestination[(function, context)]
 
 
-def evaluate(compiler, name):
+def evaluate(compiler, prgm, name):
 	with compiler.console.scope('dump'):
+		liveCode, liveInvocations = programculler.findLiveCode(prgm)
+		liveHeap, heapContexts    = programculler.findLiveHeap(prgm)
 
-		liveCode, liveInvocations = programculler.findLiveCode(compiler)
-		compiler.liveCode = liveCode
+		derived = DerivedData(prgm.liveCode)
 
-		liveHeap, heapContexts = programculler.findLiveHeap(compiler)
-
-		derived = DerivedData(compiler)
-
-		dumpReport(name, compiler, derived, liveInvocations, liveHeap, heapContexts)
+		dumpReport(name, compiler, prgm, derived, liveInvocations, liveHeap, heapContexts)

@@ -14,11 +14,11 @@ from language.python import ast
 #
 
 
-def evaluateCode(compiler, node):
+def evaluateCode(compiler, prgm, node):
 	assert node.isCode(), type(node)
 
 	try:
-		fold.evaluateCode(compiler, node)
+		fold.evaluateCode(compiler, prgm, node)
 
 		# Can't process arbitrary abstract code nodes.
 		if node.isStandardCode():
@@ -36,8 +36,8 @@ def evaluateCode(compiler, node):
 		raise
 
 
-def evaluate(compiler):
+def evaluate(compiler, prgm):
 	with compiler.console.scope('simplify'):
-		for code in compiler.liveCode:
+		for code in prgm.liveCode:
 			if not code.annotation.descriptive:
-				evaluateCode(compiler, code)
+				evaluateCode(compiler, prgm, code)

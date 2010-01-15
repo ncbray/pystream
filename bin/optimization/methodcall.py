@@ -146,10 +146,10 @@ class MethodPatternFinder(TypeDispatcher):
 			self.invokeLUT[(code, context)] = annotations.annotationSet(reach)
 
 
-	def preprocess(self, compiler):
+	def preprocess(self, compiler, prgm):
 		if not self.findOriginals(compiler.extractor):
 			return False
-		self.findExisting(compiler.liveCode)
+		self.findExisting(prgm.liveCode)
 		return self.findContexts()
 
 
@@ -345,15 +345,15 @@ def methodMeet(values):
 			return dataflow.forward.top
 	return prototype
 
-def evaluate(compiler):
+def evaluate(compiler, prgm):
 	with compiler.console.scope('method call'):
 		pattern = MethodPatternFinder()
-		if not pattern.preprocess(compiler):
+		if not pattern.preprocess(compiler, prgm):
 			compiler.console.output("No method calls to fuse.")
 			return
 
 		numrewritten = 0
-		for code in compiler.liveCode:
+		for code in prgm.liveCode:
 			analyze = MethodAnalysis(pattern)
 			rewrite = MethodRewrite(pattern)
 
@@ -370,7 +370,7 @@ def evaluate(compiler):
 
 			# HACK to turn attribute access assignments into discards.
 			if rewrite.rewritten:
-				optimization.simplify.evaluateCode(compiler, code)
+				optimization.simplify.evaluateCode(compiler, prgm, code)
 
 			if rewrite.rewritten:
 				numrewritten += len(rewrite.rewritten)

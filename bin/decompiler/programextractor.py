@@ -570,10 +570,10 @@ class Extractor(object):
 
 from stubs import makeStubs
 
-def extractProgram(compiler):
+def extractProgram(compiler, prgm):
 	compiler.extractor = Extractor(compiler)
 
 	# Create stub functions
 	makeStubs(compiler)
 
-	compiler.interface.translate(compiler.extractor)
+	prgm.interface.translate(compiler.extractor)

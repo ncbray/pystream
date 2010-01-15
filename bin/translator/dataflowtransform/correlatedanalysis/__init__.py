@@ -35,7 +35,7 @@ class GenericOpFunction(TypeDispatcher):
 		self.g         = g
 		self.op        = g.op
 		self.analysis  = analysis
-		self.canonical = analysis.compiler.storeGraph.canonical
+		self.canonical = analysis.prgm.storeGraph.canonical
 
 		# The positions for returning correlated RMA information.
 		self.readPosition     = self.allocateOutput()
@@ -326,8 +326,9 @@ class GenericOpFunction(TypeDispatcher):
 			analysis.accumulateObjectExists(obj, index, mask)
 
 class DataflowIOAnalysis(TypeDispatcher):
-	def __init__(self, compiler, dataflow, order):
+	def __init__(self, compiler, prgm, dataflow, order):
 		self.compiler = compiler
+		self.prgm     = prgm
 		self.dataflow = dataflow
 		self.order    = order
 
@@ -620,17 +621,17 @@ class DataflowIOAnalysis(TypeDispatcher):
 		out.endl()
 		f.close()
 
-def evaluateDataflow(compiler, dataflow):
+def evaluateDataflow(compiler, prgm, dataflow):
 	# Find a linear order to evaluate the dataflow nodes in
 	order = analysis.dataflowIR.ordering.evaluateDataflow(dataflow)
 
 	# Do a very flow-sensitive analysis to resolve points-to relations as
 	# precisely as possible.
-	dioa = DataflowIOAnalysis(compiler, dataflow, order)
+	dioa = DataflowIOAnalysis(compiler, prgm, dataflow, order)
 	dioa.process()
 
 	# HACK store on dioa
 	# TODO do not return dioa, just the dataflow
-	dioa.flat = flattendataflow.evaluateDataflow(compiler, dataflow, order, dioa)
+	dioa.flat = flattendataflow.evaluateDataflow(compiler, prgm, dataflow, order, dioa)
 
 	return dioa

@@ -13,8 +13,9 @@ import collections
 
 
 class RedundantLoadEliminator(object):
-	def __init__(self, compiler, readNumbers, writeNumbers, dom):
-		self.compiler = compiler
+	def __init__(self, compiler, prgm, readNumbers, writeNumbers, dom):
+		self.compiler     = compiler
+		self.prgm         = prgm
 		self.readNumbers  = readNumbers
 		self.writeNumbers = writeNumbers
 		self.dom = dom
@@ -142,11 +143,11 @@ class RedundantLoadEliminator(object):
 		signatures = self.generateSignatures(code)
 		replace = self.generateReplacements(signatures)
 
-		rewriteAndSimplify(self.compiler, code, replace)
+		rewriteAndSimplify(self.compiler, self.prgm, code, replace)
 		return self.eliminated
 
 
-def evaluateCode(compiler, code):
+def evaluateCode(compiler, prgm, code):
 	rm = FindReadModify().processCode(code)
 
 	dom = MakeForwardDominance().processCode(code)
@@ -154,13 +155,13 @@ def evaluateCode(compiler, code):
 	fessa = ForwardESSA(rm)
 	fessa.processCode(code)
 
-	rle = RedundantLoadEliminator(compiler, fessa.readLUT, fessa.writeLUT, dom)
+	rle = RedundantLoadEliminator(compiler, prgm, fessa.readLUT, fessa.writeLUT, dom)
 	eliminated = rle.processCode(code)
 	if eliminated:
 		print '\t', code, eliminated
 
-def evaluate(compiler):
+def evaluate(compiler, prgm):
 	with compiler.console.scope('redundant load elimination'):
-		for code in compiler.liveCode:
+		for code in prgm.liveCode:
 			if code.isStandardCode() and not code.annotation.descriptive:
-				evaluateCode(compiler, code)
+				evaluateCode(compiler, prgm, code)

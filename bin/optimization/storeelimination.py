@@ -6,13 +6,13 @@ import collections
 from optimization.rewrite import rewriteAndSimplify
 
 
-def evaluate(compiler):
+def evaluate(compiler, prgm):
 	with compiler.console.scope('dead store elimination'):
 		live = set()
 		stores = collections.defaultdict(list)
 
 		# Analysis pass
-		for code in compiler.liveCode:
+		for code in prgm.liveCode:
 			live.update(code.annotation.codeReads[0])
 
 			for op in codeOps(code):
@@ -23,7 +23,7 @@ def evaluate(compiler):
 		# Transform pass
 		totalEliminated = 0
 
-		for code in compiler.liveCode:
+		for code in prgm.liveCode:
 			if not code.isStandardCode() or code.annotation.descriptive: continue
 
 			replace = {}
@@ -41,7 +41,7 @@ def evaluate(compiler):
 			# Rewrite the code without the dead stores
 			if replace:
 				compiler.console.output('%r %d' % (code, eliminated))
-				rewriteAndSimplify(compiler, code, replace)
+				rewriteAndSimplify(compiler, prgm, code, replace)
 
 			totalEliminated += eliminated
 

@@ -61,7 +61,7 @@ class FoldRewrite(TypeDispatcher):
 
 		self.callRewrite = makeCallRewrite(extractor)
 
-		self.annotationsExist = code.annotation.contexts is not None
+		self.annotationsExist = code.annotation.contexts is not None and storeGraph is not None
 
 	def descriptive(self):
 		return self.code.annotation.descriptive
@@ -474,12 +474,17 @@ def constMeet(values):
 			return top
 	return prototype
 
-def evaluateCode(compiler, node):
+def evaluateCode(compiler, prgm, node):
 	assert node.isCode(), type(node)
+
+	if prgm is None:
+		storeGraph = None
+	else:
+		storeGraph = prgm.storeGraph
 
 	if node.isStandardCode():
 		analyze  = FoldAnalysis()
-		rewrite  = FoldRewrite(compiler.extractor, compiler.storeGraph, node)
+		rewrite  = FoldRewrite(compiler.extractor, storeGraph, node)
 		rewriteS = FoldTraverse(rewrite, node)
 
 		traverse = ForwardFlowTraverse(constMeet, analyze, rewriteS)
@@ -492,7 +497,7 @@ def evaluateCode(compiler, node):
 		t(node)
 	else:
 		# HACK bypass dataflow analysis, as there's no real "flow"
-		rewrite  = FoldRewrite(compiler.extractor, compiler.storeGraph, node)
+		rewrite  = FoldRewrite(compiler.extractor, storeGraph, node)
 		rewriteS = FoldTraverse(rewrite, node)
 		node.replaceChildren(rewriteS)
 

@@ -6,8 +6,9 @@ from analysis.dataflowIR import annotations
 from analysis.fsdf import canonicaltree
 
 class DataflowFlattener(TypeDispatcher):
-	def __init__(self, compiler, dataflow, order, dioa):
+	def __init__(self, compiler, prgm, dataflow, order, dioa):
 		self.compiler = compiler
+		self.prgm     = prgm
 		self.dataflow = dataflow
 		self.order    = order
 		self.dioa     = dioa
@@ -27,8 +28,8 @@ class DataflowFlattener(TypeDispatcher):
 		if key not in self.objects:
 			if self.dioa.getCount(obj) > 1:
 				xtype = obj.xtype
-				indexedType = self.compiler.storeGraph.canonical.indexedType(xtype)
-				replacement = self.compiler.storeGraph.regionHint.object(indexedType)
+				indexedType = self.prgm.storeGraph.canonical.indexedType(xtype)
+				replacement = self.prgm.storeGraph.regionHint.object(indexedType)
 			else:
 				replacement = obj # HACK
 			self.translateObjectAnnotations(key, replacement)
@@ -41,7 +42,7 @@ class DataflowFlattener(TypeDispatcher):
 		key = (name, index)
 		if key not in self.fields:
 			newobj = self.replacementObject(name.object, index)
-			newfield = newobj.field(name.slotName, self.compiler.storeGraph.regionHint)
+			newfield = newobj.field(name.slotName, self.prgm.storeGraph.regionHint)
 			self.fields[key] = newfield
 		else:
 			newfield = self.fields[key]
@@ -342,8 +343,8 @@ class DataflowFlattener(TypeDispatcher):
 # of the same object an "index"
 # Flattening turns indexed nodes into concrete dataflow nodes
 # Flattening also ads annotations
-def evaluateDataflow(compiler, dataflow, order, dioa):
-	flattener = DataflowFlattener(compiler, dataflow, order, dioa)
+def evaluateDataflow(compiler, prgm, dataflow, order, dioa):
+	flattener = DataflowFlattener(compiler, prgm, dataflow, order, dioa)
 	dataflow = flattener.process()
 	dce.evaluateDataflow(dataflow)
 	return dataflow

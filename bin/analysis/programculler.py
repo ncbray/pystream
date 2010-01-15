@@ -42,42 +42,46 @@ class CallGraphFinder(Finder):
 
 		children = []
 
-		ops, lcls = getOps(code)
+		ops, _lcls = getOps(code)
 		for op in ops:
 			assert hasattr(op.annotation, 'invokes'), op
 			invokes = op.annotation.invokes
 			if invokes is not None:
-				for dstf, dstc in invokes[1][cindex]:
+				cinvokes = invokes[1][cindex]
+				for dstf, dstc in cinvokes:
 					child = (dstf, dstc)
 					self.invokes[code].add(dstf)
 					self.invokesContext[node].add(child)
 					children.append(child)
 		return children
 
+
 def makeCGF(interface):
 	cgf = CallGraphFinder()
 	for code, context in interface.entryCodeContexts():
+		assert context in code.annotation.contexts
 		cgf.process((code, context))
+
 	return cgf
 
-def findLiveCode(compiler):
-	cgf = makeCGF(compiler.interface)
+def findLiveCode(prgm):
+	cgf = makeCGF(prgm.interface)
 
 	entry = set()
-	for code in compiler.interface.entryCode():
+	for code in prgm.interface.entryCode():
 		entry.add(code)
 
-	live = cgf.liveFunc
 	G = cgf.invokes
 	head = None
 	G[head] = entry
 
-	compiler.liveCode = live
+	prgm.liveCode = cgf.liveFunc
 
-	return live, G
+	return cgf.liveFunc, G
 
-def findLiveContexts(interface):
-	cgf = makeCGF(interface)
+def findLiveContexts(prgm):
+	cgf = makeCGF(prgm.interface)
+	prgm.liveCode = cgf.liveFunc
 	return cgf.liveFuncContext
 
 
@@ -86,17 +90,20 @@ class LiveHeapFinder(TypeDispatcher):
 		TypeDispatcher.__init__(self)
 		self.live = set()
 
+	def addReferences(self, refs):
+		self.live.update(refs)
+
 	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
 		pass
 
 	@dispatch(ast.Existing)
 	def visitExisting(self, node):
-		self.live.add(node.object)
+		self.addReferences(node.annotation.references.merged)
 
 	@dispatch(ast.Local)
 	def visitReference(self, node):
-		self.live.update(node.annotation.references.merged)
+		self.addReferences(node.annotation.references.merged)
 
 	@defaultdispatch
 	def visitDefault(self, node):
@@ -107,9 +114,9 @@ class LiveHeapFinder(TypeDispatcher):
 
 # HACK this may not be 100% sound, as it only considers references
 # directly embedded in the code.
-def findLiveHeap(compiler):
+def findLiveHeap(prgm):
 	finder = LiveHeapFinder()
-	for code in compiler.liveCode:
+	for code in prgm.liveCode:
 		finder.process(code)
 
 	index = {}

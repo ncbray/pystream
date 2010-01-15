@@ -511,26 +511,26 @@ class LifetimeAnalysis(object):
 		searcher.process()
 
 
-	def process(self, compiler):
+	def process(self, compiler, prgm):
 		with compiler.console.scope('solve'):
-			entryContexts = compiler.interface.entryContexts()
+			entryContexts = prgm.interface.entryContexts()
 
-			self.gatherSlots(compiler.liveCode, entryContexts)
-			self.gatherInvokes(compiler.liveCode, entryContexts)
+			self.gatherSlots(prgm.liveCode, entryContexts)
+			self.gatherInvokes(prgm.liveCode, entryContexts)
 
 			self.propagateVisibility()
 			self.propagateHeld()
 
-			self.rm = ReadModifyAnalysis(compiler.liveCode, self.invokeSources)
+			self.rm = ReadModifyAnalysis(prgm.liveCode, self.invokeSources)
 			self.inferScope()
 			self.rm.process(self.killed)
 
 		with compiler.console.scope('annotate'):
-			self.createDB(compiler)
+			self.createDB(compiler, prgm)
 
 		del self.rm
 
-	def createDB(self, compiler):
+	def createDB(self, compiler, prgm):
 		self.annotationCount = 0
 		self.annotationCache = {}
 
@@ -538,7 +538,7 @@ class LifetimeAnalysis(object):
 		modifyDB = self.rm.opModifyDB
 		self.allocations = self.rm.allocations
 
-		for code in compiler.liveCode:
+		for code in prgm.liveCode:
 			# Annotate the code
 			live   = []
 			killed = []
@@ -605,6 +605,6 @@ class LifetimeAnalysis(object):
 		del self.annotationCache
 		del self.annotationCount
 
-def evaluate(compiler):
+def evaluate(compiler, prgm):
 	with compiler.console.scope('lifetime analysis'):
-		la = LifetimeAnalysis().process(compiler)
+		la = LifetimeAnalysis().process(compiler, prgm)

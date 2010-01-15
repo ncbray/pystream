@@ -4,9 +4,11 @@ import os.path
 from decompiler.programextractor import extractProgram
 import application.pipeline
 from util.application.console import Console
-from application import context
 
-from interface import *
+from . import context
+from . program import Program
+
+from . import interface
 
 def importDeep(name):
 	mod = __import__(name)
@@ -22,8 +24,6 @@ class Makefile(object):
 		self.moduleName = None
 		self.module = None
 
-		self.interface = InterfaceDeclaration()
-
 		self.workingdir = os.path.dirname(os.path.join(sys.path[0], self.filename))
 		self.outdir = None
 
@@ -38,18 +38,18 @@ class Makefile(object):
 		self.outdir = os.path.normpath(os.path.join(self.workingdir, path))
 
 	def declConst(self, value):
-		return ExistingWrapper(value)
+		return interface.ExistingWrapper(value)
 
 	def declInstance(self, typename):
-		return InstanceWrapper(typename)
+		return interface.InstanceWrapper(typename)
 
 	def declConfig(self, **kargs):
 		for k, v in kargs.iteritems():
 			self.config[k] = v
 
 	def declAttr(self, src, attr, dst):
-		assert isinstance(src, InstanceWrapper), src
-		assert isinstance(dst, InstanceWrapper), dst
+		assert isinstance(src, interface.InstanceWrapper), src
+		assert isinstance(dst, interface.InstanceWrapper), dst
 		self.interface.attr.append((src, attr, dst))
 
 	def declFunction(self, func, *args):
@@ -57,7 +57,7 @@ class Makefile(object):
 
 	def declClass(self, cls):
 		assert isinstance(cls, type), cls
-		wrapped = ClassDeclaration(cls)
+		wrapped = interface.ClassDeclaration(cls)
 		self.interface.cls.append(wrapped)
 		return wrapped
 
@@ -80,8 +80,8 @@ class Makefile(object):
 
 			   # GLSL declarations
 			   'glsl':self.interface.glsl,
-			   'attrslot':AttrDeclaration,
-			   'arrayslot':ArrayDeclaration,
+			   'attrslot':interface.AttrDeclaration,
+			   'arrayslot':interface.ArrayDeclaration,
 			   }
 
 		f = open(self.filename)
@@ -89,6 +89,10 @@ class Makefile(object):
 
 	def pystreamCompile(self):
 		compiler = context.CompilerContext(Console())
+		prgm = Program()
+
+		self.interface = prgm.interface
+
 
 		with compiler.console.scope("makefile"):
 			compiler.console.output("Processing %s" % self.filename)
@@ -100,7 +104,6 @@ class Makefile(object):
 
 			assert self.outdir, "No output directory declared."
 
-		compiler.interface = self.interface
-		extractProgram(compiler)
+		extractProgram(compiler, prgm)
 
-		application.pipeline.evaluate(compiler, self.moduleName)
+		application.pipeline.evaluate(compiler, prgm, self.moduleName)

@@ -38,7 +38,15 @@ def decompile(compiler, func, trace=False, ssa=True, descriptive=False):
 	except:
 		mname = 'unknown_module'
 
-	code = decompileCode(compiler, func.func_code, mname, trace=trace, ssa=ssa, descriptive=descriptive)
+	code = decompileCode(compiler, func.func_code, mname, trace=trace, ssa=ssa)
+
+	# Flow sensitive, works without a ssa or ssi transform.
+	code.rewriteAnnotation(descriptive=descriptive)
+	optimization.simplify.evaluateCode(compiler, None, code)
+
+	if trace:
+		SimpleCodeGen(sys.stdout).process(code)
+
 
 	# HACK turn function defaults into code defaults
 	# Really, we should check for immutability / consistency across all functions using this code
@@ -52,8 +60,9 @@ def decompile(compiler, func, trace=False, ssa=True, descriptive=False):
 
 	return code
 
-def decompileCode(compiler, code, mname, trace=False, ssa=True, descriptive=False):
-	return Decompiler(compiler).disassemble(code, mname, trace=trace, ssa=ssa, descriptive=descriptive)
+def decompileCode(compiler, code, mname, trace, ssa):
+	return Decompiler(compiler).disassemble(code, mname, trace=trace, ssa=ssa)
+
 
 def getargs(co):
 	nargs = co.co_argcount
@@ -74,7 +83,7 @@ class Decompiler(object):
 	def __init__(self, compiler):
 		self.compiler = compiler
 
-	def disassemble(self, code, mname, trace=False, ssa=True, descriptive=False):
+	def disassemble(self, code, mname, trace=False, ssa=True):
 		argnames, vargs, kargs = getargs(code)
 
 		inst, targets = disassemble(code)
@@ -106,14 +115,6 @@ class Decompiler(object):
 
 		if ssa:
 			root = ssitransform.ssiTransform(root)
-
-		# Flow sensitive, works without a ssa or ssi transform.
-		root.rewriteAnnotation(descriptive=descriptive)
-		optimization.simplify.evaluateCode(self.compiler, root)
-
-
-		if trace:
-			SimpleCodeGen(sys.stdout).process(root)
 
 		return root
 

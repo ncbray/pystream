@@ -3,13 +3,19 @@ __all__ = ['async', 'async_limited']
 import threading
 import functools
 
+enabled = True
+
 def async(func):
 	@functools.wraps(func)
 	def async_wrapper(*args, **kargs):
 		t = threading.Thread(target=func, args=args, kwargs=kargs)
 		t.start()
 		return t
-	return async_wrapper
+
+	if enabled:
+		return async_wrapper
+	else:
+		return func
 
 def async_limited(count):
 	def limited_func(func):
@@ -29,6 +35,9 @@ def async_limited(count):
 			t.start()
 			return t
 
-		return limited_wrap
+		if enabled:
+			return limited_wrap
+		else:
+			return func
 
 	return limited_func

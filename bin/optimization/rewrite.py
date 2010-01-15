@@ -60,8 +60,8 @@ def rewrite(compiler, code, replace):
 		Rewriter(replace).processCode(code)
 	return code
 
-def rewriteAndSimplify(compiler, code, replace):
+def rewriteAndSimplify(compiler, prgm, code, replace):
 	if replace:
 		Rewriter(replace).processCode(code)
-		optimization.simplify.evaluateCode(compiler, code)
+		optimization.simplify.evaluateCode(compiler, prgm, code)
 	return code

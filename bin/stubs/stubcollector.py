@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 from _pystream import cfuncptr
 from util.monkeypatch import xtypes
-from language.python import ast
 
 from util.python import replaceGlobals
 
@@ -21,66 +20,6 @@ class StubCollector(object):
 		self.highLevelLUT 	= {}
 
 		self.codeToFunction = {}
-
-	##############################
-	### AST building utilities ###
-	##############################
-
-	def existing(self, obj):
-		return ast.Existing(self.compiler.extractor.getObject(obj))
-
-	def allocate(self, t, target):
-		return ast.Assign(ast.Allocate(t), [target])
-
-	def getType(self, inst, result):
-		return ast.Assign(ast.Load(inst, 'LowLevel', self.existing('type')), [result])
-
-	def loadAttribute(self, expr, type, name, target):
-		descriptor  = type.__dict__[name]
-		mangledName = self.compiler.slots.uniqueSlotName(descriptor)
-		return ast.Assign(ast.Load(expr, 'Attribute', self.existing(mangledName)), [target])
-
-	def returnNone(self):
-		return ast.Return(self.existing(None))
-
-	def typeLookup(self, cls, field, result):
-		clsDict = ast.Local('clsDict')
-		return [
-			ast.Assign(ast.Load(cls, 'LowLevel', self.existing('dictionary')), [clsDict]),
-			ast.Assign(ast.Load(clsDict, 'Dictionary', self.existing(field)), [result]),
-			]
-
-	def instLookup(self, expr, field, result):
-		cls = ast.Local('cls')
-		return [self.getType(expr, cls), self.typeLookup(cls, field, result)]
-
-	def operation(self, attr, expr, args, vargs, kargs, result=None):
-		type_ 	= ast.Local('type%s' % attr)
-		func 	= ast.Local('func%s' % attr)
-
-		newargs = [expr]
-		newargs.extend(args)
-
-		if result:
-			return [
-				self.instLookup(expr, attr, func),
-				ast.Assign(ast.Call(func, newargs, [], vargs, kargs), [result])
-				]
-		else:
-			return [
-				self.instLookup(expr, attr, func),
-				ast.Discard(ast.Call(func, newargs, [], vargs, kargs))
-				]
-
-	def attributeCall(self, expr, type, field, args, kwds, vargs, kargs, result=None):
-		method = ast.Local('method_%s' % field)
-		getter = self.loadAttribute(expr, type, field, method)
-		call   = ast.Call(method, args, kwds, vargs, kargs)
-		if result:
-			callStmt = ast.Assign(call, [result])
-		else:
-			callStmt = ast.Discard(call)
-		return [getter, callStmt]
 
 	#####################
 	### Stub building ###
@@ -207,31 +146,6 @@ class StubCollector(object):
 		assert code.isCode(), type(code)
 		code.rewriteAnnotation(descriptive=True, primitive=True)
 		return code
-
-	##################
-	### High Level ###
-	##################
-
-	def highLevelStub(self, f):
-		# Let the function use the common global dictionary.
-		# Recreate the function with different globals.
-		f = replaceGlobals(f, self.highLevelGlobals)
-
-		# Register
-		self.highLevelLUT[f.func_name] = f
-
-		# Add to the common global dictionary
-		self.highLevelGlobals[f.func_name] = f
-
-		return f
-
-	### Attachment functions ###
-	def replaceObject(self, o):
-		def callback(f):
-			#assert self.highLevelLUT[f.func_name] == f, "Must declare as high level stub before replacing."
-			self.compiler.extractor.replaceObject(o, f)
-			return f
-		return callback
 
 	def replaceAttr(self, o, attr):
 		def callback(obj):

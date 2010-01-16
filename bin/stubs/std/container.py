@@ -11,8 +11,6 @@ xrangeiterator = xtypes.XRangeIteratorType
 
 @stubgenerator
 def makeContainerStubs(collector):
-	highLevelStub = collector.highLevelStub
-	replaceObject = collector.replaceObject
 	replaceAttr   = collector.replaceAttr
 
 	llfunc        = collector.llfunc

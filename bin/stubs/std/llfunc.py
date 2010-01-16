@@ -2,13 +2,8 @@
 
 from __future__ import absolute_import
 
-# TODO remove once type__call__ and method__call__ are made into a functions.
-from language.python.ast import *
-
-# HACK for highlevel functions?
 from util.monkeypatch import xtypes
 method   = xtypes.MethodType
-function = xtypes.FunctionType
 
 from .. stubcollector import stubgenerator
 
@@ -20,8 +15,6 @@ def makeLLFunc(collector):
 	llast         = collector.llast
 	llfunc        = collector.llfunc
 	export        = collector.export
-	highLevelStub = collector.highLevelStub
-	replaceObject = collector.replaceObject
 	replaceAttr   = collector.replaceAttr
 	fold          = collector.fold
 	staticFold    = collector.staticFold
@@ -149,8 +142,8 @@ def makeLLFunc(collector):
 	# TODO create unbound methods if inst == None?
 	# Replace object must be on outside?
 	@export
-	@replaceObject(xtypes.FunctionType.__get__)
-	@highLevelStub
+	@attachPtr(xtypes.FunctionType, '__get__')
+	@llfunc
 	def function__get__(self, inst, cls):
 		return method(self, inst, cls)
 
@@ -160,58 +153,27 @@ def makeLLFunc(collector):
 	##############
 
 	@replaceAttr(xtypes.MethodType, '__init__')
-	@highLevelStub
+	@llfunc
 	def method__init__(self, func, inst, cls):
-		self.im_func 	= func
-		self.im_self 	= inst
-		self.im_class 	= cls
+		storeDescriptor(self, method, 'im_func',  func)
+		storeDescriptor(self, method, 'im_self',  inst)
+		storeDescriptor(self, method, 'im_class', cls)
 
 	# The __call__ function for a bound method.
 	# TODO unbound method?
-	# High level, give or take argument uglyness.
 	# Exported for method call optimization
 	@export
 	@attachPtr(xtypes.MethodType, '__call__')
-	@llast
-	def method__call__():
-		internal_self = Local('internal_self')
-		self = Local('self')
-
-		im_self = Local('im_self')
-		im_func = Local('im_func')
-		temp 	= Local('temp')
-		retp = Local('internal_return')
-
-		vargs = Local('vargs')
-
-		b = Suite()
-
-		# TODO analysis does not terminate if  generic "GetAttr" is used?
-		b.append(collector.loadAttribute(self, xtypes.MethodType, 'im_self', im_self))
-		b.append(collector.loadAttribute(self, xtypes.MethodType, 'im_func', im_func))
-#		b.append(Assign(GetAttr(self, collector.existing('im_self')), im_self))
-#		b.append(Assign(GetAttr(self, collector.existing('im_func')), im_func))
-
-
-		b.append(Assign(Call(im_func, [im_self], [], vargs, None), [temp]))
-		b.append(Return([temp]))
-
-		name = 'method__call__'
-		code = Code(name, CodeParameters(internal_self, [self], ['self'], [], vargs, None, [retp]), b)
-
-		code.rewriteAnnotation(origin=Origin(name, __file__, None, None))
-		return code
-
-
-#	@export
-#	@attachPtr(xtypes.MethodType, '__call__')
-#	@llfunc
-#	def method__call__(self, *vargs):
-#		im_func = self.im_func
-#		im_self = self.im_self
-#		return im_func(im_self, *vargs)
+	@llfunc
+	def method__call__(self, *vargs):
+		im_func = loadDescriptor(self, method, 'im_func')
+		im_self = loadDescriptor(self, method, 'im_self')
+		return im_func(im_self, *vargs)
 
 	# Getter for function, returns method.
+	# Note that this is for descriptors with "hidden" functions.
+	# The extractor explicitly attaches the low-level "function"
+	# attribute to work around the lack of a visible function.
 	@export
 	@attachPtr(xtypes.MethodDescriptorType, '__get__')
 	@attachPtr(xtypes.WrapperDescriptorType, '__get__') # HACK?

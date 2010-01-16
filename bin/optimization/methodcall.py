@@ -44,12 +44,7 @@ class MethodPatternFinder(TypeDispatcher):
 		self.iget = exports['interpreter_getattribute']
 		self.oget = exports['object__getattribute__']
 
-		fgetpyobj = exports['function__get__']
-		fgetobj = extractor.getObject(fgetpyobj)
-		self.fget = extractor.getCall(fgetobj)
-
-		if self.fget is None: return False
-
+		self.fget =  exports['function__get__']
 		self.mdget = exports['methoddescriptor__get__']
 
 		self.icall = exports['interpreter_call']

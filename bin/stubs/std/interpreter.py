@@ -2,18 +2,16 @@
 
 from __future__ import absolute_import
 
-from  language.python.ast import *
-from util.asttools.origin import Origin
+from  language.python import ast
 
 from .. stubcollector import stubgenerator
 
 import types
 import operator
-import util
 
 def noself(code):
 	p = code.codeparameters
-	code.codeparameters = CodeParameters(None, p.params, p.paramnames, p.defaults, p.vparam, p.kparam, p.returnparams)
+	code.codeparameters = ast.CodeParameters(None, p.params, p.paramnames, p.defaults, p.vparam, p.kparam, p.returnparams)
 	return code
 
 def compileFunction(s, name):
@@ -28,8 +26,6 @@ def makeInterpreterStubs(collector):
 	attachAttrPtr = collector.attachAttrPtr
 	llfunc        = collector.llfunc
 	export        = collector.export
-	highLevelStub = collector.highLevelStub
-	replaceObject = collector.replaceObject
 	replaceAttr   = collector.replaceAttr
 	fold          = collector.fold
 	staticFold    = collector.staticFold

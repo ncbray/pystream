@@ -8,8 +8,6 @@ vec4 = vec.vec4
 def makeSamplerFunc(collector):
 	llfunc        = collector.llfunc
 	export        = collector.export
-	highLevelStub = collector.highLevelStub
-	replaceObject = collector.replaceObject
 	replaceAttr   = collector.replaceAttr
 	attachPtr     = collector.attachPtr
 

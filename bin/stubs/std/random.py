@@ -11,8 +11,6 @@ import time
 def makeRandomStubs(collector):
 	llfunc        = collector.llfunc
 	export        = collector.export
-	highLevelStub = collector.highLevelStub
-	replaceObject = collector.replaceObject
 	replaceAttr   = collector.replaceAttr
 	fold          = collector.fold
 	attachPtr     = collector.attachPtr

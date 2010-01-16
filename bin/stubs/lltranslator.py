@@ -24,7 +24,12 @@ class LLTranslator(TypeDispatcher):
 			'load',      'store',      'check',
 			'loadAttr',  'storeAttr',  'checkAttr',
 			'loadDict',  'storeDict',  'checkDict',
-			'loadArray', 'storeArray', 'checkArray'))
+			'loadArray', 'storeArray', 'checkArray',
+			'loadDescriptor', 'storeDescriptor'))
+
+	def wrapPyObj(self, pyobj):
+		obj = self.compiler.extractor.getObject(pyobj)
+		return ast.Existing(obj)
 
 	def resolveGlobal(self, name):
 		glbls = self.func.func_globals
@@ -36,10 +41,24 @@ class LLTranslator(TypeDispatcher):
 		else:
 			pyobj = __builtins__[name]
 
-		obj = self.compiler.extractor.getObject(pyobj)
-		e = ast.Existing(obj)
+		e = self.wrapPyObj(pyobj)
 		self.defn[e] = e
 		return e
+
+	def getDescriptorName(self, cls, name):
+		assert isinstance(cls, ast.Existing)
+		assert isinstance(name, ast.Existing)
+
+		pycls  = cls.object.pyobj
+		pyname = name.object.pyobj
+
+		assert isinstance(pycls, type)
+		assert isinstance(pyname, str)
+
+		desc = getattr(pycls, pyname)
+
+		name = self.compiler.slots.uniqueSlotName(desc)
+		return self.wrapPyObj(name)
 
 	@dispatch(type(None), str)
 	def visitLeaf(self, node):
@@ -128,6 +147,12 @@ class LLTranslator(TypeDispatcher):
 				elif defn is 'checkArray':
 					checkCallArgs(node, 2)
 					node = ast.Check(node.args[0], 'Array', node.args[1])
+				elif defn is 'loadDescriptor':
+					name = self.getDescriptorName(node.args[1], node.args[2])
+					node = ast.Load(node.args[0], 'Attribute', name)
+				elif defn is 'storeDescriptor':
+					name = self.getDescriptorName(node.args[1], node.args[2])
+					node = ast.Store(node.args[0], 'Attribute', name, node.args[3])
 				else:
 					assert False, defn
 			elif isinstance(defn, ast.Existing):

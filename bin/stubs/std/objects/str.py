@@ -9,8 +9,6 @@ import operator
 def makeString(collector):
 	llfunc        = collector.llfunc
 	export        = collector.export
-	highLevelStub = collector.highLevelStub
-	replaceObject = collector.replaceObject
 	replaceAttr   = collector.replaceAttr
 	fold          = collector.fold
 	staticFold    = collector.staticFold

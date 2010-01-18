@@ -47,6 +47,8 @@ class ASTTranslator(object):
 
 		self.generateOutput = True
 
+		self.dispatch = {}
+
 	def generate(self, nodeType, *args):
 		if self.generateOutput:
 			return nodeType(*args)
@@ -75,16 +77,23 @@ class ASTTranslator(object):
 			if result.annotation.origin is result.__emptyAnnotation__.origin:
 				result.rewriteAnnotation(origin=self.makeOrigin(node))
 
-	def getMethod(self, node):
-		m = getattr(self, 'visit_'+self.nodeName(node), self.default)
-		return m
+	def nodeName(self, node):
+		return self.parser.typeName(node.getType())
+
+	def getMethod(self, typeID):
+		return getattr(self, 'visit_'+self.parser.typeName(typeID), self.default)
 
 	def __call__(self, node):
 		if isinstance(node, antlr3.tree.CommonErrorNode):
 			self.generateOutput = False
 			return None
 
-		m = self.getMethod(node)
+		typeID = node.getType()
+		m = self.dispatch.get(typeID)
+		if m is None:
+			m = getattr(self, 'visit_'+self.parser.typeName(typeID), self.default)
+			self.dispatch[typeID] = m
+
 		result = m(node)
 		self.attachOrigin(node, result)
 		return result

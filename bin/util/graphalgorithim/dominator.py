@@ -115,18 +115,13 @@ def dominatorTree(G, head):
 
 	# Map the solution onto the original graph.
 	idoms = {}
-	tree  = {}
 	for node, idom in enumerate(doms):
 		if node is 0: continue # Skip the head
 		node = reverse[node]
 		idom = reverse[idom]
 		idoms[node] = idom
 
-		if idom not in tree:
-			tree[idom] = [node]
-		else:
-			tree[idom].append(node)
-	return tree, idoms
+	return treeFromIDoms(idoms), idoms
 
 
 
@@ -136,12 +131,118 @@ def makeSingleHead(G, head):
 
 
 
-if __name__ == '__main__':
-	def test():
-		G = {0:(1, 2), 1:(3,), 2:(3,), 3:(4, 5), 4:(6,), 5:(6,)}
+class DomInfo(object):
+	__slots__ = 'pre', 'post', 'prev'
 
-		head = None
-		makeSingleHead(G, head)
-		print dominatorTree(G, head)
+	def __init__(self):
+		self.pre  = 0
+		self.post = 0
+		self.prev = []
 
-	test()
+	# For self to dominate other, it is necessary (but not sufficient)
+	# that pre and post bracket other's pre and post
+	def cannotDominate(self, other):
+		return self.pre > other.pre or self.post < other.post
+
+class IDomFinder(object):
+	def __init__(self, forwardCallback):
+		self.pre  = {}
+		self.domInfo = {}
+		self.uid  = 0
+		self.order = []
+		self.forwardCallback = forwardCallback
+
+	def process(self, node):
+		if node not in self.domInfo:
+			info = DomInfo()
+			self.domInfo[node] = info
+			info.pre = self.uid
+			self.uid += 1
+
+			for child in self.forwardCallback(node):
+				childInfo = self.process(child)
+				childInfo.prev.append(node)
+
+			info.post = self.uid
+			self.uid += 1
+
+			self.order.append(node)
+
+			return info
+		else:
+			return self.domInfo[node]
+
+	def findCompatable(self, current, other):
+		if current is None or other is None:
+			return None
+
+		cinfo = self.domInfo[current]
+		oinfo = self.domInfo[other]
+
+		while cinfo.cannotDominate(oinfo):
+			current = self.idom[current]
+			if current is None:
+				return None
+			cinfo   = self.domInfo[current]
+
+		return current
+
+	def findIDoms(self):
+		self.idom = {}
+
+		for node in reversed(self.order):
+			nodeInfo = self.domInfo[node]
+
+			n = len(nodeInfo.prev)
+
+			if n == 0:
+				# No previous nodes, idom is ill defined
+				best = None
+			elif n == 1:
+				# One previous node, trivial dominator
+				best = nodeInfo.prev[0]
+			else:
+				# Look for the parent with the biggest post order
+				# This may not be the idom, but is is the most likely
+				# Further, it will have already been processed
+				# (assuming all nodes are accessible from the root)
+				# Further, it will NOT be a back edge
+
+				# Choose the first one to start
+				prevs = nodeInfo.prev
+				best  = prevs[0]
+				binfo = self.domInfo[best]
+
+				# TODO redundant computation of node.prev[0]
+				for prev in prevs:
+					pinfo = self.domInfo[prev]
+					if pinfo.post > binfo.post:
+						best  = prev
+						binfo = binfo
+
+				# Find the closest node that dominates all of parents (or is one)
+				# At worst, this will perform a linear search up to the entry.
+				# Merges, however, will skip to their idom
+				for prev in prevs:
+					best = self.findCompatable(best, prev)
+
+			self.idom[node] = best
+
+		return self.idom
+
+def findIDoms(roots, forwardCallback):
+	idf = IDomFinder(forwardCallback)
+	for root in roots:
+		idf.process(root)
+	return idf.findIDoms()
+
+def treeFromIDoms(idoms):
+	tree = {}
+
+	for node, idom in idoms.iteritems():
+		if idom not in tree:
+			tree[idom] = [node]
+		else:
+			tree[idom].append(node)
+
+	return tree

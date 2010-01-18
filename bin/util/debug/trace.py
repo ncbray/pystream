@@ -9,4 +9,4 @@ class trace(object):
 
 	def __exit__(self, type, value, tb):
 		if type is not None:
-			print "<TRACE> %r" % self.data
+			print "<TRACE> %r" % (self.data,)

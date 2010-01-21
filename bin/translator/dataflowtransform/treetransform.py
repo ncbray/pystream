@@ -134,22 +134,21 @@ class TreeAnalysis(object):
 	def process(self, code):
 		codeParams = code.codeParameters()
 
-		selfparam = self.handleParam(codeParams.selfparam)
+		selfparam = (codeParams.selfparam, self.handleParam(codeParams.selfparam))
 
 
 		params = []
 
 		# Give the self parameter a special name, so we can
 		# easily merge it between shaders
-		objs = self.handleParam(codeParams.params[0], 'uniform')
-
-		params.append(objs)
+		uniformParam = codeParams.params[0]
+		params.append((uniformParam, self.handleParam(uniformParam, 'uniform')))
 
 		for param in codeParams.params[1:]:
-			params.append(self.handleParam(param))
+			params.append((param, self.handleParam(param)))
 
-		vparam = self.handleParam(codeParams.vparam)
-		kparam = self.handleParam(codeParams.kparam)
+		vparam = (codeParams.vparam, self.handleParam(codeParams.vparam))
+		kparam = (codeParams.kparam, self.handleParam(codeParams.kparam))
 
 		return CallerArgs(selfparam, params, [], vparam, kparam, None)
 
@@ -169,8 +168,7 @@ class TreeAnalysis(object):
 
 from analysis.storegraph import storegraph
 from analysis.storegraph import canonicalobjects
-from util.graphalgorithim.dominator import dominatorTree
-
+from util.graphalgorithim import exclusiongraph
 
 class TreeResynthesis(object):
 	def __init__(self, compiler, analysis):
@@ -207,8 +205,6 @@ class TreeResynthesis(object):
 					childxtype = self.processObject(child)
 					graphfield.initializeType(childxtype)
 
-					self.G[xtype].add(childxtype) # debugging
-
 			result = xtype
 		else:
 			result = self.cache[obj]
@@ -227,9 +223,17 @@ class TreeResynthesis(object):
 		else:
 			return [self.processObject(obj) for obj in objs]
 
-	def process(self, code, args):
-		self.G = xcollections.defaultdict(set) # debugging
+	def translateParam(self, tup):
+		param, objs = tup
+		xtypes = self.translateObjs(objs)
+		if xtypes is not None:
+			slotName = self.storeGraph.canonical.localName(self.code, param, None)
+			slot = self.storeGraph.root(slotName, self.storeGraph.regionHint)
+			slot.initializeTypes(xtypes)
+			self.roots.append(slot)
+		return xtypes
 
+	def process(self, code, args):
 		self.count = self.countInstances()
 
 		self.canonical  = canonicalobjects.CanonicalObjects()
@@ -237,16 +241,9 @@ class TreeResynthesis(object):
 
 		self.shaderprgm.storeGraph = self.storeGraph
 
-
-		# Rewrite memory image
-		for obj in self.analysis.root:
-			xtype = self.processObject(obj)
-			self.G[None].add(xtype) # debugging
-
-		# Create an entry point
-		self.shaderprgm.entryPoints = []
-
-		argobjs = args.map(self.translateObjs)
+		self.code  = code
+		self.roots = []
+		argobjs = args.map(self.translateParam)
 
 		print "="*60
 		print argobjs.selfarg
@@ -256,22 +253,14 @@ class TreeResynthesis(object):
 		print argobjs.kargs
 		print
 
+		# Create an entry point
 		# The arguments for this entry points are bogus.
 		ep = self.shaderprgm.interface.createEntryPoint(code, None, None, None, None, None, None)
-
+		self.shaderprgm.entryPoints = []
 		self.shaderprgm.entryPoints.append((ep, argobjs))
 
-		self.dump() # debugging
+		return exclusiongraph.build(self.roots, lambda node: iter(node), lambda node: node.isSlot())
 
-	def dump(self):
-		tree, idoms = dominatorTree(self.G, None)
-		self.dumpTree(None, tree, '')
-
-	def dumpTree(self, node, tree, tabs):
-		print "%s%r" % (tabs, node)
-		if node in tree:
-			for child in tree[node]:
-				self.dumpTree(child, tree, tabs+'\t')
 
 def process(compiler, code):
 	with compiler.console.scope('analysis'):
@@ -281,12 +270,16 @@ def process(compiler, code):
 
 	with compiler.console.scope('resynthesis'):
 		resynthesis = TreeResynthesis(compiler, analysis)
-		resynthesis.process(code, args)
+		exgraph = resynthesis.process(code, args)
 
 	prgm = resynthesis.shaderprgm
 
 	with compiler.console.scope('reanalysis'):
-		cpa.evaluateWithImage(compiler, prgm, clone=True)
+		cpa.evaluateWithImage(compiler, prgm, 3, firstPass=False, clone=True)
 		lifetimeanalysis.evaluate(compiler, prgm)
 
-	return resynthesis.shaderprgm
+
+	# The reanalysis will clone the code and create a new copy
+	newcode = prgm.interface.entryPoint[0].code
+
+	return resynthesis.shaderprgm, newcode, exgraph

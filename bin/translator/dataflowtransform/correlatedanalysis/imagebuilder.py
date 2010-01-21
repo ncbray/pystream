@@ -128,7 +128,7 @@ class AllocationMemoryImageBuilder(object):
 		for g in self.analysis.order:
 			if isinstance(g, graph.GenericOp):
 				op = g.op
-				if isinstance(op, ast.TypeSwitch): continue
+				if isinstance(op, (ast.Store, ast.Load, ast.TypeSwitch)): continue
 
 				assert op.annotation.allocates is not None, op
 				allocates = op.annotation.allocates.merged

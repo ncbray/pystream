@@ -440,6 +440,9 @@ class DataflowIOAnalysis(TypeDispatcher):
 			return 1
 		else:
 			assert isinstance(node, graph.FieldNode), node
+			slot = node.name
+			assert slot.region.group is self.prgm.storeGraph
+
 			count = self.getCount(node.name.object)
 
 			# We forgot to initialize an object?

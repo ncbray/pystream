@@ -246,39 +246,37 @@ def evaluateCode(compiler, prgm, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, prgm, vscode)
 	fscontext = DataflowTransformContext(compiler, prgm, fscode)
 
-	if False:
-		with compiler.console.scope('tree transform'):
-			vscontext.prgm = treetransform.process(compiler, vscontext.code)
-			fscontext.prgm = treetransform.process(compiler, fscontext.code)
+	with compiler.console.scope('tree transform'):
+		vscontext.prgm, vscontext.code, vscontext.exgraph = treetransform.process(compiler, vscontext.code)
+		fscontext.prgm, fscontext.code, fscontext.exgraph = treetransform.process(compiler, fscontext.code)
 
-		with compiler.console.scope('dump'):
-			vscontext.prgmDump()
-			fscontext.prgmDump()
-
-		raise compilerexceptions.CompilerAbort, "testing"
+	with compiler.console.scope('dataflow IR convert'):
+		vscontext.convert()
+		fscontext.convert()
 
 	if True:
-		with compiler.console.scope('convert'):
-			vscontext.convert()
-			fscontext.convert()
+		with compiler.console.scope('debug dump'):
+			analysis.dataflowIR.dump.evaluateDataflow(vscontext.dataflow, 'summaries\dataflow', vscontext.code.codeName())
+			vscontext.reconstructCFG()
+			vscontext.prgmDump()
 
+			analysis.dataflowIR.dump.evaluateDataflow(fscontext.dataflow, 'summaries\dataflow', fscontext.code.codeName())
+			fscontext.reconstructCFG()
+			fscontext.prgmDump()
+
+	if True:
 		with compiler.console.scope('analyze'):
 			vscontext.analyze()
 			fscontext.analyze()
 
-	if False:
 		with compiler.console.scope('field transform'):
-			fieldtransform.process(compiler, vscontext.dataflow)
-			fieldtransform.process(compiler, fscontext.dataflow)
+			fieldtransform.process(compiler, vscontext.dataflow, vscontext.exgraph)
+			fieldtransform.process(compiler, fscontext.dataflow, fscontext.exgraph)
 
 
-		with compiler.console.scope('debug dump'):
-			analysis.dataflowIR.dump.evaluateDataflow(vscontext.dataflow, 'summaries\dataflow', vscontext.code.codeName())
-			analysis.dataflowIR.dump.evaluateDataflow(fscontext.dataflow, 'summaries\dataflow', fscontext.code.codeName())
-			vscontext.reconstructCFG()
-			fscontext.reconstructCFG()
 
-		raise compilerexceptions.CompilerAbort, "testing"
+
+	raise compilerexceptions.CompilerAbort, "testing"
 
 	with compiler.console.scope('flatten trees'):
 		vscontext.findAndFlattenTrees()

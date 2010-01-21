@@ -50,7 +50,7 @@ class ImageBuilder(object):
 		# Assumes args are not polymorphic!  (True for now)
 		result = arg.get(self)
 		if result is None:
-			return []
+			return None
 		else:
 			return [result]
 

@@ -8,7 +8,7 @@ from .. import intrinsics
 from PADS.UnionFind import UnionFind
 
 class FieldTransformAnalysis(TypeDispatcher):
-	def __init__(self, compiler, dataflow):
+	def __init__(self, compiler, dataflow, exgraph):
 		TypeDispatcher.__init__(self)
 		self.compiler = compiler
 		self.dataflow = dataflow
@@ -19,6 +19,8 @@ class FieldTransformAnalysis(TypeDispatcher):
 		self.stores = []
 
 		self.fields = {}
+
+		self.exgraph = exgraph
 
 	def reads(self, args):
 		args = [arg.name for arg in args]
@@ -36,8 +38,6 @@ class FieldTransformAnalysis(TypeDispatcher):
 	def visitLoad(self, node, g):
 		if not intrinsics.isIntrinsicMemoryOp(node):
 			reads  = g.annotation.read.flat
-			expr   = g.localReads[node.expr]
-			target = g.localModifies[0]
 
 			self.reads(reads)
 			self.loads.append(g)
@@ -47,8 +47,6 @@ class FieldTransformAnalysis(TypeDispatcher):
 	def visitStore(self, node, g):
 		if not intrinsics.isIntrinsicMemoryOp(node):
 			modifies = g.annotation.modify.flat
-			value    = g.localReads[node.value]
-			expr     = g.localReads[node.expr]
 
 			self.modifies(modifies)
 			self.stores.append(g)
@@ -72,6 +70,15 @@ class FieldTransformAnalysis(TypeDispatcher):
 	def visitOp(self, node):
 		self(node.op, node)
 
+	def dumpSlotInfo(self, slot):
+		print id(slot)
+		print slot
+		print "object:", id(slot.object)
+		print "region:", id(slot.region)
+		print "group: ", slot.region.group
+
+		print self.exgraph.exInfo.get(slot)
+		print
 
 	def processGroup(self, group):
 		final = True
@@ -90,12 +97,31 @@ class FieldTransformAnalysis(TypeDispatcher):
 			unique &= object.annotation.unique
 			final &= object.annotation.final
 
+		exclusive = self.exgraph.mutuallyExclusive(*group)
+
+
 		# TODO non-interfering objects?
-		if unique and len(group) == 1:
+		if unique and exclusive:
 			print "+", group
 			self.transform(group)
 		else:
 			print "-", group
+
+		if len(group) > 1:
+			print "ex?", exclusive
+			print
+			print
+			for objfield in group:
+				self.dumpSlotInfo(objfield)
+			print
+			print "="*20
+			print
+
+			for k, v in self.exgraph.exInfo.iteritems():
+				if k.isSlot():
+					self.dumpSlotInfo(k)
+
+			print
 
 	def makeLocalForGroup(self, group):
 		# Make up a name, based on an arbitrary field
@@ -219,6 +245,6 @@ class FieldTransformAnalysis(TypeDispatcher):
 		self.postProcess()
 
 
-def process(compiler, dataflow):
-	fta = FieldTransformAnalysis(compiler, dataflow)
+def process(compiler, dataflow, exgraph):
+	fta = FieldTransformAnalysis(compiler, dataflow, exgraph)
 	fta.process()

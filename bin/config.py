@@ -18,6 +18,7 @@ if True:
 		#('tests', 'shape', 'test_shape'),
 		#('tests', 'shape', 'test_shape_compound'),
 		('tests', 'test_canonical'),
+		('tests', 'test_graphalgorithims')
 	]
 
 testExclude = [

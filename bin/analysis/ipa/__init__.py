@@ -136,6 +136,9 @@ class Context(object):
 		self.constraints.append(constraint)
 		self.analysis._constraint(self, constraint)
 
+	def dirtyconstraint(self, constraint):
+		self.analysis._constraint(self, constraint)
+
 	def call(self, selfarg, args, kwds, varg, karg, targets):
 		self.calls.append(calls.CallConstraint(selfarg, args, kwds, varg, karg, targets))
 
@@ -311,10 +314,10 @@ class IPAnalysis(object):
 		if code is None:
 			code = self.sys.extractor.stubs.exports['interpreter_call']
 
-		if code not in self.liveCode:
-			callConverter(self.compiler.extractor, code)
-			self.liveCode.add(code)
+		callConverter(self.compiler.extractor, code)
 
+		if code not in self.liveCode:
+			self.liveCode.add(code)
 
 		print "code", code
 
@@ -322,8 +325,6 @@ class IPAnalysis(object):
 
 	def updateCallGraph(self):
 		print "update"
-
-		changed = False
 
 		# HACK dictionary size may change...
 		for context in tuple(self.contexts.itervalues()):
@@ -345,8 +346,7 @@ class IPAnalysis(object):
 		print "resolve"
 		while self.constraints:
 			context, constraint = self.constraints.pop()
-
-			print constraint
+			#print constraint
 
 			constraint.resolve(context)
 		self.constraints = []
@@ -371,7 +371,7 @@ def evaluateWithImage(compiler, prgm):
 			analysis.resolveConstraints()
 			analysis.updateCallGraph()
 
-		analysis.dump()
+		#analysis.dump()
 
 		assert False
 

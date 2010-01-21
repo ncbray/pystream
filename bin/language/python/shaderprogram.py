@@ -13,7 +13,7 @@ class FSContext(object):
 
 # HACK
 from language.python.annotations import CodeAnnotation
-emptyShaderProgramAnnotation = CodeAnnotation(None, False, False, None, None, None, None, None, None, None, None)
+emptyShaderProgramAnnotation = CodeAnnotation(None, False, False, None, None, None, None, None, None, None, None, False)
 
 def createShaderProgram(extractor):
 	name = "shader_program"

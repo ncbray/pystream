@@ -249,9 +249,11 @@ class InterproceduralDataflow(object):
 				self.liveContexts.add(context)
 
 				code = context.signature.code
+
+				# HACK convert the calls before analysis to eliminate UnpackTuple nodes.
+				callConverter(self.extractor, code)
+
 				if code not in self.liveCode:
-					# HACK convert the calls before analysis to eliminate UnpackTuple nodes.
-					callConverter(self.extractor, code)
 					self.liveCode.add(code)
 
 				# Check to see if we can just fold it.

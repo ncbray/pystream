@@ -125,6 +125,8 @@ class ConvertCalls(TypeDispatcher):
 
 
 def callConverter(extractor, node):
-	converter = ConvertCalls(extractor, node)
-	node.replaceChildren(converter)
+	if not node.annotation.lowered:
+		converter = ConvertCalls(extractor, node)
+		node.replaceChildren(converter)
+		node.rewriteAnnotation(lowered=True)
 	return node

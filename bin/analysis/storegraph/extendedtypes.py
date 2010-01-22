@@ -15,6 +15,9 @@ class ExtendedType(util.canonical.CanonicalObject):
 	def group(self):
 		return self
 
+	def cpaType(self):
+		return self
+
 # All extended types may as well have an "obj" slot,
 # as the type of an object won't change.
 class ExtendedObjectType(ExtendedType):

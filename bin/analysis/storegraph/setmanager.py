@@ -6,6 +6,9 @@ class CachedSetManager(object):
 		self.cache = xcollections.weakcache()
 		self._emptyset = self.cache[frozenset()]
 
+	def coerce(self, values):
+		return self.cache[frozenset(values)]
+
 	def empty(self):
 		return self._emptyset
 
@@ -14,6 +17,9 @@ class CachedSetManager(object):
 
 	def diff(self, a, b):
 		return self.cache[a-b]
+
+	def tempDiff(self, a, b):
+		return a-b
 
 	def iter(self, s):
 		return iter(s)

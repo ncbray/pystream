@@ -9,245 +9,233 @@ UP = 'UP'
 GLBL = 'GLBL'
 
 class ConstraintNode(object):
-	def isLocal(self):
-		return False
-
-	def isObject(self):
-		return False
-
-class LocalNode(ConstraintNode):
-	def __init__(self, name, ci=False):
-		assert isinstance(name, ast.Local), name
+	def __init__(self, context, name, values=None, ci=False):
+		self.context = context
 		self.name = name
 		self.ci = ci
 
-		self.prevObj = []
+		if values is not None:
+			for value in values: assert isinstance(value, AnalysisObject), value
+			self.values = context.analysis.setmanager.coerce(values)
+		else:
+			self.values = context.analysis.setmanager.empty()
+		self.diff = context.analysis.setmanager.empty()
 
-		self.objs = set()
+		self.dirty = False
 
-		# Fact, does not flow
-		self.param   = False
-		self.ret     = False
-
-		# Flows forward
-		self.holding = False
-		self.holdingEsc = False
-
-		# Flows backward
-		self.prop    = False
-		self.propRet = False
-
-		# Forward flow depends on backward flow
-
+		self.callbacks = []
 
 	def markParam(self):
-		if not self.param:
-			self.param = True
-			self.markHolding()
+		pass
 
 	def markReturn(self):
-		if not self.ret:
-			self.ret = True
-			self.markPropReturn()
+		pass
 
-	def markHolding(self):
-		if not self.holding:
-			self.holding = True
+	def addCallback(self, callback):
+		self.callbacks.append(callback)
 
-	def markHoldingEsc(self):
-		if not self.holdingEsc:
-			self.holdingEsc = True
+	def updateValues(self, values):
+		sm = self.context.analysis.setmanager
+		# Not retained, so set manager is not used
+		diff = sm.tempDiff(values, self.values)
 
-	def markProp(self):
-		if not self.prop:
-			self.prop = True
+		if diff:
+			for value in diff:
+				assert isinstance(value, AnalysisObject), value
 
-	def markPropReturn(self):
-		if not self.propRet:
-			self.propRet = True
+			self.diff = sm.inplaceUnion(self.diff, diff)
+			if not self.dirty:
+				self.dirty = True
+				self.context.dirtySlot(self)
+			return True
+		else:
+			return False
 
-	def isLocal(self):
-		return True
+	def propagate(self):
+		assert self.dirty
+		self.dirty = False
+
+		# Update the sets of objects
+		# Must be done before any callback is performed, as a
+		# cyclic dependency could update these values
+		sm = self.context.analysis.setmanager
+		diff = self.diff
+		self.values = sm.inplaceUnion(self.values, diff)
+		self.diff   = sm.empty()
+
+		for callback in self.callbacks:
+			callback(diff)
 
 	def __repr__(self):
-		return "%r" % self.name
+		return "slot(%r/%d)" % (self.name, id(self))
 
 
-	def assignmentSource(self, c):
-		other = c.dst
-		if self.isObject():
-			if self.opaque: other.markHoldingEsc()
-		else:
-			if self.holding: other.markHolding()
-
-	def assignmentDestination(self, c):
-		other = c.src
-		if other.isObject():
-			if self.prop or self.propRet: other.markOpaque()
-		else:
-			if self.prop: other.markProp()
-			if self.propRet: other.markPropReturn()
-
-
-class ObjectNode(ConstraintNode):
-	def __init__(self, name, ci=False):
+class AnalysisObject(object):
+	__slots__ = 'name', 'qualifier'
+	def __init__(self, name, qualifier):
 		assert isinstance(name, extendedtypes.ExtendedType), name
 		self.name = name
-		self.ci   = ci
-
-		# Flows forward
-		self.opaque  = False
-
-		# HACK?
-		self.objs = set([self])
-
-	def markOpaque(self):
-		if not self.opaque:
-			self.opaque = True
-
-	def isObject(self):
-		return True
+		self.qualifier = qualifier
 
 	def __repr__(self):
-		return "%r" % self.name
-
-
-	def assignmentSource(self, c):
-		other = c.dst
-		if self.isObject():
-			if self.opaque: other.markHoldingEsc()
-		else:
-			if self.holding: other.markHolding()
-
-	def assignmentDestination(self, c):
-		other = c.src
-		if other.isObject():
-			if self.prop or self.propRet: other.markOpaque()
-		else:
-			if self.prop: other.markProp()
-			if self.propRet: other.markPropReturn()
+		return "ao(%r/%d)" % (self.name, id(self))
 
 class Constraint(object):
-	__slots__ = 'qualifier'
+	__slots__ = 'qualifier', 'dirty'
+	def __init__(self):
+		self.qualifier = HZ
+		self.dirty     = True
 
-class ObjectConstraint(Constraint):
-	def __init__(self, obj, dst):
-		self.obj = obj
-		self.dst = dst
-
-		if obj.ci:
-			self.qualifier = GLBL
-		else:
-			self.qualifier = HZ
-
-	def __repr__(self):
-		return "[%s %r -> %r]" % (self.qualifier, self.obj, self.dst)
-
-	def resolve(self, context):
-		self.dst.objs.add(self.obj)
-		self.dst.prevObj.append(self)
-
-# TODO object load and store constraints?
 
 class CopyConstraint(Constraint):
 	def __init__(self, src, dst):
-		assert isinstance(src, LocalNode), src
-		assert isinstance(dst, LocalNode), dst
-
+		assert isinstance(src, ConstraintNode), src
+		assert isinstance(dst, ConstraintNode), dst
+		Constraint.__init__(self)
 		self.src = src
 		self.dst = dst
+
+		self.attach()
+		self.makeConsistent()
+
+	def attach(self):
+		self.src.addCallback(self.srcChanged)
+
+	def makeConsistent(self):
+		# Make constraint consistent
+		if self.src.values:
+			self.srcChanged(self.src.values)
+
+	def srcChanged(self, diff):
+		self.dst.updateValues(diff)
 
 	def __repr__(self):
 		return "[%s %r -> %r]" % (self.qualifier, self.src, self.dst)
 
-	def resolve(self, context):
-		for oc in self.src.prevObj:
-			context.deriveCopy(self, oc)
 
 class FilteredCopyConstraint(Constraint):
-	def __init__(self, src, filter, dst):
-		assert isinstance(src, LocalNode), src
-		assert isinstance(dst, LocalNode), dst
-
+	def __init__(self, src, typeFilter, dst):
+		assert isinstance(src, ConstraintNode), src
+		assert isinstance(typeFilter, extendedtypes.ExtendedType), typeFilter
+		assert isinstance(dst, ConstraintNode), dst
+		Constraint.__init__(self)
 		self.src    = src
-		self.filter = filter
+		self.typeFilter = typeFilter
 		self.dst    = dst
 
-	def __repr__(self):
-		return "[%s %r %r -> %r]" % (self.qualifier, self.filter, self.src,  self.dst)
+		self.attach()
+		self.makeConsistent()
 
-	def resolve(self, context):
-		for oc in self.src.prevObj:
-			if oc.obj is self.filter:
-				context.deriveCopy(self, oc)
+	def attach(self):
+		self.src.addCallback(self.srcChanged)
+
+	def makeConsistent(self):
+		# Make constraint consistent
+		if self.src.values:
+			self.srcChanged(self.src.values)
+
+	def srcChanged(self, diff):
+		filtered = []
+
+		# TODO make the obj and filter types consistent?
+
+		for obj in diff:
+			assert isinstance(obj, AnalysisObject), obj
+			if obj.name.cpaType() is self.typeFilter:
+				filtered.append(obj)
+
+		if filtered:
+			self.dst.updateValues(frozenset(filtered))
+
+	def __repr__(self):
+		return "[%s %r %r -> %r]" % (self.qualifier, self.typeFilter, self.src,  self.dst)
+
 
 class LoadConstraint(Constraint):
 	def __init__(self, src, fieldtype, field, dst):
-		assert isinstance(src, LocalNode), src
+		assert isinstance(src, ConstraintNode), src
 		assert isinstance(fieldtype, str), fieldtype
-		assert isinstance(field, LocalNode), field
-		assert isinstance(dst, LocalNode), dst
-
+		assert isinstance(field, ConstraintNode), field
+		assert isinstance(dst, ConstraintNode), dst
+		Constraint.__init__(self)
 		self.src   = src
 		self.fieldtype = fieldtype
 		self.field = field
 		self.dst   = dst
 
-		self.qualifier = HZ
+		self.src.addCallback(self.srcChanged)
+		self.field.addCallback(self.fieldChanged)
+
+		# Make constraint consistent
+		if self.src.values and self.field.values:
+			self.srcChanged(self.src.values)
+
+	def srcChanged(self, diff):
+		pass
+
+	def fieldChanged(self, diff):
+		# TODO field is src
+		pass
 
 	def __repr__(self):
 		return "[%s %s %r.%r -> %r]" % (self.qualifier, self.fieldtype, self.src, self.field, self.dst)
 
-	def resolve(self, context):
-		for src, field in itertools.product(self.src.prevObj, self.field.prevObj):
-			assert False
+
+class CheckConstraint(Constraint):
+	def __init__(self, src, fieldtype, field, dst):
+		assert isinstance(src, ConstraintNode), src
+		assert isinstance(fieldtype, str), fieldtype
+		assert isinstance(field, ConstraintNode), field
+		assert isinstance(dst, ConstraintNode), dst
+		Constraint.__init__(self)
+		self.src   = src
+		self.fieldtype = fieldtype
+		self.field = field
+		self.dst   = dst
+
+		self.src.addCallback(self.srcChanged)
+		self.field.addCallback(self.fieldChanged)
+
+		# Make constraint consistent
+		if self.src.values and self.field.values:
+			self.srcChanged(self.src.values)
+
+	def srcChanged(self, diff):
+		pass
+
+	def fieldChanged(self, diff):
+		# TODO field is src
+		pass
+
+	def __repr__(self):
+		return "[%s %s %r.%r CHECK=> %r]" % (self.qualifier, self.fieldtype, self.src, self.field, self.dst)
+
 
 class StoreConstraint(Constraint):
 	def __init__(self, src, dst, fieldtype, field):
-		assert isinstance(src, LocalNode), src
-		assert isinstance(dst, LocalNode), dst
+		assert isinstance(src, ConstraintNode), src
+		assert isinstance(dst, ConstraintNode), dst
 		assert isinstance(fieldtype, str), fieldtype
-		assert isinstance(field, LocalNode), field
-
+		assert isinstance(field, ConstraintNode), field
+		Constraint.__init__(self)
 		self.src   = src
 		self.dst   = dst
 		self.fieldtype = fieldtype
 		self.field = field
 
-		self.qualifier = HZ
+		self.dst.addCallback(self.dstChanged)
+		self.field.addCallback(self.fieldChanged)
+
+		# Make constraint consistent
+		if self.dst.values and self.field.values:
+			self.dstChanged(self.dst.values)
+
+	def dstChanged(self, diff):
+		pass
+
+	def fieldChanged(self, diff):
+		# TODO field is dst
+		pass
 
 	def __repr__(self):
 		return "[%s %s %r -> %r.%r]" % (self.qualifier, self.fieldtype, self.src, self.dst, self.field)
-
-
-class ConcreteStoreConstraint(Constraint):
-	def __init__(self, src, slot):
-		assert isinstance(src, LocalNode), src
-
-		self.src   = src
-		self.slot  = slot
-
-		self.qualifier = HZ
-
-	def __repr__(self):
-		return "[%s %r -> %r]" % (self.qualifier, self.src, self.slot)
-
-	def resolve(self, context):
-		for oc in self.src.prevObj:
-			context.store(oc.obj, self.slot)
-
-class ConcreteLoadConstraint(Constraint):
-	def __init__(self, slot, dst):
-		assert isinstance(dst, LocalNode), dst
-
-		self.slot  = slot
-		self.dst   = dst
-
-		self.qualifier = HZ
-
-	def __repr__(self):
-		return "[%s %r -> %r]" % (self.qualifier, self.slot, self.dst)
-
-	def resolve(self, context):
-		for oc in context.load(self.slot):
-			context.assign(oc, self.dst)

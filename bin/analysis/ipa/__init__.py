@@ -1,16 +1,12 @@
-from .. cpa import simpleimagebuilder
-
-from .constraintextractor import ConstraintExtractor
-
-from . import constraints, calls
-
-
-from language.python import ast
-
-import itertools
-
-# TODO only if decompiled?
+from language.python import ast, program
 from optimization.callconverter import callConverter
+
+from . import constraints, calls, cpacontext
+from . constraintextractor import ConstraintExtractor
+from . context import Context
+
+from .. cpa import simpleimagebuilder
+from .. storegraph import setmanager
 
 
 class CallBinder(object):
@@ -31,193 +27,31 @@ class CallBinder(object):
 
 
 	def setSelfParam(self, value):
-		filter = self.context.signature.selfparam
+		typeFilter = self.context.signature.selfparam
 		dst = self.context.local(self.params.selfparam)
-		self.copyDownFiltered(value, filter, dst)
+		self.copyDownFiltered(value, typeFilter, dst)
 
 	def setParam(self, i, value):
-		filter = self.context.signature.params[i]
+		typeFilter = self.context.signature.params[i]
 		dst = self.context.local(self.params.params[i])
-		self.copyDownFiltered(value, filter, dst)
+		self.copyDownFiltered(value, typeFilter, dst)
 
 	def setVParam(self, i, value):
-		filter = self.context.signature.vparams[i]
+		typeFilter = self.context.signature.vparams[i]
 		dst = self.context.vparamTemp[i]
-		self.copyDownFiltered(value, filter, dst)
+		self.copyDownFiltered(value, typeFilter, dst)
 
 
-	def copyDownFiltered(self, src, filter, dst):
-		if filter is not cpacontext.anyType:
-			self.context.assignFiltered(src, filter, dst, constraints.DN)
+	def copyDownFiltered(self, src, typeFilter, dst):
+		if typeFilter is not cpacontext.anyType:
+			self.context.assignFiltered(src, typeFilter, dst, constraints.DN)
 		else:
 			self.copyDown(src, dst)
 
 	def copyDown(self, src, dst):
 		self.context.assignFiltered(src, dst, constraints.DN)
 
-# Context setup
-# Allocate vparam/kparam
-# store temp locals in vparam/kparams
-class Context(object):
-	def __init__(self, analysis, signature):
-		self.analysis    = analysis
-		self.signature   = signature
-		self.constraints = []
 
-		self.calls       = []
-		self.dcalls      = []
-		self.fcalls      = []
-
-		self.locals      = {}
-
-		self.memory = {}
-
-		code = signature.code
-
-		if code:
-			params = code.codeParameters()
-			hasVParam = params.vparam is not None
-
-			if hasVParam:
-				self.setupVParam(params.vparam)
-
-	def setupVParam(self, vparam):
-		numVParam = len(self.signature.vparams)
-
-		inst = self.analysis.tupleInstance()
-		xtype = self.analysis.canonical.contextType(self.signature, inst, None)
-		vparamO = self.analysis.object(xtype)
-
-		vparamC = self.local(vparam)
-
-		self.assign(vparamO, vparamC)
-
-		index = self.analysis.pyObj(numVParam)
-		lengthName = self.analysis.lengthName()
-
-		self.store(index, (vparamO, lengthName))
-
-		self.vparamTemp = []
-		for i in range(numVParam):
-				lcl = ast.Local('vparam%d'%i)
-				lc = self.local(lcl)
-				self.vparamTemp.append(lc)
-
-				index = self.analysis.pyObj(i)
-
-				fieldName = self.analysis.canonical.fieldName('Array', index.name.obj)
-				slot = (vparamO, fieldName)
-				self.constraint(constraints.ConcreteStoreConstraint(lc, slot))
-
-	def deriveCopy(self, copy, oc):
-		c = constraints.ObjectConstraint(oc.obj, copy.dst)
-
-		if copy.qualifier is constraints.DN:
-			c.qualifier = constraints.DN
-		elif oc.qualifier is constraints.GLBL:
-			c.qualifer = constraints.GLBL
-		elif copy.ci:
-			c.qualifier = constraints.GLBL
-		else:
-			if copy.qualifier is constraints.HZ:
-				c.qualifier = oc.qualifier
-			elif copy.qualifier is constraints.GLBL:
-				c.qualifier = constraints.GLBL
-			elif copy.qualifier is constraints.UP:
-					return # Do not derive!
-			else:
-				assert False, copy.qualifer
-
-		self.constraint(c)
-
-
-
-	def constraint(self, constraint):
-		self.constraints.append(constraint)
-		self.analysis._constraint(self, constraint)
-
-	def dirtyconstraint(self, constraint):
-		self.analysis._constraint(self, constraint)
-
-	def call(self, selfarg, args, kwds, varg, karg, targets):
-		self.calls.append(calls.CallConstraint(selfarg, args, kwds, varg, karg, targets))
-
-	def dcall(self, code, selfarg, args, kwds, varg, karg, targets):
-		if varg is None:
-			self.fcall(code, selfarg, args, kwds, 0, karg, targets)
-		else:
-			call = calls.DirectCallConstraint(code, selfarg, args, kwds, varg, karg, targets)
-			self.dcalls.append(call)
-
-	def fcall(self, code, selfarg, args, kwds, varg, karg, targets):
-		call = calls.FlatCallConstraint(self, code, selfarg, args, kwds, varg, karg, targets)
-		self.fcalls.append(call)
-		return call
-
-
-	def local(self, node):
-		if node not in self.locals:
-			cnode = constraints.LocalNode(node)
-			self.locals[node] = cnode
-		else:
-			cnode = self.locals[node]
-		return cnode
-
-	def assign(self, src, dst, qualifier=constraints.HZ):
-		if src.isObject():
-			constraint = constraints.ObjectConstraint(src, dst)
-		else:
-			constraint = constraints.CopyConstraint(src, dst)
-
-		constraint.qualifier = qualifier
-		self.constraint(constraint)
-
-	def assignFiltered(self, src, filter, dst, qualifier=constraints.HZ):
-		if src.isObject():
-			if src.name is filter:
-				constraint = constraints.ObjectConstraint(src, dst)
-			else:
-				return
-		else:
-			constraint = constraints.FilteredCopyConstraint(src, filter, dst)
-		constraint.qualifier = qualifier
-		self.constraint(constraint)
-
-
-	### Store model ###
-	def store(self, data, slot):
-#		print 'store'
-#		print data.name
-#		print slot
-#		print
-
-		if slot not in self.memory:
-			self.memory[slot] = set()
-		self.memory[slot].add(data)
-
-	def load(self, slot):
-#		print 'load'
-#		print slot, slot in self.memory
-#		print
-
-		return self.memory.get(slot, ())
-
-
-	def dump(self):
-
-		print self.signature
-		print
-
-		for lc in self.locals.itervalues():
-			print lc
-			print '\t', lc.objs
-		print
-
-		for slot, refs in self.memory.iteritems():
-			print slot
-			print '\t', refs
-
-		print
 
 class IPAnalysis(object):
 	def __init__(self, compiler, canonical):
@@ -235,10 +69,18 @@ class IPAnalysis(object):
 
 		self.liveCode = set()
 
+		self.setmanager = setmanager.CachedSetManager()
+
+		self.dirtySlots = []
+
+		self.dirtyCalls = False
+
+	def dirtySlot(self, slot):
+		self.dirtySlots.append(slot)
+
 	def lengthName(self):
 		lenO = self.compiler.extractor.getObject('length')
 		return self.canonical.fieldName('LowLevel', lenO)
-
 
 	def tupleInstance(self):
 		tupleCls = self.compiler.extractor.getObject(tuple)
@@ -254,27 +96,23 @@ class IPAnalysis(object):
 	def pyObj(self, pyobj):
 		obj = self.compiler.extractor.getObject(pyobj)
 		xtype = self.canonical.existingType(obj)
-		return self.object(xtype, True)
+		return self.object(xtype, constraints.GLBL)
 
-	def object(self, xtype, glbl=False):
-		if xtype not in self.objs:
-			cnode = constraints.ObjectNode(xtype, glbl)
-			self.objs[xtype] = cnode
+	def object(self, xtype, qualifier=constraints.HZ):
+		key = (xtype, qualifier)
+		if key not in self.objs:
+			obj = constraints.AnalysisObject(xtype, qualifier)
+			self.objs[key] = obj
 		else:
-			cnode = self.objs[xtype]
-		return cnode
+			obj = self.objs[key]
+		return obj
 
 	def makeFakeLocal(self, objs):
-		if objs is None: return None
-
-		lcl = ast.Local('entry_point_arg')
-		cl = self.root.local(lcl)
-
-		for obj in objs:
-			co = self.object(obj, True)
-			self.root.constraint(constraints.ObjectConstraint(co, cl))
-
-		return cl
+		if objs is None:
+			return None
+		else:
+			objs = [self.object(xtype) for xtype in objs]
+			return self.root.local(ast.Local('entry_point_arg'), objs)
 
 	def makeFakeEntryPointOp(self, ep, epargs):
 		selfarg = self.makeFakeLocal(epargs.selfarg)
@@ -286,7 +124,7 @@ class IPAnalysis(object):
 		varg = self.makeFakeLocal(epargs.vargs)
 		karg = self.makeFakeLocal(epargs.kargs)
 
-		self.root.dcall(ep.code, selfarg, args, [], varg, karg, None)
+		call = self.root.dcall(ep.code, selfarg, args, [], varg, karg, None)
 
 	def getContext(self, sig):
 		if sig not in self.contexts:
@@ -294,6 +132,7 @@ class IPAnalysis(object):
 			self.contexts[sig] = context
 
 			if sig.code:
+				context.setup()
 				ce = ConstraintExtractor(self, context)
 				ce.process()
 		else:
@@ -301,20 +140,18 @@ class IPAnalysis(object):
 		return context
 
 	def bindCall(self, call, context, info):
-		print "BIND"
 		binder = CallBinder(call, context)
 		info.transfer(binder, binder)
 
+	def getCode(self, obj):
+		assert isinstance(obj, constraints.AnalysisObject)
 
-
-	def getCode(self, co):
-		obj = co.name.obj
-
-		code = self.compiler.extractor.getCall(obj)
+		extractor = self.compiler.extractor
+		code = extractor.getCall(obj.name.obj)
 		if code is None:
-			code = self.sys.extractor.stubs.exports['interpreter_call']
+			code = extractor.stubs.exports['interpreter_call']
 
-		callConverter(self.compiler.extractor, code)
+		callConverter(extractor, code)
 
 		if code not in self.liveCode:
 			self.liveCode.add(code)
@@ -326,31 +163,25 @@ class IPAnalysis(object):
 	def updateCallGraph(self):
 		print "update"
 
+		self.dirtyCalls = False
+
 		# HACK dictionary size may change...
 		for context in tuple(self.contexts.itervalues()):
-			for call in context.calls:
-				call.resolve(context)
-
-			for dcall in context.dcalls:
-				dcall.resolve(context)
-
-			for fcall in context.fcalls:
-				fcall.resolve(context)
-
-
+			context.updateCallgraph()
 		print
 
-		return len(self.constraints) > 0
 
-	def resolveConstraints(self):
+	def updateConstraints(self):
 		print "resolve"
-		while self.constraints:
-			context, constraint = self.constraints.pop()
-			#print constraint
-
-			constraint.resolve(context)
-		self.constraints = []
+		while self.dirtySlots:
+			slot = self.dirtySlots.pop()
+			#print slot, slot.diff
+			slot.propagate()
 		print
+
+	def dirtyConstraints(self):
+		# HACK self.dirtyCalls?
+		return bool(self.dirtySlots) or self.dirtyCalls
 
 	def dump(self):
 		print
@@ -367,14 +198,15 @@ def evaluateWithImage(compiler, prgm):
 		for ep, args in prgm.entryPoints:
 			analysis.makeFakeEntryPointOp(ep, args)
 
-		while analysis.constraints:
-			analysis.resolveConstraints()
+		while analysis.dirtyConstraints():
+			analysis.updateConstraints()
 			analysis.updateCallGraph()
 
 		#analysis.dump()
 
-		assert False
 
 def evaluate(compiler, prgm):
 	simpleimagebuilder.build(compiler, prgm)
-	return evaluateWithImage(compiler, prgm)
+	result = evaluateWithImage(compiler, prgm)
+	assert False
+	return result

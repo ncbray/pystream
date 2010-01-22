@@ -39,10 +39,15 @@ class ConstraintExtractor(TypeDispatcher):
 	def visitLocal(self, node):
 		return self.context.local(node)
 
+	def existingObject(self, node):
+		xtype = self.analysis.canonical.existingType(node.object)
+		return self.analysis.object(xtype, GLBL)
+
 	@dispatch(ast.Existing)
 	def visitExisting(self, node):
-		xtype = self.analysis.canonical.existingType(node.object)
-		return self.analysis.object(xtype, True)
+		obj = self.existingObject(node)
+		lcl = self.context.local(ast.Local('existing_temp'), (obj,))
+		return lcl
 
 	def call(self, node, expr, args, kwds, vargs, kargs, targets):
 		assert not kwds, self.code
@@ -57,26 +62,24 @@ class ConstraintExtractor(TypeDispatcher):
 		self.context.dcall(code, expr, args, kwds, vargs, kargs, targets)
 
 	def allocate(self, node, expr, targets):
-		assert expr.isObject(), expr
+		assert isinstance(expr, AnalysisObject), expr
 		assert len(targets) == 1
+		target = targets[0]
 
 		inst = expr.name.obj.typeinfo.abstractInstance
 		xtype = self.analysis.canonical.pathType(self.context.signature, inst, node)
-		co = self.analysis.object(xtype, False)
+		obj = self.analysis.object(xtype, HZ)
 
-		self.context.assign(co, targets[0])
+		# TODO lazy target creation?
+		target.updateValues(frozenset([obj]))
 
 	def load(self, node, expr, fieldtype, name, targets):
 		assert len(targets) == 1
-		self.context.constraint(LoadConstraint(self.wrap(expr), fieldtype, self.wrap(name), targets[0]))
+		self.context.constraint(LoadConstraint(expr, fieldtype, name, targets[0]))
 
-	def wrap(self, cn):
-		if cn.isObject():
-			lc = self.context.local(ast.Local('wrap'))
-			self.context.assign(cn, lc)
-			return lc
-		else:
-			return cn
+	def check(self, node, expr, fieldtype, name, targets):
+		assert len(targets) == 1
+		self.context.constraint(CheckConstraint(expr, fieldtype, name, targets[0]))
 
 	@dispatch(ast.Call)
 	def visitCall(self, node, targets):
@@ -92,11 +95,15 @@ class ConstraintExtractor(TypeDispatcher):
 
 	@dispatch(ast.Allocate)
 	def visitAllocate(self, node, targets):
-		return self.allocate(node, self(node.expr), targets)
+		return self.allocate(node, self.existingObject(node.expr), targets)
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, targets):
 		return self.load(node, self(node.expr), node.fieldtype, self(node.name), targets)
+
+	@dispatch(ast.Check)
+	def visitCheck(self, node, targets):
+		return self.check(node, self(node.expr), node.fieldtype, self(node.name), targets)
 
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
@@ -119,7 +126,7 @@ class ConstraintExtractor(TypeDispatcher):
 	def visitList(self, node):
 		return [self(child) for child in node]
 
-	@dispatch(ast.Suite)
+	@dispatch(ast.Suite, ast.Condition, ast.Switch)
 	def visitOK(self, node):
 		node.visitChildren(self)
 

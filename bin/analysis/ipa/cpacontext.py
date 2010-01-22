@@ -2,8 +2,20 @@ import itertools
 
 from util import canonical
 
+from ..storegraph import extendedtypes
+
+def cpaArgOK(arg):
+	return arg is None or arg is anyType or isinstance(arg, extendedtypes.ExtendedType)
+
 class CPAContextSignature(canonical.CanonicalObject):
 	def __init__(self, code, selfparam, params, vparams):
+
+		assert cpaArgOK(selfparam), selfparam
+		for param in params:
+			assert cpaArgOK(param), param
+		for param in vparams:
+			assert cpaArgOK(param), param
+
 		self.code      = code
 		self.selfparam = selfparam
 		self.params    = params
@@ -15,7 +27,7 @@ class CPAContextSignature(canonical.CanonicalObject):
 		self.setCanonical(code, selfparam, params, vparams)
 
 	def __repr__(self):
-		return "cpa(%r, %r, %r, %r)" % (self.code, self.selfparam, self.params, self.vparams)
+		return "cpa(%r, %r, %r, %r/%d)" % (self.code, self.selfparam, self.params, self.vparams, id(self))
 
 anyType = object()
 anyTypeIter = (anyType,)
@@ -46,13 +58,19 @@ class CPATypeSigBuilder(object):
 		self.vparams[index].update(value)
 
 	def getSelfArg(self):
-		return self.call.selfarg.objs
+		return self.cpaTypes(self.call.selfarg.values)
 
 	def getArg(self, index):
-		return self.call.args[index].objs
+		return self.cpaTypes(self.call.args[index].values)
 
 	def getVArg(self, index):
-		return self.call.vargTemp[index].objs
+		return self.cpaTypes(self.call.vargTemp[index].values)
+
+	def cpaTypes(self, values):
+		types = set()
+		for value in values:
+			types.add(value.name.cpaType())
+		return types
 
 	def convertMegamorphic(self):
 		# selfparam should NOT be megamorphic... preserve the precision of method dispatch
@@ -78,7 +96,10 @@ class CPATypeSigBuilder(object):
 			params = concrete[1:len(self.params)+1]
 			vparams = concrete[len(self.params)+1:]
 
-			results.append(CPAContextSignature(self.code, selfparam, params, vparams))
+			sig = CPAContextSignature(self.code, selfparam, params, vparams)
+			sig = self.analysis.canonicalSignature(sig)
+
+			results.append(sig)
 
 		return results
 

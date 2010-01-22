@@ -1,3 +1,5 @@
+import itertools
+
 from . import cpacontext
 from . import transfer
 from . import constraints
@@ -23,11 +25,9 @@ class CallConstraint(AbstractCall):
 		self.karg = karg
 		self.targets = targets
 
-		self.selfarg.addCallback(self.argChanged)
+		self.selfarg.attachExactSplit(self.splitChanged)
 
-		self.argChanged(None)
-
-	def argChanged(self, diff):
+	def splitChanged(self):
 		if not self.dirty:
 			self.dirty = True
 			self.context.dirtyCall(self)
@@ -38,19 +38,17 @@ class CallConstraint(AbstractCall):
 	def resolve(self, context):
 		self.dirty = False
 
-		for obj in self.selfarg.values:
-			key = obj.name
+		selfsplit = self.selfarg.exactSplit
+
+		for selfobj, selflcl in selfsplit.objects.iteritems():
+			# TODO prevent over splitting?  DN objects are dealt with separately from HZ objects.
+			key = selfobj
 			if key not in self.cache:
-				#print "selfarg???", key
+				self.cache[key] = None
 
-				lcl = context.local(ast.Local('call_expr'), (obj,)) # HACK?
-				self.cache[key] = lcl
+				code = context.analysis.getCode(selfobj)
 
-				code = context.analysis.getCode(obj)
-				context.dcall(code, lcl, self.args, self.kwds, self.varg, self.karg, self.targets)
-
-			else:
-				self.cache[key].updateValues(frozenset([obj]))
+				context.dcall(code, selflcl, self.args, self.kwds, self.varg, self.karg, self.targets)
 
 class DirectCallConstraint(AbstractCall):
 	def __init__(self, context, code, selfarg, args, kwds, varg, karg, targets):
@@ -66,12 +64,12 @@ class DirectCallConstraint(AbstractCall):
 		self.karg = karg
 		self.targets = targets
 
-		self.varg.addCallback(self.argChanged)
+		assert isinstance(varg, constraints.ConstraintNode), varg
 
-		self.argChanged(None)
+		# TODO no need for the split locals?
+		self.varg.attachExactSplit(self.splitChanged)
 
-
-	def argChanged(self, diff):
+	def splitChanged(self):
 		if not self.dirty:
 			self.dirty = True
 			self.context.dirtyDCall(self)
@@ -79,45 +77,44 @@ class DirectCallConstraint(AbstractCall):
 	def __repr__(self):
 		return "[DCALL %s %r(%r, %r, *%r, **%r) -> %r]" % (self.code, self.selfarg, self.args, self.kwds, self.varg, self.karg, self.targets)
 
-	def groupedVArgs(self, context):
-		groups = {}
+	def vargObjSlots(self, vargObj):
+		slots = []
 
-		lengthName = context.analysis.compiler.extractor.getObject('length')
+		if vargObj is None: return slots
 
-		for obj in self.varg.values:
-			# HACK should be monitoring this slot?
-			lengthSlot = context.field(obj, 'LowLevel', lengthName)
-			values = lengthSlot.values
+		analysis = self.context.analysis
 
-			for valueObj in values:
-				value = valueObj.name.obj.pyobj
-				if value not in groups:
-					groups[value] = [obj]
-				else:
-					groups[value].append(obj)
+		lengthSlot = self.context.field(vargObj, 'LowLevel', analysis.pyObj('length').name.obj)
+		assert len(lengthSlot.values) == 1
+		length = tuple(lengthSlot.values)[0].name.obj.pyobj
 
-		return groups
 
+		for i in range(length):
+			index = analysis.pyObj(i)
+			slot = self.context.field(vargObj, 'Array', index.name.obj)
+
+			slots.append(slot)
+
+		return slots
 
 	def resolve(self, context):
 		self.dirty = False
 
 		assert self.varg
-		group = self.groupedVArgs(context)
 
-		for count, objs in group.iteritems():
-			if count not in self.cache:
-				call = context.fcall(self.code, self.selfarg, self.args, self.kwds, count, self.karg, self.targets)
-				self.cache[count] = call
-			else:
-				call = self.cache[count]
-			call.updateVArgObjs(context, objs)
+		for vargObj in self.varg.exactSplit.objects.iterkeys():
+			key = vargObj
+			if key not in self.cache:
+				self.cache[key] = None
+
+				vargSlots = self.vargObjSlots(vargObj)
+				context.fcall(self.code, self.selfarg, self.args, self.kwds, vargSlots, self.karg, self.targets)
 
 
 class FlatCallConstraint(AbstractCall):
 	def __init__(self, context, code, selfarg, args, kwds, varg, karg, targets):
 		assert argIsOK(selfarg), selfarg
-		assert isinstance(varg, int), varg
+		assert isinstance(varg, list), varg
 
 		AbstractCall.__init__(self)
 		self.context = context
@@ -131,40 +128,22 @@ class FlatCallConstraint(AbstractCall):
 
 		self.vargObjs = set()
 
+		if self.selfarg is not None:
+			self.selfarg.attachTypeSplit(self.splitChanged)
+
 		for arg in args:
-			arg.addCallback(self.argChanged)
+			arg.attachTypeSplit(self.splitChanged)
 
-		self.vargTemp = []
-		for i in range(varg):
-			lc = context.local(ast.Local('varg_%d_%d'%(varg,i)))
-			self.vargTemp.append(lc)
+		for arg in varg:
+			arg.attachTypeSplit(self.splitChanged)
 
-			lc.addCallback(self.argChanged)
-
-		self.argChanged(None)
-
-	def argChanged(self, diff):
+	def splitChanged(self):
 		if not self.dirty:
 			self.dirty = True
 			self.context.dirtyFCall(self)
 
-	# TODO directly generate the loads?
-	def updateVArgObjs(self, context, objs):
-		assert self.varg
-		for obj in objs:
-			if obj not in self.vargObjs:
-				self.vargObjs.add(obj)
-				self.transferVObj(context, obj)
-
-	def transferVObj(self, context, obj):
-		for i, ac in enumerate(self.vargTemp):
-			index = context.analysis.pyObj(i)
-			slot = context.field(obj, 'Array', index.name.obj)
-			context.assign(slot, ac)
-
 	def __repr__(self):
 		return "[FCALL %s %r(%r, %r, *%r, **%r) -> %r]" % (self.code, self.selfarg, self.args, self.kwds, self.varg, self.karg, self.targets)
-
 
 	def resolve(self, context):
 		self.dirty = False
@@ -172,7 +151,7 @@ class FlatCallConstraint(AbstractCall):
 		assert not self.kwds
 		assert self.karg is None
 
-		info = transfer.computeTransferInfo(self.code, self.selfarg is not None, len(self.args), self.varg)
+		info = transfer.computeTransferInfo(self.code, self.selfarg is not None, len(self.args), len(self.varg))
 
 		if info.maybeOK():
 			ctsb = cpacontext.CPATypeSigBuilder(context.analysis, self, info)

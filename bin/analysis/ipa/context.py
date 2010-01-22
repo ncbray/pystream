@@ -55,7 +55,7 @@ class Context(object):
 
 		# Set the length of the vparam object
 		slot = self.field(vparamObj, 'LowLevel', self.analysis.pyObj('length').name.obj)
-		slot.updateValues(frozenset([self.analysis.pyObj(numVParam)]))
+		slot.updateSingleValue(self.analysis.pyObj(numVParam))
 
 		# Copy the vparam locals into the vparam fields
 		for i in range(numVParam):
@@ -82,7 +82,7 @@ class Context(object):
 
 	def dcall(self, code, selfarg, args, kwds, varg, karg, targets):
 		if varg is None:
-			return self.fcall(code, selfarg, args, kwds, 0, karg, targets)
+			return self.fcall(code, selfarg, args, kwds, [], karg, targets)
 		else:
 			call = calls.DirectCallConstraint(self, code, selfarg, args, kwds, varg, karg, targets)
 			self.dcalls.append(call)
@@ -116,20 +116,18 @@ class Context(object):
 		canonical = (obj, fieldType, name)
 		return self.local(canonical) # HACK?
 
-	def assign(self, src, dst, qualifier=constraints.HZ):
+	def assign(self, src, dst):
 		assert isinstance(src, constraints.ConstraintNode), src
 		assert isinstance(dst, constraints.ConstraintNode), dst
 
 		constraint = constraints.CopyConstraint(src, dst)
-		constraint.qualifier = qualifier
 		self.constraint(constraint)
 
-	def assignFiltered(self, src, typeFilter, dst, qualifier=constraints.HZ):
+	def assignFiltered(self, src, typeFilter, dst):
 		assert isinstance(src, constraints.ConstraintNode), src
 		assert isinstance(dst, constraints.ConstraintNode), dst
 
 		constraint = constraints.FilteredCopyConstraint(src, typeFilter, dst)
-		constraint.qualifier = qualifier
 		self.constraint(constraint)
 
 	def updateCallgraph(self):

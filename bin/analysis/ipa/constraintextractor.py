@@ -71,7 +71,7 @@ class ConstraintExtractor(TypeDispatcher):
 		obj = self.analysis.object(xtype, HZ)
 
 		# TODO lazy target creation?
-		target.updateValues(frozenset([obj]))
+		target.updateSingleValue(obj)
 
 	def load(self, node, expr, fieldtype, name, targets):
 		assert len(targets) == 1

@@ -1,6 +1,8 @@
 from language.python import ast
 from analysis.storegraph import extendedtypes
 
+from . import cpacontext
+
 import itertools
 
 HZ = 'HZ'
@@ -9,6 +11,7 @@ UP = 'UP'
 GLBL = 'GLBL'
 
 class ConstraintNode(object):
+	__slots__ = 'context', 'name', 'ci', 'values', 'diff', 'dirty', 'callbacks', 'typeSplit', 'exactSplit'
 	def __init__(self, context, name, values=None, ci=False):
 		self.context = context
 		self.name = name
@@ -25,6 +28,22 @@ class ConstraintNode(object):
 
 		self.callbacks = []
 
+		self.typeSplit  = None
+		self.exactSplit = None
+
+	def attachTypeSplit(self, callback):
+		if self.typeSplit is None:
+			self.typeSplit = TypeSplitConstraint(self.context, self)
+		self.typeSplit.addSplitCallback(callback)
+
+	def getFiltered(self, typeFilter):
+		return self.typeSplit.objects[typeFilter]
+
+	def attachExactSplit(self, callback):
+		if self.exactSplit is None:
+			self.exactSplit = ExactSplitConstraint(self.context, self)
+		self.exactSplit.addSplitCallback(callback)
+
 	def markParam(self):
 		pass
 
@@ -33,6 +52,11 @@ class ConstraintNode(object):
 
 	def addCallback(self, callback):
 		self.callbacks.append(callback)
+
+	def markDirty(self):
+		if not self.dirty:
+			self.dirty = True
+			self.context.dirtySlot(self)
 
 	def updateValues(self, values):
 		sm = self.context.analysis.setmanager
@@ -43,10 +67,26 @@ class ConstraintNode(object):
 			for value in diff:
 				assert isinstance(value, AnalysisObject), value
 
-			self.diff = sm.inplaceUnion(self.diff, diff)
-			if not self.dirty:
-				self.dirty = True
-				self.context.dirtySlot(self)
+			if self.callbacks:
+				self.diff = sm.inplaceUnion(self.diff, diff)
+				self.markDirty()
+			else:
+				assert not self.diff
+				self.values = sm.inplaceUnion(self.values, diff)
+			return True
+		else:
+			return False
+
+	def updateSingleValue(self, value):
+		assert isinstance(value, AnalysisObject), value
+		if value not in self.values and value not in self.diff:
+			sm = self.context.analysis.setmanager
+			if self.callbacks:
+				self.diff = sm.inplaceUnion(self.diff, [value])
+				self.markDirty()
+			else:
+				assert not self.diff
+				self.values = sm.inplaceUnion(self.values, [value])
 			return True
 		else:
 			return False
@@ -80,14 +120,17 @@ class AnalysisObject(object):
 	def __repr__(self):
 		return "ao(%r/%d)" % (self.name, id(self))
 
+	def cpaType(self):
+		return self.name.cpaType()
+
 class Constraint(object):
-	__slots__ = 'qualifier', 'dirty'
+	__slots__ = ()
 	def __init__(self):
-		self.qualifier = HZ
-		self.dirty     = True
+		pass
 
 
 class CopyConstraint(Constraint):
+	__slots__ = 'src', 'dst'
 	def __init__(self, src, dst):
 		assert isinstance(src, ConstraintNode), src
 		assert isinstance(dst, ConstraintNode), dst
@@ -113,44 +156,6 @@ class CopyConstraint(Constraint):
 		return "[%s %r -> %r]" % (self.qualifier, self.src, self.dst)
 
 
-class FilteredCopyConstraint(Constraint):
-	def __init__(self, src, typeFilter, dst):
-		assert isinstance(src, ConstraintNode), src
-		assert isinstance(typeFilter, extendedtypes.ExtendedType), typeFilter
-		assert isinstance(dst, ConstraintNode), dst
-		Constraint.__init__(self)
-		self.src    = src
-		self.typeFilter = typeFilter
-		self.dst    = dst
-
-		self.attach()
-		self.makeConsistent()
-
-	def attach(self):
-		self.src.addCallback(self.srcChanged)
-
-	def makeConsistent(self):
-		# Make constraint consistent
-		if self.src.values:
-			self.srcChanged(self.src.values)
-
-	def srcChanged(self, diff):
-		filtered = []
-
-		# TODO make the obj and filter types consistent?
-
-		for obj in diff:
-			assert isinstance(obj, AnalysisObject), obj
-			if obj.name.cpaType() is self.typeFilter:
-				filtered.append(obj)
-
-		if filtered:
-			self.dst.updateValues(frozenset(filtered))
-
-	def __repr__(self):
-		return "[%s %r %r -> %r]" % (self.qualifier, self.typeFilter, self.src,  self.dst)
-
-
 class LoadConstraint(Constraint):
 	def __init__(self, src, fieldtype, field, dst):
 		assert isinstance(src, ConstraintNode), src
@@ -163,9 +168,14 @@ class LoadConstraint(Constraint):
 		self.field = field
 		self.dst   = dst
 
+		self.attach()
+		self.makeConsistent()
+
+	def attach(self):
 		self.src.addCallback(self.srcChanged)
 		self.field.addCallback(self.fieldChanged)
 
+	def makeConsistent(self):
 		# Make constraint consistent
 		if self.src.values and self.field.values:
 			self.srcChanged(self.src.values)
@@ -193,12 +203,18 @@ class CheckConstraint(Constraint):
 		self.field = field
 		self.dst   = dst
 
+		self.attach()
+		self.makeConsistent()
+
+	def attach(self):
 		self.src.addCallback(self.srcChanged)
 		self.field.addCallback(self.fieldChanged)
 
+	def makeConsistent(self):
 		# Make constraint consistent
 		if self.src.values and self.field.values:
 			self.srcChanged(self.src.values)
+
 
 	def srcChanged(self, diff):
 		pass
@@ -223,9 +239,14 @@ class StoreConstraint(Constraint):
 		self.fieldtype = fieldtype
 		self.field = field
 
+		self.attach()
+		self.makeConsistent()
+
+	def attach(self):
 		self.dst.addCallback(self.dstChanged)
 		self.field.addCallback(self.fieldChanged)
 
+	def makeConsistent(self):
 		# Make constraint consistent
 		if self.dst.values and self.field.values:
 			self.dstChanged(self.dst.values)
@@ -239,3 +260,101 @@ class StoreConstraint(Constraint):
 
 	def __repr__(self):
 		return "[%s %s %r -> %r.%r]" % (self.qualifier, self.fieldtype, self.src, self.dst, self.field)
+
+
+class Splitter(Constraint):
+	def addSplitCallback(self, callback):
+		self.callbacks.append(callback)
+		if self.objects: callback()
+
+	def attach(self):
+		self.src.addCallback(self.srcChanged)
+
+	def makeConsistent(self):
+		# Make constraint consistent
+		if self.src.values:
+			self.srcChanged(self.src.values)
+
+	def doNotify(self):
+		for callback in self.callbacks:
+			callback()
+
+class TypeSplitConstraint(Splitter):
+	def __init__(self, context, src):
+		assert isinstance(src, ConstraintNode), src
+		self.context = context
+		self.src = src
+		self.objects = {}
+
+		self.callbacks = []
+
+		self.megamorphic = False
+
+		self.attach()
+		self.makeConsistent()
+
+	def types(self):
+		return self.objects.keys()
+
+	def makeTempLocal(self):
+		return self.context.local(ast.Local('type_split_temp'))
+
+	def makeMegamorphic(self):
+		assert not self.megamorphic
+		self.megamorphic = True
+		self.objects.clear()
+		self.objects[cpacontext.anyType] = self.src
+		self.doNotify()
+
+	def srcChanged(self, diff):
+		if self.megamorphic: return
+
+		changed = False
+		for obj in diff:
+			cpaType = obj.cpaType()
+
+			if cpaType not in self.objects:
+				if len(self.objects) >= 4:
+					self.makeMegamorphic()
+					break
+				else:
+					temp = self.makeTempLocal()
+					self.objects[cpaType] = temp
+					changed = True
+			else:
+				temp = self.objects[cpaType]
+
+			temp.updateSingleValue(obj)
+		else:
+			if changed: self.doNotify()
+
+
+
+
+class ExactSplitConstraint(Splitter):
+	def __init__(self, context, src):
+		assert isinstance(src, ConstraintNode), src
+		self.context = context
+		self.src = src
+		self.objects = {}
+		self.callbacks = []
+
+		self.attach()
+		self.makeConsistent()
+
+	def makeTempLocal(self):
+		return self.context.local(ast.Local('exact_split_temp'))
+
+	def srcChanged(self, diff):
+		changed = False
+		for obj in diff:
+			if obj not in self.objects:
+				temp = self.makeTempLocal()
+				self.objects[obj] = temp
+				changed = True
+			else:
+				temp = self.objects[obj]
+
+			temp.updateSingleValue(obj)
+
+		if changed: self.doNotify()

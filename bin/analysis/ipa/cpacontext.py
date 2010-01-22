@@ -58,39 +58,17 @@ class CPATypeSigBuilder(object):
 		self.vparams[index].update(value)
 
 	def getSelfArg(self):
-		return self.cpaTypes(self.call.selfarg.values)
+		return self.call.selfarg.typeSplit.types()
 
 	def getArg(self, index):
-		return self.cpaTypes(self.call.args[index].values)
+		return self.call.args[index].typeSplit.types()
 
 	def getVArg(self, index):
-		return self.cpaTypes(self.call.vargTemp[index].values)
-
-	def cpaTypes(self, values):
-		types = set()
-		for value in values:
-			types.add(value.name.cpaType())
-		return types
-
-	def convertMegamorphic(self):
-		# selfparam should NOT be megamorphic... preserve the precision of method dispatch
-#		if len(self.selfparam) > 4:
-#			self.selfparam = anyTypeIter
-
-		for i, values in enumerate(self.params):
-			if len(values) > 4:
-				self.params[i] = anyTypeIter
-
-		for i, values in enumerate(self.vparams):
-			if len(values) > 4:
-				self.vparams[i] = anyTypeIter
+		return self.call.varg[index].typeSplit.types()
 
 
 	def signatures(self):
-		self.convertMegamorphic()
-
 		results = []
-
 		for concrete in itertools.product(self.selfparam, *self.params+self.vparams):
 			selfparam = concrete[0]
 			params = concrete[1:len(self.params)+1]

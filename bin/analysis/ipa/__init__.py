@@ -23,7 +23,7 @@ class CallBinder(object):
 		return self.call.args[i]
 
 	def getVArg(self, i):
-		return self.call.vargTemp[i]
+		return self.call.varg[i]
 
 
 	def setSelfParam(self, value):
@@ -43,14 +43,8 @@ class CallBinder(object):
 
 
 	def copyDownFiltered(self, src, typeFilter, dst):
-		if typeFilter is not cpacontext.anyType:
-			self.context.assignFiltered(src, typeFilter, dst, constraints.DN)
-		else:
-			self.copyDown(src, dst)
-
-	def copyDown(self, src, dst):
-		self.context.assignFiltered(src, dst, constraints.DN)
-
+		# TODO downward?
+		self.context.assign(src.getFiltered(typeFilter), dst)
 
 
 class IPAnalysis(object):

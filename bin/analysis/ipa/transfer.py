@@ -42,17 +42,28 @@ class TransferInfo(object):
 		self.transferOK = tvl.TVLTrue
 
 	def transfer(self, getter, setter):
-		if self.selfparam:
+		if not self.selfparam:
+			setter.unusedSelfParam()
+		else:
 			setter.setSelfParam(getter.getSelfArg())
 
 		for i, p in enumerate(self.params):
-			setter.setParam(i, p.get(getter))
+			if p is None:
+				setter.unusedParam(i)
+			else:
+				setter.setParam(i, p.get(getter))
 
 		for i, p in enumerate(self.vparams):
-			setter.setVParam(i, p.get(getter))
+			if p is None:
+				setter.unusedVParam(i)
+			else:
+				setter.setVParam(i, p.get(getter))
 
 		for kwd, p in enumerate(self.kparams):
-			setter.setKParam(kwd, p.get(getter))
+			if p is None:
+				setter.unusedKParam(kwd)
+			else:
+				setter.setKParam(kwd, p.get(getter))
 
 	def invalidate(self):
 		self.selfparam  = None
@@ -124,6 +135,19 @@ class TransferInfoBuilder(object):
 	def getDefault(self, index):
 		return None
 
+	def setParam(self, index, value):
+		if self.cparams.params[index].isDoNotCare():
+			value = None
+		self.info.params.append(value)
+
+	def setVParam(self, value):
+		if self.cparams.vparam.isDoNotCare():
+			# In theory it would be nice to collapse contexts with
+			# different vparam lengths, but this could cause argument
+			# normalization to be unsound.
+			value = None
+		self.info.vparams.append(value)
+
 	def compute(self, code, selfarg, arglen, varglen):
 		self.code    = code
 
@@ -131,26 +155,27 @@ class TransferInfoBuilder(object):
 		self.varglen = varglen
 
 		cparams = code.codeParameters()
+		self.cparams = cparams
 
 		if cparams.selfparam is not None:
 			if selfarg:
-				self.info.selfparam = True
+				self.info.selfparam = not cparams.selfparam.isDoNotCare()
 			else:
 				# Self arg is missing
 				return self.invalidateTransfer()
 
 		for i, param in enumerate(cparams.params):
 			if self.positionalArgsRemain():
-				self.info.params.append(self.getPositional())
+				self.setParam(i, self.getPositional())
 			elif self.defaultExists(i):
-				self.info.params.append(self.getDefault(i))
+				self.setParam(i, self.getDefault(i))
 			else:
 				# Not enough positional parameters
 				return self.invalidateTransfer()
 
 		if cparams.vparam is not None:
 			while self.positionalArgsRemain():
-				self.info.vparams.append(self.getPositional())
+				self.setVParam(self.getPositional())
 		else:
 			# TODO defaults?
 			if self.positionalArgsRemain():

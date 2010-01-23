@@ -29,15 +29,24 @@ class CallBinder(object):
 		return self.call.varg[i]
 
 
+	def unusedSelfParam(self):
+		pass
+
 	def setSelfParam(self, value):
 		typeFilter = self.context.signature.selfparam
 		dst = self.context.local(self.params.selfparam)
 		self.copyDownFiltered(value, typeFilter, dst)
 
+	def unusedParam(self, i):
+		pass
+
 	def setParam(self, i, value):
 		typeFilter = self.context.signature.params[i]
 		dst = self.context.local(self.params.params[i])
 		self.copyDownFiltered(value, typeFilter, dst)
+
+	def unusedVParam(self, i):
+		pass
 
 	def setVParam(self, i, value):
 		typeFilter = self.context.signature.vparams[i]
@@ -153,8 +162,6 @@ class IPAnalysis(object):
 		if code not in self.liveCode:
 			self.liveCode.add(code)
 
-		print "code", code
-
 		return code
 
 	def updateCallGraph(self):
@@ -215,5 +222,4 @@ def evaluateWithImage(compiler, prgm):
 def evaluate(compiler, prgm):
 	simpleimagebuilder.build(compiler, prgm)
 	result = evaluateWithImage(compiler, prgm)
-	assert False
 	return result

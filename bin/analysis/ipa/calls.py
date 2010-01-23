@@ -163,7 +163,7 @@ class FlatCallConstraint(AbstractCall):
 
 			for sig in sigs:
 				if not sig in self.cache:
-					print sig
+					#print sig
 
 					# HACK - varg can be weird, must take it into account?
 					self.cache[sig] = None

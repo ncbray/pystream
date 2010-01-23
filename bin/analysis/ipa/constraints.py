@@ -13,6 +13,8 @@ GLBL = 'GLBL'
 class ConstraintNode(object):
 	__slots__ = 'context', 'name', 'ci', 'values', 'diff', 'dirty', 'callbacks', 'typeSplit', 'exactSplit'
 	def __init__(self, context, name, values=None, ci=False):
+		assert not isinstance(name, ast.DoNotCare), name
+
 		self.context = context
 		self.name = name
 		self.ci = ci
@@ -295,7 +297,7 @@ class StoreConstraint(Constraint):
 			self.dstChanged(self.dst.values)
 
 	def dstChanged(self, diff):
-		pass
+		assert False
 
 	def fieldChanged(self, diff):
 		# TODO field is dst

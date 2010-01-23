@@ -39,23 +39,29 @@ class CPATypeSigBuilder(object):
 		self.call = call
 
 		self.code = self.call.code
-		self.selfparam  = set()
-		self.params     = [set() for i in range(info.numParams())]
-		self.vparams    = [set() for i in range(info.numVParams())]
-
-		if call.selfarg is None:
-			self.selfparam = nullIter
+		self.selfparam  = None
+		self.params     = [None for i in range(info.numParams())]
+		self.vparams    = [None for i in range(info.numVParams())]
 
 		assert not info.numKParams()
 
+	def unusedSelfParam(self):
+		self.selfparam = nullIter
+
 	def setSelfParam(self, value):
-		self.selfparam.update(value)
+		self.selfparam = value
+
+	def unusedParam(self, index):
+		self.params[index] = nullIter
 
 	def setParam(self, index, value):
-		self.params[index].update(value)
+		self.params[index] = value
+
+	def unusedVParam(self, index):
+		self.vparams[index] = nullIter
 
 	def setVParam(self, index, value):
-		self.vparams[index].update(value)
+		self.vparams[index] = value
 
 	def getSelfArg(self):
 		return self.call.selfarg.typeSplit.types()

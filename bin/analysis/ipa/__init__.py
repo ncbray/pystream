@@ -9,6 +9,8 @@ from .. cpa import simpleimagebuilder
 from .. storegraph import setmanager
 
 
+from .dump import Dumper
+
 class CallBinder(object):
 	def __init__(self, call, context):
 		self.call    = call
@@ -183,12 +185,12 @@ class IPAnalysis(object):
 		return bool(self.dirtySlots)
 
 	def dump(self):
-		print
-		print "="*60
+		dumper = Dumper('summaries/ipa')
+
+		dumper.index(self.contexts.values(), self.root)
 
 		for context in self.contexts.itervalues():
-			context.dump()
-			print
+			dumper.dumpContext(context)
 
 	def topDown(self):
 		dirty = True
@@ -206,7 +208,8 @@ def evaluateWithImage(compiler, prgm):
 			analysis.makeFakeEntryPointOp(ep, args)
 			analysis.topDown()
 
-		#analysis.dump()
+	with compiler.console.scope('ipa dump'):
+		analysis.dump()
 
 
 def evaluate(compiler, prgm):

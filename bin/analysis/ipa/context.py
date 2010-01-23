@@ -82,7 +82,7 @@ class Object(object):
 			# TODO
 			#if isinstance(obj.pyobj, list):
 			#	return set([canonical.existingType(t) for t in obj.array.itervalues()])
-			
+
 			# Extracted from memory
 			if isinstance(obj, program.Object):
 				if fieldtype == 'LowLevel':
@@ -95,7 +95,7 @@ class Object(object):
 					subdict = obj.dictionary
 				else:
 					assert False, fieldtype
-	
+
 				if fieldname in subdict:
 					self.updateExternal(slot, canonical.existingType(subdict[fieldname]))
 
@@ -104,7 +104,7 @@ class Object(object):
 			qualifier=constraints.HZ
 		else:
 			qualifier=constraints.GLBL
-		
+
 		ao = self.context.analysis.object(xtype, qualifier)
 		slot.updateSingleValue(ao)
 

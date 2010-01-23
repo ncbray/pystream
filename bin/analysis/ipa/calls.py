@@ -15,9 +15,10 @@ def argIsOK(arg):
 	return arg is None or isinstance(arg, constraints.ConstraintNode)
 
 class CallConstraint(AbstractCall):
-	def __init__(self, context, selfarg, args, kwds, varg, karg, targets):
+	def __init__(self, context, op, selfarg, args, kwds, varg, karg, targets):
 		AbstractCall.__init__(self)
 		self.context = context
+		self.op = op
 		self.selfarg = selfarg
 		self.args = args
 		self.kwds = kwds
@@ -48,14 +49,15 @@ class CallConstraint(AbstractCall):
 
 				code = context.analysis.getCode(selfobj)
 
-				context.dcall(code, selflcl, self.args, self.kwds, self.varg, self.karg, self.targets)
+				context.dcall(self.op, code, selflcl, self.args, self.kwds, self.varg, self.karg, self.targets)
 
 class DirectCallConstraint(AbstractCall):
-	def __init__(self, context, code, selfarg, args, kwds, varg, karg, targets):
+	def __init__(self, context, op, code, selfarg, args, kwds, varg, karg, targets):
 		assert code is not None
 		assert argIsOK(selfarg), selfarg
 		AbstractCall.__init__(self)
 		self.context = context
+		self.op = op
 		self.code = code
 		self.selfarg = selfarg
 		self.args = args
@@ -108,16 +110,17 @@ class DirectCallConstraint(AbstractCall):
 				self.cache[key] = None
 
 				vargSlots = self.vargObjSlots(vargObj)
-				context.fcall(self.code, self.selfarg, self.args, self.kwds, vargSlots, self.karg, self.targets)
+				context.fcall(self.op, self.code, self.selfarg, self.args, self.kwds, vargSlots, self.karg, self.targets)
 
 
 class FlatCallConstraint(AbstractCall):
-	def __init__(self, context, code, selfarg, args, kwds, varg, karg, targets):
+	def __init__(self, context, op, code, selfarg, args, kwds, varg, karg, targets):
 		assert argIsOK(selfarg), selfarg
 		assert isinstance(varg, list), varg
 
 		AbstractCall.__init__(self)
 		self.context = context
+		self.op = op
 		self.code = code
 		self.selfarg = selfarg
 		self.args = args

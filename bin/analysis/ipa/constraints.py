@@ -118,7 +118,7 @@ class AnalysisObject(object):
 		self.qualifier = qualifier
 
 	def __repr__(self):
-		return "ao(%r/%d)" % (self.name, id(self))
+		return "ao(%r, %s/%d)" % (self.name, self.qualifier, id(self))
 
 	def cpaType(self):
 		return self.name.cpaType()
@@ -153,7 +153,35 @@ class CopyConstraint(Constraint):
 		self.dst.updateValues(diff)
 
 	def __repr__(self):
-		return "[%s %r -> %r]" % (self.qualifier, self.src, self.dst)
+		return "[%r -> %r]" % (self.src, self.dst)
+
+class DownwardConstraint(Constraint):
+	__slots__ = 'invoke', 'src', 'dst'
+	def __init__(self, invoke, src, dst):
+		assert isinstance(src, ConstraintNode), src
+		assert isinstance(dst, ConstraintNode), dst
+		Constraint.__init__(self)
+		self.invoke = invoke
+		self.src = src
+		self.dst = dst
+
+		self.attach()
+		self.makeConsistent()
+
+	def attach(self):
+		self.src.addCallback(self.srcChanged)
+
+	def makeConsistent(self):
+		# Make constraint consistent
+		if self.src.values:
+			self.srcChanged(self.src.values)
+
+	def srcChanged(self, diff):
+		for obj in diff:
+			self.dst.updateSingleValue(self.invoke.copyDown(obj))
+
+	def __repr__(self):
+		return "[DN %r -> %r]" % (self.src, self.dst)
 
 
 class LoadConstraint(Constraint):
@@ -171,6 +199,11 @@ class LoadConstraint(Constraint):
 		self.attach()
 		self.makeConsistent()
 
+	# HACK
+	@property
+	def context(self):
+		return self.dst.context
+
 	def attach(self):
 		self.src.addCallback(self.srcChanged)
 		self.field.addCallback(self.fieldChanged)
@@ -180,15 +213,25 @@ class LoadConstraint(Constraint):
 		if self.src.values and self.field.values:
 			self.srcChanged(self.src.values)
 
+	def concrete(self, obj, field):
+		slot = self.context.field(obj, self.fieldtype, field.name.obj)
+		self.context.assign(slot, self.dst)
+
 	def srcChanged(self, diff):
-		pass
+		for obj in diff:
+			for field in self.field.values:
+				self.concrete(obj, field)
 
 	def fieldChanged(self, diff):
-		# TODO field is src
-		pass
+		for obj in self.src.values:
+			# Avoid problems if src and field alias...
+			if self.src is self.field and obj in diff: continue
+
+			for field in diff:
+				self.concrete(obj, field)
 
 	def __repr__(self):
-		return "[%s %s %r.%r -> %r]" % (self.qualifier, self.fieldtype, self.src, self.field, self.dst)
+		return "[%s %r.%r -> %r]" % (self.fieldtype, self.src, self.field, self.dst)
 
 
 class CheckConstraint(Constraint):
@@ -224,7 +267,7 @@ class CheckConstraint(Constraint):
 		pass
 
 	def __repr__(self):
-		return "[%s %s %r.%r CHECK=> %r]" % (self.qualifier, self.fieldtype, self.src, self.field, self.dst)
+		return "[%s %r.%r CHECK=> %r]" % (self.fieldtype, self.src, self.field, self.dst)
 
 
 class StoreConstraint(Constraint):
@@ -259,7 +302,7 @@ class StoreConstraint(Constraint):
 		pass
 
 	def __repr__(self):
-		return "[%s %s %r -> %r.%r]" % (self.qualifier, self.fieldtype, self.src, self.dst, self.field)
+		return "[%s %r -> %r.%r]" % (self.fieldtype, self.src, self.dst, self.field)
 
 
 class Splitter(Constraint):

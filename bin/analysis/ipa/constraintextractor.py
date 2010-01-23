@@ -53,13 +53,13 @@ class ConstraintExtractor(TypeDispatcher):
 		assert not kwds, self.code
 		assert kargs is None, self.code
 
-		self.context.call(expr, args, kwds, vargs, kargs, targets)
+		self.context.call(node, expr, args, kwds, vargs, kargs, targets)
 
 	def dcall(self, node, code, expr, args, kwds, vargs, kargs, targets):
 		assert not kwds, self.code
 		assert kargs is None, self.code
 
-		self.context.dcall(code, expr, args, kwds, vargs, kargs, targets)
+		self.context.dcall(node, code, expr, args, kwds, vargs, kargs, targets)
 
 	def allocate(self, node, expr, targets):
 		assert isinstance(expr, AnalysisObject), expr

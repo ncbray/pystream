@@ -13,8 +13,9 @@ class CallBinder(object):
 	def __init__(self, call, context):
 		self.call    = call
 		self.context = context
+		self.params  = self.context.signature.code.codeParameters()
 
-		self.params = self.context.signature.code.codeParameters()
+		self.invoke = call.context.getInvoke(call.op, context)
 
 	def getSelfArg(self):
 		return self.call.selfarg
@@ -44,7 +45,7 @@ class CallBinder(object):
 
 	def copyDownFiltered(self, src, typeFilter, dst):
 		# TODO downward?
-		self.context.assign(src.getFiltered(typeFilter), dst)
+		self.context.down(self.invoke, src.getFiltered(typeFilter), dst)
 
 
 class IPAnalysis(object):
@@ -66,8 +67,6 @@ class IPAnalysis(object):
 		self.setmanager = setmanager.CachedSetManager()
 
 		self.dirtySlots = []
-
-		self.dirtyCalls = False
 
 	def dirtySlot(self, slot):
 		self.dirtySlots.append(slot)
@@ -118,7 +117,7 @@ class IPAnalysis(object):
 		varg = self.makeFakeLocal(epargs.vargs)
 		karg = self.makeFakeLocal(epargs.kargs)
 
-		call = self.root.dcall(ep.code, selfarg, args, [], varg, karg, None)
+		call = self.root.dcall(ep, ep.code, selfarg, args, [], varg, karg, None)
 
 	def getContext(self, sig):
 		if sig not in self.contexts:
@@ -156,26 +155,30 @@ class IPAnalysis(object):
 
 	def updateCallGraph(self):
 		print "update"
-
-		self.dirtyCalls = False
+		changed = False
 
 		# HACK dictionary size may change...
 		for context in tuple(self.contexts.itervalues()):
-			context.updateCallgraph()
+			changed |= context.updateCallgraph()
 		print
+
+		return changed
 
 
 	def updateConstraints(self):
 		print "resolve"
 		while self.dirtySlots:
 			slot = self.dirtySlots.pop()
-			#print slot, slot.diff
+			if False:
+				print slot
+				for value in slot.diff:
+					print '\t', value
 			slot.propagate()
 		print
 
 	def dirtyConstraints(self):
 		# HACK self.dirtyCalls?
-		return bool(self.dirtySlots) or self.dirtyCalls
+		return bool(self.dirtySlots)
 
 	def dump(self):
 		print
@@ -185,16 +188,21 @@ class IPAnalysis(object):
 			context.dump()
 			print
 
+	def topDown(self):
+		dirty = True
+		while dirty:
+			self.updateConstraints()
+			self.updateCallGraph()
+			dirty = self.dirtyConstraints()
+
+
 def evaluateWithImage(compiler, prgm):
 	with compiler.console.scope('ipa analysis'):
 		analysis = IPAnalysis(compiler, prgm.storeGraph.canonical)
 
 		for ep, args in prgm.entryPoints:
 			analysis.makeFakeEntryPointOp(ep, args)
-
-		while analysis.dirtyConstraints():
-			analysis.updateConstraints()
-			analysis.updateCallGraph()
+			analysis.topDown()
 
 		#analysis.dump()
 

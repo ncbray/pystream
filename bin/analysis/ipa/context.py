@@ -1,6 +1,8 @@
 from . import constraints, calls
 from language.python import ast, program
 
+import collections
+
 class Invocation(object):
 	def __init__(self, src, op, dst):
 		self.src = src
@@ -10,8 +12,127 @@ class Invocation(object):
 		self.dst.invokeIn[(src, op)] = self
 		self.src.invokeOut[(op, dst)] = self
 
+		self.objForward = {}
+		self.objReverse = collections.defaultdict(list)
+
 	def copyDown(self, obj):
-		return self.dst.analysis.object(obj.name, constraints.DN)
+		# TODO copy down existing fields
+		if obj not in self.objForward:
+			remapped = self.dst.analysis.object(obj.name, constraints.DN)
+			self.objForward[obj] = remapped
+			self.objReverse[remapped].append(obj)
+		else:
+			remapped = self.objForward[obj]
+
+		return remapped
+
+	def copyFieldFromSources(self, slot):
+		obj, fieldtype, name = slot.name
+		assert isinstance(obj, constraints.AnalysisObject), obj
+
+		prev = self.objReverse.get(obj)
+		if not prev: return
+
+		context = self.dst #?
+
+		for prevobj in prev:
+			prevfield = self.src.field(prevobj, fieldtype, name)
+			context.down(self, prevfield, slot)
+
+
+class Object(object):
+	def __init__(self, context, name):
+		self.context = context
+		self.name   = name
+		self.fields = {}
+
+	def initDownwardField(self, slot):
+		#print "DN COPY", slot
+		for invoke in self.context.invokeIn.itervalues():
+			invoke.copyFieldFromSources(slot)
+
+	def initExternalField(self, slot):
+
+		obj, fieldtype, fieldname = slot.name
+
+		xtype = obj.name
+		obj = xtype.obj
+
+		assert isinstance(obj, program.AbstractObject), obj
+
+		extractor = self.context.analysis.compiler.extractor
+
+		extractor.ensureLoaded(obj)
+
+		# TODO
+		#if isinstance(obj.pyobj, list):
+		#	return set([canonical.existingType(t) for t in obj.array.itervalues()])
+
+		# TODO type pointers
+		if fieldtype == 'LowLevel' and fieldname.pyobj == 'type':
+			self.updateExternal(slot, obj.type)
+
+		# TODO external fields?
+
+		if isinstance(obj, program.Object):
+			if fieldtype == 'LowLevel':
+				subdict = obj.lowlevel
+			elif fieldtype == 'Attribute':
+				subdict = obj.slot
+			elif fieldtype == 'Array':
+				subdict = obj.array
+			elif fieldtype == 'Dictionary':
+				subdict = obj.dictionary
+			else:
+				assert False, slottype
+
+			if fieldname in subdict:
+				self.updateExternal(slot, subdict[fieldname])
+
+	def updateExternal(self, slot, obj):
+		canonical = self.context.analysis.canonical
+
+		xtype = canonical.existingType(obj)
+		ao = self.context.analysis.object(xtype, constraints.GLBL)
+		slot.updateSingleValue(ao)
+
+		print "external", ao
+
+
+	def field(self, fieldType, name):
+		assert isinstance(fieldType, str), fieldType
+		assert isinstance(name, program.AbstractObject), name
+
+		key = (fieldType, name)
+
+		if key not in self.fields:
+			result = constraints.ConstraintNode(self.context, (self.name, fieldType, name))
+			self.fields[key] = result
+
+			if self.name.qualifier is constraints.DN:
+				self.initDownwardField(result)
+			elif self.context.external:
+				self.initExternalField(result)
+		else:
+			result = self.fields[key]
+
+		return result
+
+class Region(object):
+	def __init__(self, context):
+		self.context = context
+		self.objects = {}
+
+	def object(self, obj):
+		assert isinstance(obj, constraints.AnalysisObject), obj
+
+		if obj not in self.objects:
+			result = Object(self.context, obj)
+			self.objects[obj] = result
+		else:
+			result = self.objects[obj]
+
+		return result
 
 class Context(object):
 	def __init__(self, analysis, signature):
@@ -36,6 +157,10 @@ class Context(object):
 
 		self.invokeIn  = {}
 		self.invokeOut = {}
+
+		self.region = Region(self)
+
+		self.external = False
 
 	def getInvoke(self, op, dst):
 		key = op, dst
@@ -128,28 +253,13 @@ class Context(object):
 				cnode.updateValues(values)
 		return cnode
 
-	def initDownwardField(self, slot):
-		print "DN", slot
-
 	def field(self, obj, fieldType, name):
 		assert isinstance(obj, constraints.AnalysisObject), obj
 		assert isinstance(fieldType, str), fieldType
 		assert isinstance(name, program.AbstractObject), name
 
-		key = (obj, fieldType, name)
+		return self.region.object(obj).field(fieldType, name)
 
-
-		if key not in self.fields:
-			slot = constraints.ConstraintNode(self, key)
-			self.fields[key] = slot
-
-			if obj.qualifier is constraints.DN:
-				self.initDownwardField(slot)
-			# TODO global
-
-		else:
-			slot = self.fields[key]
-		return slot
 
 	def assign(self, src, dst):
 		assert isinstance(src, constraints.ConstraintNode), src
@@ -161,6 +271,9 @@ class Context(object):
 	def down(self, invoke, src, dst):
 		assert isinstance(src, constraints.ConstraintNode), src
 		assert isinstance(dst, constraints.ConstraintNode), dst
+
+		assert src.context is not self
+		assert dst.context is self
 
 		constraint = constraints.DownwardConstraint(invoke, src, dst)
 		self.constraint(constraint)
@@ -214,10 +327,13 @@ class Context(object):
 			print
 		print
 
-		print "FIELDS"
-		for slot in self.fields.itervalues():
-			print slot
-			for value in slot.values:
-				print '\t', value
+		print "OBJECTS"
+		region = self.region
+		for obj in region.objects.itervalues():
+			print obj.name
+			for slot in obj.fields.itervalues():
+				print '\t', slot
+				for value in slot.values:
+					print '\t\t', value
 			print
 		print

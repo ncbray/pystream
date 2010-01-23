@@ -7,7 +7,7 @@ class MarkParameters(TypeDispatcher):
 	def __init__(self, ce):
 		self.ce = ce
 
-	@dispatch(type(None))
+	@dispatch(type(None), ast.DoNotCare)
 	def visitNone(self, node):
 		pass
 
@@ -36,18 +36,28 @@ class ConstraintExtractor(TypeDispatcher):
 		return node
 
 	@dispatch(ast.Local)
-	def visitLocal(self, node):
-		return self.context.local(node)
+	def visitLocal(self, node, targets=None):
+		lcl = self.context.local(node)
+
+		if targets is None:
+			return lcl
+		else:
+			assert len(targets) == 1
+			self.context.assign(lcl, targets[0])
 
 	def existingObject(self, node):
 		xtype = self.analysis.canonical.existingType(node.object)
 		return self.analysis.object(xtype, GLBL)
 
 	@dispatch(ast.Existing)
-	def visitExisting(self, node):
+	def visitExisting(self, node, targets=None):
 		obj = self.existingObject(node)
 		lcl = self.context.local(ast.Local('existing_temp'), (obj,))
-		return lcl
+		if targets is None:
+			return lcl
+		else:
+			assert len(targets) == 1
+			self.context.assign(lcl, targets[0])
 
 	def call(self, node, expr, args, kwds, vargs, kargs, targets):
 		assert not kwds, self.code

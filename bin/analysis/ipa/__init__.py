@@ -57,6 +57,7 @@ class IPAnalysis(object):
 		self.contexts = {}
 
 		self.root = self.getContext(cpacontext.externalContext)
+		self.root.external = True
 
 		self.constraints = []
 

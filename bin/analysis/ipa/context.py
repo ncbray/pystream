@@ -21,10 +21,22 @@ class Invocation(object):
 			remapped = self.dst.analysis.object(obj.name, constraints.DN)
 			self.objForward[obj] = remapped
 			self.objReverse[remapped].append(obj)
+
+
+			# Copy fields already in use
+			region = self.dst.region
+			for slot in region.object(remapped).fields.itervalues():
+				print "old slot", slot
+				self.copyFieldFromSourceObj(slot, obj)
 		else:
 			remapped = self.objForward[obj]
 
 		return remapped
+
+	def copyFieldFromSourceObj(self, slot, prevobj):
+		obj, fieldtype, name = slot.name
+		prevfield = self.src.field(prevobj, fieldtype, name)
+		self.dst.down(self, prevfield, slot)
 
 	def copyFieldFromSources(self, slot):
 		obj, fieldtype, name = slot.name
@@ -33,11 +45,8 @@ class Invocation(object):
 		prev = self.objReverse.get(obj)
 		if not prev: return
 
-		context = self.dst #?
-
 		for prevobj in prev:
-			prevfield = self.src.field(prevobj, fieldtype, name)
-			context.down(self, prevfield, slot)
+			self.copyFieldFromSourceObj(slot, prevobj)
 
 
 class Object(object):

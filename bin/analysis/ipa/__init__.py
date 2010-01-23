@@ -215,6 +215,9 @@ def evaluateWithImage(compiler, prgm):
 			analysis.makeFakeEntryPointOp(ep, args)
 			analysis.topDown()
 
+		print "%5d code" % len(analysis.liveCode)
+		print "%5d contexts" % len(analysis.contexts)
+
 	with compiler.console.scope('ipa dump'):
 		analysis.dump()
 

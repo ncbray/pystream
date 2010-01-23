@@ -113,6 +113,7 @@ class Dumper(object):
 		for slot in context.locals.itervalues():
 			with o.scope('p'):
 				o << slot
+				if slot.null: o << " (null)"
 				o.endl()
 
 				with o.scope('ul'):
@@ -134,6 +135,7 @@ class Dumper(object):
 					for slot in obj.fields.itervalues():
 						with o.scope('li'):
 							o << slot
+							if slot.null: o << " (null)"
 							with o.scope('ul'):
 								for value in slot.values:
 									with o.scope('li'):

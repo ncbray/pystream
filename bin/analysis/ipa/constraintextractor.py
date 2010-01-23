@@ -76,9 +76,7 @@ class ConstraintExtractor(TypeDispatcher):
 		assert len(targets) == 1
 		target = targets[0]
 
-		inst = expr.name.obj.typeinfo.abstractInstance
-		xtype = self.analysis.canonical.pathType(self.context.signature, inst, node)
-		obj = self.analysis.object(xtype, HZ)
+		obj = self.context.allocate(expr, node)
 
 		# TODO lazy target creation?
 		target.updateSingleValue(obj)
@@ -89,7 +87,7 @@ class ConstraintExtractor(TypeDispatcher):
 
 	def check(self, node, expr, fieldtype, name, targets):
 		assert len(targets) == 1
-		self.context.constraint(CheckConstraint(expr, fieldtype, name, targets[0]))
+		self.context.constraint(CheckConstraint(self.context, expr, fieldtype, name, targets[0]))
 
 	@dispatch(ast.Call)
 	def visitCall(self, node, targets):

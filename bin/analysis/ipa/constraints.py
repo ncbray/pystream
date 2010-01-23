@@ -11,7 +11,7 @@ UP = 'UP'
 GLBL = 'GLBL'
 
 class ConstraintNode(object):
-	__slots__ = 'context', 'name', 'ci', 'values', 'diff', 'dirty', 'callbacks', 'typeSplit', 'exactSplit'
+	__slots__ = 'context', 'name', 'ci', 'values', 'diff', 'null', 'dirty', 'callbacks', 'typeSplit', 'exactSplit'
 	def __init__(self, context, name, values=None, ci=False):
 		assert not isinstance(name, ast.DoNotCare), name
 
@@ -25,6 +25,8 @@ class ConstraintNode(object):
 		else:
 			self.values = context.analysis.setmanager.empty()
 		self.diff = context.analysis.setmanager.empty()
+
+		self.null = False
 
 		self.dirty = False
 
@@ -93,6 +95,19 @@ class ConstraintNode(object):
 		else:
 			return False
 
+	def markNull(self):
+		if not self.null:
+			self.null = True
+			if self.callbacks:
+				# HACK this is an expensive way of communicating with the
+				# few consumers that care.  Fortunately, this is rare.
+				self.markDirty()
+
+	def clearNull(self):
+		# Can only be done before the node is observed.
+		assert not self.callbacks
+		self.null = False
+
 	def propagate(self):
 		assert self.dirty
 		self.dirty = False
@@ -158,14 +173,15 @@ class CopyConstraint(Constraint):
 		return "[%r -> %r]" % (self.src, self.dst)
 
 class DownwardConstraint(Constraint):
-	__slots__ = 'invoke', 'src', 'dst'
-	def __init__(self, invoke, src, dst):
+	__slots__ = 'invoke', 'src', 'dst', 'fieldTransfer'
+	def __init__(self, invoke, src, dst, fieldTransfer=False):
 		assert isinstance(src, ConstraintNode), src
 		assert isinstance(dst, ConstraintNode), dst
 		Constraint.__init__(self)
 		self.invoke = invoke
 		self.src = src
 		self.dst = dst
+		self.fieldTransfer = fieldTransfer
 
 		self.attach()
 		self.makeConsistent()
@@ -175,12 +191,15 @@ class DownwardConstraint(Constraint):
 
 	def makeConsistent(self):
 		# Make constraint consistent
-		if self.src.values:
+		if self.src.values or (self.fieldTransfer and self.src.null):
 			self.srcChanged(self.src.values)
 
 	def srcChanged(self, diff):
 		for obj in diff:
 			self.dst.updateSingleValue(self.invoke.copyDown(obj))
+
+		if self.fieldTransfer and self.src.null:
+			self.dst.markNull()
 
 	def __repr__(self):
 		return "[DN %r -> %r]" % (self.src, self.dst)
@@ -237,12 +256,13 @@ class LoadConstraint(Constraint):
 
 
 class CheckConstraint(Constraint):
-	def __init__(self, src, fieldtype, field, dst):
+	def __init__(self, context, src, fieldtype, field, dst):
 		assert isinstance(src, ConstraintNode), src
 		assert isinstance(fieldtype, str), fieldtype
 		assert isinstance(field, ConstraintNode), field
 		assert isinstance(dst, ConstraintNode), dst
 		Constraint.__init__(self)
+		self.context = context
 		self.src   = src
 		self.fieldtype = fieldtype
 		self.field = field
@@ -260,16 +280,57 @@ class CheckConstraint(Constraint):
 		if self.src.values and self.field.values:
 			self.srcChanged(self.src.values)
 
+	def concrete(self, obj, field):
+		slot = self.context.field(obj, self.fieldtype, field.name.obj)
+		self.context.constraint(ConcreteCheckConstraint(self.context, slot, self.dst))
 
 	def srcChanged(self, diff):
-		pass
+		for obj in diff:
+			for field in self.field.values:
+				self.concrete(obj, field)
 
 	def fieldChanged(self, diff):
-		# TODO field is src
-		pass
+		for obj in self.src.values:
+			# Avoid problems if src and field alias...
+			if self.src is self.field and obj in diff: continue
+
+			for field in diff:
+				self.concrete(obj, field)
 
 	def __repr__(self):
 		return "[%s %r.%r CHECK=> %r]" % (self.fieldtype, self.src, self.field, self.dst)
+
+
+class ConcreteCheckConstraint(Constraint):
+	def __init__(self, context, src, dst):
+		assert isinstance(src, ConstraintNode), src
+		assert isinstance(dst, ConstraintNode), dst
+		Constraint.__init__(self)
+		self.context = context
+		self.src   = src
+		self.dst   = dst
+
+		self.t = False
+		self.f = False
+
+		self.attach()
+		self.makeConsistent()
+
+	def attach(self):
+		self.src.addCallback(self.srcChanged)
+
+	def makeConsistent(self):
+		if self.src.values or self.src.null:
+			self.srcChanged(self.src.values)
+
+	def srcChanged(self, diff):
+		if diff and not self.t:
+			self.t = True
+			self.dst.updateSingleValue(self.context.allocatePyObj(True))
+
+		if self.src.null and not self.f:
+			self.f = True
+			self.dst.updateSingleValue(self.context.allocatePyObj(False))
 
 
 class StoreConstraint(Constraint):

@@ -36,7 +36,7 @@ class Invocation(object):
 	def copyFieldFromSourceObj(self, slot, prevobj):
 		obj, fieldtype, name = slot.name
 		prevfield = self.src.field(prevobj, fieldtype, name)
-		self.dst.down(self, prevfield, slot)
+		self.dst.down(self, prevfield, slot, fieldTransfer=True)
 
 	def copyFieldFromSources(self, slot):
 		obj, fieldtype, name = slot.name
@@ -75,9 +75,12 @@ class Object(object):
 
 		canonical = self.context.analysis.canonical
 
+		filled = False
+
 		if fieldtype == 'LowLevel' and fieldname.pyobj == 'type':
 			# Type pointer
 			self.updateExternal(slot, canonical.existingType(obj.type))
+			filled = True
 		elif xtype.isExternal():
 			# User-specified memory image
 			storeGraph = self.context.analysis.storeGraph
@@ -87,6 +90,7 @@ class Object(object):
 			xtypes = sgfield.refs
 			for ref in xtypes:
 				self.updateExternal(slot, ref)
+				filled = True
 		else:
 			# TODO
 			#if isinstance(obj.pyobj, list):
@@ -107,6 +111,10 @@ class Object(object):
 
 				if fieldname in subdict:
 					self.updateExternal(slot, canonical.existingType(subdict[fieldname]))
+					filled = True
+
+		if not filled: slot.markNull()
+
 
 	def updateExternal(self, slot, xtype):
 		if xtype.isExternal():
@@ -137,6 +145,8 @@ class Object(object):
 				self.initDownwardField(result)
 			elif self.context.external:
 				self.initExistingField(result)
+			else:
+				result.markNull()
 		else:
 			result = self.fields[key]
 
@@ -186,6 +196,38 @@ class Context(object):
 
 		self.external = False
 
+	def allocatePyObj(self, pyobj):
+		typeobj = self.analysis.compiler.extractor.getObject(type(pyobj))
+		typextype = self.analysis.canonical.existingType(typeobj)
+		tao = self.analysis.object(typextype, constraints.HZ) # Yes, it is not global
+
+		obj = self.analysis.compiler.extractor.getObject(pyobj)
+		xtype = self.analysis.canonical.existingType(obj)
+		ao = self.analysis.object(xtype, constraints.HZ)
+
+		self.setTypePointer(ao, tao)
+
+		return ao
+
+	def setTypePointer(self, obj, typeObj):
+		assert isinstance(obj, constraints.AnalysisObject), obj
+		assert isinstance(typeObj, constraints.AnalysisObject), typeObj
+
+		typeptr = self.field(obj, 'LowLevel', self.analysis.compiler.extractor.getObject('type'))
+		typeptr.clearNull()
+		typeptr.updateSingleValue(typeObj)
+
+	def allocate(self, typeObj, node):
+		assert isinstance(typeObj, constraints.AnalysisObject), typeObj
+
+		inst = typeObj.name.obj.typeinfo.abstractInstance
+		xtype = self.analysis.canonical.pathType(None, inst, node)
+		obj = self.analysis.object(xtype, constraints.HZ)
+
+		self.setTypePointer(obj, typeObj)
+
+		return obj
+
 	def getInvoke(self, op, dst):
 		key = op, dst
 		inv = self.invokeOut.get(key)
@@ -227,6 +269,7 @@ class Context(object):
 
 		# Set the length of the vparam object
 		slot = self.field(vparamObj, 'LowLevel', self.analysis.pyObj('length').name.obj)
+		slot.clearNull()
 		slot.updateSingleValue(self.analysis.pyObj(numVParam))
 
 		# Copy the vparam locals into the vparam fields
@@ -238,6 +281,7 @@ class Context(object):
 			# Create a vparam field
 			index = self.analysis.pyObj(i)
 			slot = self.field(vparamObj, 'Array', index.name.obj)
+			slot.clearNull()
 
 			# Copy
 			self.assign(lcl, slot)
@@ -292,14 +336,14 @@ class Context(object):
 		constraint = constraints.CopyConstraint(src, dst)
 		self.constraint(constraint)
 
-	def down(self, invoke, src, dst):
+	def down(self, invoke, src, dst, fieldTransfer=False):
 		assert isinstance(src, constraints.ConstraintNode), src
 		assert isinstance(dst, constraints.ConstraintNode), dst
 
 		assert src.context is not self
 		assert dst.context is self
 
-		constraint = constraints.DownwardConstraint(invoke, src, dst)
+		constraint = constraints.DownwardConstraint(invoke, src, dst, fieldTransfer)
 		self.constraint(constraint)
 
 	def updateCallgraph(self):

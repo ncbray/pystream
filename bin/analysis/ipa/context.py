@@ -51,7 +51,7 @@ class Object(object):
 		for invoke in self.context.invokeIn.itervalues():
 			invoke.copyFieldFromSources(slot)
 
-	def initExternalField(self, slot):
+	def initExistingField(self, slot):
 
 		obj, fieldtype, fieldname = slot.name
 
@@ -64,39 +64,54 @@ class Object(object):
 
 		extractor.ensureLoaded(obj)
 
-		# TODO
-		#if isinstance(obj.pyobj, list):
-		#	return set([canonical.existingType(t) for t in obj.array.itervalues()])
-
-		# TODO type pointers
-		if fieldtype == 'LowLevel' and fieldname.pyobj == 'type':
-			self.updateExternal(slot, obj.type)
-
-		# TODO external fields?
-
-		if isinstance(obj, program.Object):
-			if fieldtype == 'LowLevel':
-				subdict = obj.lowlevel
-			elif fieldtype == 'Attribute':
-				subdict = obj.slot
-			elif fieldtype == 'Array':
-				subdict = obj.array
-			elif fieldtype == 'Dictionary':
-				subdict = obj.dictionary
-			else:
-				assert False, slottype
-
-			if fieldname in subdict:
-				self.updateExternal(slot, subdict[fieldname])
-
-	def updateExternal(self, slot, obj):
 		canonical = self.context.analysis.canonical
 
-		xtype = canonical.existingType(obj)
-		ao = self.context.analysis.object(xtype, constraints.GLBL)
+		if fieldtype == 'LowLevel' and fieldname.pyobj == 'type':
+			# Type pointer
+			self.updateExternal(slot, canonical.existingType(obj.type))
+		elif xtype.isExternal():
+			# User-specified memory image
+			storeGraph = self.context.analysis.storeGraph
+			sgobj = storeGraph.regionHint.object(xtype)
+			canonicalField = canonical.fieldName(fieldtype, fieldname)
+			sgfield = sgobj.field(canonicalField, storeGraph.regionHint)
+			xtypes = sgfield.refs
+			for ref in xtypes:
+				self.updateExternal(slot, ref)
+		else:
+			# TODO
+			#if isinstance(obj.pyobj, list):
+			#	return set([canonical.existingType(t) for t in obj.array.itervalues()])
+			
+			# Extracted from memory
+			if isinstance(obj, program.Object):
+				if fieldtype == 'LowLevel':
+					subdict = obj.lowlevel
+				elif fieldtype == 'Attribute':
+					subdict = obj.slot
+				elif fieldtype == 'Array':
+					subdict = obj.array
+				elif fieldtype == 'Dictionary':
+					subdict = obj.dictionary
+				else:
+					assert False, fieldtype
+	
+				if fieldname in subdict:
+					self.updateExternal(slot, canonical.existingType(subdict[fieldname]))
+
+	def updateExternal(self, slot, xtype):
+		if xtype.isExternal():
+			qualifier=constraints.HZ
+		else:
+			qualifier=constraints.GLBL
+		
+		ao = self.context.analysis.object(xtype, qualifier)
 		slot.updateSingleValue(ao)
 
-		print "external", ao
+		if False:
+			print "external"
+			print slot
+			print ao
 
 
 	def field(self, fieldType, name):
@@ -112,7 +127,7 @@ class Object(object):
 			if self.name.qualifier is constraints.DN:
 				self.initDownwardField(result)
 			elif self.context.external:
-				self.initExternalField(result)
+				self.initExistingField(result)
 		else:
 			result = self.fields[key]
 

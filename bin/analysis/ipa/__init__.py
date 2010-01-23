@@ -49,9 +49,10 @@ class CallBinder(object):
 
 
 class IPAnalysis(object):
-	def __init__(self, compiler, canonical):
+	def __init__(self, compiler, storeGraph):
 		self.compiler = compiler
-		self.canonical = canonical
+		self.storeGraph = storeGraph
+		self.canonical = storeGraph.canonical
 
 		self.objs = {}
 		self.contexts = {}
@@ -199,7 +200,7 @@ class IPAnalysis(object):
 
 def evaluateWithImage(compiler, prgm):
 	with compiler.console.scope('ipa analysis'):
-		analysis = IPAnalysis(compiler, prgm.storeGraph.canonical)
+		analysis = IPAnalysis(compiler, prgm.storeGraph)
 
 		for ep, args in prgm.entryPoints:
 			analysis.makeFakeEntryPointOp(ep, args)

@@ -1,12 +1,14 @@
 import collections
 from . import objectname
-from .. constraints import qualifiers
+from .. constraints import flow, qualifiers
 
 class Invocation(object):
 	def __init__(self, src, op, dst):
 		self.src = src
 		self.op  = op
 		self.dst = dst
+
+		self.constraints = []
 
 		self.dst.invokeIn[(src, op)] = self
 		self.src.invokeOut[(op, dst)] = self
@@ -34,7 +36,7 @@ class Invocation(object):
 	def copyFieldFromSourceObj(self, slot, prevobj):
 		_obj, fieldtype, name = slot.name
 		prevfield = self.src.field(prevobj, fieldtype, name)
-		self.dst.down(self, prevfield, slot, fieldTransfer=True)
+		self.down(prevfield, slot, fieldTransfer=True)
 
 	def copyFieldFromSources(self, slot):
 		obj, _fieldtype, _name = slot.name
@@ -45,3 +47,10 @@ class Invocation(object):
 
 		for prevobj in prev:
 			self.copyFieldFromSourceObj(slot, prevobj)
+
+	def down(self, srcslot, dstslot, fieldTransfer=False):
+		assert srcslot.context is self.src
+		assert dstslot.context is self.dst
+
+		constraint = flow.DownwardConstraint(self, srcslot, dstslot, fieldTransfer)
+		self.constraints.append(constraint)

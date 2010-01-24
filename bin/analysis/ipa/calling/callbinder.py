@@ -46,7 +46,7 @@ class CallBinder(object):
 
 
 	def copyDownFiltered(self, src, typeFilter, dst):
-		self.context.down(self.invoke, src.getFiltered(typeFilter), dst)
+		self.invoke.down(src.getFiltered(typeFilter), dst)
 
 def bind(call, context, info):
 	binder = CallBinder(call, context)

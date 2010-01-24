@@ -25,7 +25,7 @@ class CopyConstraint(Constraint):
 		self.dst.updateValues(diff)
 
 	def __repr__(self):
-		return "[%r -> %r]" % (self.src, self.dst)
+		return "[CP %r -> %r]" % (self.src, self.dst)
 
 class DownwardConstraint(Constraint):
 	__slots__ = 'invoke', 'src', 'dst', 'fieldTransfer'
@@ -109,7 +109,7 @@ class LoadConstraint(Constraint):
 				self.concrete(obj, field)
 
 	def __repr__(self):
-		return "[%s %r.%r -> %r]" % (self.fieldtype, self.src, self.field, self.dst)
+		return "[LD %r %s %r -> %r]" % (self.src, self.fieldtype, self.field, self.dst)
 
 
 class CheckConstraint(Constraint):
@@ -156,7 +156,7 @@ class CheckConstraint(Constraint):
 				self.concrete(obj, field)
 
 	def __repr__(self):
-		return "[%s %r.%r CHECK=> %r]" % (self.fieldtype, self.src, self.field, self.dst)
+		return "[CA %r %s %r -> %r]" % (self.src, self.fieldtype, self.field, self.dst)
 
 
 class ConcreteCheckConstraint(Constraint):
@@ -189,6 +189,9 @@ class ConcreteCheckConstraint(Constraint):
 		if self.src.null and not self.f:
 			self.f = True
 			self.dst.updateSingleValue(self.context.allocatePyObj(False))
+
+	def __repr__(self):
+		return "[CC %r -> %r]" % (self.src, self.dst)
 
 
 class StoreConstraint(Constraint):
@@ -223,4 +226,4 @@ class StoreConstraint(Constraint):
 		pass
 
 	def __repr__(self):
-		return "[%s %r -> %r.%r]" % (self.fieldtype, self.src, self.dst, self.field)
+		return "[ST %r -> %r %s %r]" % (self.src, self.dst, self.fieldtype, self.field)

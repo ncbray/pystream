@@ -150,13 +150,6 @@ class Context(object):
 		constraint = flow.CopyConstraint(src, dst)
 		self.constraint(constraint)
 
-	def down(self, invoke, src, dst, fieldTransfer=False):
-		assert src.context is not self
-		assert dst.context is self
-
-		constraint = flow.DownwardConstraint(invoke, src, dst, fieldTransfer)
-		self.constraint(constraint)
-
 	def updateCallgraph(self):
 		changed = False
 

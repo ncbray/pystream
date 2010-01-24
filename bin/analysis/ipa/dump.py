@@ -89,10 +89,11 @@ class Dumper(object):
 		for src, invokes in grouped.iteritems():
 			with o.scope('p'):
 				self.displayContext(src, o)
-				o.tag('br')
-				for invoke in invokes:
+			for invoke in invokes:
+				with o.scope('p'):
 					o << invoke.op
-					o.tag('br')
+				self.constraints(invoke.constraints, o)
+
 			o.endl()
 
 	def invokesOut(self, context, o):
@@ -166,6 +167,15 @@ class Dumper(object):
 
 		self.dumpTree(None, tree, o)
 
+	def constraints(self, constraints, o):
+		with o.scope('p'):
+			with o.scope('b'):
+				o << "%d constraints" % len(constraints)
+			o.tag('br')
+			for c in constraints:
+				o << c
+				o.tag('br')
+
 	def dumpContext(self, context):
 		url = self.contextURL(context)
 		o = XMLOutput(open(url, 'w'))
@@ -186,8 +196,11 @@ class Dumper(object):
 				o.endl()
 				with o.scope('p'):
 					self.displayContext(context, o, link=False)
+
 				self.code(context, o)
 				self.invokesIn(context, o)
 				self.invokesOut(context, o)
 				self.locals(context, o)
 				self.objects(context, o)
+
+				self.constraints(context.constraints, o)

@@ -48,7 +48,7 @@ class ConstraintExtractor(TypeDispatcher):
 
 	def existingObject(self, node):
 		xtype = self.analysis.canonical.existingType(node.object)
-		return self.analysis.object(xtype, qualifiers.GLBL)
+		return self.analysis.objectName(xtype, qualifiers.GLBL)
 
 	@dispatch(ast.Existing)
 	def visitExisting(self, node, targets=None):

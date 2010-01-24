@@ -1,4 +1,4 @@
-from language.python import ast, program
+import time
 from optimization.callconverter import callConverter
 
 from . constraints import flow, calls, qualifiers
@@ -6,6 +6,7 @@ from . model import objectname
 from . model.context import Context
 from . calling import cpa
 from . constraintextractor import ConstraintExtractor
+from . entrypointbuilder import buildEntryPoint
 
 from analysis.cpa import simpleimagebuilder
 from analysis.storegraph import setmanager
@@ -24,35 +25,23 @@ class IPAnalysis(object):
 		self.root = self.getContext(cpa.externalContext)
 		self.root.external = True
 
-		self.sigs = {}
-
 		self.liveCode = set()
 
 		self.setmanager = setmanager.CachedSetManager()
 
 		self.dirtySlots = []
 
-	def dirtySlot(self, slot):
-		self.dirtySlots.append(slot)
-
-	def lengthName(self):
-		lenO = self.compiler.extractor.getObject('length')
-		return self.canonical.fieldName('LowLevel', lenO)
+		self.decompileTime = 0.0
 
 	def tupleInstance(self):
-		tupleCls = self.compiler.extractor.getObject(tuple)
+		tupleCls = self.pyObj(tuple)
 		self.compiler.extractor.ensureLoaded(tupleCls)
 		return tupleCls.typeinfo.abstractInstance
 
-	def canonicalSignature(self, sig):
-		return self.sigs.setdefault(sig, sig)
-
 	def pyObj(self, pyobj):
-		obj = self.compiler.extractor.getObject(pyobj)
-		xtype = self.canonical.existingType(obj)
-		return self.object(xtype, qualifiers.GLBL)
+		return self.compiler.extractor.getObject(pyobj)
 
-	def object(self, xtype, qualifier=qualifiers.HZ):
+	def objectName(self, xtype, qualifier=qualifiers.HZ):
 		key = (xtype, qualifier)
 		if key not in self.objs:
 			obj = objectname.ObjectName(xtype, qualifier)
@@ -60,27 +49,6 @@ class IPAnalysis(object):
 		else:
 			obj = self.objs[key]
 		return obj
-
-	def makeFakeLocal(self, objs):
-		if objs is None:
-			return None
-		else:
-			lcl = self.root.local(ast.Local('entry_point_arg'))
-			objs = frozenset([self.object(xtype) for xtype in objs])
-			lcl.updateValues(objs)
-			return lcl
-
-	def makeFakeEntryPointOp(self, ep, epargs):
-		selfarg = self.makeFakeLocal(epargs.selfarg)
-
-		args = []
-		for arg in epargs.args:
-			args.append(self.makeFakeLocal(arg))
-
-		varg = self.makeFakeLocal(epargs.vargs)
-		karg = self.makeFakeLocal(epargs.kargs)
-
-		call = self.root.dcall(ep, ep.code, selfarg, args, [], varg, karg, None)
 
 	def getContext(self, sig):
 		if sig not in self.contexts:
@@ -96,6 +64,8 @@ class IPAnalysis(object):
 		return context
 
 	def getCode(self, obj):
+		start = time.clock()
+
 		assert isinstance(obj, objectname.ObjectName)
 
 		extractor = self.compiler.extractor
@@ -108,7 +78,18 @@ class IPAnalysis(object):
 		if code not in self.liveCode:
 			self.liveCode.add(code)
 
+		end = time.clock()
+		self.decompileTime += end-start
+
 		return code
+
+	### Analysis methods ###
+
+	def dirtySlot(self, slot):
+		self.dirtySlots.append(slot)
+
+	def dirtyConstraints(self):
+		return bool(self.dirtySlots)
 
 	def updateCallGraph(self):
 		print "update"
@@ -121,7 +102,6 @@ class IPAnalysis(object):
 
 		return changed
 
-
 	def updateConstraints(self):
 		print "resolve"
 		while self.dirtySlots:
@@ -133,18 +113,6 @@ class IPAnalysis(object):
 			slot.propagate()
 		print
 
-	def dirtyConstraints(self):
-		# HACK self.dirtyCalls?
-		return bool(self.dirtySlots)
-
-	def dump(self):
-		dumper = Dumper('summaries/ipa')
-
-		dumper.index(self.contexts.values(), self.root)
-
-		for context in self.contexts.itervalues():
-			dumper.dumpContext(context)
-
 	def topDown(self):
 		dirty = True
 		while dirty:
@@ -153,19 +121,30 @@ class IPAnalysis(object):
 			dirty = self.dirtyConstraints()
 
 
+def dumpAnalysisResults(analysis):
+	dumper = Dumper('summaries/ipa')
+
+	dumper.index(analysis.contexts.values(), analysis.root)
+
+	for context in analysis.contexts.itervalues():
+		dumper.dumpContext(context)
+
+
 def evaluateWithImage(compiler, prgm):
 	with compiler.console.scope('ipa analysis'):
 		analysis = IPAnalysis(compiler, prgm.storeGraph)
 
 		for ep, args in prgm.entryPoints:
-			analysis.makeFakeEntryPointOp(ep, args)
-			analysis.topDown()
+			buildEntryPoint(analysis, ep, args)
+
+		analysis.topDown()
 
 		print "%5d code" % len(analysis.liveCode)
 		print "%5d contexts" % len(analysis.contexts)
+		print "%.2f ms decompile" % (analysis.decompileTime*1000.0)
 
 	with compiler.console.scope('ipa dump'):
-		analysis.dump()
+		dumpAnalysisResults(analysis)
 
 
 def evaluate(compiler, prgm):

@@ -85,8 +85,6 @@ class CPATypeSigBuilder(object):
 			selfparam, params, vparams = self.split(concrete)
 
 			sig = CPAContextSignature(self.code, selfparam, params, vparams)
-			sig = self.analysis.canonicalSignature(sig)
-
 			results.append(sig)
 
 		return results

@@ -17,7 +17,7 @@ class Invocation(object):
 	def copyDown(self, obj):
 		# TODO copy down existing fields
 		if obj not in self.objForward:
-			remapped = self.dst.analysis.object(obj.xtype, qualifiers.DN)
+			remapped = self.dst.analysis.objectName(obj.xtype, qualifiers.DN)
 			self.objForward[obj] = remapped
 			self.objReverse[remapped].append(obj)
 

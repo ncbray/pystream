@@ -27,15 +27,16 @@ class Context(object):
 
 		self.external = False
 
-	def allocatePyObj(self, pyobj):
-		typeobj = self.analysis.compiler.extractor.getObject(type(pyobj))
-		typextype = self.analysis.canonical.existingType(typeobj)
-		tao = self.analysis.object(typextype, qualifiers.HZ) # Yes, it is not global
-
-		obj = self.analysis.compiler.extractor.getObject(pyobj)
+	def existingPyObj(self, pyobj, qualifier=qualifiers.HZ):
+		obj = self.analysis.pyObj(pyobj)
 		xtype = self.analysis.canonical.existingType(obj)
-		ao = self.analysis.object(xtype, qualifiers.HZ)
+		return self.analysis.objectName(xtype, qualifier)
 
+	def allocatePyObj(self, pyobj):
+		ao  = self.existingPyObj(pyobj, qualifiers.HZ)
+
+		# TODO do we need to set the type pointer?
+		tao = self.existingPyObj(type(pyobj), qualifiers.HZ) # Yes, it is not global
 		self.setTypePointer(ao, tao)
 
 		return ao
@@ -44,7 +45,7 @@ class Context(object):
 		assert isinstance(obj, objectname.ObjectName), obj
 		assert isinstance(typeObj, objectname.ObjectName), typeObj
 
-		typeptr = self.field(obj, 'LowLevel', self.analysis.compiler.extractor.getObject('type'))
+		typeptr = self.field(obj, 'LowLevel', self.analysis.pyObj('type'))
 		typeptr.clearNull()
 		typeptr.updateSingleValue(typeObj)
 
@@ -53,7 +54,7 @@ class Context(object):
 
 		inst = typeObj.xtype.obj.typeinfo.abstractInstance
 		xtype = self.analysis.canonical.pathType(None, inst, node)
-		obj = self.analysis.object(xtype, qualifiers.HZ)
+		obj = self.analysis.objectName(xtype, qualifiers.HZ)
 
 		self.setTypePointer(obj, typeObj)
 
@@ -89,7 +90,7 @@ class Context(object):
 	def vparamObj(self):
 		inst = self.analysis.tupleInstance()
 		xtype = self.analysis.canonical.contextType(self.signature, inst, None)
-		return self.analysis.object(xtype, qualifiers.HZ)
+		return self.analysis.objectName(xtype, qualifiers.HZ)
 
 	def setupVParam(self, vparam):
 		# Assign the vparam object to the vparam local
@@ -100,14 +101,14 @@ class Context(object):
 		numVParam = len(self.signature.vparams)
 
 		# Set the length of the vparam object
-		slot = self.field(vparamObj, 'LowLevel', self.analysis.pyObj('length').xtype.obj)
+		slot = self.field(vparamObj, 'LowLevel', self.analysis.pyObj('length'))
 		slot.clearNull()
-		slot.updateSingleValue(self.analysis.pyObj(numVParam))
+		slot.updateSingleValue(self.allocatePyObj(numVParam))
 
 		# Copy the vparam locals into the vparam fields
 		for i in range(numVParam):
 			# Create a vparam field
-			slot = self.field(vparamObj, 'Array', self.analysis.pyObj(i).xtype.obj)
+			slot = self.field(vparamObj, 'Array', self.analysis.pyObj(i))
 			slot.clearNull()
 			self.vparamField.append(slot)
 

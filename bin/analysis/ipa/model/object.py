@@ -75,7 +75,7 @@ class Object(object):
 		else:
 			qualifier=qualifiers.GLBL
 
-		ao = self.context.analysis.object(xtype, qualifier)
+		ao = self.context.analysis.objectName(xtype, qualifier)
 		slot.updateSingleValue(ao)
 
 		if False:

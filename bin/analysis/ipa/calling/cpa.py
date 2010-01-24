@@ -1,8 +1,6 @@
 import itertools
-
 from util import canonical
-
-from ..storegraph import extendedtypes
+from analysis.storegraph import extendedtypes
 
 def cpaArgOK(arg):
 	return arg is None or arg is anyType or isinstance(arg, extendedtypes.ExtendedType)
@@ -30,7 +28,6 @@ class CPAContextSignature(canonical.CanonicalObject):
 		return "cpa(%r, %r, %r, %r/%d)" % (self.code, self.selfparam, self.params, self.vparams, id(self))
 
 anyType = object()
-anyTypeIter = (anyType,)
 nullIter = (None,)
 
 class CPATypeSigBuilder(object):
@@ -72,13 +69,20 @@ class CPATypeSigBuilder(object):
 	def getVArg(self, index):
 		return self.call.varg[index].typeSplit.types()
 
+	def flatten(self):
+		flat = [self.selfparam]
+		flat.extend(self.params)
+		flat.extend(self.vparams)
+		return flat
+
+	def split(self, flat):
+		psplit = len(self.params)+1
+		return flat[0], flat[1:psplit], flat[psplit:]
 
 	def signatures(self):
 		results = []
-		for concrete in itertools.product(self.selfparam, *self.params+self.vparams):
-			selfparam = concrete[0]
-			params = concrete[1:len(self.params)+1]
-			vparams = concrete[len(self.params)+1:]
+		for concrete in itertools.product(*self.flatten()):
+			selfparam, params, vparams = self.split(concrete)
 
 			sig = CPAContextSignature(self.code, selfparam, params, vparams)
 			sig = self.analysis.canonicalSignature(sig)

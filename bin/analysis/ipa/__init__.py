@@ -1,63 +1,16 @@
 from language.python import ast, program
 from optimization.callconverter import callConverter
 
-from . import constraints, calls, cpacontext
+from . constraints import flow, calls, qualifiers
+from . model import objectname
+from . model.context import Context
+from . calling import cpa
 from . constraintextractor import ConstraintExtractor
-from . context import Context
 
-from .. cpa import simpleimagebuilder
-from .. storegraph import setmanager
-
+from analysis.cpa import simpleimagebuilder
+from analysis.storegraph import setmanager
 
 from .dump import Dumper
-
-class CallBinder(object):
-	def __init__(self, call, context):
-		self.call    = call
-		self.context = context
-		self.params  = self.context.signature.code.codeParameters()
-
-		self.invoke = call.context.getInvoke(call.op, context)
-
-	def getSelfArg(self):
-		return self.call.selfarg
-
-	def getArg(self, i):
-		return self.call.args[i]
-
-	def getVArg(self, i):
-		return self.call.varg[i]
-
-
-	def unusedSelfParam(self):
-		pass
-
-	def setSelfParam(self, value):
-		typeFilter = self.context.signature.selfparam
-		dst = self.context.local(self.params.selfparam)
-		self.copyDownFiltered(value, typeFilter, dst)
-
-	def unusedParam(self, i):
-		pass
-
-	def setParam(self, i, value):
-		typeFilter = self.context.signature.params[i]
-		dst = self.context.local(self.params.params[i])
-		self.copyDownFiltered(value, typeFilter, dst)
-
-	def unusedVParam(self, i):
-		pass
-
-	def setVParam(self, i, value):
-		typeFilter = self.context.signature.vparams[i]
-		dst = self.context.vparamTemp[i]
-		self.copyDownFiltered(value, typeFilter, dst)
-
-
-	def copyDownFiltered(self, src, typeFilter, dst):
-		# TODO downward?
-		self.context.down(self.invoke, src.getFiltered(typeFilter), dst)
-
 
 class IPAnalysis(object):
 	def __init__(self, compiler, storeGraph):
@@ -68,10 +21,8 @@ class IPAnalysis(object):
 		self.objs = {}
 		self.contexts = {}
 
-		self.root = self.getContext(cpacontext.externalContext)
+		self.root = self.getContext(cpa.externalContext)
 		self.root.external = True
-
-		self.constraints = []
 
 		self.sigs = {}
 
@@ -93,21 +44,18 @@ class IPAnalysis(object):
 		self.compiler.extractor.ensureLoaded(tupleCls)
 		return tupleCls.typeinfo.abstractInstance
 
-	def _constraint(self, context, constraint):
-		self.constraints.append((context, constraint))
-
 	def canonicalSignature(self, sig):
 		return self.sigs.setdefault(sig, sig)
 
 	def pyObj(self, pyobj):
 		obj = self.compiler.extractor.getObject(pyobj)
 		xtype = self.canonical.existingType(obj)
-		return self.object(xtype, constraints.GLBL)
+		return self.object(xtype, qualifiers.GLBL)
 
-	def object(self, xtype, qualifier=constraints.HZ):
+	def object(self, xtype, qualifier=qualifiers.HZ):
 		key = (xtype, qualifier)
 		if key not in self.objs:
-			obj = constraints.AnalysisObject(xtype, qualifier)
+			obj = objectname.ObjectName(xtype, qualifier)
 			self.objs[key] = obj
 		else:
 			obj = self.objs[key]
@@ -117,8 +65,10 @@ class IPAnalysis(object):
 		if objs is None:
 			return None
 		else:
-			objs = [self.object(xtype) for xtype in objs]
-			return self.root.local(ast.Local('entry_point_arg'), objs)
+			lcl = self.root.local(ast.Local('entry_point_arg'))
+			objs = frozenset([self.object(xtype) for xtype in objs])
+			lcl.updateValues(objs)
+			return lcl
 
 	def makeFakeEntryPointOp(self, ep, epargs):
 		selfarg = self.makeFakeLocal(epargs.selfarg)
@@ -145,15 +95,11 @@ class IPAnalysis(object):
 			context = self.contexts[sig]
 		return context
 
-	def bindCall(self, call, context, info):
-		binder = CallBinder(call, context)
-		info.transfer(binder, binder)
-
 	def getCode(self, obj):
-		assert isinstance(obj, constraints.AnalysisObject)
+		assert isinstance(obj, objectname.ObjectName)
 
 		extractor = self.compiler.extractor
-		code = extractor.getCall(obj.name.obj)
+		code = extractor.getCall(obj.xtype.obj)
 		if code is None:
 			code = extractor.stubs.exports['interpreter_call']
 

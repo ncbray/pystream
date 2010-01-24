@@ -1,10 +1,5 @@
-import itertools
-
-from . import cpacontext
-from . import transfer
-from . import constraints
-
-from language.python import ast
+from .. calling import cpa, transfer, callbinder
+from . import node
 
 class AbstractCall(object):
 	def __init__(self):
@@ -12,7 +7,7 @@ class AbstractCall(object):
 		self.cache = {}
 
 def argIsOK(arg):
-	return arg is None or isinstance(arg, constraints.ConstraintNode)
+	return arg is None or isinstance(arg, node.ConstraintNode)
 
 class CallConstraint(AbstractCall):
 	def __init__(self, context, op, selfarg, args, kwds, varg, karg, targets):
@@ -66,7 +61,7 @@ class DirectCallConstraint(AbstractCall):
 		self.karg = karg
 		self.targets = targets
 
-		assert isinstance(varg, constraints.ConstraintNode), varg
+		assert isinstance(varg, node.ConstraintNode), varg
 
 		# TODO no need for the split locals?
 		self.varg.attachExactSplit(self.splitChanged)
@@ -86,15 +81,13 @@ class DirectCallConstraint(AbstractCall):
 
 		analysis = self.context.analysis
 
-		lengthSlot = self.context.field(vargObj, 'LowLevel', analysis.pyObj('length').name.obj)
+		lengthSlot = self.context.field(vargObj, 'LowLevel', analysis.pyObj('length').xtype.obj)
 		assert len(lengthSlot.values) == 1
-		length = tuple(lengthSlot.values)[0].name.obj.pyobj
+		length = tuple(lengthSlot.values)[0].xtype.obj.pyobj
 
 
 		for i in range(length):
-			index = analysis.pyObj(i)
-			slot = self.context.field(vargObj, 'Array', index.name.obj)
-
+			slot = self.context.field(vargObj, 'Array', analysis.pyObj(i).xtype.obj)
 			slots.append(slot)
 
 		return slots
@@ -129,8 +122,6 @@ class FlatCallConstraint(AbstractCall):
 		self.karg = karg
 		self.targets = targets
 
-		self.vargObjs = set()
-
 		if self.selfarg is not None:
 			self.selfarg.attachTypeSplit(self.splitChanged)
 
@@ -157,20 +148,19 @@ class FlatCallConstraint(AbstractCall):
 		info = transfer.computeTransferInfo(self.code, self.selfarg is not None, len(self.args), len(self.varg))
 
 		if info.maybeOK():
-			ctsb = cpacontext.CPATypeSigBuilder(context.analysis, self, info)
+			ctsb = cpa.CPATypeSigBuilder(context.analysis, self, info)
 			info.transfer(ctsb, ctsb)
 			sigs = ctsb.signatures()
 
 			for sig in sigs:
 				if not sig in self.cache:
-					#print sig
+					print sig
 
 					# HACK - varg can be weird, must take it into account?
 					self.cache[sig] = None
 
 					invoked = context.analysis.getContext(sig)
-					context.analysis.bindCall(self, invoked, info)
-
+					callbinder.bind(self, invoked, info)
 		else:
 			import pdb
 			pdb.set_trace()

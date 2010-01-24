@@ -1,7 +1,8 @@
 from util.typedispatch import *
 from language.python import ast, program
-
-from . constraints import *
+from . model import objectname
+from . constraints import qualifiers
+from . constraints import flow
 
 class MarkParameters(TypeDispatcher):
 	def __init__(self, ce):
@@ -47,12 +48,13 @@ class ConstraintExtractor(TypeDispatcher):
 
 	def existingObject(self, node):
 		xtype = self.analysis.canonical.existingType(node.object)
-		return self.analysis.object(xtype, GLBL)
+		return self.analysis.object(xtype, qualifiers.GLBL)
 
 	@dispatch(ast.Existing)
 	def visitExisting(self, node, targets=None):
 		obj = self.existingObject(node)
-		lcl = self.context.local(ast.Local('existing_temp'), (obj,))
+		lcl = self.context.local(ast.Local('existing_temp'))
+		lcl.updateSingleValue(obj)
 		if targets is None:
 			return lcl
 		else:
@@ -72,7 +74,7 @@ class ConstraintExtractor(TypeDispatcher):
 		self.context.dcall(node, code, expr, args, kwds, vargs, kargs, targets)
 
 	def allocate(self, node, expr, targets):
-		assert isinstance(expr, AnalysisObject), expr
+		assert isinstance(expr, objectname.ObjectName), expr
 		assert len(targets) == 1
 		target = targets[0]
 
@@ -83,11 +85,11 @@ class ConstraintExtractor(TypeDispatcher):
 
 	def load(self, node, expr, fieldtype, name, targets):
 		assert len(targets) == 1
-		self.context.constraint(LoadConstraint(expr, fieldtype, name, targets[0]))
+		self.context.constraint(flow.LoadConstraint(expr, fieldtype, name, targets[0]))
 
 	def check(self, node, expr, fieldtype, name, targets):
 		assert len(targets) == 1
-		self.context.constraint(CheckConstraint(self.context, expr, fieldtype, name, targets[0]))
+		self.context.constraint(flow.CheckConstraint(self.context, expr, fieldtype, name, targets[0]))
 
 	@dispatch(ast.Call)
 	def visitCall(self, node, targets):

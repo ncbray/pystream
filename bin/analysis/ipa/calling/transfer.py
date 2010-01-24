@@ -1,8 +1,5 @@
 from util import tvl
 
-
-# TODO pool arg objects?
-
 class BaseArg(object):
 	__slots__ = 'index',
 	def __init__(self, index):
@@ -83,15 +80,6 @@ class TransferInfo(object):
 
 	def numKParams(self):
 		return len(self.kparams)
-
-	def dump(self):
-		print "="*40
-		print self.selfparam
-		print self.params
-		print self.vparams
-		print self.transferOK
-		print "="*40
-		print
 
 
 class TransferInfoBuilder(object):

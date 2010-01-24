@@ -15,10 +15,9 @@ doThreadCleanup = False
 if True:
 	testOnly = [
 		('tests', 'test_full'),
-		#('tests', 'shape', 'test_shape'),
-		#('tests', 'shape', 'test_shape_compound'),
-		('tests', 'test_canonical'),
-		('tests', 'test_graphalgorithims')
+		#('tests', 'test_canonical'),
+		#('tests', 'test_graphalgorithims'),
+		('tests', 'test_ipa'),
 	]
 
 testExclude = [

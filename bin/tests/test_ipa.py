@@ -7,27 +7,6 @@ from language.python import program
 
 from analysis.storegraph.canonicalobjects import CanonicalObjects
 
-class MockObjectName(object):
-	__slots__ = '_obj', 'qualifier'
-	def __init__(self, obj, qualifier):
-		self._obj = obj
-		self.qualifier = qualifier
-
-	def cpaType(self):
-		return self._obj
-
-	def obj(self):
-		return self._obj
-
-	def pyObj(self):
-		return self._obj.pyobj
-
-	def isObjectName(self):
-		return True
-
-	def __repr__(self):
-		return "MockObjectName(%r, %s)" % (self._obj, self.qualifier)
-
 class MockExtractor(object):
 	def __init__(self):
 		self.cache = {}
@@ -40,7 +19,11 @@ class MockExtractor(object):
 			self.cache[key] = result
 		return result
 
-class TestFlowConstraints(unittest.TestCase):
+class MockSignature(object):
+	def __init__(self):
+		self.code = None
+
+class TestConstraintBase(unittest.TestCase):
 	def setUp(self):
 		self.extractor = MockExtractor()
 		self.canonical = CanonicalObjects()
@@ -48,29 +31,34 @@ class TestFlowConstraints(unittest.TestCase):
 		externalPolicy = None
 
 		self.analysis = IPAnalysis(self.extractor, self.canonical, existingPolicy, externalPolicy)
-		self.context  = self.analysis.getContext(None)
-
-	def local(self, name, *values):
-		lcl = self.context.local(name)
+	
+	def local(self, context, name, *values):
+		lcl = context.local(name)
 		if values: lcl.updateValues(frozenset(values))
 		return lcl
 
 	def assertIsInstance(self, obj, cls):
 		self.assert_(isinstance(obj, cls), "expected %r, got %r" % (cls, type(obj)))
 
-	def const(self, pyobj):
+	def const(self, pyobj, qualifier=qualifiers.HZ):
 		obj = self.extractor.getObject(pyobj)
-		return MockObjectName(obj, qualifiers.HZ)
+		xtype = self.canonical.existingType(obj)
+		return self.analysis.objectName(xtype, qualifier)
+
+class TestFlowConstraints(TestConstraintBase):
+	def setUp(self):
+		TestConstraintBase.setUp(self)
+		self.context  = self.analysis.getContext(MockSignature())
 
 	def testStore(self):
 		o = self.const('obj')
 		n = self.const('name')
 		v = self.const('value')
 
-		src       = self.local(0, v)
-		dst       = self.local(1, o)
+		src       = self.local(self.context, 0, v)
+		dst       = self.local(self.context, 1, o)
 		fieldtype = 'Attribute'
-		fieldname = self.local(2, n)
+		fieldname = self.local(self.context, 2, n)
 
 		self.context.constraint(flow.StoreConstraint(src, dst, fieldtype, fieldname))
 
@@ -93,10 +81,10 @@ class TestFlowConstraints(unittest.TestCase):
 		n = self.const('name')
 		v = self.const('value')
 
-		src       = self.local(0, o)
+		src       = self.local(self.context, 0, o)
 		fieldtype = 'Attribute'
-		fieldname = self.local(1, n)
-		dst       = self.local(2)
+		fieldname = self.local(self.context, 1, n)
+		dst       = self.local(self.context, 2)
 
 		field = self.context.field(o, fieldtype, n.obj())
 		field.updateSingleValue(v)
@@ -120,10 +108,10 @@ class TestFlowConstraints(unittest.TestCase):
 		n = self.const('name')
 		v = self.const('value')
 
-		src       = self.local(0, o)
+		src       = self.local(self.context, 0, o)
 		fieldtype = 'Attribute'
-		fieldname = self.local(1, n)
-		dst       = self.local(2)
+		fieldname = self.local(self.context, 1, n)
+		dst       = self.local(self.context, 2)
 
 		field = self.context.field(o, fieldtype, n.obj())
 		self.assertEqual(field.null, True)
@@ -160,3 +148,148 @@ class TestFlowConstraints(unittest.TestCase):
 
 	def testCheckNeither(self):
 		self.checkTemplate(False, False)
+
+
+class TestDownwardFieldTransfer(TestConstraintBase):
+	def setUp(self):
+		TestConstraintBase.setUp(self)
+
+		self.contextA  = self.analysis.getContext(MockSignature())
+		self.contextB  = self.analysis.getContext(MockSignature())
+		self.contextC  = self.analysis.getContext(MockSignature())
+
+
+	def testNewTransfer(self):
+		o = self.const('obj', qualifiers.HZ)
+		od = self.const('obj', qualifiers.DN)
+		n = self.const('name')
+		v = self.const('value')
+		fieldtype = 'Attribute'
+
+		slotA = self.contextA.field(o, fieldtype, n.obj())
+		slotA.updateSingleValue(v)
+		
+		invokeAB = self.contextA.getInvoke(None, self.contextB)
+		
+		# Copy down before field is created
+		remapped = invokeAB.copyDown(o)
+		self.assertEqual(remapped, od)
+		
+		slotB = self.contextB.field(od, fieldtype, n.obj())
+		
+		expected = frozenset([invokeAB.objForward[value] for value in slotA.values])
+		self.assertEqual(slotB.values, expected)
+	
+	def testOldTransfer(self):
+		o = self.const('obj', qualifiers.HZ)
+		od = self.const('obj', qualifiers.DN)
+		n = self.const('name')
+		v = self.const('value')
+		fieldtype = 'Attribute'
+
+		slotA = self.contextA.field(o, fieldtype, n.obj())
+		slotA.updateSingleValue(v)
+		
+		invokeAB = self.contextA.getInvoke(None, self.contextB)
+		
+		slotB = self.contextB.field(od, fieldtype, n.obj())
+
+		self.assertEqual(slotB.values, frozenset())
+
+		# Copy down after field is created
+		remapped = invokeAB.copyDown(o)
+		self.assertEqual(remapped, od)
+		
+		expected = frozenset([invokeAB.objForward[value] for value in slotA.values])
+		self.assertEqual(slotB.values, expected)
+	
+	def testMultiTransfer(self):
+		o = self.const('obj', qualifiers.HZ)
+		od = self.const('obj', qualifiers.DN)
+		n  = self.const('name')
+		v1 = self.const('value1')
+		v2 = self.const('value2')
+		v3 = self.const('value3')
+
+		fieldtype = 'Attribute'
+
+		slotA = self.contextA.field(o, fieldtype, n.obj())
+		slotA.updateSingleValue(v1)
+		slotA.updateSingleValue(v2)
+
+		slotB = self.contextB.field(o, fieldtype, n.obj())
+		slotB.updateSingleValue(v2)
+		slotB.updateSingleValue(v3)
+
+		
+		invokeAC = self.contextA.getInvoke(None, self.contextC)
+		invokeBC = self.contextB.getInvoke(None, self.contextC)
+		
+		slotC = self.contextC.field(od, fieldtype, n.obj())
+
+		self.assertEqual(slotC.values, frozenset())
+
+		# Copy down after field is created
+		remapped = invokeAC.copyDown(o)
+		self.assertEqual(remapped, od)
+
+		remapped = invokeBC.copyDown(o)
+		self.assertEqual(remapped, od)
+
+		expectedA = [invokeAC.objForward[value] for value in slotA.values]
+		self.assertEqual(len(expectedA), 2)
+		
+		expectedB = [invokeBC.objForward[value] for value in slotB.values]
+		self.assertEqual(len(expectedB), 2)
+		
+		expected = frozenset(expectedA+expectedB)
+		self.assertEqual(len(expected), 3)
+		
+		self.assertEqual(slotC.values, expected)
+	
+	def testChainTransfer(self):
+		o = self.const('obj', qualifiers.HZ)
+		od = self.const('obj', qualifiers.DN)
+		n  = self.const('name')
+		v1 = self.const('value1')
+		v2 = self.const('value2')
+		v3 = self.const('value3')
+
+		fieldtype = 'Attribute'
+
+		slotA = self.contextA.field(o, fieldtype, n.obj())
+		slotA.updateSingleValue(v1)
+		slotA.updateSingleValue(v2)
+
+		slotB = self.contextB.field(o, fieldtype, n.obj())
+		slotB.updateSingleValue(v2)
+		slotB.updateSingleValue(v3)
+
+		
+		invokeAB = self.contextA.getInvoke(None, self.contextB)
+		invokeBC = self.contextB.getInvoke(None, self.contextC)
+		
+		slotC = self.contextC.field(od, fieldtype, n.obj())
+
+		self.assertEqual(slotC.values, frozenset())
+
+
+		remapped = invokeBC.copyDown(o)
+		self.assertEqual(remapped, od)
+
+		# At this point A has NOT been coppied all the way down to C.
+		expected = frozenset([invokeBC.objForward[value] for value in slotB.values])
+		self.assertEqual(len(expected), 2)
+		self.assertEqual(slotC.values, expected)
+
+		# Copy down after field is created
+		remapped = invokeAB.copyDown(o)
+		self.assertEqual(remapped, od)
+
+		self.assertEqual(len(slotB.values), 2)
+
+		# Finish propagation		
+		invokeBC.copyDown(remapped)
+
+		self.assertEqual(len(slotB.values), 2)
+		self.assertEqual(len(slotC.values), 3)

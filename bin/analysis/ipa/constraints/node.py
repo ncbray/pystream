@@ -79,12 +79,14 @@ class ConstraintNode(object):
 		assert value.isObjectName(), value
 		if value not in self.values and value not in self.diff:
 			sm = self.context.analysis.setmanager
+			diff = sm.coerce([value])
+			
 			if self.callbacks:
-				self.diff = sm.inplaceUnion(self.diff, [value])
+				self.diff = sm.inplaceUnion(self.diff, diff)
 				self.markDirty()
 			else:
 				assert not self.diff
-				self.values = sm.inplaceUnion(self.values, [value])
+				self.values = sm.inplaceUnion(self.values, diff)
 			return True
 		else:
 			return False

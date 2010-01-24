@@ -17,7 +17,6 @@ class Invocation(object):
 		self.objReverse = collections.defaultdict(list)
 
 	def copyDown(self, obj):
-		# TODO copy down existing fields
 		if obj not in self.objForward:
 			remapped = self.dst.analysis.objectName(obj.xtype, qualifiers.DN)
 			self.objForward[obj] = remapped
@@ -26,7 +25,6 @@ class Invocation(object):
 			# Copy fields already in use
 			region = self.dst.region
 			for slot in region.object(remapped).fields.itervalues():
-				print "old slot", slot
 				self.copyFieldFromSourceObj(slot, obj)
 		else:
 			remapped = self.objForward[obj]

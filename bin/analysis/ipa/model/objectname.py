@@ -12,3 +12,12 @@ class ObjectName(object):
 
 	def cpaType(self):
 		return self.xtype.cpaType()
+
+	def obj(self):
+		return self.xtype.obj
+
+	def pyObj(self):
+		return self.xtype.obj.pyobj
+
+	def isObjectName(self):
+		return True

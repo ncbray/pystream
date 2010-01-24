@@ -27,6 +27,7 @@ class ConstraintNode(object):
 	def attachTypeSplit(self, callback):
 		if self.typeSplit is None:
 			self.typeSplit = split.TypeSplitConstraint(self.context, self)
+			self.context.constraint(self.typeSplit)
 		self.typeSplit.addSplitCallback(callback)
 
 	def getFiltered(self, typeFilter):
@@ -38,6 +39,7 @@ class ConstraintNode(object):
 	def attachExactSplit(self, callback):
 		if self.exactSplit is None:
 			self.exactSplit = split.ExactSplitConstraint(self.context, self)
+			self.context.constraint(self.exactSplit)
 		self.exactSplit.addSplitCallback(callback)
 
 	def markParam(self):
@@ -61,7 +63,7 @@ class ConstraintNode(object):
 
 		if diff:
 			for value in diff:
-				assert isinstance(value, objectname.ObjectName), value
+				assert value.isObjectName(), value
 
 			if self.callbacks:
 				self.diff = sm.inplaceUnion(self.diff, diff)
@@ -74,7 +76,7 @@ class ConstraintNode(object):
 			return False
 
 	def updateSingleValue(self, value):
-		assert isinstance(value, objectname.ObjectName), value
+		assert value.isObjectName(), value
 		if value not in self.values and value not in self.diff:
 			sm = self.context.analysis.setmanager
 			if self.callbacks:
@@ -113,7 +115,7 @@ class ConstraintNode(object):
 		self.diff   = sm.empty()
 
 		for callback in self.callbacks:
-			callback(diff)
+			callback(self.context, diff)
 
 	def __repr__(self):
 		return "slot(%r/%d)" % (self.name, id(self))

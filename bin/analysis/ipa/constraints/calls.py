@@ -83,7 +83,7 @@ class DirectCallConstraint(AbstractCall):
 
 		lengthSlot = self.context.field(vargObj, 'LowLevel', analysis.pyObj('length'))
 		assert len(lengthSlot.values) == 1
-		length = tuple(lengthSlot.values)[0].xtype.obj.pyobj
+		length = tuple(lengthSlot.values)[0].pyObj()
 
 
 		for i in range(length):

@@ -42,17 +42,17 @@ class Context(object):
 		return ao
 
 	def setTypePointer(self, obj, typeObj):
-		assert isinstance(obj, objectname.ObjectName), obj
-		assert isinstance(typeObj, objectname.ObjectName), typeObj
+		assert obj.isObjectName(), obj
+		assert typeObj.isObjectName(), typeObj
 
 		typeptr = self.field(obj, 'LowLevel', self.analysis.pyObj('type'))
 		typeptr.clearNull()
 		typeptr.updateSingleValue(typeObj)
 
 	def allocate(self, typeObj, node):
-		assert isinstance(typeObj, objectname.ObjectName), typeObj
+		assert typeObj.isObjectName(), typeObj
 
-		inst  = self.analysis.pyObjInst(typeObj.xtype.obj.pyobj)
+		inst  = self.analysis.pyObjInst(typeObj.pyObj())
 		xtype = self.analysis.canonical.pathType(None, inst, node)
 		obj   = self.analysis.objectName(xtype, qualifiers.HZ)
 
@@ -67,13 +67,6 @@ class Context(object):
 			inv = invocation.Invocation(self, op, dst)
 		return inv
 
-	def setup(self):
-		# Is this a real context?
-		code = self.signature.code
-		if code:
-			params = code.codeParameters()
-			if params.vparam is not None:
-				self.setupVParam(params.vparam)
 
 	def dirtySlot(self, slot):
 		self.analysis.dirtySlot(slot)
@@ -87,35 +80,9 @@ class Context(object):
 	def dirtyFCall(self, call):
 		self.dirtyfcalls.append(call)
 
-	def vparamObj(self):
-		inst  = self.analysis.pyObjInst(tuple)
-		xtype = self.analysis.canonical.contextType(self.signature, inst, None)
-		return self.analysis.objectName(xtype, qualifiers.HZ)
-
-	def setupVParam(self, vparam):
-		# Assign the vparam object to the vparam local
-		vparamObj = self.vparamObj()
-		lcl = self.local(vparam)
-		lcl.updateSingleValue(vparamObj)
-
-		numVParam = len(self.signature.vparams)
-
-		# Set the length of the vparam object
-		slot = self.field(vparamObj, 'LowLevel', self.analysis.pyObj('length'))
-		slot.clearNull()
-		slot.updateSingleValue(self.allocatePyObj(numVParam))
-
-		# Copy the vparam locals into the vparam fields
-		for i in range(numVParam):
-			# Create a vparam field
-			slot = self.field(vparamObj, 'Array', self.analysis.pyObj(i))
-			slot.clearNull()
-			self.vparamField.append(slot)
-
-
 	def constraint(self, constraint):
 		self.constraints.append(constraint)
-
+		constraint.init(self)
 
 	def call(self, op, selfarg, args, kwds, varg, karg, targets):
 		call = calls.CallConstraint(self, op, selfarg, args, kwds, varg, karg, targets)

@@ -1,7 +1,7 @@
 import time
 
 from optimization.callconverter import callConverter
-from . constraintextractor import ConstraintExtractor
+from . import constraintextractor
 
 from . model import objectname
 from . model.context import Context
@@ -11,8 +11,8 @@ from . calling import cpa
 from analysis.storegraph import setmanager
 
 class IPAnalysis(object):
-	def __init__(self, compiler, canonical, existingPolicy, externalPolicy):
-		self.compiler = compiler
+	def __init__(self, extractor, canonical, existingPolicy, externalPolicy):
+		self.extractor = extractor
 		self.canonical = canonical
 
 		self.existingPolicy = existingPolicy
@@ -32,12 +32,14 @@ class IPAnalysis(object):
 
 		self.decompileTime = 0.0
 
+		self.trace = False
+
 	def pyObj(self, pyobj):
-		return self.compiler.extractor.getObject(pyobj)
+		return self.extractor.getObject(pyobj)
 
 	def pyObjInst(self, pycls):
 		cls = self.pyObj(pycls)
-		self.compiler.extractor.ensureLoaded(cls)
+		self.extractor.ensureLoaded(cls)
 		return cls.typeinfo.abstractInstance
 
 	def objectName(self, xtype, qualifier=qualifiers.HZ):
@@ -54,10 +56,8 @@ class IPAnalysis(object):
 			context = Context(self, sig)
 			self.contexts[sig] = context
 
-			if sig.code:
-				context.setup()
-				ce = ConstraintExtractor(self, context)
-				ce.process()
+			if sig and sig.code:
+				constraintextractor.evaluate(self, context, sig.code)
 		else:
 			context = self.contexts[sig]
 		return context
@@ -65,14 +65,13 @@ class IPAnalysis(object):
 	def getCode(self, obj):
 		start = time.clock()
 
-		assert isinstance(obj, objectname.ObjectName)
+		assert obj.isObjectName()
 
-		extractor = self.compiler.extractor
-		code = extractor.getCall(obj.xtype.obj)
+		code = self.extractor.getCall(obj.obj())
 		if code is None:
-			code = extractor.stubs.exports['interpreter_call']
+			code = self.extractor.stubs.exports['interpreter_call']
 
-		callConverter(extractor, code)
+		callConverter(self.extractor, code)
 
 		if code not in self.liveCode:
 			self.liveCode.add(code)
@@ -91,26 +90,22 @@ class IPAnalysis(object):
 		return bool(self.dirtySlots)
 
 	def updateCallGraph(self):
-		print "update"
+		if self.trace: print "update"
 		changed = False
 
 		# HACK dictionary size may change...
 		for context in tuple(self.contexts.itervalues()):
 			changed |= context.updateCallgraph()
-		print
+		if self.trace: print
 
 		return changed
 
 	def updateConstraints(self):
-		print "resolve"
+		if self.trace: print "resolve"
 		while self.dirtySlots:
 			slot = self.dirtySlots.pop()
-			if False:
-				print slot
-				for value in slot.diff:
-					print '\t', value
 			slot.propagate()
-		print
+		if self.trace: print
 
 	def topDown(self):
 		dirty = True

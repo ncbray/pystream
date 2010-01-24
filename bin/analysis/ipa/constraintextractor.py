@@ -28,9 +28,10 @@ class MarkParameters(TypeDispatcher):
 			self.ce(param).markReturn()
 
 class ConstraintExtractor(TypeDispatcher):
-	def __init__(self, analysis, context):
+	def __init__(self, analysis, context, code):
 		self.analysis = analysis
 		self.context  = context
+		self.code     = code
 
 	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
@@ -74,7 +75,7 @@ class ConstraintExtractor(TypeDispatcher):
 		self.context.dcall(node, code, expr, args, kwds, vargs, kargs, targets)
 
 	def allocate(self, node, expr, targets):
-		assert isinstance(expr, objectname.ObjectName), expr
+		assert expr.isObjectName(), expr
 		assert len(targets) == 1
 		target = targets[0]
 
@@ -89,7 +90,7 @@ class ConstraintExtractor(TypeDispatcher):
 
 	def check(self, node, expr, fieldtype, name, targets):
 		assert len(targets) == 1
-		self.context.constraint(flow.CheckConstraint(self.context, expr, fieldtype, name, targets[0]))
+		self.context.constraint(flow.CheckConstraint(expr, fieldtype, name, targets[0]))
 
 	@dispatch(ast.Call)
 	def visitCall(self, node, targets):
@@ -140,14 +141,46 @@ class ConstraintExtractor(TypeDispatcher):
 	def visitOK(self, node):
 		node.visitChildren(self)
 
+	def vparamObj(self):
+		inst  = self.analysis.pyObjInst(tuple)
+		xtype = self.analysis.canonical.contextType(self.context.signature, inst, None)
+		return self.analysis.objectName(xtype, qualifiers.HZ)
+
+	def setupVParam(self, vparam):
+		# Assign the vparam object to the vparam local
+		vparamObj = self.vparamObj()
+		lcl = self.context.local(vparam)
+		lcl.updateSingleValue(vparamObj)
+
+		numVParam = len(self.context.signature.vparams)
+
+		# Set the length of the vparam object
+		slot = self.context.field(vparamObj, 'LowLevel', self.analysis.pyObj('length'))
+		slot.clearNull()
+		slot.updateSingleValue(self.context.allocatePyObj(numVParam))
+
+		# Copy the vparam locals into the vparam fields
+		for i in range(numVParam):
+			# Create a vparam field
+			slot = self.context.field(vparamObj, 'Array', self.analysis.pyObj(i))
+			slot.clearNull()
+			self.context.vparamField.append(slot)
+
 	### Entry point ###
 	def process(self):
-		code =  self.context.signature.code
+		code =  self.code
 		self.codeParameters = code.codeParameters()
 
 		MarkParameters(self).process(self.codeParameters)
+
+		if self.codeParameters.vparam:
+			self.setupVParam(self.codeParameters.vparam)
 
 		if code.isStandardCode():
 			self(code.ast)
 		else:
 			code.extractConstraints(self)
+
+def evaluate(analysis, context, code):
+	ce = ConstraintExtractor(analysis, context, code)
+	ce.process()

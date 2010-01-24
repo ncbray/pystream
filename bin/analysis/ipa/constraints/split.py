@@ -10,10 +10,10 @@ class Splitter(Constraint):
 	def attach(self):
 		self.src.addCallback(self.srcChanged)
 
-	def makeConsistent(self):
+	def makeConsistent(self, context):
 		# Make constraint consistent
 		if self.src.values:
-			self.srcChanged(self.src.values)
+			self.srcChanged(context, self.src.values)
 
 	def doNotify(self):
 		for callback in self.callbacks:
@@ -30,9 +30,6 @@ class TypeSplitConstraint(Splitter):
 
 		self.megamorphic = False
 
-		self.attach()
-		self.makeConsistent()
-
 	def types(self):
 		return self.objects.keys()
 
@@ -46,7 +43,7 @@ class TypeSplitConstraint(Splitter):
 		self.objects[cpa.anyType] = self.src
 		self.doNotify()
 
-	def srcChanged(self, diff):
+	def srcChanged(self, context, diff):
 		if self.megamorphic: return
 
 		changed = False
@@ -79,13 +76,10 @@ class ExactSplitConstraint(Splitter):
 		self.objects = {}
 		self.callbacks = []
 
-		self.attach()
-		self.makeConsistent()
-
 	def makeTempLocal(self):
 		return self.context.local(ast.Local('exact_split_temp'))
 
-	def srcChanged(self, diff):
+	def srcChanged(self, context, diff):
 		changed = False
 		for obj in diff:
 			if obj not in self.objects:

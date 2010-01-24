@@ -40,7 +40,7 @@ class Invocation(object):
 
 	def copyFieldFromSources(self, slot):
 		obj, _fieldtype, _name = slot.name
-		assert isinstance(obj, objectname.ObjectName), obj
+		assert obj.isObjectName(), obj
 
 		prev = self.objReverse.get(obj)
 		if not prev: return
@@ -54,3 +54,4 @@ class Invocation(object):
 
 		constraint = flow.DownwardConstraint(self, srcslot, dstslot, fieldTransfer)
 		self.constraints.append(constraint)
+		constraint.init(self.dst) # HACK?

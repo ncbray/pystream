@@ -18,7 +18,8 @@ def dumpAnalysisResults(analysis):
 
 def evaluateWithImage(compiler, prgm):
 	with compiler.console.scope('ipa analysis'):
-		analysis = IPAnalysis(compiler, prgm.storeGraph.canonical, ExtractorPolicy(compiler.extractor), DefaultStoreGraphPolicy(prgm.storeGraph))
+		analysis = IPAnalysis(compiler.extractor, prgm.storeGraph.canonical, ExtractorPolicy(compiler.extractor), DefaultStoreGraphPolicy(prgm.storeGraph))
+		analysis.trace = True
 
 		for ep, args in prgm.entryPoints:
 			buildEntryPoint(analysis, ep, args)

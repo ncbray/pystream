@@ -113,6 +113,18 @@ class Object(AbstractObject):
 		assert isinstance(obj, AbstractObject), obj
 		self.lowlevel[name] = obj
 
+	def getDict(self, fieldtype):
+		if fieldtype == 'LowLevel':
+			d = self.lowlevel
+		elif fieldtype == 'Attribute':
+			d = self.slot
+		elif fieldtype == 'Array':
+			d = self.array
+		elif fieldtype == 'Dictionary':
+			d = self.dictionary
+		else:
+			assert False, fieldtype
+		return d
 
 	def __repr__(self):
 		if isinstance(self.pyobj, dict):

@@ -218,12 +218,22 @@ class StoreConstraint(Constraint):
 		if self.dst.values and self.field.values:
 			self.dstChanged(self.dst.values)
 
+	def concrete(self, obj, field):
+		slot = self.context.field(obj, self.fieldtype, field.xtype.obj)
+		self.context.assign(self.src, slot)
+
 	def dstChanged(self, diff):
-		assert False
+		for obj in diff:
+			for field in self.field.values:
+				self.concrete(obj, field)
 
 	def fieldChanged(self, diff):
-		# TODO field is dst
-		pass
+		for obj in self.dst.values:
+			# Avoid problems if dst and field alias...
+			if self.dst is self.field and obj in diff: continue
+
+			for field in diff:
+				self.concrete(obj, field)
 
 	def __repr__(self):
 		return "[ST %r -> %r %s %r]" % (self.src, self.dst, self.fieldtype, self.field)

@@ -52,9 +52,9 @@ class Context(object):
 	def allocate(self, typeObj, node):
 		assert isinstance(typeObj, objectname.ObjectName), typeObj
 
-		inst = typeObj.xtype.obj.typeinfo.abstractInstance
+		inst  = self.analysis.pyObjInst(typeObj.xtype.obj.pyobj)
 		xtype = self.analysis.canonical.pathType(None, inst, node)
-		obj = self.analysis.objectName(xtype, qualifiers.HZ)
+		obj   = self.analysis.objectName(xtype, qualifiers.HZ)
 
 		self.setTypePointer(obj, typeObj)
 
@@ -88,7 +88,7 @@ class Context(object):
 		self.dirtyfcalls.append(call)
 
 	def vparamObj(self):
-		inst = self.analysis.tupleInstance()
+		inst  = self.analysis.pyObjInst(tuple)
 		xtype = self.analysis.canonical.contextType(self.signature, inst, None)
 		return self.analysis.objectName(xtype, qualifiers.HZ)
 

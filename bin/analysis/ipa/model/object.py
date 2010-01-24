@@ -14,75 +14,19 @@ class Object(object):
 			invoke.copyFieldFromSources(slot)
 
 	def initExistingField(self, slot):
-
 		obj, fieldtype, fieldname = slot.name
-
-		xtype = obj.xtype
-		obj = xtype.obj
-
-		assert isinstance(obj, program.AbstractObject), obj
-
-		extractor = self.context.analysis.compiler.extractor
-
-		extractor.ensureLoaded(obj)
-
-		canonical = self.context.analysis.canonical
-
-		filled = False
+		analysis  = self.context.analysis
 
 		if fieldtype == 'LowLevel' and fieldname.pyobj == 'type':
-			# Type pointer
-			self.updateExternal(slot, canonical.existingType(obj.type))
-			filled = True
-		elif xtype.isExternal():
-			# User-specified memory image
-			storeGraph = self.context.analysis.storeGraph
-			sgobj = storeGraph.regionHint.object(xtype)
-			canonicalField = canonical.fieldName(fieldtype, fieldname)
-			sgfield = sgobj.field(canonicalField, storeGraph.regionHint)
-			xtypes = sgfield.refs
-			for ref in xtypes:
-				self.updateExternal(slot, ref)
-				filled = True
+			ao = analysis.existingPolicy.typeObject(analysis, obj)
+			values, null = [ao], False
+		elif obj.xtype.isExternal():
+			values, null = analysis.externalPolicy.fieldValues(analysis, slot)
 		else:
-			# TODO
-			#if isinstance(obj.pyobj, list):
-			#	return set([canonical.existingType(t) for t in obj.array.itervalues()])
+			values, null = analysis.existingPolicy.fieldValues(analysis, slot)
 
-			# Extracted from memory
-			if isinstance(obj, program.Object):
-				if fieldtype == 'LowLevel':
-					subdict = obj.lowlevel
-				elif fieldtype == 'Attribute':
-					subdict = obj.slot
-				elif fieldtype == 'Array':
-					subdict = obj.array
-				elif fieldtype == 'Dictionary':
-					subdict = obj.dictionary
-				else:
-					assert False, fieldtype
-
-				if fieldname in subdict:
-					self.updateExternal(slot, canonical.existingType(subdict[fieldname]))
-					filled = True
-
-		if not filled: slot.markNull()
-
-
-	def updateExternal(self, slot, xtype):
-		if xtype.isExternal():
-			qualifier=qualifiers.HZ
-		else:
-			qualifier=qualifiers.GLBL
-
-		ao = self.context.analysis.objectName(xtype, qualifier)
-		slot.updateSingleValue(ao)
-
-		if False:
-			print "external"
-			print slot
-			print ao
-
+		if values: slot.updateValues(frozenset(values))
+		if null: slot.markNull()
 
 	def field(self, fieldType, name):
 		assert isinstance(fieldType, str), fieldType

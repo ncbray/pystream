@@ -18,6 +18,7 @@ def buildParser():
 	group.add_option('-n', dest='dryrun', action='store_true', default=False, help="modifications are not written to disk")
 
 	group.add_option('--multiline-ok', dest='multiline_ok', action='store_true', default=False, help="don't abort if a multiline string is found")
+	group.add_option('--convert-tabs', dest='convert_tabs', action='store_true', default=False, help="convert spacetabs if reasonably certain about the spacing")
 
 	parser.add_option_group(group)
 
@@ -51,25 +52,82 @@ class CascadingMatcher(object):
 
 		return True
 
-possibleMultilineString = re.compile('"""|\'\'\'')
+stringMarkers = re.compile(r'#|\\[\\\'"]|\'\'\'|"""|[\'"]')
+lineBreak = re.compile("\\\s*$")
+
+class StringTracker(object):
+	def __init__(self):
+		self.current = None
+
+	def handleLine(self, line):
+		markers = stringMarkers.findall(line)
+		for marker in markers:
+			text = marker
+
+			if self.current is None:
+				if text == '#':
+					break
+				elif text == '\\\\':
+					pass
+				elif text[0] == '\\':
+					assert False, "unescaped quote outside of a string?"
+				else:
+					self.current = text
+			elif self.current == text:
+				self.current = None
+
+		if self.current and not lineBreak.search(line):
+			assert self.current != '"' and self.current != "'", (line, markers)
+
+	def inString(self):
+		return self.current is not None
 
 def countSpaces(line):
 	count = 0
+	inconsistent = False
+
 	for c in line:
 		if c == ' ':
 			count += 1
+		elif c == '\t':
+			inconsistent = True
+			break
 		else:
 			break
-	return count
+	return count, inconsistent
+
+def convSpacetabs(lines, size):
+	tracker = StringTracker()
+
+	result = []
+
+	for line in lines:
+		startInString = tracker.inString()
+		tracker.handleLine(line)
+
+		if not startInString:
+			count, inconsistent = countSpaces(line)
+			assert not inconsistent
+			if count:
+				assert count%size == 0
+				line = '\t'*(count/size) + line.lstrip()
+
+		result.append(line)
+
+	return result
 
 def handleFile(fn):
 	f = open(fn)
+
+	tracker = StringTracker()
 
 	spacetabs = False
 	spacetabRanges = []
 	spacetabStart = -1
 	spacetabEnd = -1
 	blockEnd = -1
+
+	tabtabs = False
 
 	def logSpacetabs():
 		if spacetabStart != -1:
@@ -78,7 +136,8 @@ def handleFile(fn):
 			else:
 				spacetabRanges.append("%d-%d" % (spacetabStart, spacetabEnd))
 
-	changed   = False
+	changed      = False
+	inconsistent = False
 
 	lines = []
 
@@ -88,39 +147,44 @@ def handleFile(fn):
 
 	spaceDist = {}
 
-	multiline = False
-
 	for line in f:
-		if possibleMultilineString.search(line):
-			multiline = True
+		startInString = tracker.inString()
+		tracker.handleLine(line)
+		endInString = tracker.inString()
 
 		# Note: this implicitly fixes inconsistent newline characters.
+		original = line
 		newline = line.rstrip() + '\n'
 
 		lineNo = len(lines)+1
 
-		if line != newline:
-			if not title:
-				print fn
-				title = True
-			print "EOL MOD", len(lines)+1, repr(line)
-			eolMod += 1
-			changed = True
-			line = newline
+		if not endInString or options.multiline_ok:
+			if line != newline:
+				if not title:
+					print fn
+					title = True
+				print "EOL MOD", len(lines)+1, repr(line)
+				eolMod += 1
+				changed = True
+				line = newline
 
-		if line[0] == ' ':
-			spacetabs = True
-			count = countSpaces(line)
-			spaceDist[count] = spaceDist.get(count, 0) + 1
-			if blockEnd + 1 != lineNo:
-				logSpacetabs()
-				spacetabStart = lineNo
-			spacetabEnd = lineNo
-			blockEnd = lineNo
-		elif line[0] != '\t':
-			if blockEnd + 1 == lineNo:
-				blockEnd = lineNo # Extend blocks past empty lines.
+		if not startInString:
+			if newline[0] == ' ':
+				spacetabs = True
+				count, lineInconsistent = countSpaces(newline)
+				inconsistent |= lineInconsistent
 
+				spaceDist[count] = spaceDist.get(count, 0) + 1
+				if blockEnd + 1 != lineNo:
+					logSpacetabs()
+					spacetabStart = lineNo
+				spacetabEnd = lineNo
+				blockEnd = lineNo
+			elif newline[0] == '\t':
+				tabtabs = True
+			else:
+				if blockEnd + 1 == lineNo:
+					blockEnd = lineNo # Extend blocks past empty lines.
 
 		lines.append(line)
 
@@ -140,9 +204,6 @@ def handleFile(fn):
 		print "EOF NEWLINES"
 
 	if spacetabs:
-		if not title:
-			print fn
-			title = True
 		counts = list(spaceDist.keys())
 		counts.sort()
 
@@ -150,31 +211,46 @@ def handleFile(fn):
 		clean4 = all([c%4==0 for c in counts])
 
 		if clean8:
-			size = '8?'
+			sizeStr = '8'
+			size = 8
 		elif clean4:
-			size = '4?'
+			sizeStr = '4'
+			size = 4
 		else:
-			size = 'wierd'
+			sizeStr = 'wierd'
+			size = 0
 
-		print "WARNING: spacetabs (%s)" % size, counts
-		print "lines", ",".join(spacetabRanges)
+
+		inconsistent |= tabtabs
+		if size:
+			for i, count in enumerate(counts):
+				if count != (i+1)*size:
+					inconsistent = True
+					break
+
+		if inconsistent:
+			sizeStr += '?'
+
+		if not title:
+			print fn
+			title = True
+
+		if inconsistent or not size:
+			print "WARNING: spacetabs (%s)" % sizeStr, counts
+			print "lines", ",".join(spacetabRanges)
+		else:
+			print "converting spacetabs (%d)" % size
+			lines = convSpacetabs(lines, size)
+			changed = True
+
 
 	f.close()
 
 	if changed and not options.dryrun:
-		if multiline and not options.multiline_ok:
-			if not title:
-				print fn
-				title = True
-			print "ABORTING CHANGES - possible multiline string"
-			print
-			return
-
-		if changed:
-			f = open(fn, 'w')
-			for line in lines:
-				f.write(line)
-			f.close()
+		f = open(fn, 'w')
+		for line in lines:
+			f.write(line)
+		f.close()
 
 	if title:
 		print

@@ -30,6 +30,13 @@ class Splitter(Constraint):
 		if self.src.values:
 			self.changed(context, self.src, self.src.values)
 
+		if self.src.critical.values:
+			self.criticalChanged(context, self.src, self.src.critical.values)
+
+	def criticalChanged(self, context, node, diff):
+		for dst in self.dst:
+			dst.critical.updateValues(context, dst, diff)
+
 	def doNotify(self):
 		for callback in self.callbacks:
 			callback()

@@ -83,6 +83,14 @@ class Dumper(object):
 			with o.scope('pre'):
 				o << sio.getvalue()
 
+	def criticalOps(self, context, o):
+		self.header("CriticalOps", o)
+		with o.scope('ul'):
+			for op in context.criticalOps:
+				with o.scope('li'):
+					o << op
+				o.endl()
+		o.endl()
 
 	def invokesIn(self, context, o):
 		self.header("Invoke In", o)
@@ -111,19 +119,42 @@ class Dumper(object):
 					o.tag('br')
 			o.endl()
 
+	def slot(self, context, slot, o):
+		o << slot
+		if slot.null: o << " (null)"
+		o.tag('br')
+		o.endl()
+
+		if slot.critical.values:
+			with o.scope('b'):
+				o << "Critical"
+			o.endl()
+
+			with o.scope('ul'):
+				for value in slot.critical.values:
+					with o.scope('li'):
+						o << value
+					o.endl()
+			o.endl()
+
+
+		if slot.values:
+			with o.scope('b'):
+				o << "Values"
+			o.endl()
+
+			with o.scope('ul'):
+				for value in slot.values:
+					with o.scope('li'):
+						o << value
+					o.endl()
+			o.endl()
+
 	def locals(self, context, o):
 		self.header("Locals", o)
 		for slot in context.locals.itervalues():
 			with o.scope('p'):
-				o << slot
-				if slot.null: o << " (null)"
-				o.endl()
-
-				with o.scope('ul'):
-					for value in slot.values:
-						with o.scope('li'):
-							o << value
-			o.endl()
+				self.slot(context, slot, o)
 
 	def objects(self, context, o):
 		self.header("Objects", o)
@@ -138,13 +169,7 @@ class Dumper(object):
 				with o.scope('ul'):
 					for slot in obj.fields.itervalues():
 						with o.scope('li'):
-							o << slot
-							if slot.null: o << " (null)"
-							with o.scope('ul'):
-								for value in slot.values:
-									with o.scope('li'):
-										o << value
-							o.endl()
+							self.slot(context, slot, o)
 						o.endl()
 			o.endl()
 
@@ -201,6 +226,7 @@ class Dumper(object):
 					self.displayContext(context, o, link=False)
 
 				self.code(context, o)
+				self.criticalOps(context, o)
 				self.invokesIn(context, o)
 				self.invokesOut(context, o)
 				self.locals(context, o)

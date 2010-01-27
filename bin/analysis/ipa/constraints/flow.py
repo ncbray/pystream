@@ -18,6 +18,9 @@ class CopyConstraint(Constraint):
 		if self.src.values:
 			self.changed(context, self.src, self.src.values)
 
+		if self.src.critical.values:
+			self.criticalChanged(context, self.src, self.src.critical.values)
+
 	def changed(self, context, node, diff):
 		self.dst.updateValues(diff)
 
@@ -26,6 +29,10 @@ class CopyConstraint(Constraint):
 
 	def isCopy(self):
 		return True
+
+	def criticalChanged(self, context, node, diff):
+		self.dst.critical.updateValues(context, self.dst, diff)
+
 
 class DownwardConstraint(Constraint):
 	__slots__ = 'invoke', 'src', 'dst', 'fieldTransfer'
@@ -47,6 +54,8 @@ class DownwardConstraint(Constraint):
 		if self.src.values or (self.fieldTransfer and self.src.null):
 			self.changed(context, self.src, self.src.values)
 
+		# Crticial values are not transfered.
+
 	def changed(self, context, node, diff):
 		for obj in diff:
 			self.dst.updateSingleValue(self.invoke.copyDown(obj))
@@ -59,7 +68,7 @@ class DownwardConstraint(Constraint):
 
 
 class MemoryConstraint(Constraint):
-	__slots__ = 'obj', 'fieldtype', 'field'
+	__slots__ = 'obj', 'fieldtype', 'field', 'criticalOp'
 
 	def __init__(self, obj, fieldtype, field):
 		Constraint.__init__(self)
@@ -70,6 +79,7 @@ class MemoryConstraint(Constraint):
 		self.obj = obj
 		self.fieldtype = fieldtype
 		self.field = field
+		self.criticalOp = False
 
 	def attach(self):
 		self.obj.addNext(self)
@@ -79,6 +89,10 @@ class MemoryConstraint(Constraint):
 	def makeConsistent(self, context):
 		if self.obj.values and self.field.values:
 			self.changed(context, self.obj, self.obj.values)
+
+		if self.obj.critical.values:
+			self.criticalChanged(context, self.obj, self.obj.critical.values)
+
 
 	def changedDiffs(self, context, objDiff, fieldDiff):
 		for obj in objDiff:
@@ -99,7 +113,10 @@ class MemoryConstraint(Constraint):
 			self.changedDiffs(context, diff, self.field.values)
 		# else is OK... for stores, changes to the value may cause this.
 
+
 class LoadConstraint(MemoryConstraint):
+	__slots__ = 'dst',
+
 	def __init__(self, obj, fieldtype, field, dst):
 		assert dst.isNode(), dst
 		MemoryConstraint.__init__(self, obj, fieldtype, field)
@@ -119,7 +136,15 @@ class LoadConstraint(MemoryConstraint):
 	def isLoad(self):
 		return True
 
+	def criticalChanged(self, context, node, diff):
+		if not self.criticalOp and diff:
+			self.criticalOp = True
+			self.dst.critical.markCritical(context, self.dst)
+
+
 class CheckConstraint(MemoryConstraint):
+	__slots__ = 'dst',
+
 	def __init__(self, obj, fieldtype, field, dst):
 		assert dst.isNode(), dst
 		MemoryConstraint.__init__(self, obj, fieldtype, field)
@@ -136,8 +161,13 @@ class CheckConstraint(MemoryConstraint):
 	def __repr__(self):
 		return "[CA %r %s %r -> %r]" % (self.obj, self.fieldtype, self.field, self.dst)
 
+	def criticalChanged(self, context, node, diff):
+		pass
+
 
 class ConcreteCheckConstraint(Constraint):
+	__slots__ = 'src', 'dst', 't', 'f'
+
 	def __init__(self, src, dst):
 		assert src.isNode(), src
 		assert dst.isNode(), dst
@@ -168,9 +198,13 @@ class ConcreteCheckConstraint(Constraint):
 	def __repr__(self):
 		return "[CC %r -> %r]" % (self.src, self.dst)
 
+	def criticalChanged(self, context, node, diff):
+		pass
 
 
 class StoreConstraint(MemoryConstraint):
+	__slots__ = 'src',
+
 	def __init__(self, src, obj, fieldtype, field):
 		assert src.isNode(), src
 		MemoryConstraint.__init__(self, obj, fieldtype, field)
@@ -190,3 +224,8 @@ class StoreConstraint(MemoryConstraint):
 
 	def isStore(self):
 		return True
+
+	def criticalChanged(self, context, node, diff):
+		if not self.criticalOp and diff:
+			self.criticalOp = True
+			context.criticalOp(self)

@@ -32,6 +32,9 @@ class Context(object):
 		self.dirtyflags   = []
 		self.dirtyobjects = []
 
+		self.dirtycriticals = []
+		self.criticalOps = []
+
 	def dirtyFlags(self, node):
 		self.dirtyflags.append(node)
 
@@ -49,6 +52,15 @@ class Context(object):
 			node = self.dirtyobjects.pop()
 			node.dirty = False
 			callback(self, node)
+
+	def dirtyCritical(self, node, critical):
+		assert critical._dirty
+		assert node.context is self
+		assert node not in self.dirtycriticals
+		self.dirtycriticals.append(node)
+
+	def criticalOp(self, constraint):
+		self.criticalOps.append(constraint)
 
 	def existingPyObj(self, pyobj, qualifier=qualifiers.HZ):
 		obj = self.analysis.pyObj(pyobj)

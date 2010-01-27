@@ -12,7 +12,9 @@ class MarkParameters(TypeDispatcher):
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
-		self.ce.context.params.append(self.ce(node))
+		cnode = self.ce(node)
+		self.ce.context.params.append(cnode)
+		cnode.critical.markCritical(self.ce.context, cnode)
 
 	def process(self, codeParameters):
 		self(codeParameters.selfparam)
@@ -163,6 +165,7 @@ class ConstraintExtractor(TypeDispatcher):
 			slot = self.context.field(vparamObj, 'Array', self.analysis.pyObj(i))
 			slot.clearNull()
 			self.context.vparamField.append(slot)
+			slot.critical.markCritical(self.context, slot)
 
 	### Entry point ###
 	def process(self):

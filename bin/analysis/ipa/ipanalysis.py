@@ -28,7 +28,8 @@ class IPAnalysis(object):
 
 		self.liveCode = set()
 
-		self.setmanager = setmanager.CachedSetManager()
+		self.valuemanager    = setmanager.CachedSetManager()
+		self.criticalmanager = setmanager.CachedSetManager()
 
 		self.dirtySlots = []
 
@@ -116,6 +117,11 @@ class IPAnalysis(object):
 			self.updateCallGraph()
 			dirty = self.dirtyConstraints()
 
+	def propagateCriticals(self, context):
+		while context.dirtycriticals:
+			node = context.dirtycriticals.pop()
+			node.critical.propagate(context, node)
+
 	def contextBottomUp(self, context):
 		if context not in self.processed:
 			self.processed.add(context)
@@ -125,6 +131,7 @@ class IPAnalysis(object):
 			for invoke in context.invokeOut.itervalues():
 				self.contextBottomUp(invoke.dst)
 
+			self.propagateCriticals(context)
 			objectescape.process(context)
 
 			self.path.pop()

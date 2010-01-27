@@ -14,6 +14,14 @@ def check_directory(option, opt_str, value, parser):
 		raise optparse.OptionValueError("directory %r does not exist" % value)
 	setattr(parser.values, option.dest, value)
 
+def replacesIDCallback(option, opt, value, parser):
+	match, replace = value
+	match = makeIDMatcher(match)
+
+	parser.values.replaces.append((match, replace))
+
+def matchIDCallback(option, opt, value, parser):
+	parser.largs.append(makeIDMatcher(value))
 
 def buildParser():
 	usage = "usage: %prog [options] textfilters"
@@ -34,11 +42,13 @@ def buildParser():
 	parser.add_option_group(group)
 
 	group = optparse.OptionGroup(parser, "Text Filters")
-	group.add_option('--id', dest='identifiers', action='append', default=[], metavar="FILTER" , help="specialized text filter to find an identifier")
+	group.add_option('--id', dest='identifiers', action='callback', callback=matchIDCallback, type="str", metavar="FILTER", help="specialized text filter to find an identifier")
+
 	group.add_option('-x', dest='excludes', action='append', default=[], help="excludes matching text", metavar="FILTER")
 	group.add_option('--import', dest='imports', action='store_true', default=False, help="restricts search to imports")
 
 	group.add_option('-r', dest='replaces', action='append', default=[], help="replaces matching text", nargs=2, metavar="MATCH SUB")
+	group.add_option('--idr', dest='replaces', action='callback', callback=replacesIDCallback, help="replaces matching identifier", type='str', nargs=2, metavar="MATCH SUB")
 
 	parser.add_option_group(group)
 
@@ -203,10 +213,19 @@ class StandardGrep(object):
 			print "%7.1d lines rewritten." % self.linesChanged
 			print "%7.1d files changed." % self.filesChanged
 
+def makeIDMatcher(s):
+	# The lookaheads/lookbehinds ensures that the expr starts and ends either
+	# with a non-id character, or adjacent to one.
+	# This allows exprs that can match non-id characters to behave in a reasonable way
+	# Note there are subtle semantic differences between positive and negative
+	# lookaheads/lookbehinds.  Primarily, negative versions can match end of strings.
+	return '(?:(?<!\w)|(?=\W))(?:%s)(?:(?!\w)|(?<=\W))' % (s,)
+
 if __name__ == '__main__':
 	try:
-		import psyco
-		psyco.full()
+		pass
+		#import psyco
+		#psyco.full()
 	except ImportError:
 		pass
 
@@ -216,18 +235,6 @@ if __name__ == '__main__':
 
 	if options.imports:
 		args.insert(0, "^\s*(import|from)\s")
-
-	# Create specialized text filters
-	# Identifiers are a little strange, as we need to take into account
-	# that they may be at the start or the end of a line.
-	for i in options.identifiers:
-		# The lookaheads/lookbehinds ensures that the expr starts and ends either
-		# with a non-id character, or adjacent to one.
-		# This allows exprs that can match non-id characters to behave in a reasonable way
-		# Note there are subtle semantic differences between positive and negative
-		# lookaheads/lookbehinds.  Primarily, negative versions can match end of strings.
-		expr = '(?:(?<!\w)|(?=\W))(?:%s)(?:(?!\w)|(?<=\W))' % i
-		args.append(expr)
 
 	matchText = True
 	if len(args) < 1 and len(options.replaces) < 1:
@@ -287,7 +294,6 @@ if __name__ == '__main__':
 	for rf in options.replaces:
 		print "!repl: %s -> %s" % rf
 		replaceFilters.append((re.compile(rf[0], flags), rf[1]))
-
 
 	print
 

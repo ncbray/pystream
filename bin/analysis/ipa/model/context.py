@@ -6,6 +6,8 @@ class Context(object):
 		self.analysis    = analysis
 		self.signature   = signature
 
+		self.params = []
+		self.returns = []
 		self.vparamField = []
 
 		self.region = region.Region(self)
@@ -26,6 +28,27 @@ class Context(object):
 		self.invokeOut = {}
 
 		self.external = False
+
+		self.dirtyflags   = []
+		self.dirtyobjects = []
+
+	def dirtyFlags(self, node):
+		self.dirtyflags.append(node)
+
+	def processFlags(self, callback):
+		while self.dirtyflags:
+			node = self.dirtyflags.pop()
+			node.dirty = False
+			callback(self, node)
+
+	def dirtyObject(self, node):
+		self.dirtyobjects.append(node)
+
+	def processObjects(self, callback):
+		while self.dirtyobjects:
+			node = self.dirtyobjects.pop()
+			node.dirty = False
+			callback(self, node)
 
 	def existingPyObj(self, pyobj, qualifier=qualifiers.HZ):
 		obj = self.analysis.pyObj(pyobj)
@@ -115,6 +138,18 @@ class Context(object):
 
 	def assign(self, src, dst):
 		constraint = flow.CopyConstraint(src, dst)
+		self.constraint(constraint)
+
+	def load(self, obj, fieldtype, field, dst):
+		constraint = flow.LoadConstraint(obj, fieldtype, field, dst)
+		self.constraint(constraint)
+
+	def check(self, obj, fieldtype, field, dst):
+		constraint = flow.CheckConstraint(obj, fieldtype, field, dst)
+		self.constraint(constraint)
+
+	def store(self, src, obj, fieldtype, field):
+		constraint = flow.StoreConstraint(src, obj, fieldtype, field)
 		self.constraint(constraint)
 
 	def updateCallgraph(self):

@@ -25,6 +25,7 @@ def evaluateWithImage(compiler, prgm):
 			buildEntryPoint(analysis, ep, args)
 
 		analysis.topDown()
+		analysis.bottomUp()
 
 		print "%5d code" % len(analysis.liveCode)
 		print "%5d contexts" % len(analysis.contexts)

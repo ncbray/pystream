@@ -3,6 +3,8 @@ from util.io.xmloutput import XMLOutput
 from util.io.filesystem import ensureDirectoryExists
 from util.graphalgorithim import dominator
 
+from . escape import objectescape
+
 from language.python import simplecodegen, ast
 import cStringIO
 
@@ -130,6 +132,7 @@ class Dumper(object):
 		for obj in region.objects.itervalues():
 			with o.scope('p'):
 				o << obj.name
+				o << " (%s)" % objectescape.repr(obj.flags)
 				o.endl()
 
 				with o.scope('ul'):

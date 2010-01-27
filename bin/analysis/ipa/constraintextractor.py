@@ -1,8 +1,6 @@
 from util.typedispatch import *
-from language.python import ast, program
-from . model import objectname
+from language.python import ast
 from . constraints import qualifiers
-from . constraints import flow
 
 class MarkParameters(TypeDispatcher):
 	def __init__(self, ce):
@@ -14,7 +12,7 @@ class MarkParameters(TypeDispatcher):
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
-		self.ce(node).markParam()
+		self.ce.context.params.append(self.ce(node))
 
 	def process(self, codeParameters):
 		self(codeParameters.selfparam)
@@ -25,7 +23,7 @@ class MarkParameters(TypeDispatcher):
 		self(codeParameters.kparam)
 
 		for param in codeParameters.returnparams:
-			self.ce(param).markReturn()
+			self.ce.context.returns.append(self.ce(param))
 
 class ConstraintExtractor(TypeDispatcher):
 	def __init__(self, analysis, context, code):
@@ -86,11 +84,11 @@ class ConstraintExtractor(TypeDispatcher):
 
 	def load(self, node, expr, fieldtype, name, targets):
 		assert len(targets) == 1
-		self.context.constraint(flow.LoadConstraint(expr, fieldtype, name, targets[0]))
+		self.context.load(expr, fieldtype, name, targets[0])
 
 	def check(self, node, expr, fieldtype, name, targets):
 		assert len(targets) == 1
-		self.context.constraint(flow.CheckConstraint(expr, fieldtype, name, targets[0]))
+		self.context.check(expr, fieldtype, name, targets[0])
 
 	@dispatch(ast.Call)
 	def visitCall(self, node, targets):

@@ -11,18 +11,21 @@ class CopyConstraint(Constraint):
 		self.dst = dst
 
 	def attach(self):
-		self.src.addCallback(self.srcChanged)
+		self.src.addNext(self)
+		self.dst.addPrev(self)
 
 	def makeConsistent(self, context):
-		# Make constraint consistent
 		if self.src.values:
-			self.srcChanged(context, self.src.values)
+			self.changed(context, self.src, self.src.values)
 
-	def srcChanged(self, context, diff):
+	def changed(self, context, node, diff):
 		self.dst.updateValues(diff)
 
 	def __repr__(self):
 		return "[CP %r -> %r]" % (self.src, self.dst)
+
+	def isCopy(self):
+		return True
 
 class DownwardConstraint(Constraint):
 	__slots__ = 'invoke', 'src', 'dst', 'fieldTransfer'
@@ -37,14 +40,14 @@ class DownwardConstraint(Constraint):
 		self.fieldTransfer = fieldTransfer
 
 	def attach(self):
-		self.src.addCallback(self.srcChanged)
+		self.src.addNext(self)
+		self.dst.addPrev(self)
 
 	def makeConsistent(self, context):
-		# Make constraint consistent
 		if self.src.values or (self.fieldTransfer and self.src.null):
-			self.srcChanged(context, self.src.values)
+			self.changed(context, self.src, self.src.values)
 
-	def srcChanged(self, context, diff):
+	def changed(self, context, node, diff):
 		for obj in diff:
 			self.dst.updateSingleValue(self.invoke.copyDown(obj))
 
@@ -55,90 +58,83 @@ class DownwardConstraint(Constraint):
 		return "[DN %r -> %r]" % (self.src, self.dst)
 
 
-class LoadConstraint(Constraint):
-	def __init__(self, src, fieldtype, field, dst):
-		assert src.isNode(), src
+class MemoryConstraint(Constraint):
+	__slots__ = 'obj', 'fieldtype', 'field'
+
+	def __init__(self, obj, fieldtype, field):
+		Constraint.__init__(self)
+		assert obj.isNode(), obj
 		assert isinstance(fieldtype, str), fieldtype
 		assert field.isNode(), field
-		assert dst.isNode(), dst
 
-		Constraint.__init__(self)
-		self.src   = src
+		self.obj = obj
 		self.fieldtype = fieldtype
 		self.field = field
+
+	def attach(self):
+		self.obj.addNext(self)
+		if self.field is not self.obj:
+			self.field.addNext(self)
+
+	def makeConsistent(self, context):
+		if self.obj.values and self.field.values:
+			self.changed(context, self.obj, self.obj.values)
+
+	def changedDiffs(self, context, objDiff, fieldDiff):
+		for obj in objDiff:
+			for field in fieldDiff:
+				self.concrete(context, obj, field)
+
+	def changed(self, context, node, diff):
+		if node is self.field:
+			if node is self.obj:
+				# must alias, values are correlated
+				for value in diff:
+					self.concrete(context, value, value)
+			else:
+				# field, and not object
+				self.changedDiffs(context, self.obj.values, diff)
+		elif node is self.obj:
+			# object and not field
+			self.changedDiffs(context, diff, self.field.values)
+		# else is OK... for stores, changes to the value may cause this.
+
+class LoadConstraint(MemoryConstraint):
+	def __init__(self, obj, fieldtype, field, dst):
+		assert dst.isNode(), dst
+		MemoryConstraint.__init__(self, obj, fieldtype, field)
 		self.dst   = dst
 
 	def attach(self):
-		self.src.addCallback(self.srcChanged)
-		self.field.addCallback(self.fieldChanged)
-
-	def makeConsistent(self, context):
-		# Make constraint consistent
-		if self.src.values and self.field.values:
-			self.srcChanged(context, self.src.values)
+		MemoryConstraint.attach(self)
+		self.dst.addPrev(self) # TODO is this correct?
 
 	def concrete(self, context, obj, field):
 		slot = context.field(obj, self.fieldtype, field.obj())
 		context.assign(slot, self.dst)
 
-	def srcChanged(self, context, diff):
-		for obj in diff:
-			for field in self.field.values:
-				self.concrete(context, obj, field)
-
-	def fieldChanged(self, context, diff):
-		for obj in self.src.values:
-			# Avoid problems if src and field alias...
-			if self.src is self.field and obj in diff: continue
-
-			for field in diff:
-				self.concrete(context, obj, field)
-
 	def __repr__(self):
-		return "[LD %r %s %r -> %r]" % (self.src, self.fieldtype, self.field, self.dst)
+		return "[LD %r %s %r -> %r]" % (self.obj, self.fieldtype, self.field, self.dst)
 
+	def isLoad(self):
+		return True
 
-class CheckConstraint(Constraint):
-	def __init__(self, src, fieldtype, field, dst):
-		assert src.isNode(), src
-		assert isinstance(fieldtype, str), fieldtype
-		assert field.isNode(), field
+class CheckConstraint(MemoryConstraint):
+	def __init__(self, obj, fieldtype, field, dst):
 		assert dst.isNode(), dst
-
-		Constraint.__init__(self)
-		self.src   = src
-		self.fieldtype = fieldtype
-		self.field = field
+		MemoryConstraint.__init__(self, obj, fieldtype, field)
 		self.dst   = dst
 
 	def attach(self):
-		self.src.addCallback(self.srcChanged)
-		self.field.addCallback(self.fieldChanged)
-
-	def makeConsistent(self, context):
-		# Make constraint consistent
-		if self.src.values and self.field.values:
-			self.srcChanged(context, self.src.values)
+		MemoryConstraint.attach(self)
+		self.dst.addPrev(self) # TODO is this correct?
 
 	def concrete(self, context, obj, field):
 		slot = context.field(obj, self.fieldtype, field.obj())
 		context.constraint(ConcreteCheckConstraint(slot, self.dst))
 
-	def srcChanged(self, context, diff):
-		for obj in diff:
-			for field in self.field.values:
-				self.concrete(context, obj, field)
-
-	def fieldChanged(self, context, diff):
-		for obj in self.src.values:
-			# Avoid problems if src and field alias...
-			if self.src is self.field and obj in diff: continue
-
-			for field in diff:
-				self.concrete(context, obj, field)
-
 	def __repr__(self):
-		return "[CA %r %s %r -> %r]" % (self.src, self.fieldtype, self.field, self.dst)
+		return "[CA %r %s %r -> %r]" % (self.obj, self.fieldtype, self.field, self.dst)
 
 
 class ConcreteCheckConstraint(Constraint):
@@ -153,13 +149,14 @@ class ConcreteCheckConstraint(Constraint):
 		self.f = False
 
 	def attach(self):
-		self.src.addCallback(self.srcChanged)
+		self.src.addNext(self)
+		self.dst.addPrev(self)
 
 	def makeConsistent(self, context):
 		if self.src.values or self.src.null:
-			self.srcChanged(context, self.src.values)
+			self.changed(context, self.src, self.src.values)
 
-	def srcChanged(self, context, diff):
+	def changed(self, context, node, diff):
 		if diff and not self.t:
 			self.t = True
 			self.dst.updateSingleValue(context.allocatePyObj(True))
@@ -172,44 +169,24 @@ class ConcreteCheckConstraint(Constraint):
 		return "[CC %r -> %r]" % (self.src, self.dst)
 
 
-class StoreConstraint(Constraint):
-	__slots__ = 'src', 'dst', 'fieldtype', 'field'
-	def __init__(self, src, dst, fieldtype, field):
+
+class StoreConstraint(MemoryConstraint):
+	def __init__(self, src, obj, fieldtype, field):
 		assert src.isNode(), src
-		assert dst.isNode(), dst
-		assert isinstance(fieldtype, str), fieldtype
-		assert field.isNode(), field
-		Constraint.__init__(self)
-		self.src   = src
-		self.dst   = dst
-		self.fieldtype = fieldtype
-		self.field = field
+		MemoryConstraint.__init__(self, obj, fieldtype, field)
+		self.src = src
 
 	def attach(self):
-		self.dst.addCallback(self.dstChanged)
-		self.field.addCallback(self.fieldChanged)
-
-	def makeConsistent(self, context):
-		# Make constraint consistent
-		if self.dst.values and self.field.values:
-			self.dstChanged(context, self.dst.values)
+		MemoryConstraint.attach(self)
+		if self.src is not self.obj and self.src is not self.field:
+			self.src.addNext(self) # TODO is this correct?
 
 	def concrete(self, context, obj, field):
 		slot = context.field(obj, self.fieldtype, field.obj())
 		context.assign(self.src, slot)
 
-	def dstChanged(self, context, diff):
-		for obj in diff:
-			for field in self.field.values:
-				self.concrete(context, obj, field)
-
-	def fieldChanged(self, context, diff):
-		for obj in self.dst.values:
-			# Avoid problems if dst and field alias...
-			if self.dst is self.field and obj in diff: continue
-
-			for field in diff:
-				self.concrete(context, obj, field)
-
 	def __repr__(self):
-		return "[ST %r -> %r %s %r]" % (self.src, self.dst, self.fieldtype, self.field)
+		return "[ST %r -> %r %s %r]" % (self.src, self.obj, self.fieldtype, self.field)
+
+	def isStore(self):
+		return True

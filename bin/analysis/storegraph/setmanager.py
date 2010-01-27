@@ -13,7 +13,9 @@ class CachedSetManager(object):
 		return self._emptyset
 
 	def inplaceUnion(self, a, b):
-		if not a:
+		if a is b:
+			return a
+		elif not a:
 			return self.cache[b]
 		elif not b:
 			return self.cache[a]
@@ -21,13 +23,17 @@ class CachedSetManager(object):
 			return self.cache[a.union(b)]
 
 	def diff(self, a, b):
-		if not b:
+		if a is b:
+			return self._emptyset
+		elif not b:
 			return self.cache[a]
 		else:
 			return self.cache[a-b]
 
 	def tempDiff(self, a, b):
-		if not b:
+		if a is b:
+			return self._emptyset
+		elif not b:
 			return a
 		else:
 			return a-b

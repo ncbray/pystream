@@ -1,13 +1,30 @@
 from language.python import program
 from .. constraints import node, qualifiers
 
+from ..escape import objectescape
+
 class Object(object):
-	__slots__ = 'context', 'name', 'fields'
+	__slots__ = 'context', 'name', 'fields', 'flags', 'dirty'
 
 	def __init__(self, context, name):
 		self.context = context
-		self.name   = name
-		self.fields = {}
+		self.name    = name
+		self.fields  = {}
+		self.flags   = 0
+		self.dirty   = False
+
+		if name.qualifier is qualifiers.DN:
+			self.flags |= objectescape.escapeParam
+		elif name.qualifier is qualifiers.GLBL:
+			self.flags |= objectescape.escapeGlobal
+
+	def updateFlags(self, context, flags):
+		diff = ~self.flags & flags
+		if diff:
+			self.flags |= diff
+			if not self.dirty:
+				self.dirty = True
+				context.dirtyObject(self)
 
 	def initDownwardField(self, slot):
 		for invoke in self.context.invokeIn.itervalues():

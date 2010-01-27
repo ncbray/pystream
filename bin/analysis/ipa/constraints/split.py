@@ -3,38 +3,51 @@ from . base import Constraint
 from .. calling import cpa
 
 class Splitter(Constraint):
+	def __init__(self, src):
+		assert src.isNode(), src
+		self.src = src
+		self.dst = []
+		self.callbacks = []
+
 	def addSplitCallback(self, callback):
 		self.callbacks.append(callback)
 		if self.objects: callback()
 
 	def attach(self):
-		self.src.addCallback(self.srcChanged)
+		self.src.addNext(self)
+
+	def localName(self):
+		return 'split_temp'
+
+	def makeTarget(self, context):
+		lcl = context.local(ast.Local(self.localName()))
+		lcl.addPrev(self)
+		self.dst.append(lcl)
+		return lcl
 
 	def makeConsistent(self, context):
 		# Make constraint consistent
 		if self.src.values:
-			self.srcChanged(context, self.src.values)
+			self.changed(context, self.src, self.src.values)
 
 	def doNotify(self):
 		for callback in self.callbacks:
 			callback()
 
+	def isSplit(self):
+		return True
+
 class TypeSplitConstraint(Splitter):
-	def __init__(self, context, src):
-		assert src.isNode(), src
-		self.context = context
-		self.src = src
+	def __init__(self, src):
+		Splitter.__init__(self, src)
 		self.objects = {}
-
-		self.callbacks = []
-
 		self.megamorphic = False
+
+	def localName(self):
+		return 'type_split_temp'
 
 	def types(self):
 		return self.objects.keys()
-
-	def makeTempLocal(self):
-		return self.context.local(ast.Local('type_split_temp'))
 
 	def makeMegamorphic(self):
 		assert not self.megamorphic
@@ -43,7 +56,7 @@ class TypeSplitConstraint(Splitter):
 		self.objects[cpa.anyType] = self.src
 		self.doNotify()
 
-	def srcChanged(self, context, diff):
+	def changed(self, context, node, diff):
 		if self.megamorphic: return
 
 		changed = False
@@ -55,7 +68,7 @@ class TypeSplitConstraint(Splitter):
 					self.makeMegamorphic()
 					break
 				else:
-					temp = self.makeTempLocal()
+					temp = self.makeTarget(context)
 					self.objects[cpaType] = temp
 					changed = True
 			else:
@@ -69,21 +82,18 @@ class TypeSplitConstraint(Splitter):
 
 
 class ExactSplitConstraint(Splitter):
-	def __init__(self, context, src):
-		assert src.isNode(), src
-		self.context = context
-		self.src = src
+	def __init__(self, src):
+		Splitter.__init__(self, src)
 		self.objects = {}
-		self.callbacks = []
 
-	def makeTempLocal(self):
-		return self.context.local(ast.Local('exact_split_temp'))
+	def localName(self):
+		return 'exact_split_temp'
 
-	def srcChanged(self, context, diff):
+	def changed(self, context, node, diff):
 		changed = False
 		for obj in diff:
 			if obj not in self.objects:
-				temp = self.makeTempLocal()
+				temp = self.makeTarget(context)
 				self.objects[obj] = temp
 				changed = True
 			else:

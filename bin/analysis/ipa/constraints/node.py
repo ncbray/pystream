@@ -4,7 +4,7 @@ from .. calling import cpa
 from .. model import objectname
 
 class ConstraintNode(object):
-	__slots__ = 'context', 'name', 'ci', 'values', 'diff', 'null', 'dirty', 'callbacks', 'typeSplit', 'exactSplit'
+	__slots__ = 'context', 'name', 'ci', 'values', 'diff', 'null', 'dirty', 'prev', 'next', 'typeSplit', 'exactSplit', 'flags', 'flagsdiff'
 	def __init__(self, context, name, ci=False):
 		assert not isinstance(name, ast.DoNotCare), name
 
@@ -19,14 +19,34 @@ class ConstraintNode(object):
 
 		self.dirty = False
 
-		self.callbacks = []
+		self.next = []
+		self.prev = []
 
 		self.typeSplit  = None
 		self.exactSplit = None
 
+		self.flags = 0
+		self.flagsdiff = 0
+
+	def isField(self):
+		return isinstance(self.name, tuple)
+
+	def clearFlags(self):
+		self.flags = 0
+		self.flagsdiff = 0
+
+	def updateFlags(self, flags):
+		diff = ~self.flags & flags
+		new = self.flagsdiff | diff
+		if new != self.flagsdiff:
+			self.flagsdiff = new
+			if not self.dirty:
+				self.dirty = True
+				self.context.dirtyFlags(self)
+
 	def attachTypeSplit(self, callback):
 		if self.typeSplit is None:
-			self.typeSplit = split.TypeSplitConstraint(self.context, self)
+			self.typeSplit = split.TypeSplitConstraint(self)
 			self.context.constraint(self.typeSplit)
 		self.typeSplit.addSplitCallback(callback)
 
@@ -38,18 +58,15 @@ class ConstraintNode(object):
 
 	def attachExactSplit(self, callback):
 		if self.exactSplit is None:
-			self.exactSplit = split.ExactSplitConstraint(self.context, self)
+			self.exactSplit = split.ExactSplitConstraint(self)
 			self.context.constraint(self.exactSplit)
 		self.exactSplit.addSplitCallback(callback)
 
-	def markParam(self):
-		pass
+	def addNext(self, constraint):
+		self.next.append(constraint)
 
-	def markReturn(self):
-		pass
-
-	def addCallback(self, callback):
-		self.callbacks.append(callback)
+	def addPrev(self, constraint):
+		self.prev.append(constraint)
 
 	def markDirty(self):
 		if not self.dirty:
@@ -65,7 +82,7 @@ class ConstraintNode(object):
 			for value in diff:
 				assert value.isObjectName(), value
 
-			if self.callbacks:
+			if self.next:
 				self.diff = sm.inplaceUnion(self.diff, diff)
 				self.markDirty()
 			else:
@@ -80,8 +97,8 @@ class ConstraintNode(object):
 		if value not in self.values and value not in self.diff:
 			sm = self.context.analysis.setmanager
 			diff = sm.coerce([value])
-			
-			if self.callbacks:
+
+			if self.next:
 				self.diff = sm.inplaceUnion(self.diff, diff)
 				self.markDirty()
 			else:
@@ -94,14 +111,14 @@ class ConstraintNode(object):
 	def markNull(self):
 		if not self.null:
 			self.null = True
-			if self.callbacks:
+			if self.next:
 				# HACK this is an expensive way of communicating with the
 				# few consumers that care.  Fortunately, this is rare.
 				self.markDirty()
 
 	def clearNull(self):
 		# Can only be done before the node is observed.
-		assert not self.callbacks
+		assert not self.next
 		self.null = False
 
 	def propagate(self):
@@ -116,8 +133,8 @@ class ConstraintNode(object):
 		self.values = sm.inplaceUnion(self.values, diff)
 		self.diff   = sm.empty()
 
-		for callback in self.callbacks:
-			callback(self.context, diff)
+		for constraint in self.next:
+			constraint.changed(self.context, self, diff)
 
 	def __repr__(self):
 		return "slot(%r/%d)" % (self.name, id(self))

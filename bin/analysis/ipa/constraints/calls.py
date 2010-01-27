@@ -125,7 +125,8 @@ class FlatCallConstraint(AbstractCall):
 		self.karg = karg
 		self.targets = targets
 
-		self.info = transfer.computeTransferInfo(self.code, self.selfarg is not None, len(self.args), len(self.varg))
+		returnarglen = len(self.targets) if self.targets is not None else 0
+		self.info = transfer.computeTransferInfo(self.code, self.selfarg is not None, len(self.args), len(self.varg), returnarglen)
 
 		if self.info.maybeOK():
 			if self.selfarg is not None:

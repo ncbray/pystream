@@ -36,6 +36,7 @@ class TransferInfo(object):
 		self.params     = []
 		self.vparams    = []
 		self.kparams    = []
+		self.numReturns = 0
 		self.transferOK = tvl.TVLTrue
 
 	def transfer(self, getter, setter):
@@ -61,6 +62,9 @@ class TransferInfo(object):
 				setter.unusedKParam(kwd)
 			else:
 				setter.setKParam(kwd, p.get(getter))
+
+		for i in range(self.numReturns):
+			getter.setReturnArg(i, setter.getReturnParam(i))
 
 	def invalidate(self):
 		self.selfparam  = None
@@ -136,7 +140,7 @@ class TransferInfoBuilder(object):
 			value = None
 		self.info.vparams.append(value)
 
-	def compute(self, code, selfarg, arglen, varglen):
+	def compute(self, code, selfarg, arglen, varglen, returnarglen):
 		self.code    = code
 
 		self.arglen  = arglen
@@ -172,9 +176,15 @@ class TransferInfoBuilder(object):
 
 		assert cparams.kparam is None
 
+		if returnarglen:
+			if len(cparams.returnparams) == returnarglen:
+				self.info.numReturns = returnarglen
+			else:
+				return self.invalidateTransfer()
+
 		return self.info
 
-def computeTransferInfo(code, selfarg, arglen, varglen):
+def computeTransferInfo(code, selfarg, arglen, varglen, returnarglen):
 	builder = TransferInfoBuilder()
-	info = builder.compute(code, selfarg, arglen, varglen)
+	info = builder.compute(code, selfarg, arglen, varglen, returnarglen)
 	return info

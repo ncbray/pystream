@@ -44,6 +44,12 @@ class CallBinder(object):
 		dst = self.context.vparamField[i]
 		self.copyDownFiltered(value, typeFilter, dst)
 
+	def getReturnParam(self, i):
+		return self.context.returns[i]
+
+	def setReturnArg(self, i, value):
+		target = self.call.targets[i]
+		self.invoke.up(value, target)
 
 	def copyDownFiltered(self, src, typeFilter, dst):
 		self.invoke.down(src.getFiltered(typeFilter), dst)

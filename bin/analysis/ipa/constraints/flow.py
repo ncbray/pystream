@@ -228,4 +228,4 @@ class StoreConstraint(MemoryConstraint):
 	def criticalChanged(self, context, node, diff):
 		if not self.criticalOp and diff:
 			self.criticalOp = True
-			context.criticalOp(self)
+			context.criticalStore(self)

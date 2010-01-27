@@ -1,10 +1,14 @@
 from . import invocation, region, objectname
 from .. constraints import flow, calls, qualifiers, node
 
+from .. summary import Summary
+
 class Context(object):
 	def __init__(self, analysis, signature):
 		self.analysis    = analysis
 		self.signature   = signature
+
+		self.summary = Summary()
 
 		self.params = []
 		self.returns = []
@@ -33,7 +37,7 @@ class Context(object):
 		self.dirtyobjects = []
 
 		self.dirtycriticals = []
-		self.criticalOps = []
+		self.criticalStores = []
 
 	def dirtyFlags(self, node):
 		self.dirtyflags.append(node)
@@ -59,8 +63,9 @@ class Context(object):
 		assert node not in self.dirtycriticals
 		self.dirtycriticals.append(node)
 
-	def criticalOp(self, constraint):
-		self.criticalOps.append(constraint)
+	def criticalStore(self, constraint):
+		assert constraint.isStore()
+		self.criticalStore.append(constraint)
 
 	def existingPyObj(self, pyobj, qualifier=qualifiers.HZ):
 		obj = self.analysis.pyObj(pyobj)

@@ -11,6 +11,7 @@ from . calling import cpa
 from analysis.storegraph import setmanager
 
 from . escape import objectescape
+from . import summary
 
 class IPAnalysis(object):
 	def __init__(self, extractor, canonical, existingPolicy, externalPolicy):
@@ -104,13 +105,14 @@ class IPAnalysis(object):
 		return changed
 
 	def updateConstraints(self):
-		if self.trace: print "resolve"
+		#if self.trace: print "resolve"
 		while self.dirtySlots:
 			slot = self.dirtySlots.pop()
 			slot.propagate()
-		if self.trace: print
+		#if self.trace: print
 
 	def topDown(self):
+		print "top down"
 		dirty = True
 		while dirty:
 			self.updateConstraints()
@@ -130,16 +132,25 @@ class IPAnalysis(object):
 			# Process children first
 			for invoke in context.invokeOut.itervalues():
 				self.contextBottomUp(invoke.dst)
+				invoke.apply()
+
+			self.updateConstraints()
 
 			self.propagateCriticals(context)
 			objectescape.process(context)
+
+			summary.update(context)
+
 
 			self.path.pop()
 		else:
 			assert context not in self.path, "Recursive cycle detected in call graph"
 
 	def bottomUp(self):
+		print "bottom up"
 		self.processed = set()
 		self.path = []
 
 		self.contextBottomUp(self.root)
+
+		self.updateCallGraph()

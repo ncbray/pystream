@@ -1,6 +1,8 @@
 import collections
 from . import objectname
 from .. constraints import flow, qualifiers
+from language.python import ast
+import itertools
 
 class Invocation(object):
 	def __init__(self, src, op, dst):
@@ -15,6 +17,8 @@ class Invocation(object):
 
 		self.objForward = {}
 		self.objReverse = collections.defaultdict(list)
+
+		self.slotReverse = collections.defaultdict(list)
 
 	def copyDown(self, obj):
 		if obj not in self.objForward:
@@ -53,3 +57,56 @@ class Invocation(object):
 		constraint = flow.DownwardConstraint(self, srcslot, dstslot, fieldTransfer)
 		self.constraints.append(constraint)
 		constraint.init(self.dst) # HACK?
+
+		if not fieldTransfer:
+			self.slotReverse[dstslot].append(srcslot)
+
+	def up(self, srcslot, dstslot):
+		assert srcslot.context is self.dst
+		assert dstslot.context is self.src
+
+		self.slotReverse[srcslot].append(dstslot)
+
+	def apply(self):
+		self.dst.summary.apply(self)
+
+	def upwardSlots(self, slot):
+		if slot not in self.slotReverse:
+			self.slotReverse[slot].append(self.src.local(ast.Local('summaryTemp')))
+		result = self.slotReverse[slot]
+		assert result
+		return result
+
+	def applyLoad(self, obj, fieldtype, field, dst):
+		obj = self.upwardSlots(obj)
+		field = self.upwardSlots(field)
+
+		dst = self.upwardSlots(dst)
+
+		# TODO potentially explosive
+		for obj, field, dst in itertools.product(obj, field, dst):
+			self.src.load(obj, fieldtype, field, dst)
+
+	def applyCopy(self, src, dst):
+		src = self.upwardSlots(src)
+		dst = self.upwardSlots(dst)
+
+		# TODO potentially explosive
+		for src, dst in itertools.product(src, dst):
+			self.src.assign(src, dst)
+
+	def translateObjs(self, objs):
+		vm = self.src.analysis.valuemanager
+
+		for obj in objs:
+			assert obj.qualifier is qualifiers.GLBL
+
+		return vm.coerce(objs)
+
+	def applyObjs(self, slot, objs):
+		objs = self.translateObjs(objs)
+
+		slots = self.upwardSlots(slot)
+
+		for slot in slots:
+			slot.updateValues(objs)

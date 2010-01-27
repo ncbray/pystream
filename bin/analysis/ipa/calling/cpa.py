@@ -69,6 +69,12 @@ class CPATypeSigBuilder(object):
 	def getVArg(self, index):
 		return self.call.varg[index].typeSplit.types()
 
+	def setReturnArg(self, i, value):
+		pass
+
+	def getReturnParam(self, i):
+		pass
+
 	def flatten(self):
 		flat = [self.selfparam]
 		flat.extend(self.params)

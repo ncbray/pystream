@@ -84,9 +84,9 @@ class Dumper(object):
 				o << sio.getvalue()
 
 	def criticalOps(self, context, o):
-		self.header("CriticalOps", o)
+		self.header("Critical Stores", o)
 		with o.scope('ul'):
-			for op in context.criticalOps:
+			for op in context.criticalStores:
 				with o.scope('li'):
 					o << op
 				o.endl()

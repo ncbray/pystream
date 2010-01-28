@@ -24,7 +24,7 @@ def evaluateWithImage(compiler, prgm):
 		for ep, args in prgm.entryPoints:
 			buildEntryPoint(analysis, ep, args)
 
-		for i in range(3):
+		for i in range(5):
 			analysis.topDown()
 			analysis.bottomUp()
 

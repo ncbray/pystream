@@ -38,6 +38,7 @@ class TransferInfo(object):
 		self.kparams    = []
 		self.numReturns = 0
 		self.transferOK = tvl.TVLTrue
+		self.reason = None
 
 	def transfer(self, getter, setter):
 		if not self.selfparam:
@@ -66,12 +67,13 @@ class TransferInfo(object):
 		for i in range(self.numReturns):
 			getter.setReturnArg(i, setter.getReturnParam(i))
 
-	def invalidate(self):
+	def invalidate(self, reason):
 		self.selfparam  = None
 		self.params     = []
 		self.vparams    = []
 		self.kparams    = []
 		self.transferOK = tvl.TVLFalse
+		self.reason = reason
 
 	def maybeOK(self):
 		return self.transferOK.maybeTrue()
@@ -92,8 +94,8 @@ class TransferInfoBuilder(object):
 		self.argsConsumed  = 0
 		self.vargsConsumed = 0
 
-	def invalidateTransfer(self):
-		self.info.invalidate()
+	def invalidateTransfer(self, reason):
+		self.info.invalidate(reason)
 		return self.info
 
 	def argsRemain(self):
@@ -153,12 +155,12 @@ class TransferInfoBuilder(object):
 		self.defaultOffset = len(cparams.params)-defaultlen
 
 
-		if cparams.selfparam is not None:
+		if cparams.selfparam is not None and not cparams.selfparam.isDoNotCare():
 			if selfarg:
-				self.info.selfparam = not cparams.selfparam.isDoNotCare()
+				self.info.selfparam = True
 			else:
 				# Self arg is missing
-				return self.invalidateTransfer()
+				return self.invalidateTransfer("Callee requires a selfarg")
 
 		for i, param in enumerate(cparams.params):
 			if self.positionalArgsRemain():
@@ -167,7 +169,7 @@ class TransferInfoBuilder(object):
 				self.setParam(i, self.getDefault(i))
 			else:
 				# Not enough positional parameters
-				return self.invalidateTransfer()
+				return self.invalidateTransfer("Not enough positional parameters (%d)" % i)
 
 		if cparams.vparam is not None:
 			while self.positionalArgsRemain():
@@ -176,7 +178,7 @@ class TransferInfoBuilder(object):
 			# TODO defaults?
 			if self.positionalArgsRemain():
 				# Too many positional parameters
-				return self.invalidateTransfer()
+				return self.invalidateTransfer("Too many positional parameters")
 
 		assert cparams.kparam is None
 
@@ -184,7 +186,7 @@ class TransferInfoBuilder(object):
 			if len(cparams.returnparams) == returnarglen:
 				self.info.numReturns = returnarglen
 			else:
-				return self.invalidateTransfer()
+				return self.invalidateTransfer("Return argument mismatch")
 
 		return self.info
 

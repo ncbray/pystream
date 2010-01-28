@@ -221,7 +221,7 @@ class FlatCallConstraint(AbstractCall):
 			self.context.dirtyFCall(self)
 
 	def __repr__(self):
-		return "[FCALL %s %r(%r, %r, *%r, **%r) -> %r]" % (self.code, self.selfarg, self.args, self.kwds, self.varg, self.karg, self.targets)
+		return "[FCALL %r %r(%r, %r, %r) -> %r]" % (self.code, self.selfarg, self.args, self.vargSlots, self.defaultSlots, self.targets)
 
 	def resolve(self, context):
 		self.dirty = False
@@ -233,7 +233,7 @@ class FlatCallConstraint(AbstractCall):
 
 		for sig in sigs:
 			if not sig in self.cache:
-				print sig
+				#print sig
 
 				# HACK - varg can be weird, must take it into account?
 				self.cache[sig] = None

@@ -61,11 +61,13 @@ class Invocation(object):
 		if not fieldTransfer:
 			self.slotReverse[dstslot].append(srcslot)
 
+
 	def up(self, srcslot, dstslot):
 		assert srcslot.context is self.dst
 		assert dstslot.context is self.src
 
 		self.slotReverse[srcslot].append(dstslot)
+
 
 	def apply(self):
 		if self.dst.summary.fresh:

@@ -56,7 +56,7 @@ class DownwardConstraint(Constraint):
 		if self.src.values or (self.fieldTransfer and self.src.null):
 			self.changed(context, self.src, self.src.values)
 
-		# Crticial values are not transfered.
+		# Critical values are not transfered.
 
 	def changed(self, context, node, diff):
 		for obj in diff:

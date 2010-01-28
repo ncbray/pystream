@@ -1,6 +1,7 @@
 from util.typedispatch import *
-from language.python import ast
+from language.python import ast, program
 from . constraints import qualifiers
+from . calling import cpa
 
 class MarkParameters(TypeDispatcher):
 	def __init__(self, ce):
@@ -49,27 +50,37 @@ class ConstraintExtractor(TypeDispatcher):
 			assert len(targets) == 1
 			self.context.assign(lcl, targets[0])
 
-	def existingObject(self, node):
-		xtype = self.analysis.canonical.existingType(node.object)
+	def existingObject(self, object):
+		assert isinstance(object, program.AbstractObject), object
+		xtype = self.analysis.canonical.existingType(object)
 		return self.analysis.objectName(xtype, qualifiers.GLBL)
+
+	def existingTemp(self, obj):
+		lcl = self.context.local(ast.Local('existing_temp'))
+		lcl.updateSingleValue(obj)
+		return lcl
 
 	@dispatch(ast.Existing)
 	def visitExisting(self, node, targets=None):
-		obj = self.existingObject(node)
-
-		if obj not in self.existing:
-			# TODO this may unnecessarily hork region analysis in some cases?
-			lcl = self.context.local(ast.Local('existing_temp'))
-			lcl.updateSingleValue(obj)
-			self.existing[obj] = lcl
-		else:
-			lcl = self.existing[obj]
+		obj = self.existingObject(node.object)
 
 		if targets is None:
+			# Just an argument, can be stuck in the same region
+			if obj not in self.existing:
+				lcl = self.existingTemp(obj)
+				self.existing[obj] = lcl
+			else:
+				lcl = self.existing[obj]
 			return lcl
 		else:
+			# Assigned somewhere else, avoid collapsing regions
 			assert len(targets) == 1
+			lcl = self.existingTemp(obj)
 			self.context.assign(lcl, targets[0])
+
+	@dispatch(ast.DoNotCare)
+	def visitDoNotCare(self, node):
+		return None
 
 	def call(self, node, expr, args, kwds, vargs, kargs, targets):
 		assert not kwds, self.code
@@ -176,6 +187,34 @@ class ConstraintExtractor(TypeDispatcher):
 			self.context.vparamField.append(slot)
 			slot.critical.markCritical(self.context, slot)
 
+	def doFold(self):
+		foldFunc = self.code.annotation.dynamicFold
+		if foldFunc:
+			sig = self.context.signature
+
+			# TODO ignoring selfparam?
+
+			params  = []
+			for param in sig.params:
+				if param and param is not cpa.anyType and param.isExisting():
+					params.append(param.obj.pyobj)
+				else:
+					return
+
+			for param in sig.vparams:
+				if param and param is not cpa.anyType and param.isExisting():
+					params.append(param.obj.pyobj)
+				else:
+					return
+
+			try:
+				result = foldFunc(*params)
+			except:
+				return
+
+			obj = self.context.analysis.pyObj(result)
+			self.context.foldObj = self.existingObject(obj)
+
 	### Entry point ###
 	def process(self):
 		code =  self.code
@@ -191,6 +230,8 @@ class ConstraintExtractor(TypeDispatcher):
 			self(code.ast)
 		else:
 			code.extractConstraints(self)
+
+		self.doFold()
 
 def evaluate(analysis, context, code):
 	ce = ConstraintExtractor(analysis, context, code)

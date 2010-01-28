@@ -50,8 +50,12 @@ class CallBinder(object):
 		return self.context.returns[i]
 
 	def setReturnArg(self, i, value):
-		target = self.call.targets[i]
-		self.invoke.up(value, target)
+		if self.context.foldObj:
+			assert i == 0
+			self.call.targets[i].updateSingleValue(self.context.foldObj)
+		else:
+			target = self.call.targets[i]
+			self.invoke.up(value, target)
 
 	def copyDownFiltered(self, src, typeFilter, dst):
 		self.invoke.down(src.getFiltered(typeFilter), dst)

@@ -74,6 +74,15 @@ class Dumper(object):
 			o << text
 		o.endl()
 
+	def objRef(self, obj, o):
+		o << obj
+
+	def fold(self, context, o):
+		if context.foldObj:
+			self.header("Fold", o)
+			self.objRef(context.foldObj, o)
+			o.endl()
+
 	def code(self, context, o):
 		code = context.signature.code
 		if code and code.isStandardCode():
@@ -146,7 +155,7 @@ class Dumper(object):
 			with o.scope('ul'):
 				for value in slot.values:
 					with o.scope('li'):
-						o << value
+						self.objRef(value, o)
 					o.endl()
 			o.endl()
 
@@ -225,6 +234,7 @@ class Dumper(object):
 				with o.scope('p'):
 					self.displayContext(context, o, link=False)
 
+				self.fold(context, o)
 				self.code(context, o)
 				self.criticalOps(context, o)
 				self.invokesIn(context, o)

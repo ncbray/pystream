@@ -57,6 +57,8 @@ class Object(object):
 
 			if self.context.external:
 				self.initExistingField(result)
+			elif self.name.qualifier is qualifiers.GLBL:
+				self.initExistingField(result) # HACK unsound
 			elif self.name.qualifier is qualifiers.DN:
 				self.initDownwardField(result)
 			else:

@@ -14,6 +14,8 @@ class Context(object):
 		self.returns = []
 		self.vparamField = []
 
+		self.foldObj = None
+
 		self.region = region.Region(self)
 		self.locals = {}
 		self.fields = {}

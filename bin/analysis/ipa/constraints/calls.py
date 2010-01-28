@@ -1,3 +1,4 @@
+import itertools
 from .. calling import cpa, transfer, callbinder
 from . import node
 
@@ -9,7 +10,9 @@ class AbstractCall(object):
 def argIsOK(arg):
 	return arg is None or isinstance(arg, node.ConstraintNode)
 
-class CallConstraint(AbstractCall):
+nullObjects = {None:None}
+
+class UserCallConstraint(AbstractCall):
 	def __init__(self, context, op, selfarg, args, kwds, varg, karg, targets):
 		AbstractCall.__init__(self)
 		self.context = context
@@ -21,7 +24,13 @@ class CallConstraint(AbstractCall):
 		self.karg = karg
 		self.targets = targets
 
-		self.selfarg.attachExactSplit(self.splitChanged)
+		assert self.selfarg or self.varg
+
+		if self.selfarg:
+			self.selfarg.attachExactSplit(self.splitChanged)
+
+		if self.varg:
+			self.varg.attachExactSplit(self.splitChanged)
 
 	def splitChanged(self):
 		if not self.dirty:
@@ -31,23 +40,92 @@ class CallConstraint(AbstractCall):
 	def __repr__(self):
 		return "[CALL %r(%r, %r, *%r, **%r) -> %r]" % (self.selfarg, self.args, self.kwds, self.varg, self.karg, self.targets)
 
+	def selfObjects(self):
+		if self.selfarg:
+			return self.selfarg.exactSplit.objects
+		else:
+			return nullObjects
+
+	def vargObjects(self):
+		if self.varg:
+			return self.varg.exactSplit.objects
+		else:
+			return nullObjects
+
+
+	def tupleSlots(self, tupleObj):
+		slots = []
+
+		if tupleObj is None: return slots
+
+		assert tupleObj.obj().pythonType() is tuple, tupleObj
+
+		analysis = self.context.analysis
+
+		lengthSlot = self.context.field(tupleObj, 'LowLevel', analysis.pyObj('length'))
+		assert len(lengthSlot.values) == 1, tupleObj
+		length = tuple(lengthSlot.values)[0].pyObj()
+
+
+		for i in range(length):
+			slot = self.context.field(tupleObj, 'Array', analysis.pyObj(i))
+			slots.append(slot)
+
+		return slots
+
+	def defaultSlots(self, selfObj):
+		if selfObj is None: return []
+
+		# Relies on func_defaults being immutable.
+
+		defaultsSlot = self.context.field(selfObj, 'Attribute', self.context.analysis.funcDefaultName)
+		if defaultsSlot.null:
+			assert len(defaultsSlot.values) == 0
+			return []
+
+		assert len(defaultsSlot.values) == 1
+
+		defaultsObj = tuple(defaultsSlot.values)[0]
+
+		pt = defaultsObj.obj().pythonType()
+		if pt is type(None):
+			return []
+		elif pt is tuple:
+			return self.tupleSlots(defaultsObj)
+		else:
+			assert False, "func_defaults is a %r?" % pt
+
 	def resolve(self, context):
 		self.dirty = False
 
-		selfsplit = self.selfarg.exactSplit
-
-		for selfobj, selflcl in selfsplit.objects.iteritems():
-			# TODO prevent over splitting?  DN objects are dealt with separately from HZ objects.
-			key = selfobj
+		for (selfobj, selflcl), (vargobj, varglcl) in itertools.product(self.selfObjects().iteritems(), self.vargObjects().iteritems()):
+			key = (selfobj, vargobj)
 			if key not in self.cache:
 				self.cache[key] = None
 
-				code = context.analysis.getCode(selfobj)
+				code = self.getCode(context, selfobj)
 
-				context.dcall(self.op, code, selflcl, self.args, self.kwds, self.varg, self.karg, self.targets)
+				vargSlots    = self.tupleSlots(vargobj)
+				defaultSlots = self.defaultSlots(selfobj)
 
-class DirectCallConstraint(AbstractCall):
+				context.fcall(self.op, code, selflcl, self.args, vargSlots, defaultSlots, self.targets)
+
+class CallConstraint(UserCallConstraint):
+	def getCode(self, context, selfobj):
+			return context.analysis.getCode(selfobj)
+
+
+class DirectCallConstraint(UserCallConstraint):
 	def __init__(self, context, op, code, selfarg, args, kwds, varg, karg, targets):
+		UserCallConstraint.__init__(self, context, op, selfarg, args, kwds, varg, karg, targets)
+		self.code = code
+
+	def getCode(self, context, selfobj):
+			return self.code
+
+
+class ConcreteCallConstraint(AbstractCall):
+	def __init__(self, context, op, code, selfarg, args, kwds, varg, karg, targets, vargSlots, defaultSlots):
 		assert code is not None
 		assert argIsOK(selfarg), selfarg
 		AbstractCall.__init__(self)
@@ -60,8 +138,6 @@ class DirectCallConstraint(AbstractCall):
 		self.varg = varg
 		self.karg = karg
 		self.targets = targets
-
-		assert isinstance(varg, node.ConstraintNode), varg
 
 		# TODO no need for the split locals?
 		self.varg.attachExactSplit(self.splitChanged)
@@ -107,12 +183,8 @@ class DirectCallConstraint(AbstractCall):
 
 
 class FlatCallConstraint(AbstractCall):
-	def __init__(self, context, op, code, selfarg, args, kwds, varg, karg, targets):
+	def __init__(self, context, op, code, selfarg, args, vargSlots, defaultSlots, targets):
 		assert argIsOK(selfarg), selfarg
-		assert isinstance(varg, list), varg
-
-		assert not kwds
-		assert karg is None
 
 		AbstractCall.__init__(self)
 		self.context = context
@@ -120,13 +192,12 @@ class FlatCallConstraint(AbstractCall):
 		self.code = code
 		self.selfarg = selfarg
 		self.args = args
-		self.kwds = kwds
-		self.varg = varg
-		self.karg = karg
+		self.vargSlots = vargSlots
+		self.defaultSlots = defaultSlots
 		self.targets = targets
 
 		returnarglen = len(self.targets) if self.targets is not None else 0
-		self.info = transfer.computeTransferInfo(self.code, self.selfarg is not None, len(self.args), len(self.varg), returnarglen)
+		self.info = transfer.computeTransferInfo(self.code, self.selfarg is not None, len(self.args), len(self.vargSlots), len(self.defaultSlots), returnarglen)
 
 		if self.info.maybeOK():
 			if self.selfarg is not None:
@@ -135,7 +206,10 @@ class FlatCallConstraint(AbstractCall):
 			for arg in args:
 				arg.attachTypeSplit(self.splitChanged)
 
-			for arg in varg:
+			for arg in vargSlots:
+				arg.attachTypeSplit(self.splitChanged)
+
+			for arg in defaultSlots:
 				arg.attachTypeSplit(self.splitChanged)
 		else:
 			import pdb
@@ -164,5 +238,8 @@ class FlatCallConstraint(AbstractCall):
 				# HACK - varg can be weird, must take it into account?
 				self.cache[sig] = None
 
-				invoked = context.analysis.getContext(sig)
-				callbinder.bind(self, invoked, info)
+				invokedC = context.analysis.getContext(sig)
+				invoke = callbinder.bind(self, invokedC, info)
+
+				# TODO is this a good idea?
+				invoke.apply()

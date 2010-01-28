@@ -16,8 +16,10 @@ class CallBinder(object):
 		return self.call.args[i]
 
 	def getVArg(self, i):
-		return self.call.varg[i]
+		return self.call.vargSlots[i]
 
+	def getDefault(self, i):
+		return self.call.defaultSlots[i]
 
 	def unusedSelfParam(self):
 		pass
@@ -57,3 +59,4 @@ class CallBinder(object):
 def bind(call, context, info):
 	binder = CallBinder(call, context)
 	info.transfer(binder, binder)
+	return binder.invoke

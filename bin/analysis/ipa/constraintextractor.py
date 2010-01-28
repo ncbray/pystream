@@ -33,6 +33,8 @@ class ConstraintExtractor(TypeDispatcher):
 		self.context  = context
 		self.code     = code
 
+		self.existing = {}
+
 	@dispatch(ast.leafTypes)
 	def visitLeaf(self, node):
 		return node
@@ -54,8 +56,15 @@ class ConstraintExtractor(TypeDispatcher):
 	@dispatch(ast.Existing)
 	def visitExisting(self, node, targets=None):
 		obj = self.existingObject(node)
-		lcl = self.context.local(ast.Local('existing_temp'))
-		lcl.updateSingleValue(obj)
+
+		if obj not in self.existing:
+			# TODO this may unnecessarily hork region analysis in some cases?
+			lcl = self.context.local(ast.Local('existing_temp'))
+			lcl.updateSingleValue(obj)
+			self.existing[obj] = lcl
+		else:
+			lcl = self.existing[obj]
+
 		if targets is None:
 			return lcl
 		else:
@@ -75,14 +84,9 @@ class ConstraintExtractor(TypeDispatcher):
 		self.context.dcall(node, code, expr, args, kwds, vargs, kargs, targets)
 
 	def allocate(self, node, expr, targets):
-		assert expr.isObjectName(), expr
+		assert expr.isNode(), expr
 		assert len(targets) == 1
-		target = targets[0]
-
-		obj = self.context.allocate(expr, node)
-
-		# TODO lazy target creation?
-		target.updateSingleValue(obj)
+		self.context.allocate(node, expr, targets[0])
 
 	def load(self, node, expr, fieldtype, name, targets):
 		assert len(targets) == 1
@@ -104,9 +108,14 @@ class ConstraintExtractor(TypeDispatcher):
 			self(node.args), self(node.kwds),
 			self(node.vargs), self(node.kargs), targets)
 
+	@dispatch(ast.Is)
+	def visitIs(self, node, targets):
+		assert len(targets) == 1
+		return self.context.is_(self(node.left), self(node.right), targets[0])
+
 	@dispatch(ast.Allocate)
 	def visitAllocate(self, node, targets):
-		return self.allocate(node, self.existingObject(node.expr), targets)
+		return self.allocate(node, self(node.expr), targets)
 
 	@dispatch(ast.Load)
 	def visitLoad(self, node, targets):
@@ -174,8 +183,9 @@ class ConstraintExtractor(TypeDispatcher):
 
 		MarkParameters(self).process(self.codeParameters)
 
-		if self.codeParameters.vparam:
-			self.setupVParam(self.codeParameters.vparam)
+		vparam = self.codeParameters.vparam
+		if vparam and not vparam.isDoNotCare():
+			self.setupVParam(vparam)
 
 		if code.isStandardCode():
 			self(code.ast)

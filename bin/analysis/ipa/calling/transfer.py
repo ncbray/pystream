@@ -122,10 +122,10 @@ class TransferInfoBuilder(object):
 			return self.getVArg()
 
 	def defaultExists(self, index):
-		return False
+		return 0 <= (index-self.defaultOffset) < self.defaultlen
 
 	def getDefault(self, index):
-		return None
+		return DefaultArg(index-self.defaultOffset)
 
 	def setParam(self, index, value):
 		if self.cparams.params[index].isDoNotCare():
@@ -140,14 +140,18 @@ class TransferInfoBuilder(object):
 			value = None
 		self.info.vparams.append(value)
 
-	def compute(self, code, selfarg, arglen, varglen, returnarglen):
+	def compute(self, code, selfarg, arglen, varglen, defaultlen, returnarglen):
 		self.code    = code
 
 		self.arglen  = arglen
 		self.varglen = varglen
+		self.defaultlen = defaultlen
 
 		cparams = code.codeParameters()
 		self.cparams = cparams
+
+		self.defaultOffset = len(cparams.params)-defaultlen
+
 
 		if cparams.selfparam is not None:
 			if selfarg:
@@ -184,7 +188,7 @@ class TransferInfoBuilder(object):
 
 		return self.info
 
-def computeTransferInfo(code, selfarg, arglen, varglen, returnarglen):
+def computeTransferInfo(code, selfarg, arglen, varglen, defaultlen, returnarglen):
 	builder = TransferInfoBuilder()
-	info = builder.compute(code, selfarg, arglen, varglen, returnarglen)
+	info = builder.compute(code, selfarg, arglen, varglen, defaultlen, returnarglen)
 	return info

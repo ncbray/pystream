@@ -4,6 +4,8 @@ from analysis.ipa.constraints import qualifiers
 from analysis.storegraph.canonicalobjects import CanonicalObjects
 from language.python import program
 
+from application.context import CompilerContext
+
 class MockExtractor(object):
 	def __init__(self):
 		self.cache = {}
@@ -22,12 +24,14 @@ class MockSignature(object):
 
 class TestIPABase(unittest.TestCase):
 	def setUp(self):
+		self.compiler  = CompilerContext(None)
 		self.extractor = MockExtractor()
+		self.compiler.extractor = self.extractor
 		self.canonical = CanonicalObjects()
 		existingPolicy = None
 		externalPolicy = None
 
-		self.analysis = IPAnalysis(self.extractor, self.canonical, existingPolicy, externalPolicy)
+		self.analysis = IPAnalysis(self.compiler, self.canonical, existingPolicy, externalPolicy)
 
 	def local(self, context, name, *values):
 		lcl = context.local(name)

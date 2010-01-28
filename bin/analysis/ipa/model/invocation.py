@@ -68,7 +68,8 @@ class Invocation(object):
 		self.slotReverse[srcslot].append(dstslot)
 
 	def apply(self):
-		self.dst.summary.apply(self)
+		if self.dst.summary.fresh:
+			self.dst.summary.apply(self)
 
 	def upwardSlots(self, slot):
 		if slot not in self.slotReverse:
@@ -98,8 +99,10 @@ class Invocation(object):
 	def translateObjs(self, objs):
 		vm = self.src.analysis.valuemanager
 
-		for obj in objs:
-			assert obj.qualifier is qualifiers.GLBL
+		# TODO copy HZ objects up
+
+#		for obj in objs:
+#			assert obj.qualifier is qualifiers.GLBL
 
 		return vm.coerce(objs)
 

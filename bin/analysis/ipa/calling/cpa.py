@@ -67,7 +67,10 @@ class CPATypeSigBuilder(object):
 		return self.call.args[index].typeSplit.types()
 
 	def getVArg(self, index):
-		return self.call.varg[index].typeSplit.types()
+		return self.call.vargSlots[index].typeSplit.types()
+
+	def getDefault(self, index):
+		return self.call.defaultSlots[index].typeSplit.types()
 
 	def setReturnArg(self, i, value):
 		pass

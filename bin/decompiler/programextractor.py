@@ -100,6 +100,8 @@ class Extractor(object):
 		self.initalizeObjects()
 
 
+		self.getsetMember = set()
+		self.getsetMember.add(xtypes.FunctionType.__dict__['func_defaults'])
 
 	def flatTypeDict(self, cls):
 		assert isinstance(cls, type)
@@ -403,6 +405,11 @@ class Extractor(object):
 		self.ensureLoaded(dictobj)
 		return dictobj.dictionary
 
+	def handleLowLevel(self, obj):
+		# Low level slots aren't directly visible, so we need to explicitly get them.
+		pyobj = obj.pyobj
+		if isinstance(pyobj, tuple):
+			obj.addLowLevel(self.__getObject('length'), self.__getObject(len(pyobj)))
 
 	# Object may have fixed slots.  Search for them.
 	def handleSlots(self, obj):
@@ -417,17 +424,22 @@ class Extractor(object):
 
 			# TODO Directly test for slot wrapper?
 			# TODO slot wrapper for methods?
-			if inspect.ismemberdescriptor(member):
+			isMember = inspect.ismemberdescriptor(member)
+
+			# HACK some getsets may as well be members
+			isMember |= inspect.isgetsetdescriptor(member) and member in self.getsetMember
+
+			if isMember:
 				try:
-					mangledName = self.compiler.slots.uniqueSlotName(member)
 					value = member.__get__(pyobj, type(pyobj))
-					obj.addSlot(self.__getObject(mangledName), self.__getObject(value))
 				except:
-					print "Error getting attribute?"
+					print "Error getting attribute %s" % name
 					print "obj", pyobj
-					for k, v in inspect.getmembers(member):
-						print '\t', k, v
+					for k, v in inspect.getmembers(pyobj):
+						print '\t', k, repr(v)
 					raise
+				mangledName = self.compiler.slots.uniqueSlotName(member)
+				obj.addSlot(self.__getObject(mangledName), self.__getObject(value))
 
 
 	# Object my have an arbitrary dictionary.
@@ -475,6 +487,7 @@ class Extractor(object):
 	def handleObject(self, obj):
 		pyobj = obj.pyobj
 
+		self.handleLowLevel(obj)
 		self.handleSlots(obj)
 		self.handleObjectDict(obj)
 		self.handleContainer(obj)

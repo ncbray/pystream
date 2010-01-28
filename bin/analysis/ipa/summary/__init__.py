@@ -25,6 +25,9 @@ class Summary(object):
 		self.ops   = []
 		self.slotObjs = collections.defaultdict(list)
 
+		self.dirty = False
+		self.fresh = False
+
 	def reset(self):
 		self.slots = {}
 		self.ops   = []
@@ -38,8 +41,11 @@ class Summary(object):
 
 	def handleObjects(self, context, slot):
 		for obj in slot.values:
-			assert obj.qualifier is not qualifiers.HZ, obj
-			if obj.qualifier is qualifiers.GLBL:
+
+			if obj.qualifier is qualifiers.HZ:
+				# TODO copy fields
+				self.slotObjs[slot].append(obj)
+			elif obj.qualifier is qualifiers.GLBL:
 				self.slotObjs[slot].append(obj)
 
 	def handleSlot(self, context, slot):
@@ -68,6 +74,13 @@ class Summary(object):
 			invoke.applyObjs(slot, objs)
 
 def update(context):
+	summary = context.summary
+	if not summary.dirty:
+		return
+
+	summary.dirty = False
+	summary.fresh = True
+
 	context.summary.reset() # HACK not incremental
 
 	for param in context.returns:

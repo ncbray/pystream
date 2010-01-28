@@ -12,10 +12,12 @@ from analysis.storegraph import setmanager
 
 from . escape import objectescape
 from . import summary
+from util.monkeypatch import xtypes
 
 class IPAnalysis(object):
-	def __init__(self, extractor, canonical, existingPolicy, externalPolicy):
-		self.extractor = extractor
+	def __init__(self, compiler, canonical, existingPolicy, externalPolicy):
+		self.compiler = compiler
+		self.extractor = compiler.extractor
 		self.canonical = canonical
 
 		self.existingPolicy = existingPolicy
@@ -37,6 +39,10 @@ class IPAnalysis(object):
 		self.decompileTime = 0.0
 
 		self.trace = False
+
+		descName = compiler.slots.uniqueSlotName(xtypes.FunctionType.func_defaults)
+		self.funcDefaultName = self.pyObj(descName)
+
 
 	def pyObj(self, pyobj):
 		return self.extractor.getObject(pyobj)
@@ -131,15 +137,19 @@ class IPAnalysis(object):
 
 			# Process children first
 			for invoke in context.invokeOut.itervalues():
-				self.contextBottomUp(invoke.dst)
+				dst = invoke.dst
+				self.contextBottomUp(dst)
 				invoke.apply()
 
 			self.updateConstraints()
 
-			self.propagateCriticals(context)
-			objectescape.process(context)
+			if context.summary.dirty:
+				self.propagateCriticals(context)
+				objectescape.process(context)
 
-			summary.update(context)
+				summary.update(context)
+
+				self.updateConstraints() # TODO only once?
 
 
 			self.path.pop()
@@ -150,6 +160,9 @@ class IPAnalysis(object):
 		print "bottom up"
 		self.processed = set()
 		self.path = []
+
+		for context in self.contexts.itervalues():
+			context.summary.fresh = False
 
 		self.contextBottomUp(self.root)
 

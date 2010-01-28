@@ -1,4 +1,6 @@
+import itertools
 from . base import Constraint
+from . import qualifiers
 
 class CopyConstraint(Constraint):
 	__slots__ = 'src', 'dst'
@@ -229,3 +231,125 @@ class StoreConstraint(MemoryConstraint):
 		if not self.criticalOp and diff:
 			self.criticalOp = True
 			context.criticalStore(self)
+
+
+class AllocateConstraint(Constraint):
+	__slots__ = 'op', 'src', 'dst'
+	def __init__(self, op, src, dst):
+		Constraint.__init__(self)
+		self.op  = op
+		self.src = src
+		self.dst = dst
+
+	def attach(self):
+		self.src.addNext(self)
+		self.dst.addPrev(self)
+
+	def makeConsistent(self, context):
+		if self.src.values:
+			self.changed(context, self.src, self.src.values)
+
+	def changed(self, context, node, diff):
+		for value in diff:
+			assert value.obj().pythonType() is type, value
+			exinst = context.analysis.pyObjInst(value.pyObj())
+			xtype = context.analysis.canonical.pathType(None, exinst, node)
+			inst   = context.analysis.objectName(xtype, qualifiers.HZ)
+
+			self.dst.updateSingleValue(inst)
+
+	def __repr__(self):
+		return "[AL %r -> %r]" % (self.src, self.dst)
+
+	def isAllocate(self):
+		return True
+
+	def criticalChanged(self, context, node, diff):
+		pass
+
+class IsConstraint(Constraint):
+	__slots__ = 'left', 'right', 'dst', 't', 'f'
+
+	def __init__(self, left, right, dst):
+		Constraint.__init__(self)
+		self.left  = left
+		self.right = right
+		self.dst   = dst
+
+		self.t = False
+		self.f = False
+
+	def attach(self):
+		self.left.addNext(self)
+		if self.left is not self.right:
+			self.right.addNext(self)
+		self.dst.addPrev(self)
+
+	def makeConsistent(self, context):
+		if self.left.values and self.right.values:
+			self.changed(context, self.left, self.left.values)
+
+	def canBeTrue(self, context):
+		if not self.t:
+			self.t = True
+			self.dst.updateSingleValue(context.allocatePyObj(True))
+
+	def canBeFalse(self, context):
+		if not self.f:
+			self.f = True
+			self.dst.updateSingleValue(context.allocatePyObj(False))
+
+	def concrete(self, context, left, right):
+		# TODO use regions for even more precision?
+		# TODO use qualifiers for non-CI types
+		lxtype = left.xtype
+		rxtype = left.xtype
+
+		lpt = lxtype.obj.pythonType()
+		rpt = rxtype.obj.pythonType()
+
+		if lpt is not rpt:
+			self.canBeFalse(context)
+		elif lxtype.isExisting() and rxtype.isExisting():
+			if lxtype.obj is rxtype.obj:
+				self.canBeTrue(context)
+			else:
+				self.canBeFalse(context)
+		elif isinstance(lpt, xtypes.ConstantTypes):
+			# May be pooled later, which creates ambiguity
+			self.canBeTrue(context)
+			self.canBeFalse(context)
+		elif lxtype is rxtype:
+			# More that one of this object may be created...
+			self.canBeTrue(context)
+			self.canBeFalse(context)
+		else:
+			# Not the same object, will not be pooled.
+			self.canBeFalse(context)
+
+	def done(self):
+		return self.t and self.f
+
+	def changed(self, context, node, diff):
+		if self.done(): return
+
+		if node is self.left:
+			if node is self.right:
+				for value in diff:
+					self.concrete(context, value, value)
+					if self.done(): return
+			else:
+				for left, right in itertools.product(diff, self.right.values):
+					self.concrete(context, left, right)
+					if self.done(): return
+
+		elif node is self.right:
+			for left, right in itertools.product(self.left.values, diff):
+				self.concrete(context, left, right)
+				if self.done(): return
+
+	def __repr__(self):
+		return "[IS %r %r -> %r]" % (self.left, self.right, self.dst)
+
+	def criticalChanged(self, context, node, diff):
+		pass

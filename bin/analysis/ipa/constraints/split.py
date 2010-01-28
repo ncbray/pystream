@@ -87,7 +87,7 @@ class TypeSplitConstraint(Splitter):
 
 
 
-
+# TODO prevent over splitting?  All objects with the same qualifier should be grouped?
 class ExactSplitConstraint(Splitter):
 	def __init__(self, src):
 		Splitter.__init__(self, src)

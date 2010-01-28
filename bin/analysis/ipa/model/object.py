@@ -55,10 +55,10 @@ class Object(object):
 			result = node.ConstraintNode(self.context, (self.name, fieldType, name))
 			self.fields[key] = result
 
-			if self.name.qualifier is qualifiers.DN:
-				self.initDownwardField(result)
-			elif self.context.external:
+			if self.context.external:
 				self.initExistingField(result)
+			elif self.name.qualifier is qualifiers.DN:
+				self.initDownwardField(result)
 			else:
 				result.markNull()
 		else:

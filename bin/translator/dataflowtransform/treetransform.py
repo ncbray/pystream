@@ -10,6 +10,28 @@ from analysis import cpa, lifetimeanalysis
 
 from application.program import Program
 
+class ReadCollector(TypeDispatcher):
+	@dispatch(ast.leafTypes, ast.CodeParameters, ast.Local, ast.Existing, ast.Return)
+	def visitLeaf(self, node):
+		pass
+
+	@dispatch(ast.Load, ast.Store, ast.Allocate, ast.Call, ast.DirectCall)
+	def visitOP(self, node):
+		self.reads.update(node.annotation.reads.merged)
+
+	@dispatch(ast.Assign, ast.Discard)
+	def visitAssign(self, node):
+		self(node.expr)
+
+	@dispatch(ast.Suite, ast.Switch, ast.TypeSwitch, ast.TypeSwitchCase)
+	def visitOK(self, node):
+		node.visitChildren(self)
+
+	def process(self, code):
+		self.reads = set()
+		code.visitChildrenForced(self)
+		return self.reads
+
 class ObjectInfo(object):
 	def __init__(self, uid):
 		self.uid     = uid
@@ -41,7 +63,11 @@ class TreeAnalysis(object):
 
 	def handleFields(self, obj, objectInfo):
 		for slot in obj.slots.itervalues():
-			if self.intrinsicFields or not intrinsics.isIntrinsicSlot(slot):
+
+			intrinsic = intrinsics.isIntrinsicSlot(slot)
+			slotRead = slot in self.reads
+
+			if self.intrinsicFields and intrinsic or slotRead and not intrinsic:
 				path = objectInfo.path
 				extpath = path + (slot.slotName,)
 				objs = self.handleSlot(extpath, slot)
@@ -133,6 +159,8 @@ class TreeAnalysis(object):
 
 	def process(self, code):
 		codeParams = code.codeParameters()
+
+		self.reads = ReadCollector().process(code)
 
 		selfparam = (codeParams.selfparam, self.handleParam(codeParams.selfparam))
 

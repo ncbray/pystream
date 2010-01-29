@@ -3,8 +3,9 @@ from language.python import ast
 from .. import intrinsics
 
 class ObjectAnalysis(TypeDispatcher):
-	def __init__(self, compiler, code):
+	def __init__(self, compiler, prgm, code):
 		self.compiler = compiler
+		self.prgm = prgm
 		self.code = code
 
 		self.allocated = set()
@@ -50,6 +51,18 @@ class ObjectAnalysis(TypeDispatcher):
 	def visitSuite(self, node):
 		node.visitChildren(self)
 
+	def fixupStoreGraph(self):
+		region = self.prgm.storeGraph.regionHint
+		for xtype, obj in region.objects.iteritems():
+			assert xtype.obj.pythonType() is not list, "Temporary Limitation: Cannot handle lists"
+
+			if xtype.isUnique():
+				obj.rewriteAnnotation(unique=True)
+
+			if obj.annotation.unique:
+				for field in obj:
+					field.rewriteAnnotation(unique=True)
+
 	def postProcess(self):
 		for obj in self.allocated:
 			unique = obj in self.unique
@@ -61,10 +74,12 @@ class ObjectAnalysis(TypeDispatcher):
 				for field in obj:
 					field.rewriteAnnotation(unique=True)
 
+		self.fixupStoreGraph()
+
 	def process(self):
 		self.code.visitChildrenForced(self)
 		self.postProcess()
 
-def process(compiler, code):
-	oa = ObjectAnalysis(compiler, code)
+def process(compiler, prgm, code):
+	oa = ObjectAnalysis(compiler, prgm, code)
 	oa.process()

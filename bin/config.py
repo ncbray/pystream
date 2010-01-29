@@ -17,7 +17,7 @@ if True:
 		('tests', 'test_full'),
 		#('tests', 'test_canonical'),
 		#('tests', 'test_graphalgorithims'),
-		('tests', 'test_ipa'),
+		('tests', 'ipa'),
 	]
 
 testExclude = [

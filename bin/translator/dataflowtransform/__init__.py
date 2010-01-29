@@ -245,7 +245,7 @@ def evaluateContext(compiler, context):
 		context.prgm, context.code, context.exgraph = treetransform.process(compiler, context.code)
 
 	with compiler.console.scope('object analysis'):
-		objectanalysis.process(compiler, context.code)
+		objectanalysis.process(compiler, context.prgm, context.code)
 
 	with compiler.console.scope('field transform'):
 		newfieldtransform.process(compiler, context.prgm, context.code, context.exgraph)

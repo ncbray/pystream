@@ -196,7 +196,10 @@ class TreeResynthesis(object):
 
 			self.cache[obj] = xtype
 
+			assert xtype.obj.pythonType() is not list, "lists create non-uniqueness, currently unsupported."
+
 			graphobj = self.storeGraph.regionHint.object(xtype)
+			graphobj.rewriteAnnotation(preexisting=True, unique=True, final=True)
 
 			for fieldName, values in obj.field.iteritems():
 				graphfield = graphobj.field(fieldName, self.storeGraph.regionHint)
@@ -204,6 +207,8 @@ class TreeResynthesis(object):
 				for child in values:
 					childxtype = self.processObject(child)
 					graphfield.initializeType(childxtype)
+					graphfield.rewriteAnnotation(unique=True)
+
 
 			result = xtype
 		else:

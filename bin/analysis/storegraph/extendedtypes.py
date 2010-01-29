@@ -12,6 +12,9 @@ class ExtendedType(util.canonical.CanonicalObject):
 	def isExternal(self):
 		return False
 
+	def isUnique(self):
+		return False
+
 	def group(self):
 		return self
 
@@ -45,6 +48,9 @@ class ExternalObjectType(ExtendedObjectType):
 # Found in memory by the decompiler
 class ExistingObjectType(ExtendedObjectType):
 	__slots__ = ()
+
+	def isUnique(self):
+		return self.obj.isUnique()
 
 	def isExisting(self):
 		return True
@@ -113,6 +119,9 @@ class IndexedObjectType(ExtendedObjectType):
 		self.index = index
 		self.obj   = xtype.obj
 		self.setCanonical(xtype, index)
+
+	def isUnique(self):
+		return self.xtype.isUnique()
 
 	def __repr__(self):
 			return "<index %r %r>" % (self.index, self.xtype)

@@ -9,6 +9,7 @@ import types
 # Types are almost constant, however, by fiat.
 constantTypes = set((float, int, long, str, bool, type(None), type, types.CodeType))
 lexicalConstantTypes = set((float, int, long, str, bool, type(None)))
+poolableTypes = set((float, int, long, str, bool))
 
 class ProgramDecl(object):
 	__slots__ = ()
@@ -35,6 +36,9 @@ class AbstractObject(ProgramDecl):
 
 	def isLexicalConstant(self):
 		return False
+
+	def isUnique(self):
+		return self.isPreexisting() and self.pythonType() not in poolableTypes
 
 
 def isConstant(pyobj):

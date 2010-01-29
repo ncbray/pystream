@@ -70,6 +70,28 @@ def remapContextual(cdata, remap, translator=None):
 
 	return makeContextualAnnotation(cout)
 
-
 class Annotation(object):
 	__slots__ = ()
+
+	def rewrite(self, **kwds):
+		# Assume only one level of inheritance. (__slots__ gets masked otherwise)
+		slots = self.__slots__
+
+		# Make sure extraneous keywords were not given.
+		for name in kwds.iterkeys():
+			assert name in slots, name
+
+		# Fill in unspecified names with the old values
+		for name in slots:
+			if name not in kwds:
+				kwds[name] = getattr(self, name)
+
+		return type(self)(**kwds)
+
+	def __repr__(self):
+		parts = []
+		slots = self.__slots__
+		for name in slots:
+			parts.append("%s=%r" % (name, getattr(self, name)))
+
+		return "%s(%s)" % (type(self).__name__, ", ".join(parts))

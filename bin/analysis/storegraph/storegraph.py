@@ -1,5 +1,6 @@
 from . import extendedtypes
 from . import setmanager
+from . import annotations
 
 # HACK for assertions
 from language.python import program
@@ -183,6 +184,8 @@ class ObjectNode(MergableNode):
 		self.slots  = {}
 		self.leaks  = True
 
+		self.annotation = annotations.emptyObjectAnnotation
+
 	def merge(self, other):
 		self  = self.getForward()
 		other = other.getForward()
@@ -250,9 +253,11 @@ class ObjectNode(MergableNode):
 	def isObject(self):
 		return True
 
+	def rewriteAnnotation(self, **kwds):
+		self.annotation = self.annotation.rewrite(**kwds)
 
 class SlotNode(MergableNode):
-	__slots__ = 'object', 'slotName', 'region', 'refs', 'null', 'observers'
+	__slots__ = 'object', 'slotName', 'region', 'refs', 'null', 'observers', 'annotation'
 	def __init__(self, object, slot, region, refs):
 		MergableNode.__init__(self)
 
@@ -262,6 +267,8 @@ class SlotNode(MergableNode):
 		self.refs      = refs
 		self.null      = True
 		self.observers = []
+
+		self.annotation = annotations.emptyFieldAnnotation
 
 	def merge(self, other):
 		self  = self.getForward()
@@ -380,3 +387,6 @@ class SlotNode(MergableNode):
 
 	def isSlot(self):
 		return True
+
+	def rewriteAnnotation(self, **kwds):
+		self.annotation = self.annotation.rewrite(**kwds)

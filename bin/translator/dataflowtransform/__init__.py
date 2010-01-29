@@ -8,15 +8,13 @@ from  translator.dataflowtransform import correlatedanalysis
 from . import treetransform
 from . import poolanalysis
 from . import finalobjectanalysis
-from . import fieldtransform
+from . import fieldtransform, newfieldtransform, objectanalysis
 from analysis.cfgIR import dataflowsynthesis
 from . import glsltranslator
 
 from . iotransform import iotree
 from . import iotransform
 from . import bind
-
-import analysis.dataflowIR.convert
 
 from util.application import compilerexceptions
 
@@ -242,19 +240,38 @@ class DataflowTransformContext(object):
 		dumpreport.evaluate(self.compiler, self.prgm, self.code.codeName())
 
 
+def evaluateContext(compiler, context):
+	with compiler.console.scope('tree transform'):
+		context.prgm, context.code, context.exgraph = treetransform.process(compiler, context.code)
+
+	with compiler.console.scope('object analysis'):
+		objectanalysis.process(compiler, context.code)
+
+	with compiler.console.scope('field transform'):
+		newfieldtransform.process(compiler, context.prgm, context.code, context.exgraph)
+
 def evaluateCode(compiler, prgm, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, prgm, vscode)
 	fscontext = DataflowTransformContext(compiler, prgm, fscode)
 
-	with compiler.console.scope('tree transform'):
-		vscontext.prgm, vscontext.code, vscontext.exgraph = treetransform.process(compiler, vscontext.code)
-		fscontext.prgm, fscontext.code, fscontext.exgraph = treetransform.process(compiler, fscontext.code)
 
-	with compiler.console.scope('dataflow IR convert'):
-		vscontext.convert()
-		fscontext.convert()
+	with compiler.console.scope('vs'):
+		evaluateContext(compiler, vscontext)
 
-	if True:
+	with compiler.console.scope('fs'):
+		evaluateContext(compiler, fscontext)
+
+
+	with compiler.console.scope('debug dump'):
+		vscontext.prgmDump()
+		fscontext.prgmDump()
+
+	if False:
+		# The old dataflow path
+		with compiler.console.scope('dataflow IR convert'):
+			vscontext.convert()
+			fscontext.convert()
+
 		with compiler.console.scope('debug dump'):
 			analysis.dataflowIR.dump.evaluateDataflow(vscontext.dataflow, 'summaries\dataflow', vscontext.code.codeName())
 			vscontext.reconstructCFG()
@@ -264,7 +281,6 @@ def evaluateCode(compiler, prgm, vscode, fscode):
 			fscontext.reconstructCFG()
 			fscontext.prgmDump()
 
-	if True:
 		with compiler.console.scope('analyze'):
 			vscontext.analyze()
 			fscontext.analyze()

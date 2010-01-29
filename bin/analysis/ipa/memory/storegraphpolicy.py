@@ -4,9 +4,7 @@ class DefaultStoreGraphPolicy(object):
 	def __init__(self, storeGraph):
 		self.storeGraph = storeGraph
 
-	def fieldValues(self, analysis, slot):
-		obj, fieldtype, fieldname = slot.name
-
+	def fieldValues(self, analysis, slot, obj, fieldtype, fieldname):
 		sgregion = self.storeGraph.regionHint
 		sgobj = sgregion.object(obj.xtype)
 

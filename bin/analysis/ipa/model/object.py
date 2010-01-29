@@ -26,21 +26,20 @@ class Object(object):
 				self.dirty = True
 				context.dirtyObject(self)
 
-	def initDownwardField(self, slot):
+	def initDownwardField(self, slot, fieldtype, name):
 		for invoke in self.context.invokeIn.itervalues():
-			invoke.copyFieldFromSources(slot)
+			invoke.copyFieldFromSources(slot, self.name, fieldtype, name)
 
-	def initExistingField(self, slot):
-		obj, fieldtype, fieldname = slot.name
+	def initExistingField(self, slot, fieldtype, fieldname):
 		analysis  = self.context.analysis
 
 		if fieldtype == 'LowLevel' and fieldname.pyobj == 'type':
-			ao = analysis.existingPolicy.typeObject(analysis, obj)
+			ao = analysis.existingPolicy.typeObject(analysis, self.name)
 			values, null = [ao], False
-		elif obj.xtype.isExternal():
-			values, null = analysis.externalPolicy.fieldValues(analysis, slot)
+		elif self.name.xtype.isExternal():
+			values, null = analysis.externalPolicy.fieldValues(analysis, slot, self.name, fieldtype, fieldname)
 		else:
-			values, null = analysis.existingPolicy.fieldValues(analysis, slot)
+			values, null = analysis.existingPolicy.fieldValues(analysis, slot, self.name, fieldtype, fieldname)
 
 		if values: slot.updateValues(frozenset(values))
 		if null: slot.markNull()
@@ -56,11 +55,11 @@ class Object(object):
 			self.fields[key] = result
 
 			if self.context.external:
-				self.initExistingField(result)
+				self.initExistingField(result, fieldType, name)
 			elif self.name.qualifier is qualifiers.GLBL:
-				self.initExistingField(result) # HACK unsound
+				self.initExistingField(result, fieldType, name) # HACK unsound
 			elif self.name.qualifier is qualifiers.DN:
-				self.initDownwardField(result)
+				self.initDownwardField(result, fieldType, name)
 			else:
 				result.markNull()
 		else:

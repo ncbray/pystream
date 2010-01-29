@@ -95,9 +95,6 @@ class ConstraintNode(object):
 
 		self.critical = Critical(context, self)
 
-	def isField(self):
-		return isinstance(self.name, tuple)
-
 	def clearFlags(self):
 		self.flags = 0
 		self.flagsdiff = 0

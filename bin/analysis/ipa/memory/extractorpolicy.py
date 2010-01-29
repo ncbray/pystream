@@ -5,8 +5,7 @@ class ExtractorPolicy(object):
 	def __init__(self, extractor):
 		self.extractor = extractor
 
-	def fieldValues(self, analysis, slot):
-		ao, fieldtype, fieldname = slot.name
+	def fieldValues(self, analysis, slot, ao, fieldtype, fieldname):
 		obj = ao.xtype.obj
 
 		self.extractor.ensureLoaded(obj)

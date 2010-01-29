@@ -28,27 +28,26 @@ class Invocation(object):
 
 			# Copy fields already in use
 			region = self.dst.region
-			for slot in region.object(remapped).fields.itervalues():
-				self.copyFieldFromSourceObj(slot, obj)
+			for (fieldtype, name), slot in region.object(remapped).fields.iteritems():
+				self.copyFieldFromSourceObj(slot, obj, fieldtype, name)
 		else:
 			remapped = self.objForward[obj]
 
 		return remapped
 
-	def copyFieldFromSourceObj(self, slot, prevobj):
-		_obj, fieldtype, name = slot.name
+	def copyFieldFromSourceObj(self, slot, prevobj, fieldtype, name):
+		assert isinstance(fieldtype, str), fieldtype
 		prevfield = self.src.field(prevobj, fieldtype, name)
 		self.down(prevfield, slot, fieldTransfer=True)
 
-	def copyFieldFromSources(self, slot):
-		obj, _fieldtype, _name = slot.name
+	def copyFieldFromSources(self, slot, obj, fieldtype, name):
 		assert obj.isObjectName(), obj
 
 		prev = self.objReverse.get(obj)
 		if not prev: return
 
 		for prevobj in prev:
-			self.copyFieldFromSourceObj(slot, prevobj)
+			self.copyFieldFromSourceObj(slot, prevobj, fieldtype, name)
 
 	def down(self, srcslot, dstslot, fieldTransfer=False):
 		assert srcslot.context is self.src

@@ -2,10 +2,14 @@ from util.typedispatch import *
 from language.python import ast
 from language.python.shaderprogram import VSContext, FSContext
 from optimization import rewrite
-from optimization import loadelimination
+from optimization import loadelimination, simplify
 
 from . import common
+
 from .. import intrinsics
+
+
+from . shaderdescription import *
 
 class FindReturns(TypeDispatcher):
 
@@ -86,7 +90,8 @@ class OutputFlattener(object):
 		return lcl
 
 	def handleTree(self, root):
-		refs = root.annotation.references.merged
+		slot = root.lcl
+		refs = slot.annotation.references.merged
 
 		assert refs
 
@@ -97,17 +102,17 @@ class OutputFlattener(object):
 
 		for fieldName in refs[0].slots.iterkeys():
 			if not intrinsics.isIntrinsicField(fieldName):
-				fieldroot = self.generateLoad(root, fieldName, refs)
+				fieldslot = self.generateLoad(slot, fieldName, refs)
+				fieldroot = root.field(fieldName, fieldslot)
 				self.handleTree(fieldroot)
+
+
 
 	def returnNone(self):
 		self.statements.append(ast.Return([self.generateExisting(self.compiler.extractor.getObject(None))]))
 
-	def processReturn(self, ret):
-		self.statements = []
-
-		if self.fs:
-			slotName = self.compiler.slots.uniqueSlotName(FSContext.colors)
+	def loadFromContext(self, contextType, name):
+			slotName = self.compiler.slots.uniqueSlotName(getattr(contextType, name))
 			slotName = self.compiler.extractor.getObject(slotName)
 
 			canonical = self.prgm.storeGraph.canonical
@@ -117,14 +122,43 @@ class OutputFlattener(object):
 			refs = expr.annotation.references.merged
 
 			outputslot = self.generateLoad(expr, fieldName, refs)
+
+			return outputslot
+
+	def makeTree(self, slot):
+		root = TreeNode(slot)
+		self.handleTree(root)
+		return root
+
+	def processReturn(self, ret):
+		self.statements = []
+
+		if self.fs:
+			outputslot = self.loadFromContext(FSContext, 'colors')
 		else:
 			assert len(ret.exprs) == 1
 			outputslot = ret.exprs[0]
 
+		root = self.makeTree(outputslot)
+		outtuple = root.extractTuple()
 
-		print "OUTSLOT", outputslot
+		if self.fs:
+			outdesc = FSOutputDescription()
+			outdesc.colors = outtuple
 
-		self.handleTree(outputslot)
+			try:
+				depthslot = self.loadFromContext(FSContext, 'depth')
+				outdesc.depth = self.makeTree(depthslot)
+			except:
+				outdesc.depth = None
+
+		else:
+			outdesc = VSOutputDescription()
+			outdesc.varying = outtuple
+			posslot = self.loadFromContext(VSContext, 'position')
+
+			outdesc.position = self.makeTree(posslot)
+
 
 		self.returnNone()
 
@@ -133,7 +167,10 @@ class OutputFlattener(object):
 			print stmt
 		print
 
-		return self.statements
+
+		desc = ShaderDescription()
+		desc.outputs = outdesc
+		return desc, self.statements
 
 	def process(self):
 		returns = FindReturns().process(self.code)
@@ -143,8 +180,11 @@ class OutputFlattener(object):
 		rewrites = {}
 
 		for ret in returns:
-			rewrites[ret] = self.processReturn(ret)
+			desc, rewrites[ret] = self.processReturn(ret)
 
+		self.outputAnchors = desc.outputs.collectUsed()
+
+		print self.outputAnchors
 
 		rewrite.rewrite(self.compiler, self.code, rewrites)
 
@@ -153,9 +193,10 @@ class OutputFlattener(object):
 		# HACK
 		loadelimination.evaluateCode(self.compiler, self.prgm, self.code, simplify=False)
 
-		# TODO load elimination / simplify?
+		simplify.evaluateCode(self.compiler, self.prgm, self.code, outputAnchors=self.outputAnchors)
 
+		return desc
 
 def process(compiler, prgm, code, fs):
 	of = OutputFlattener(compiler, prgm, code, fs)
-	of.process()
+	return of.process()

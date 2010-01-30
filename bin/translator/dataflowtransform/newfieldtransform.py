@@ -3,7 +3,7 @@ from language.python import ast
 from .. import intrinsics
 from PADS.UnionFind import UnionFind
 
-from optimization import rewrite
+from optimization import rewrite, simplify
 
 from . import common
 
@@ -168,6 +168,13 @@ class FieldTransformAnalysis(TypeDispatcher):
 		self.postProcess()
 
 
-def process(compiler, prgm, code, exgraph):
+def process(compiler, context):
+	prgm = context.prgm
+	code = context.code
+	exgraph = context.exgraph
 	fta = FieldTransformAnalysis(compiler, prgm, code, exgraph)
 	fta.process()
+
+	context.shaderdesc.fields = fta.fields
+
+	simplify.evaluateCode(compiler, prgm, code, outputAnchors=context.shaderdesc.outputs.collectUsed())

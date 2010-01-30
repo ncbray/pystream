@@ -14,7 +14,7 @@ from language.python import ast
 #
 
 
-def evaluateCode(compiler, prgm, node):
+def evaluateCode(compiler, prgm, node, outputAnchors=None):
 	assert node.isCode(), type(node)
 
 	try:
@@ -22,7 +22,7 @@ def evaluateCode(compiler, prgm, node):
 
 		# Can't process arbitrary abstract code nodes.
 		if node.isStandardCode():
-			dce.evaluateCode(compiler, node)
+			dce.evaluateCode(compiler, node, outputAnchors)
 
 	except InternalError:
 		print

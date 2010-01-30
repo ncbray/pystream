@@ -245,13 +245,13 @@ def evaluateContext(compiler, context, isFS):
 		context.prgm, context.code, context.exgraph = treetransform.process(compiler, context.code)
 
 	with compiler.console.scope('flatten output'):
-		flattenoutput.process(compiler, context.prgm, context.code, isFS)
+		context.shaderdesc = flattenoutput.process(compiler, context.prgm, context.code, isFS)
 
 	with compiler.console.scope('object analysis'):
 		objectanalysis.process(compiler, context.prgm, context.code)
 
 	with compiler.console.scope('field transform'):
-		newfieldtransform.process(compiler, context.prgm, context.code, context.exgraph)
+		newfieldtransform.process(compiler, context)
 
 def evaluateCode(compiler, prgm, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, prgm, vscode)

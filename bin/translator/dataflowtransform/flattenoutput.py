@@ -1,0 +1,161 @@
+from util.typedispatch import *
+from language.python import ast
+from language.python.shaderprogram import VSContext, FSContext
+from optimization import rewrite
+from optimization import loadelimination
+
+from . import common
+from .. import intrinsics
+
+class FindReturns(TypeDispatcher):
+
+	@dispatch(ast.leafTypes, ast.CodeParameters, ast.Local, ast.Existing, ast.Assign, ast.Discard, ast.Store)
+	def visitLeaf(self, node):
+		pass
+
+	@dispatch(ast.Suite, ast.Switch, ast.TypeSwitch, ast.TypeSwitchCase)
+	def visitOK(self, node):
+		node.visitChildren(self)
+
+	@dispatch(ast.Return)
+	def visitReturn(self, node):
+		self.returns.append(node)
+
+	def process(self, code):
+		self.returns = []
+		code.visitChildrenForced(self)
+		return self.returns
+
+class OutputFlattener(object):
+	def __init__(self, compiler, prgm, code, fs):
+		self.compiler = compiler
+		self.prgm = prgm
+		self.code = code
+		self.fs   = fs
+
+	def generateExisting(self, object):
+		ex = ast.Existing(object)
+
+		region = self.prgm.storeGraph.regionHint
+		xtype = self.prgm.storeGraph.canonical.existingType(object)
+		obj = region.object(xtype)
+
+		refs = common.annotationFromValues(self.code, (obj,))
+		ex.rewriteAnnotation(references=refs)
+
+		return ex
+
+
+	def generateTypeLoad(self, expr, fieldName, refs):
+		pt = refs[0].xtype.obj.pythonType()
+
+		for ref in refs[1:]:
+			assert ref.xtype.obj.pythonType is pt, "Temporary Limitation"
+
+		ex = self.generateExisting(self.compiler.extractor.getObject(pt))
+
+		name = common.nameForField(self.compiler, fieldName)
+
+		lcl = ast.Local(name)
+		lcl.annotation = ex.annotation
+
+		self.statements.append(ast.Assign(ex, [lcl]))
+
+		return lcl
+
+	def generateLoad(self, expr, fieldName, refs):
+		if fieldName.type == 'LowLevel' and fieldName.name.pyobj == 'type':
+			# This a kludge until IPA works.
+			return self.generateTypeLoad(expr, fieldName, refs)
+
+		fields = []
+		for ref in refs:
+			fields.append(ref.knownField(fieldName))
+
+		lcl = common.localForFieldSlot(self.compiler, self.code, fields[0], fields)
+
+		exname = self.generateExisting(fieldName.name)
+		load = ast.Load(expr, fieldName.type, exname)
+
+		empty = common.emptyAnnotation(self.code)
+
+		load.rewriteAnnotation(allocates=empty, modifies=empty, reads=common.annotationFromValues(self.code, fields))
+
+		self.statements.append(ast.Assign(load, [lcl]))
+
+		return lcl
+
+	def handleTree(self, root):
+		refs = root.annotation.references.merged
+
+		assert refs
+
+		if len(refs) > 1:
+			fields = frozenset(refs[0].slots.iterkeys())
+			for ref in refs[1:]:
+				assert fields == frozenset(ref.slots.iterkeys()), "Output tree is not certain"
+
+		for fieldName in refs[0].slots.iterkeys():
+			if not intrinsics.isIntrinsicField(fieldName):
+				fieldroot = self.generateLoad(root, fieldName, refs)
+				self.handleTree(fieldroot)
+
+	def returnNone(self):
+		self.statements.append(ast.Return([self.generateExisting(self.compiler.extractor.getObject(None))]))
+
+	def processReturn(self, ret):
+		self.statements = []
+
+		if self.fs:
+			slotName = self.compiler.slots.uniqueSlotName(FSContext.colors)
+			slotName = self.compiler.extractor.getObject(slotName)
+
+			canonical = self.prgm.storeGraph.canonical
+			fieldName = canonical.fieldName('Attribute', slotName)
+
+			expr = self.code.codeparameters.params[1]
+			refs = expr.annotation.references.merged
+
+			outputslot = self.generateLoad(expr, fieldName, refs)
+		else:
+			assert len(ret.exprs) == 1
+			outputslot = ret.exprs[0]
+
+
+		print "OUTSLOT", outputslot
+
+		self.handleTree(outputslot)
+
+		self.returnNone()
+
+		print
+		for stmt in self.statements:
+			print stmt
+		print
+
+		return self.statements
+
+	def process(self):
+		returns = FindReturns().process(self.code)
+
+		assert len(returns) == 1, "Temporary Limitation: only one return per shader"
+
+		rewrites = {}
+
+		for ret in returns:
+			rewrites[ret] = self.processReturn(ret)
+
+
+		rewrite.rewrite(self.compiler, self.code, rewrites)
+
+		loadelimination.evaluateCode(self.compiler, self.prgm, self.code, simplify=False)
+
+		# HACK
+		loadelimination.evaluateCode(self.compiler, self.prgm, self.code, simplify=False)
+
+		# TODO load elimination / simplify?
+
+
+def process(compiler, prgm, code, fs):
+	of = OutputFlattener(compiler, prgm, code, fs)
+	of.process()

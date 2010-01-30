@@ -4,7 +4,7 @@ from analysis.numbering.readmodify import FindReadModify
 from analysis.numbering.dominance import MakeForwardDominance
 from analysis.numbering.ssa import ForwardESSA
 
-from optimization.rewrite import rewriteAndSimplify
+from optimization import rewrite
 
 # For debugging
 from util.io.xmloutput import XMLOutput
@@ -139,15 +139,19 @@ class RedundantLoadEliminator(object):
 						self.eliminated += 1
 		return self.replace
 
-	def processCode(self, code):
+	def processCode(self, code, simplify):
 		signatures = self.generateSignatures(code)
 		replace = self.generateReplacements(signatures)
 
-		rewriteAndSimplify(self.compiler, self.prgm, code, replace)
+		if simplify:
+			rewrite.rewriteAndSimplify(self.compiler, self.prgm, code, replace)
+		else:
+			rewrite.rewrite(self.compiler, code, replace)
+
 		return self.eliminated
 
 
-def evaluateCode(compiler, prgm, code):
+def evaluateCode(compiler, prgm, code, simplify=True):
 	rm = FindReadModify().processCode(code)
 
 	dom = MakeForwardDominance().processCode(code)
@@ -156,7 +160,7 @@ def evaluateCode(compiler, prgm, code):
 	fessa.processCode(code)
 
 	rle = RedundantLoadEliminator(compiler, prgm, fessa.readLUT, fessa.writeLUT, dom)
-	eliminated = rle.processCode(code)
+	eliminated = rle.processCode(code, simplify)
 	if eliminated:
 		print '\t', code, eliminated
 

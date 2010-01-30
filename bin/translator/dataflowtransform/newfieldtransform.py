@@ -5,7 +5,7 @@ from PADS.UnionFind import UnionFind
 
 from optimization import rewrite
 
-from util.asttools import annotation
+from . import common
 
 class FieldTransformAnalysis(TypeDispatcher):
 	def __init__(self, compiler, prgm, code, exgraph):
@@ -73,37 +73,8 @@ class FieldTransformAnalysis(TypeDispatcher):
 
 	### Post processing ###
 
-	def makeLocalForGroup(self, groupName, group):
-		# Make up a name, based on an arbitrary field
-		field = groupName.slotName
-		name = field.name.pyobj
-
-		# Create a somewhat meaningful name for this local
-		if field.type == 'Attribute':
-			descriptor = self.compiler.slots.reverse[name]
-			originalName = descriptor.__name__
-		elif field.type == 'Array':
-			originalName = 'array_%d' % name
-		elif field.type == 'LowLevel':
-			originalName = name
-
-		else:
-			assert False, field
-
-		# Create a conservative annotation
-		refs = set()
-		for field in group:
-			refs.update(field)
-		refs = annotation.annotationSet(refs)
-		refsAnnotation = annotation.ContextualAnnotation(refs, tuple([refs for context in self.code.annotation.contexts]))
-
-		# Create the new local
-		lcl = ast.Local(originalName)
-		lcl.rewriteAnnotation(references=refsAnnotation)
-		return lcl
-
 	def transform(self, name, group):
-		lcl = self.makeLocalForGroup(name, group)
+		lcl = common.localForFieldSlot(self.compiler, self.code, name, group)
 
 		for field in group:
 			self.remap[field] = lcl
@@ -136,6 +107,9 @@ class FieldTransformAnalysis(TypeDispatcher):
 			self.transform(name, group)
 		else:
 			print "-", group
+			print unique, exclusive
+			print [objfield.object.annotation.unique for objfield in group]
+			print
 
 
 	def fieldGroups(self):

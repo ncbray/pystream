@@ -5,7 +5,7 @@ from analysis.dataflowIR.transform import dce
 
 from  translator.dataflowtransform import correlatedanalysis
 
-from . import treetransform
+from . import treetransform, flattenoutput
 from . import poolanalysis
 from . import finalobjectanalysis
 from . import fieldtransform, newfieldtransform, objectanalysis
@@ -240,9 +240,12 @@ class DataflowTransformContext(object):
 		dumpreport.evaluate(self.compiler, self.prgm, self.code.codeName())
 
 
-def evaluateContext(compiler, context):
+def evaluateContext(compiler, context, isFS):
 	with compiler.console.scope('tree transform'):
 		context.prgm, context.code, context.exgraph = treetransform.process(compiler, context.code)
+
+	with compiler.console.scope('flatten output'):
+		flattenoutput.process(compiler, context.prgm, context.code, isFS)
 
 	with compiler.console.scope('object analysis'):
 		objectanalysis.process(compiler, context.prgm, context.code)
@@ -256,11 +259,10 @@ def evaluateCode(compiler, prgm, vscode, fscode):
 
 
 	with compiler.console.scope('vs'):
-		evaluateContext(compiler, vscontext)
+		evaluateContext(compiler, vscontext, False)
 
 	with compiler.console.scope('fs'):
-		evaluateContext(compiler, fscontext)
-
+		evaluateContext(compiler, fscontext, True)
 
 	with compiler.console.scope('debug dump'):
 		vscontext.prgmDump()

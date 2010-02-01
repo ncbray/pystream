@@ -15,6 +15,7 @@ from . import glsltranslator
 from . iotransform import iotree
 from . import iotransform
 from . import bind
+from . import shaderdescription
 
 from util.application import compilerexceptions
 
@@ -242,7 +243,8 @@ class DataflowTransformContext(object):
 
 def evaluateContext(compiler, context, isFS):
 	with compiler.console.scope('tree transform'):
-		context.prgm, context.code, context.exgraph = treetransform.process(compiler, context.code)
+		context.prgm, context.code, context.exgraph, context.objectInfo = treetransform.process(compiler, context.code)
+		context.originalParams = context.code.codeparameters.clone()
 
 	with compiler.console.scope('flatten output'):
 		context.shaderdesc = flattenoutput.process(compiler, context.prgm, context.code, isFS)
@@ -263,6 +265,9 @@ def evaluateCode(compiler, prgm, vscode, fscode):
 
 	with compiler.console.scope('fs'):
 		evaluateContext(compiler, fscontext, True)
+
+	shaderprgm = shaderdescription.ProgramDescription(vscontext, fscontext)
+	shaderprgm.link()
 
 	with compiler.console.scope('debug dump'):
 		vscontext.prgmDump()

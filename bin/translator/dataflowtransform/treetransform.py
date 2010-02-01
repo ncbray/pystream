@@ -37,6 +37,7 @@ class ObjectInfo(object):
 		self.uid     = uid
 		self.objects = []
 		self.field   = xcollections.defaultdict(set)
+		self.result  = None
 
 	@property
 	def path(self):
@@ -237,7 +238,7 @@ class TreeResynthesis(object):
 					graphfield.initializeType(childxtype)
 					graphfield.rewriteAnnotation(unique=True)
 
-
+			obj.result = xtype
 			result = xtype
 		else:
 			result = self.cache[obj]
@@ -315,4 +316,4 @@ def process(compiler, code):
 	# The reanalysis will clone the code and create a new copy
 	newcode = prgm.interface.entryPoint[0].code
 
-	return resynthesis.shaderprgm, newcode, exgraph
+	return resynthesis.shaderprgm, newcode, exgraph, analysis.objectInfo

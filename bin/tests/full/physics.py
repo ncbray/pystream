@@ -202,6 +202,19 @@ class Fog(object):
 		return self.color.mix(color, math.exp(position.length()*-self.density))
 
 
+class TangentSpaceBasis(object):
+	__slots__ = 'normal', 'tangent', 'bitangent'
+
+	def __init__(self, normal, tangent, bitangent):
+		self.normal    = normal
+		self.tangent   = tangent
+		self.bitangent = bitangent
+
+
+def transformNormal(m, n):
+	return (m*vec4(n, 0.0)).xyz
+
+
 class Shader(object):
 	__slots__ = ['objectToWorld', 'worldToCamera', 'projection',
 				'light', 'ambient',
@@ -239,22 +252,21 @@ class Shader(object):
 		trans      = self.worldToCamera*self.objectToWorld
 		newpos     = trans*pos
 
-		newnormal  = (trans*vec4(normal, 0.0)).xyz
-
-		newtangent = (trans*vec4(tangent.xyz, 0.0)).xyz
+		newnormal  = transformNormal(trans, normal)
+		newtangent = transformNormal(trans, tangent.xyz)
 		#newtangent = vec4(newtangent, tangent.w)
+		newbitangent  = transformNormal(trans, bitangent)
 
-		newbitangent  = (trans*vec4(bitangent, 0.0)).xyz
+		tsbasis = TangentSpaceBasis(newnormal, newtangent, newbitangent)
 
 		context.position = self.projection*newpos
 
-		return newpos.xyz, newnormal, newtangent, newbitangent, texCoord
+		return newpos.xyz, tsbasis, texCoord
 
-	def shadeFragment(self, context, pos, normal, tangent, bitangent, texCoord):
-		n  = normal.normalize()
-
-		t      = tangent.xyz.normalize()
-		b      = bitangent.normalize()
+	def shadeFragment(self, context, pos, tsbasis, texCoord):
+		n  = tsbasis.normal.normalize()
+		t  = tsbasis.tangent.normalize()
+		b  = tsbasis.bitangent.normalize()
 		#btsign = tangent.w
 		#b      = (n.cross(t)*btsign).normalize()
 
@@ -265,7 +277,6 @@ class Shader(object):
 					  tsn.x*t.y + tsn.y*b.y + tsn.z*n.y,
 					  tsn.x*t.z + tsn.y*b.z + tsn.z*n.z)
 
-		# Correct errors from the texture normal
 		normal = normal.normalize()
 
 		surface = self.material.surface(pos, normal)

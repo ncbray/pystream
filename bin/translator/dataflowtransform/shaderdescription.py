@@ -1,5 +1,76 @@
 from .. import intrinsics
 
+class ProgramDescription(object):
+	__slots__ = 'vscontext', 'fscontext'
+
+	def __init__(self, vscontext, fscontext):
+		self.vscontext = vscontext
+		self.fscontext = fscontext
+
+
+	def handleOutputToLocal(self, tree, lcl, mapping):
+		if tree.used:
+			assert lcl not in mapping
+			mapping[lcl] = tree.lcl
+
+		refs = lcl.annotation.references.merged
+		self.traverse(tree, refs, mapping)
+
+	def handleOutputToField(self, tree, field, mapping):
+		if tree.used:
+			assert field not in mapping
+			mapping[field] = tree.lcl
+
+		refs = field
+		self.traverse(tree, refs, mapping)
+
+
+	def traverse(self, tree, refs, mapping):
+		for fieldName, child in tree.fields.iteritems():
+			for obj in refs:
+				if fieldName in obj.slots:
+					self.handleOutputToField(child, obj.slots[fieldName], mapping)
+
+	def link(self):
+		self.linkUniform()
+		self.linkVarying()
+
+	def linkUniform(self):
+		# Generate uniform <=> uniform mappings
+		vskeys = set(self.vscontext.objectInfo.iterkeys())
+		fskeys = set(self.fscontext.objectInfo.iterkeys())
+		common = vskeys.intersection(fskeys)
+
+		vs2fs = {}
+		fs2vs = {}
+
+		for key in common:
+			vsxtype = self.vscontext.objectInfo[key].result
+			fsxtype = self.fscontext.objectInfo[key].result
+			print key
+			print vsxtype
+			print fsxtype
+			print
+
+			vs2fs[vsxtype] = fsxtype
+			fs2vs[fsxtype] = vsxtype
+
+	def linkVarying(self):
+		# Generate fs input => vs output mappings
+		# This is a reverse mapping, as that makes subsequent operations easier
+
+		vsoutputs = self.vscontext.shaderdesc.outputs.varying
+		fsparams = self.fscontext.originalParams.params[2:]
+
+		assert len(vsoutputs) == len(fsparams)
+
+		mapping = {}
+
+		for output, param in zip(vsoutputs, fsparams):
+			self.handleOutputToLocal(output, param, mapping)
+
+
+
 class ShaderDescription(object):
 	__slots__ = 'fields', 'outputs'
 

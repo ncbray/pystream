@@ -8,7 +8,7 @@ from  translator.dataflowtransform import correlatedanalysis
 from . import treetransform, flattenoutput
 from . import poolanalysis
 from . import finalobjectanalysis
-from . import fieldtransform, newfieldtransform, objectanalysis
+from . import fieldtransform, newfieldtransform, objectanalysis, newpoolanalysis
 from analysis.cfgIR import dataflowsynthesis
 from . import glsltranslator
 
@@ -243,12 +243,6 @@ class DataflowTransformContext(object):
 	def copyOriginalParams(self):
 		self.originalParams = self.code.codeparameters.clone()
 
-def evaluateContext(compiler, context, isFS):
-	with compiler.console.scope('object analysis'):
-		objectanalysis.process(compiler, context.prgm, context.code)
-
-	with compiler.console.scope('field transform'):
-		newfieldtransform.process(compiler, context)
 
 def evaluateShaderProgram(compiler, vscontext, fscontext):
 	with compiler.console.scope('tree transform'):
@@ -275,6 +269,9 @@ def evaluateShaderProgram(compiler, vscontext, fscontext):
 
 	with compiler.console.scope('field transform'):
 		newfieldtransform.process(compiler, prgm, exgraph, vscontext, fscontext)
+
+	with compiler.console.scope('pool analysis'):
+		newpoolanalysis.process(compiler, prgm, exgraph, vscontext, fscontext)
 
 	shaderprgm = shaderdescription.ProgramDescription(prgm, vscontext, fscontext)
 	shaderprgm.link()

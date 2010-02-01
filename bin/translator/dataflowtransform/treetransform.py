@@ -11,6 +11,9 @@ from analysis import cpa, lifetimeanalysis
 from application.program import Program
 
 class ReadCollector(TypeDispatcher):
+	def __init__(self):
+		self.reads = set()
+
 	@dispatch(ast.leafTypes, ast.CodeParameters, ast.Local, ast.Existing, ast.Return)
 	def visitLeaf(self, node):
 		pass
@@ -28,9 +31,7 @@ class ReadCollector(TypeDispatcher):
 		node.visitChildren(self)
 
 	def process(self, code):
-		self.reads = set()
 		code.visitChildrenForced(self)
-		return self.reads
 
 class ObjectInfo(object):
 	def __init__(self, uid):
@@ -53,8 +54,9 @@ class ObjectInfo(object):
 
 
 class TreeAnalysis(object):
-	def __init__(self, compiler):
+	def __init__(self, compiler, reads):
 		self.compiler = compiler
+		self.reads = reads
 
 		self.objectInfo = xcollections.lazydict(lambda obj:  ObjectInfo(obj))
 		self.root = set()
@@ -161,8 +163,6 @@ class TreeAnalysis(object):
 	def process(self, code):
 		codeParams = code.codeParameters()
 
-		self.reads = ReadCollector().process(code)
-
 		selfparam = (codeParams.selfparam, self.handleParam(codeParams.selfparam))
 
 
@@ -203,7 +203,15 @@ class TreeResynthesis(object):
 	def __init__(self, compiler, analysis):
 		self.compiler = compiler
 		self.analysis = analysis
+
+		self.canonical  = canonicalobjects.CanonicalObjects()
+		self.storeGraph = storegraph.StoreGraph(self.compiler.extractor, self.canonical)
+
 		self.shaderprgm = Program()
+		self.shaderprgm.storeGraph = self.storeGraph
+		self.shaderprgm.entryPoints = []
+
+		self.roots = []
 
 		self.cache = {}
 
@@ -270,13 +278,7 @@ class TreeResynthesis(object):
 	def process(self, code, args):
 		self.count = self.countInstances()
 
-		self.canonical  = canonicalobjects.CanonicalObjects()
-		self.storeGraph = storegraph.StoreGraph(self.compiler.extractor, self.canonical)
-
-		self.shaderprgm.storeGraph = self.storeGraph
-
 		self.code  = code
-		self.roots = []
 		argobjs = args.map(self.translateParam)
 
 		print "="*60
@@ -290,21 +292,28 @@ class TreeResynthesis(object):
 		# Create an entry point
 		# The arguments for this entry points are bogus.
 		ep = self.shaderprgm.interface.createEntryPoint(code, None, None, None, None, None, None)
-		self.shaderprgm.entryPoints = []
 		self.shaderprgm.entryPoints.append((ep, argobjs))
 
+	def buildExGraph(self):
 		return exclusiongraph.build(self.roots, lambda node: iter(node), lambda node: node.isSlot())
 
 
-def process(compiler, code):
+def process(compiler, *codeASTs):
 	with compiler.console.scope('analysis'):
-		analysis = TreeAnalysis(compiler)
-		args = analysis.process(code)
-		#analysis.dump()
+		rc = ReadCollector()
+		for code in codeASTs:
+			rc.process(code)
+
+		analysis = TreeAnalysis(compiler, rc.reads)
+		argsList = [(code, analysis.process(code)) for code in codeASTs]
 
 	with compiler.console.scope('resynthesis'):
 		resynthesis = TreeResynthesis(compiler, analysis)
-		exgraph = resynthesis.process(code, args)
+
+		for code, args in argsList:
+			resynthesis.process(code, args)
+
+		exgraph = resynthesis.buildExGraph()
 
 	prgm = resynthesis.shaderprgm
 
@@ -314,6 +323,6 @@ def process(compiler, code):
 
 
 	# The reanalysis will clone the code and create a new copy
-	newcode = prgm.interface.entryPoint[0].code
+	newcode = [ep.code for ep in prgm.interface.entryPoint]
 
 	return resynthesis.shaderprgm, newcode, exgraph, analysis.objectInfo

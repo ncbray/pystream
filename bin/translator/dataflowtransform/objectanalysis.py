@@ -3,10 +3,9 @@ from language.python import ast
 from .. import intrinsics
 
 class ObjectAnalysis(TypeDispatcher):
-	def __init__(self, compiler, prgm, code):
+	def __init__(self, compiler, prgm):
 		self.compiler = compiler
 		self.prgm = prgm
-		self.code = code
 
 		self.allocated = set()
 		self.nonfinal  = set()
@@ -76,10 +75,12 @@ class ObjectAnalysis(TypeDispatcher):
 
 		self.fixupStoreGraph()
 
-	def process(self):
-		self.code.visitChildrenForced(self)
-		self.postProcess()
+	def process(self, code):
+		code.visitChildrenForced(self)
 
-def process(compiler, prgm, code):
-	oa = ObjectAnalysis(compiler, prgm, code)
-	oa.process()
+def process(compiler, prgm, *codeASTs):
+	oa = ObjectAnalysis(compiler, prgm)
+	for code in codeASTs:
+		oa.process(code)
+
+	oa.postProcess()

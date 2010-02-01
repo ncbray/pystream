@@ -1,9 +1,10 @@
 from .. import intrinsics
 
 class ProgramDescription(object):
-	__slots__ = 'vscontext', 'fscontext'
+	__slots__ = 'prgm', 'vscontext', 'fscontext'
 
-	def __init__(self, vscontext, fscontext):
+	def __init__(self, prgm, vscontext, fscontext):
+		self.prgm = prgm
 		self.vscontext = vscontext
 		self.fscontext = fscontext
 
@@ -32,28 +33,28 @@ class ProgramDescription(object):
 					self.handleOutputToField(child, obj.slots[fieldName], mapping)
 
 	def link(self):
-		self.linkUniform()
+		#self.linkUniform()
 		self.linkVarying()
 
-	def linkUniform(self):
-		# Generate uniform <=> uniform mappings
-		vskeys = set(self.vscontext.objectInfo.iterkeys())
-		fskeys = set(self.fscontext.objectInfo.iterkeys())
-		common = vskeys.intersection(fskeys)
-
-		vs2fs = {}
-		fs2vs = {}
-
-		for key in common:
-			vsxtype = self.vscontext.objectInfo[key].result
-			fsxtype = self.fscontext.objectInfo[key].result
-			print key
-			print vsxtype
-			print fsxtype
-			print
-
-			vs2fs[vsxtype] = fsxtype
-			fs2vs[fsxtype] = vsxtype
+#	def linkUniform(self):
+#		# Generate uniform <=> uniform mappings
+#		vskeys = set(self.vscontext.objectInfo.iterkeys())
+#		fskeys = set(self.fscontext.objectInfo.iterkeys())
+#		common = vskeys.intersection(fskeys)
+#
+#		vs2fs = {}
+#		fs2vs = {}
+#
+#		for key in common:
+#			vsxtype = self.vscontext.objectInfo[key].result
+#			fsxtype = self.fscontext.objectInfo[key].result
+#			print key
+#			print vsxtype
+#			print fsxtype
+#			print
+#
+#			vs2fs[vsxtype] = fsxtype
+#			fs2vs[fsxtype] = vsxtype
 
 	def linkVarying(self):
 		# Generate fs input => vs output mappings

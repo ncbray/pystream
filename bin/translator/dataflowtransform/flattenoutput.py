@@ -188,10 +188,10 @@ class OutputFlattener(object):
 
 		rewrite.rewrite(self.compiler, self.code, rewrites)
 
-		loadelimination.evaluateCode(self.compiler, self.prgm, self.code, simplify=False)
 
 		# HACK
-		loadelimination.evaluateCode(self.compiler, self.prgm, self.code, simplify=False)
+		while loadelimination.evaluateCode(self.compiler, self.prgm, self.code, simplify=False):
+			pass
 
 		simplify.evaluateCode(self.compiler, self.prgm, self.code, outputAnchors=self.outputAnchors)
 

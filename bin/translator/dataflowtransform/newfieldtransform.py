@@ -8,11 +8,10 @@ from optimization import rewrite, simplify
 from . import common
 
 class FieldTransformAnalysis(TypeDispatcher):
-	def __init__(self, compiler, prgm, code, exgraph):
+	def __init__(self, compiler, prgm, exgraph):
 		TypeDispatcher.__init__(self)
 		self.compiler = compiler
 		self.prgm = prgm
-		self.code = code
 
 		self.compatable = UnionFind()
 
@@ -47,8 +46,7 @@ class FieldTransformAnalysis(TypeDispatcher):
 
 	@dispatch(ast.Allocate)
 	def visitAllocate(self, node, stmt):
-		print node.annotation.allocates.merged
-
+		pass
 
 	@dispatch(ast.DirectCall)
 	def visitOp(self, node, stmt):
@@ -60,7 +58,7 @@ class FieldTransformAnalysis(TypeDispatcher):
 			reads  = node.annotation.reads.merged
 
 			self.reads(reads)
-			self.loads.append(node)
+			self.loads.append((self.code, node))
 
 
 	@dispatch(ast.Store)
@@ -69,48 +67,64 @@ class FieldTransformAnalysis(TypeDispatcher):
 			modifies  = node.annotation.modifies.merged
 
 			self.modifies(modifies)
-			self.stores.append(node)
+			self.stores.append((self.code, node))
 
 	### Post processing ###
 
-	def transform(self, name, group):
-		lcl = common.localForFieldSlot(self.compiler, self.code, name, group)
+	def transform(self, code, name, group):
+		lcl = common.localForFieldSlot(self.compiler, code, name, group)
 
 		for field in group:
 			self.remap[field] = lcl
 
+
+	def generateRewrites(self, code, name, group):
+		lcl = self.remap[name]
+
 		isLoaded = False
 
-		for load in self.loadLUT.get(name, ()):
+		for load in self.loadLUT.get((code, name), ()):
 			self.rewrites[load] = lcl
 			isLoaded = True
 
 		storeCount = 0
-		for store in self.storeLUT.get(name, ()):
+		for store in self.storeLUT.get((code, name), ()):
 			self.rewrites[store] = ast.Assign(store.value, [lcl])
 			storeCount += 1
 
 		assert storeCount == 0 or storeCount == 1 and not isLoaded, "Field transform broke SSA form"
 
-	def processGroup(self, name, group):
-		unique = True
+	def processGroup(self, code, name, group):
+		self.transform(code, name, group)
+		self.generateRewrites(code, name, group)
 
-		for objfield in group:
-			# The field is only unique if the object containing it is unique and
-			# the field is not a "slop" field (e.g. list[-1])
-			unique &= objfield.annotation.unique
 
-		exclusive = self.exgraph.mutuallyExclusive(*group)
+	def filterGroups(self, groups):
+		filtered = {}
 
-		if unique and exclusive:
-			print "+", group
-			self.transform(name, group)
-		else:
-			print "-", group
-			print unique, exclusive
-			print [objfield.object.annotation.unique for objfield in group]
-			print
+		print
+		print "GROUPS"
 
+		for name, group in groups.iteritems():
+			unique = True
+
+			for objfield in group:
+				# The field is only unique if the object containing it is unique and
+				# the field is not a "slop" field (e.g. list[-1])
+				unique &= objfield.annotation.unique
+
+			exclusive = self.exgraph.mutuallyExclusive(*group)
+
+			if unique and exclusive:
+				print "+", group
+				filtered[name] = group
+			else:
+				print "-", group
+				print unique, exclusive
+				print [objfield.object.annotation.unique for objfield in group]
+				print
+
+		return filtered
 
 	def fieldGroups(self):
 		groups = {}
@@ -119,62 +133,70 @@ class FieldTransformAnalysis(TypeDispatcher):
 				groups[group] = [obj]
 			else:
 				groups[group].append(obj)
-		return groups
+
+		return self.filterGroups(groups)
 
 	def loadGroups(self):
 		loads  = {}
-		for load in self.loads:
+		for code, load in self.loads:
 			example = load.annotation.reads.merged[0]
 			group = self.compatable[example]
 
-			if group not in loads:
-				loads[group] = [load]
+			key = (code, group)
+			if key not in loads:
+				loads[key] = [load]
 			else:
-				loads[group].append(load)
+				loads[key].append(load)
 		return loads
 
 	def storeGroups(self):
 		stores = {}
-		for store in self.stores:
+		for code, store in self.stores:
 			example = store.annotation.modifies.merged[0]
 			group = self.compatable[example]
 
-			if group not in stores:
-				stores[group] = [store]
+			key = (code, group)
+			if key not in stores:
+				stores[key] = [store]
 			else:
-				stores[group].append(store)
+				stores[key].append(store)
 
 		return stores
 
 	def postProcess(self):
-		groups = self.fieldGroups()
+		self.groups = self.fieldGroups()
 		self.loadLUT  = self.loadGroups()
 		self.storeLUT = self.storeGroups()
+
+	def postProcessCode(self, code, outputAnchors):
 		self.rewrites = {}
 		self.remap = {}
 
-		print
-		print "GROUPS"
-		for name, group in groups.iteritems():
-			self.processGroup(name, group)
+		for name, group in self.groups.iteritems():
+			self.processGroup(code, name, group)
 
-		# TODO rewrite, SSA, then simplify
-		# TODO can we simplify?  The field locals would be eliminated
-		# without some sort of anchor.
-		rewrite.rewrite(self.compiler, self.code, self.rewrites)
+#		for k, v in self.rewrites.iteritems():
+#			print k
+#			print v
+#			print
 
-	def process(self):
-		self.code.visitChildrenForced(self)
-		self.postProcess()
+		rewrite.rewrite(self.compiler, code, self.rewrites)
+		# TODO SSA
+		simplify.evaluateCode(self.compiler, self.prgm, code, outputAnchors=outputAnchors)
 
 
-def process(compiler, context):
-	prgm = context.prgm
-	code = context.code
-	exgraph = context.exgraph
-	fta = FieldTransformAnalysis(compiler, prgm, code, exgraph)
-	fta.process()
+	def process(self, code):
+		self.code = code
+		code.visitChildrenForced(self)
 
-	context.shaderdesc.fields = fta.fields
+def process(compiler, prgm, exgraph, *contexts):
+	fta = FieldTransformAnalysis(compiler, prgm, exgraph)
 
-	simplify.evaluateCode(compiler, prgm, code, outputAnchors=context.shaderdesc.outputs.collectUsed())
+	for context in contexts:
+		fta.process(context.code)
+
+	fta.postProcess()
+
+	for context in contexts:
+		fta.postProcessCode(context.code, context.shaderdesc.outputs.collectUsed())
+		context.shaderdesc.fields = fta.fields

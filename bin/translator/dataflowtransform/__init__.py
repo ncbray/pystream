@@ -240,63 +240,58 @@ class DataflowTransformContext(object):
 	def prgmDump(self):
 		dumpreport.evaluate(self.compiler, self.prgm, self.code.codeName())
 
+	def copyOriginalParams(self):
+		self.originalParams = self.code.codeparameters.clone()
 
 def evaluateContext(compiler, context, isFS):
-	with compiler.console.scope('tree transform'):
-		context.prgm, context.code, context.exgraph, context.objectInfo = treetransform.process(compiler, context.code)
-		context.originalParams = context.code.codeparameters.clone()
-
-	with compiler.console.scope('flatten output'):
-		context.shaderdesc = flattenoutput.process(compiler, context.prgm, context.code, isFS)
-
 	with compiler.console.scope('object analysis'):
 		objectanalysis.process(compiler, context.prgm, context.code)
 
 	with compiler.console.scope('field transform'):
 		newfieldtransform.process(compiler, context)
 
+def evaluateShaderProgram(compiler, vscontext, fscontext):
+	with compiler.console.scope('tree transform'):
+		prgm, code, exgraph, objectInfo = treetransform.process(compiler, vscontext.code, fscontext.code)
+
+		vscontext.prgm = prgm
+		vscontext.code = code[0]
+		vscontext.exgraph = exgraph
+		vscontext.objectInfo = objectInfo
+		vscontext.copyOriginalParams()
+
+		fscontext.prgm = prgm
+		fscontext.code = code[1]
+		fscontext.exgraph = exgraph
+		fscontext.objectInfo = objectInfo
+		fscontext.copyOriginalParams()
+
+	with compiler.console.scope('flatten output'):
+		vscontext.shaderdesc = flattenoutput.process(compiler, prgm, vscontext.code, False)
+		fscontext.shaderdesc = flattenoutput.process(compiler, prgm, fscontext.code, True)
+
+	with compiler.console.scope('object analysis'):
+		objectanalysis.process(compiler, prgm, vscontext.code, fscontext.code)
+
+	with compiler.console.scope('field transform'):
+		newfieldtransform.process(compiler, prgm, exgraph, vscontext, fscontext)
+
+	shaderprgm = shaderdescription.ProgramDescription(prgm, vscontext, fscontext)
+	shaderprgm.link()
+
+	return shaderprgm
+
 def evaluateCode(compiler, prgm, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, prgm, vscode)
 	fscontext = DataflowTransformContext(compiler, prgm, fscode)
 
 
-	with compiler.console.scope('vs'):
-		evaluateContext(compiler, vscontext, False)
-
-	with compiler.console.scope('fs'):
-		evaluateContext(compiler, fscontext, True)
-
-	shaderprgm = shaderdescription.ProgramDescription(vscontext, fscontext)
-	shaderprgm.link()
+	shaderprgm = evaluateShaderProgram(compiler, vscontext, fscontext)
 
 	with compiler.console.scope('debug dump'):
-		vscontext.prgmDump()
-		fscontext.prgmDump()
+		dumpreport.evaluate(compiler, shaderprgm.prgm, "shaderProgram")
 
-	if False:
-		# The old dataflow path
-		with compiler.console.scope('dataflow IR convert'):
-			vscontext.convert()
-			fscontext.convert()
-
-		with compiler.console.scope('debug dump'):
-			analysis.dataflowIR.dump.evaluateDataflow(vscontext.dataflow, 'summaries\dataflow', vscontext.code.codeName())
-			vscontext.reconstructCFG()
-			vscontext.prgmDump()
-
-			analysis.dataflowIR.dump.evaluateDataflow(fscontext.dataflow, 'summaries\dataflow', fscontext.code.codeName())
-			fscontext.reconstructCFG()
-			fscontext.prgmDump()
-
-		with compiler.console.scope('analyze'):
-			vscontext.analyze()
-			fscontext.analyze()
-
-		with compiler.console.scope('field transform'):
-			fieldtransform.process(compiler, vscontext.dataflow, vscontext.exgraph)
-			fieldtransform.process(compiler, fscontext.dataflow, fscontext.exgraph)
-
-
+	raise compilerexceptions.CompilerAbort, "testing"
 
 
 	raise compilerexceptions.CompilerAbort, "testing"

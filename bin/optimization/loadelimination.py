@@ -164,6 +164,8 @@ def evaluateCode(compiler, prgm, code, simplify=True):
 	if eliminated:
 		print '\t', code, eliminated
 
+	return eliminated
+
 def evaluate(compiler, prgm):
 	with compiler.console.scope('redundant load elimination'):
 		for code in prgm.liveCode:

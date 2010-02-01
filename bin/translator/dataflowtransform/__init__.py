@@ -271,7 +271,7 @@ def evaluateShaderProgram(compiler, vscontext, fscontext):
 		newfieldtransform.process(compiler, prgm, exgraph, vscontext, fscontext)
 
 	with compiler.console.scope('pool analysis'):
-		newpoolanalysis.process(compiler, prgm, exgraph, vscontext, fscontext)
+		poolAnalysis = newpoolanalysis.process(compiler, prgm, exgraph, vscontext, fscontext)
 
 	shaderprgm = shaderdescription.ProgramDescription(prgm, vscontext, fscontext)
 	shaderprgm.link()

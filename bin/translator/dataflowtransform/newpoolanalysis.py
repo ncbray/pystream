@@ -1,6 +1,10 @@
 from util.typedispatch import *
 from language.python import ast
 
+import collections
+from PADS.UnionFind import UnionFind
+
+
 class PoolInfo(object):
 	def __init__(self, slot, refs):
 		self.slots = set([slot])
@@ -15,7 +19,8 @@ class PoolInfo(object):
 		self.next  = set()
 		self.prev  = set()
 
-		self.fields = {}
+		self.fieldGroupsRefer = []
+		self.containedFieldGroups = []
 
 		self._forward = None
 
@@ -113,11 +118,90 @@ class PoolInfo(object):
 
 		self.types = set([ref.xtype.obj.pythonType() for ref in self.refs])
 
+		if len(self.types) > 1:
+			analysis.ambiguousTypes(self.types)
+
+	def isSingleton(self):
+		return self.unique
+
+	def isStructure(self):
+		return not self.unique and self.final
+
+	def isPool(self):
+		return not self.unique and not self.final
+
+class FieldGroup(object):
+	def __init__(self, name, fields, poolInfo):
+		self.name     = name
+		self.fields   = fields
+		self.poolInfo = poolInfo
+
+		poolInfo.fieldGroupsRefer.append(self)
+
+	def __repr__(self):
+		return "FieldGroup(%r)" % (self.name,)
+
 class PoolGraphBuilder(TypeDispatcher):
 	def __init__(self, exgraph):
 		self.exgraph = exgraph
-		self.poolInfos = {}
+		self.poolInfos  = {}
+		self.fieldInfos = {}
+		self.typeIDs    = {}
+		self.uid = 0
+
 		self.dirty = set()
+
+		self.compatable = UnionFind()
+
+	def reads(self, args):
+		self.compatable.union(*args)
+
+	def modifies(self, args):
+		self.compatable.union(*args)
+
+
+	def ambiguousTypes(self, types):
+		for t in types:
+			if not t in self.typeIDs:
+				self.typeIDs[t] = self.uid
+				self.uid += 1
+
+	def linkContainedFieldGroups(self, fgs):
+		lut = collections.defaultdict(list)
+
+		for fg in fgs:
+			objs = set([field.object for field in fg.fields])
+			for obj in objs:
+				lut[obj].append(fg)
+
+		for info in self.getUniquePools():
+			infoFGs = set()
+			for ref in info.refs:
+				infoFGs.update(lut[ref])
+			info.containedFieldGroups = tuple(infoFGs)
+
+	def fieldGroups(self):
+		groups = {}
+		for obj, group in self.compatable.parents.iteritems():
+			if group not in groups:
+				groups[group] = [obj]
+			else:
+				groups[group].append(obj)
+
+		fgs = []
+		for name, group in groups.iteritems():
+			fg = FieldGroup(name, group, self.fieldInfo(name))
+			fgs.append(fg)
+
+		# TODO compress mutually exclusive field groups?
+		self.linkContainedFieldGroups(fgs)
+
+		# Create an index
+		for fg in fgs:
+			for field in fg.fields:
+				self.fieldInfos[field] = fg
+
+		return fgs
 
 	def markDirty(self, info):
 		assert not info.dirty
@@ -172,6 +256,8 @@ class PoolGraphBuilder(TypeDispatcher):
 			expr = self.localInfo(load.expr)
 			target = self.localInfo(node.lcls[0])
 
+			self.reads(load.annotation.reads.merged)
+
 			src = None
 			for field in load.annotation.reads.merged:
 				fieldInfo = self.fieldInfo(field)
@@ -185,6 +271,8 @@ class PoolGraphBuilder(TypeDispatcher):
 
 	@dispatch(ast.Store)
 	def visitStore(self, node):
+		self.modifies(node.annotation.modifies.merged)
+
 		node.visitAllChildren(self)
 
 		if isinstance(node.value, ast.Local):
@@ -230,6 +318,8 @@ class PoolGraphBuilder(TypeDispatcher):
 		for info in self.getUniquePools():
 			info.postProcess(self)
 
+		self.fieldGroups()
+
 	def getUniquePools(self):
 		unique = set()
 
@@ -249,6 +339,13 @@ class PoolGraphBuilder(TypeDispatcher):
 			print "REFS"
 			for ref in info.refs:
 				print '\t', ref
+			print "GROUPS REFER"
+			for fg in info.fieldGroupsRefer:
+				print '\t', fg
+			print "GROUPS CONTAINED"
+			for fg in info.containedFieldGroups:
+				print '\t', fg
+
 			print "FINAL ", info.final
 			print "UNIQUE", info.unique
 			print
@@ -265,3 +362,5 @@ def process(compiler, prgm, exgraph, *contexts):
 	pgb.process()
 
 	pgb.dump()
+
+	return pgb

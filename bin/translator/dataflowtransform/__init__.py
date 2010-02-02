@@ -276,7 +276,7 @@ def evaluateShaderProgram(compiler, vscontext, fscontext):
 	shaderprgm = shaderdescription.ProgramDescription(prgm, vscontext, fscontext)
 	shaderprgm.link()
 
-	newglsltranslator.process(compiler, prgm, exgraph, poolAnalysis, vscontext, fscontext)
+	newglsltranslator.process(compiler, prgm, exgraph, poolAnalysis, shaderprgm)
 
 	return shaderprgm
 

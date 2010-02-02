@@ -81,6 +81,9 @@ class FieldTransformAnalysis(TypeDispatcher):
 	def generateRewrites(self, code, name, group):
 		lcl = self.remap[name]
 
+		for field in group:
+			self.fields[field] = lcl
+
 		isLoaded = False
 
 		for load in self.loadLUT.get((code, name), ()):
@@ -171,6 +174,7 @@ class FieldTransformAnalysis(TypeDispatcher):
 	def postProcessCode(self, code, outputAnchors):
 		self.rewrites = {}
 		self.remap = {}
+		self.fields = {}
 
 		for name, group in self.groups.iteritems():
 			self.processGroup(code, name, group)

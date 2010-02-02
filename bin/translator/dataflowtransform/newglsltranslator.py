@@ -26,16 +26,22 @@ class RewriterWrapper(TypeDispatcher):
 	def visitContainer(self, node):
 		return [self(child) for child in node]
 
+uniform = "UNIFORM"
+local   = "LOCAL"
+input   = "INPUT"
+output  = "OUTPUT"
 
 class StructureInfo(object):
-	def __init__(self, slot, poolInfo):
+	def __init__(self, translator, slot, poolInfo, mode, builtin):
 		self.slot     = slot
 		self.poolInfo = poolInfo
+		self.mode     = mode
+		self.builtin  = builtin
 
-		prefix = "struct"
+		prefix = translator.uniqueNameForSlot(slot, mode)
 
 		if len(self.poolInfo.types) > 1:
-			self.typeField = glsl.Local(intrinsics.intrinsicTypeNodes[int], "%s_%s" % (prefix, 'type'))
+			self.typeField = self.makeField(int, "%s_%s" % (prefix, 'type'))
 		else:
 			self.typeField = None
 
@@ -43,8 +49,33 @@ class StructureInfo(object):
 
 		for t in self.poolInfo.types:
 			if intrinsics.isIntrinsicType(t):
-				lcl = glsl.Local(intrinsics.intrinsicTypeNodes[t], "%s_%s" % (prefix, t.__name__))
-				self.intrinsics[t] = lcl
+				self.intrinsics[t] = self.makeField(t, "%s_%s" % (prefix, t.__name__))
+
+	def makeField(self, t, name):
+		bt = intrinsics.intrinsicTypeNodes[t]
+
+		if self.mode is output:
+			if self.builtin:
+				# TODO check type?
+				return glsl.Output(self.builtin)
+
+			return glsl.Output(glsl.OutputDecl(None, False, False, False, bt, name))
+		elif self.mode is uniform:
+			if self.builtin:
+				# TODO check type?
+				return glsl.Uniform(self.builtin)
+
+			return glsl.Uniform(glsl.UniformDecl(False, bt, name, None))
+		elif self.mode is input:
+			if self.builtin:
+				# TODO check type?
+				return glsl.Input(self.builtin)
+
+			return glsl.Input(glsl.InputDecl(None, False, False, bt, name))
+		elif self.mode is local:
+			return glsl.Local(bt, name)
+		else:
+			assert False, self.mode
 
 	def refTypes(self, refs):
 		return set([ref.xtype.obj.pythonType() for ref in refs])
@@ -55,10 +86,13 @@ class StructureInfo(object):
 		return types.pop()
 
 	def intrinsicRef(self, refs):
+		assert not self.mode is output
 		t = self.refType(refs)
 		return self.intrinsics[t]
 
 	def assignIntrinsic(self, analysis, refs, expr):
+		assert self.mode is not input and self.mode is not uniform
+
 		t = self.refType(refs)
 
 		if self.typeField: analysis.initType(t, self.typeField)
@@ -66,6 +100,13 @@ class StructureInfo(object):
 
 	def copyFrom(self, analysis, src, refs):
 		if self is src: return
+
+		if self.mode is input or self.mode is uniform:
+			import pdb
+			pdb.set_trace()
+			assert False
+
+		assert not src.mode is output
 
 		types = self.refTypes(refs)
 
@@ -83,16 +124,57 @@ class StructureInfo(object):
 
 
 class GLSLTranslator(TypeDispatcher):
-	def __init__(self, compiler, poolanalysis, rewriter):
+	def __init__(self, compiler, poolanalysis, rewriter, ioinfo):
 		self.compiler = compiler
 		self.poolanalysis = poolanalysis
 		self.intrinsicRewrite = rewriter
 		self.wrapper = RewriterWrapper(self)
 
+		self.ioinfo = ioinfo
+
 		self.slotInfos = {}
 
 		self.blockStack = []
 		self.current = None
+
+		self.inputID   = "inp"
+		self.outputID  = "out"
+		self.uniformID = "uni"
+
+		self.nameCount = {}
+
+		self.names = {}
+
+	def uniqueNameForSlot(self, slot, mode):
+		if slot in self.names:
+			return self.names[slot]
+
+		if isinstance(slot, ast.Local) and slot.name:
+			prefix = slot.name
+		else:
+			prefix = "struct"
+
+		if mode is uniform:
+			prefix = "%s_%s" % (self.uniformID, prefix)
+		elif mode is input:
+			prefix = "%s_%s" % (self.inputID, prefix)
+		elif mode is output:
+			prefix = "%s_%s" % (self.outputID, prefix)
+
+		prefix = self.uniqueName(prefix)
+		self.names[slot] = prefix
+		if slot in self.ioinfo.same:
+			self.names[self.ioinfo.same[slot]] = prefix
+		return prefix
+
+	def uniqueName(self, name):
+		if name not in self.nameCount:
+			self.nameCount[name] = 0
+		else:
+			count = self.nameCount[name]+1
+			self.nameCount[name] = count
+			name = "%s_%d" % (name, count)
+		return name
 
 	def pushBlock(self):
 		self.blockStack.append(self.current)
@@ -112,7 +194,16 @@ class GLSLTranslator(TypeDispatcher):
 			slot = poolInfo.name
 
 		if slot not in self.slotInfos:
-			info = StructureInfo(slot, poolInfo)
+			if slot in self.ioinfo.outputs:
+				mode = output
+			elif slot in self.ioinfo.inputs:
+				mode = input
+			elif slot in self.ioinfo.uniforms:
+				mode = uniform
+			else:
+				mode = local
+
+			info = StructureInfo(self, slot, poolInfo, mode, self.ioinfo.builtin.get(slot))
 			self.slotInfos[slot] = info
 		else:
 			info = self.slotInfos[slot]
@@ -127,7 +218,8 @@ class GLSLTranslator(TypeDispatcher):
 		self.emitAssign(self.typeID(t), target)
 
 	def emitAssign(self, expr, target):
-		self.current.append(glsl.Assign(expr, target))
+		stmt = glsl.Assign(expr, target)
+		self.current.append(stmt)
 
 	@dispatch(ast.Local)
 	def visitLocal(self, node):
@@ -234,11 +326,13 @@ class GLSLTranslator(TypeDispatcher):
 		return self.popBlock()
 
 	def process(self, node):
+
+
 		suite = self(node.ast)
 		return glsl.Code('main', [], glsl.BuiltinType('void'), suite)
 
-def processContext(compiler, prgm, exgraph, poolanalysis, rewriter, context):
-	trans = GLSLTranslator(compiler, poolanalysis, rewriter)
+def processContext(compiler, trans, context):
+
 	result = trans.process(context.code)
 	s = codegen.evaluateCode(compiler, result)
 
@@ -246,8 +340,17 @@ def processContext(compiler, prgm, exgraph, poolanalysis, rewriter, context):
 	print s
 	print
 
-def process(compiler, prgm, exgraph, poolanalysis, *contexts):
+
+def process(compiler, prgm, exgraph, poolanalysis, shaderprgm):
 	rewriter = intrinsics.makeIntrinsicRewriter(compiler.extractor)
 
-	for context in contexts:
-		processContext(compiler, prgm, exgraph, poolanalysis, rewriter, context)
+	ioinfo = shaderprgm.makeIOInfo()
+
+	trans = GLSLTranslator(compiler, poolanalysis, rewriter, ioinfo)
+	trans.inputID  = "inp"
+	trans.outputID = "v2f"
+	processContext(compiler, trans, shaderprgm.vscontext)
+
+	trans.inputID  = "v2f"
+	trans.outputID = "out"
+	processContext(compiler, trans, shaderprgm.fscontext)

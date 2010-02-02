@@ -1,13 +1,27 @@
 from .. import intrinsics
+from language.glsl import ast as glsl
+
+class IOInfo(object):
+	__slots__ = 'uniforms', 'inputs', 'outputs', 'builtin', 'same'
+
+	def __init__(self):
+		self.uniforms = set()
+		self.inputs   = set()
+		self.outputs  = set()
+
+		self.builtin  = {}
+
+		self.same     = {}
 
 class ProgramDescription(object):
-	__slots__ = 'prgm', 'vscontext', 'fscontext'
+	__slots__ = 'prgm', 'vscontext', 'fscontext', 'mapping', 'vs2fs', 'ioinfo'
 
 	def __init__(self, prgm, vscontext, fscontext):
 		self.prgm = prgm
 		self.vscontext = vscontext
 		self.fscontext = fscontext
 
+		self.vs2fs = {}
 
 	def handleOutputToLocal(self, tree, lcl, mapping):
 		if tree.used:
@@ -21,6 +35,9 @@ class ProgramDescription(object):
 		if tree.used:
 			assert field not in mapping
 			mapping[field] = tree.lcl
+
+			assert tree.lcl not in self.vs2fs
+			self.vs2fs[tree.lcl] = field
 
 		refs = field
 		self.traverse(tree, refs, mapping)
@@ -36,26 +53,6 @@ class ProgramDescription(object):
 		#self.linkUniform()
 		self.linkVarying()
 
-#	def linkUniform(self):
-#		# Generate uniform <=> uniform mappings
-#		vskeys = set(self.vscontext.objectInfo.iterkeys())
-#		fskeys = set(self.fscontext.objectInfo.iterkeys())
-#		common = vskeys.intersection(fskeys)
-#
-#		vs2fs = {}
-#		fs2vs = {}
-#
-#		for key in common:
-#			vsxtype = self.vscontext.objectInfo[key].result
-#			fsxtype = self.fscontext.objectInfo[key].result
-#			print key
-#			print vsxtype
-#			print fsxtype
-#			print
-#
-#			vs2fs[vsxtype] = fsxtype
-#			fs2vs[fsxtype] = vsxtype
-
 	def linkVarying(self):
 		# Generate fs input => vs output mappings
 		# This is a reverse mapping, as that makes subsequent operations easier
@@ -70,12 +67,76 @@ class ProgramDescription(object):
 		for output, param in zip(vsoutputs, fsparams):
 			self.handleOutputToLocal(output, param, mapping)
 
+		self.mapping = mapping
 
+
+
+
+	def markTraverse(self, refs, marks):
+		for ref in refs:
+			for field in ref:
+				self.markField(field, marks)
+
+	def markEquivilents(self, field, marks):
+		lcls = []
+		for fields in (self.vscontext.shaderdesc.fields, self.fscontext.shaderdesc.fields):
+			if field in fields:
+				lcl = fields[field]
+				marks.add(lcl)
+				lcls.append(lcl)
+
+		if len(lcls) > 1:
+			self.ioinfo.same[lcls[0]] = lcls[1]
+
+	def markField(self, field, marks):
+		if field not in self.ioinfo.uniforms and not intrinsics.isIntrinsicSlot(field):
+			marks.add(field)
+			self.markEquivilents(field, marks)
+
+			self.markTraverse(field, marks)
+
+	def markParam(self, param, marks):
+		if param.isDoNotCare(): return
+		marks.add(param)
+		self.markTraverse(param.annotation.references.merged, marks)
+
+
+	def markParams(self, context):
+		params = context.originalParams
+		self.markParam(params.params[0], self.ioinfo.uniforms)
+
+		for param in params.params[1:]:
+			self.markParam(param, self.ioinfo.inputs)
+
+	def makeIOInfo(self):
+		self.ioinfo = IOInfo()
+
+		self.markParams(self.vscontext)
+		self.markParams(self.fscontext)
+
+		self.vscontext.shaderdesc.outputs.updateInfo(self.ioinfo)
+		self.fscontext.shaderdesc.outputs.updateInfo(self.ioinfo)
+
+
+		fsfields = self.fscontext.shaderdesc.fields
+		for src, dst in self.vs2fs.iteritems():
+			dst = fsfields.get(dst, dst)
+			self.ioinfo.same[src] = dst
+
+		return self.ioinfo
 
 class ShaderDescription(object):
 	__slots__ = 'fields', 'outputs'
 
-class VSOutputDescription(object):
+class OutputBase(object):
+	__slots__ = ()
+
+	def updateInfo(self, info):
+		info.outputs.update(self.collectUsed())
+		self.getBuiltin(info)
+
+
+class VSOutputDescription(OutputBase):
 	__slots__ = 'position', 'varying'
 
 	def collectUsed(self):
@@ -87,7 +148,11 @@ class VSOutputDescription(object):
 
 		return used
 
-class FSOutputDescription(object):
+	def getBuiltin(self, info):
+		vec4T = intrinsics.intrinsicTypeNodes[intrinsics.vec.vec4]
+		info.builtin[self.position.lcl] = glsl.OutputDecl(None, False, False, True, vec4T, 'gl_Position')
+
+class FSOutputDescription(OutputBase):
 	__slots__ = 'colors', 'depth'
 
 	def collectUsed(self):
@@ -99,6 +164,12 @@ class FSOutputDescription(object):
 			color.collectUsed(used)
 
 		return used
+
+	def getBuiltin(self, info):
+		if self.depth:
+			floatT = intrinsics.intrinsicTypeNodes[float]
+			info.builtin[self.position.lcl] = glsl.OutputDecl(None, False, False, True, floatT, 'gl_Depth')
+
 
 class TreeNode(object):
 	def __init__(self, lcl):

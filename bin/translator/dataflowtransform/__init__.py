@@ -8,7 +8,7 @@ from  translator.dataflowtransform import correlatedanalysis
 from . import treetransform, flattenoutput
 from . import poolanalysis
 from . import finalobjectanalysis
-from . import fieldtransform, newfieldtransform, objectanalysis, newpoolanalysis
+from . import fieldtransform, newfieldtransform, objectanalysis, newpoolanalysis, newglsltranslator
 from analysis.cfgIR import dataflowsynthesis
 from . import glsltranslator
 
@@ -275,6 +275,8 @@ def evaluateShaderProgram(compiler, vscontext, fscontext):
 
 	shaderprgm = shaderdescription.ProgramDescription(prgm, vscontext, fscontext)
 	shaderprgm.link()
+
+	newglsltranslator.process(compiler, prgm, exgraph, poolAnalysis, vscontext, fscontext)
 
 	return shaderprgm
 

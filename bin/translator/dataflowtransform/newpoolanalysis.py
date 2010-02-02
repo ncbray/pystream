@@ -102,7 +102,10 @@ class PoolInfo(object):
 
 
 	def postProcess(self, analysis):
-		if len(self.slots) == 1 and isinstance(tuple(self.slots)[0], ast.Local):
+		# Choose a random name
+		self.name = tuple(self.slots)[0]
+
+		if len(self.slots) == 1 and isinstance(self.name, ast.Local):
 			# If there is only one pointer to this pool, it is safe to assume it is unique.
 			unique = True
 		else:
@@ -152,6 +155,8 @@ class PoolGraphBuilder(TypeDispatcher):
 		self.dirty = set()
 
 		self.compatable = UnionFind()
+
+		self.active = True
 
 	def reads(self, args):
 		self.compatable.union(*args)
@@ -218,6 +223,8 @@ class PoolGraphBuilder(TypeDispatcher):
 
 	def poolInfo(self, slot, refs):
 		if slot not in self.poolInfos:
+			assert self.active
+
 			info = PoolInfo(slot, refs)
 			self.poolInfos[slot] = info
 			self.markDirty(info)
@@ -360,6 +367,8 @@ def process(compiler, prgm, exgraph, *contexts):
 		pgb.analyzeCode(code, context.shaderdesc.outputs.collectUsed())
 
 	pgb.process()
+
+	pgb.active = False
 
 	pgb.dump()
 

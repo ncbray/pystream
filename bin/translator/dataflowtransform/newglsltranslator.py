@@ -337,9 +337,17 @@ class GLSLTranslator(TypeDispatcher):
 
 			cases.append((condCheck, block))
 
-		assert len(cases) == 2
+		last = None
 
-		self.current.append(glsl.Switch(cases[0][0], cases[0][1], cases[1][1]))
+		while cases:
+			condCheck, block = cases.pop()
+
+			if last is None:
+				last = block
+			else:
+				last = glsl.Suite([glsl.Switch(condCheck, block, last)])
+
+		self.current.append(last)
 
 	@dispatch(ast.Discard)
 	def visitDiscard(self, node):

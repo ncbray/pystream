@@ -132,6 +132,7 @@ class LambertMaterial(Material):
 		self.wrap = wrap
 
 	def diffuseTransfer(self, n, l, e):
+		# Wrap lighting - approximates sub-surface scattering
 		ndl = n.dot(l)
 		wrapped = (ndl+self.wrap)/(1.0+self.wrap)
 		return max(wrapped, 0.0)
@@ -139,8 +140,6 @@ class LambertMaterial(Material):
 	def specularTransfer(self, n, l, e):
 		return 0.0
 
-class DummyMaterial(Material):
-	pass
 
 class PhongMaterial(Material):
 	__slots__ = 'shiny',
@@ -156,6 +155,23 @@ class PhongMaterial(Material):
 		# Scale by (shiny+8)/8 to approximate energy conservation
 		scale = (self.shiny+8.0)*0.125
 		return (ndh**self.shiny)*scale
+
+
+class ToonMaterial(Material):
+	__slots__ = 'toonMap',
+
+	def __init__(self, toonMap):
+		Material.__init__(self)
+		self.toonMap = toonMap
+
+	def diffuseTransfer(self, n, l, e):
+		amt = n.dot(l)*0.5+0.5
+		return self.toonMap.texture(vec2(0.25, amt)).x
+
+	def specularTransfer(self, n, l, e):
+		h = (l+e).normalize()
+		amt = nldot(n, h)*0.5+0.5
+		return self.toonMap.texture(vec2(0.75, amt)).x
 
 
 class Light(object):
@@ -231,7 +247,7 @@ class Shader(object):
 	__slots__ = ['objectToWorld', 'worldToCamera', 'projection',
 				'light', 'ambient',
 				'material',
-				'sampler', 'normalmap',
+				'sampler', 'normalmap', 'useNormalMap',
 				'fog']
 
 	def __init__(self):
@@ -277,19 +293,23 @@ class Shader(object):
 
 	def shadeFragment(self, context, pos, tsbasis, texCoord):
 		n  = tsbasis.normal.normalize()
-		t  = tsbasis.tangent.normalize()
-		b  = tsbasis.bitangent.normalize()
-		#btsign = tangent.w
-		#b      = (n.cross(t)*btsign).normalize()
 
-		# Look up the tangent space normal and transform it to camera space
-		tsn = self.normalmap.texture(texCoord).xyz*2.0-1.0
+		if self.useNormalMap:
+			t  = tsbasis.tangent.normalize()
+			b  = tsbasis.bitangent.normalize()
+			#btsign = tangent.w
+			#b      = (n.cross(t)*btsign).normalize()
 
-		normal = vec3(tsn.x*t.x + tsn.y*b.x + tsn.z*n.x,
-					  tsn.x*t.y + tsn.y*b.y + tsn.z*n.y,
-					  tsn.x*t.z + tsn.y*b.z + tsn.z*n.z)
+			# Look up the tangent space normal and transform it to camera space
+			tsn = self.normalmap.texture(texCoord).xyz*2.0-1.0
 
-		normal = normal.normalize()
+			normal = vec3(tsn.x*t.x + tsn.y*b.x + tsn.z*n.x,
+						  tsn.x*t.y + tsn.y*b.y + tsn.z*n.y,
+						  tsn.x*t.z + tsn.y*b.z + tsn.z*n.z)
+
+			normal = normal.normalize()
+		else:
+			normal = n
 
 		surface = self.material.surface(pos, normal)
 

@@ -62,25 +62,34 @@ attr(inst(physics.Shader), 'ambient',  inst(physics.AmbientLight))
 
 attr(inst(physics.Shader), 'sampler',    inst(sampler.sampler2D))
 attr(inst(physics.Shader), 'normalmap',  inst(sampler.sampler2D))
+attr(inst(physics.Shader), 'useNormalMap',  inst(bool))
+
 
 attr(inst(physics.Shader),  'material',  inst(physics.PhongMaterial))
 attr(inst(physics.Shader),  'material',  inst(physics.LambertMaterial))
+attr(inst(physics.Shader),  'material',  inst(physics.ToonMaterial))
 
 
 attr(inst(physics.Material), 'diffuseColor',    inst(vec.vec3))
 attr(inst(physics.Material), 'specularColor',   inst(vec.vec3))
 
-attr(inst(physics.PhongMaterial),   'shiny',     inst(float))
 
 # HACK don't the declarations from the base class take effect?
 attr(inst(physics.PhongMaterial), 'diffuseColor',    inst(vec.vec3))
 attr(inst(physics.PhongMaterial), 'specularColor',   inst(vec.vec3))
+attr(inst(physics.PhongMaterial),   'shiny',     inst(float))
 
 
-attr(inst(physics.LambertMaterial),   'wrap',     inst(float))
-
+# HACK don't the declarations from the base class take effect?
 attr(inst(physics.LambertMaterial), 'diffuseColor',    inst(vec.vec3))
 attr(inst(physics.LambertMaterial), 'specularColor',   inst(vec.vec3))
+attr(inst(physics.LambertMaterial),   'wrap',     inst(float))
+
+
+# HACK don't the declarations from the base class take effect?
+attr(inst(physics.ToonMaterial), 'diffuseColor',    inst(vec.vec3))
+attr(inst(physics.ToonMaterial), 'specularColor',   inst(vec.vec3))
+attr(inst(physics.ToonMaterial),   'toonMap',     inst(sampler.sampler2D))
 
 
 attr(inst(physics.PointLight), 'position',    inst(vec.vec3))

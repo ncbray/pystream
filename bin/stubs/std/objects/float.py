@@ -64,6 +64,7 @@ def makeFloat(collector):
 	def prim_float_div(a, b):
 		return allocate(float)
 
+	@export
 	@staticFold(lambda a, b: a%b)
 	@llfunc(primitive=True)
 	def prim_float_mod(a, b):
@@ -75,36 +76,42 @@ def makeFloat(collector):
 	def prim_float_pow(a, b):
 		return allocate(float)
 
+	@export
 	@staticFold(lambda a, b: a==b)
 	@fold(lambda a, b: a==b)
 	@llfunc(primitive=True)
 	def prim_float_eq(a, b):
 		return allocate(bool)
 
+	@export
 	@staticFold(lambda a, b: a!=b)
 	@fold(lambda a, b: a!=b)
 	@llfunc(primitive=True)
 	def prim_float_ne(a, b):
 		return allocate(bool)
 
+	@export
 	@staticFold(lambda a, b: a<b)
 	@fold(lambda a, b: a<b)
 	@llfunc(primitive=True)
 	def prim_float_lt(a, b):
 		return allocate(bool)
 
+	@export
 	@staticFold(lambda a, b: a<=b)
 	@fold(lambda a, b: a<=b)
 	@llfunc(primitive=True)
 	def prim_float_le(a, b):
 		return allocate(bool)
 
+	@export
 	@staticFold(lambda a, b: a>b)
 	@fold(lambda a, b: a>b)
 	@llfunc(primitive=True)
 	def prim_float_gt(a, b):
 		return allocate(bool)
 
+	@export
 	@staticFold(lambda a, b: a>=b)
 	@fold(lambda a, b: a>=b)
 	@llfunc(primitive=True)

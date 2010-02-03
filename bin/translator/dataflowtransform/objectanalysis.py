@@ -48,8 +48,14 @@ class ObjectAnalysis(TypeDispatcher):
 		for case in node.cases:
 			self(case.body)
 
-	@dispatch(ast.Suite)
-	def visitSuite(self, node):
+	@dispatch(ast.Switch)
+	def visitSwitch(self, node):
+		self(node.condition)
+		self(node.t)
+		self(node.f)
+
+	@dispatch(ast.Suite, ast.Condition)
+	def visitOK(self, node):
 		node.visitChildren(self)
 
 	def fixupStoreGraph(self):

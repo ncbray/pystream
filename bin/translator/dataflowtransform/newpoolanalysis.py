@@ -314,7 +314,7 @@ class PoolGraphBuilder(TypeDispatcher):
 			cond = cond.transfer(self, expr)
 			self(case.body)
 
-	@dispatch(ast.Suite)
+	@dispatch(ast.Suite, ast.Switch, ast.Condition)
 	def visitOK(self, node):
 		node.visitChildren(self)
 

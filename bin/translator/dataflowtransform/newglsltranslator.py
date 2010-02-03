@@ -299,6 +299,20 @@ class GLSLTranslator(TypeDispatcher):
 		else:
 			assert False, parts
 
+	@dispatch(ast.Switch)
+	def visitSwitch(self, node):
+		condition = node.condition
+
+		self(condition.preamble)
+
+		condInfo = self(condition.conditional)
+		cond = condInfo.intrinsics[bool]
+
+		t = self(node.t)
+		f = self(node.f)
+
+		self.current.append(glsl.Switch(cond, t, f))
+
 	@dispatch(ast.TypeSwitch)
 	def visitTypeSwitch(self, node):
 		condInfo = self(node.conditional)
@@ -344,8 +358,7 @@ class GLSLTranslator(TypeDispatcher):
 		return self.popBlock()
 
 	def process(self, node):
-
-
+		self.code = node
 		suite = self(node.ast)
 		return glsl.Code('main', [], glsl.BuiltinType('void'), suite)
 

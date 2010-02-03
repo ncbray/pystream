@@ -454,6 +454,55 @@ def floatPowRewrite(self, node):
 		if args is None: return None
 		return glsl.IntrinsicOp('pow', args)
 
+### Compare Ops ###
+
+def eqRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '==', self(node.args[1]))
+
+def neRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '!=', self(node.args[1]))
+
+def gtRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '>', self(node.args[1]))
+
+def geRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '>=', self(node.args[1]))
+
+def ltRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '<', self(node.args[1]))
+
+def leRewrite(self, node):
+	if not hasNumArgs(node, 2): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.BinaryOp(self(node.args[0]), '<=', self(node.args[1]))
 
 def samplerTextureRewrite(self, node):
 	if not hasNumArgs(node, 2): return
@@ -477,6 +526,12 @@ def makeIntrinsicRewriter(extractor):
 	rewriter.addRewrite('prim_float_pos', posRewrite)
 	rewriter.addRewrite('prim_float_neg', negRewrite)
 
+	rewriter.addRewrite('prim_float_eq', eqRewrite)
+	rewriter.addRewrite('prim_float_ne', neRewrite)
+	rewriter.addRewrite('prim_float_gt', gtRewrite)
+	rewriter.addRewrite('prim_float_ge', geRewrite)
+	rewriter.addRewrite('prim_float_lt', ltRewrite)
+	rewriter.addRewrite('prim_float_le', leRewrite)
 
 	rewriter.addRewrite('type__call__', typeCallRewrite)
 	rewriter.addRewrite('max_stub', maxRewrite)

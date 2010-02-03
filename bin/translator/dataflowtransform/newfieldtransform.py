@@ -32,7 +32,7 @@ class FieldTransformAnalysis(TypeDispatcher):
 	def visitLeaf(self, node, stmt=None):
 		pass
 
-	@dispatch(ast.Suite, ast.TypeSwitch, ast.TypeSwitchCase)
+	@dispatch(ast.Suite, ast.Switch, ast.Condition, ast.TypeSwitch, ast.TypeSwitchCase)
 	def visitOK(self, node):
 		node.visitChildren(self)
 

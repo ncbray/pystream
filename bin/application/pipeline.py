@@ -1,6 +1,7 @@
 import time
 import util
 
+#import analysis.ipa
 import analysis.cpa
 import analysis.lifetimeanalysis
 import analysis.dump.dumpreport
@@ -73,6 +74,9 @@ def bruteForceSimplification(compiler, prgm):
 
 def depythonPass(compiler, prgm, opPathLength=0, firstPass=True):
 	with compiler.console.scope('depython'):
+		#analysis.ipa.evaluate(compiler, prgm)
+		#assert False, "abort"
+
 		analysis.cpa.evaluate(compiler, prgm, opPathLength, firstPass=firstPass)
 		codeConditioning(compiler, prgm)
 

@@ -90,9 +90,6 @@ class FieldTransformAnalysis(TypeDispatcher):
 			object = objfield.object
 			field  = objfield.slotName
 
-			#import pdb
-			#pdb.set_trace()
-
 			preexisting &= object.annotation.preexisting
 			unique &= object.annotation.unique
 			final &= object.annotation.final

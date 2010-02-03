@@ -46,26 +46,33 @@ typeCheckTemplate = ast.Call(
 typeBindTemplate = ast.Suite([
 ])
 
-# TODO mask?
-def serializeUniformNode(compiler, self, tree, root):
+# self -> the serializing class
+# root -> the current uniform local
+def serializeUniformNode(compiler, translator, self, holdingSlot, refs, root):
 	check = symbols.SymbolRewriter(compiler.extractor, typeCheckTemplate)
 
-	types = sorted(set([k.xtype.obj.pythonType() for k in tree.objMasks.iterkeys()]))
+	types = sorted(set([ref.xtype.obj.pythonType() for ref in refs]))
+
+	# The tree transform should guarantee there's only one object per type
+	typeLUT = {}
+	for ref in refs:
+		t = ref.xtype.obj.pythonType()
+		assert t not in typeLUT
+		typeLUT[t] = ref
+
 	assert len(types) > 0
 
 	if len(types) == 1:
-		return handleUniformType(compiler, self, tree, root, types[0])
+		t = types[0]
+		return handleUniformType(compiler, translator, self, holdingSlot, typeLUT[t], root, t)
 	else:
 		switches = []
 		for t in types:
 			cond  = check.rewrite(root=root, type=t)
 
-			# Bind an integer that indicated the type of the object?
-			value    = ast.Existing(compiler.extractor.getObject(len(types)))
-			bindType = bindUniform(compiler, self, 'bogus', int, value)
-			body     = handleUniformType(compiler, self, tree, root, t)
+			body     = handleUniformType(compiler, translator, self, holdingSlot, typeLUT[t], root, t)
 
-			switches.append((cond, ast.Suite([bindType, body])))
+			switches.append((cond, ast.Suite(body)))
 
 		current = ast.Suite([ast.Assert(ast.Existing(compiler.extractor.getObject(False)), None)])
 
@@ -88,31 +95,49 @@ uniformGetTemplate = ast.Assign(
 	[Symbol('target')]
 )
 
-def handleUniformType(compiler, self, tree, root, t):
+def classAttrFromField(compiler, field):
+	assert field.type == 'Attribute', field
+
+	name = field.name.pyobj
+	descriptor = compiler.slots.reverse[name]
+	cls  = descriptor.__objclass__
+	attr = descriptor.__name__
+
+	# HACK may have been renamed...
+	assert cls.__dict__[attr] is descriptor, "Can't find original descriptor!"
+
+	return cls, attr
+
+def handleUniformType(compiler, translator, self, holdingSlot, ref, root, t):
 	statements = []
 
-	if intrinsics.isIntrinsicType(t):
-		statements.append(bindUniform(compiler, self, tree.name, t, root))
+	structInfo = translator.serializationInfo(holdingSlot)
+
+	if structInfo:
+		if structInfo.typeField:
+			name = structInfo.typeField.decl.name
+			uid  = translator.poolanalysis.typeIDs[t]
+			uidO = compiler.extractor.getObject(uid)
+
+			statements.append(bindUniform(compiler, self, name, int, ast.Existing(uidO)))
+
+		if intrinsics.isIntrinsicType(t):
+			name = structInfo.intrinsics[t].decl.name
+			statements.append(bindUniform(compiler, self, name, t, root))
+
+		# TODO fields?
 
 	get = symbols.SymbolRewriter(compiler.extractor, uniformGetTemplate)
 
 	# TODO mutually exclusive?
 
-	for field, child in tree.fields.iteritems():
-		if not intrinsics.isIntrinsicField(field):
+	for field in ref.slots.itervalues():
+		if not intrinsics.isIntrinsicSlot(field):
+			if field.slotName.type != 'Attribute': continue
 
-			assert field.type == 'Attribute'
+			cls, attr = classAttrFromField(compiler, field.slotName)
 
-			name = field.name.pyobj
-			descriptor = compiler.slots.reverse[name]
-			cls  = descriptor.__objclass__
-			attr = descriptor.__name__
-
-			# HACK may have been renamed...
-			assert cls.__dict__[attr] is descriptor, "Can't find original descriptor!"
-
-			# This field is obviously not on the object
-			if not issubclass(t, cls): continue
+			assert issubclass(t, cls), (ref, field)
 
 			target  = ast.Local('bogus')
 
@@ -121,7 +146,7 @@ def handleUniformType(compiler, self, tree, root, t):
 			statements.append(assign)
 
 			# Recurse
-			statements.extend(serializeUniformNode(compiler, self, child, target))
+			statements.extend(serializeUniformNode(compiler, translator, self, field, field, target))
 
 	return statements
 
@@ -134,12 +159,15 @@ uniformCodeTemplate = ast.Code(
 	symbols.Symbol('body')
 )
 
-def bindUniforms(compiler, uniforms):
+def bindUniforms(compiler, translator, uniformSlot):
 	code = symbols.SymbolRewriter(compiler.extractor, uniformCodeTemplate)
 
 	self   = ast.Local('self')
 	shader = ast.Local('shader')
-	body = ast.Suite(serializeUniformNode(compiler, self, uniforms, shader))
+
+	uniformRefs = uniformSlot.annotation.references.merged
+
+	body = ast.Suite(serializeUniformNode(compiler, translator, self, uniformSlot, uniformRefs, shader))
 
 	return code.rewrite(args=[self, shader], body=body)
 
@@ -162,26 +190,35 @@ streamBindTemplate = ast.Discard(
 	)
 )
 
-def bindStreams(context):
-	code = symbols.SymbolRewriter(context.compiler.extractor, streamCodeTemplate)
-	bind = symbols.SymbolRewriter(context.compiler.extractor, streamBindTemplate)
+def bindStreams(compiler, translator, context):
+	code = symbols.SymbolRewriter(compiler.extractor, streamCodeTemplate)
+	bind = symbols.SymbolRewriter(compiler.extractor, streamBindTemplate)
+
+	originalParams = context.originalParams
+	currentParams = context.code.codeparameters
 
 	self   = ast.Local('self')
-	streams   = [ast.Local(param.name) for param in context.code.codeparameters.params[2:]]
+	streams   = []
 
 	statements = []
 
-	for tree, root in zip(context.trees.inputs, streams):
-		shaderName = tree.name
+	for original, current in zip(originalParams.params, currentParams.params)[2:]:
+		root = ast.Local(original.name)
+		streams.append(root)
 
-		# Unused?
-		if shaderName is None: continue
+		if current.isDoNotCare(): continue
 
-		assert len(tree.objMasks) == 1
-		obj = tree.objMasks.keys()[0]
+		refs = current.annotation.references.merged
+		assert len(refs) == 1
+		obj = refs[0]
 		assert intrinsics.isIntrinsicObject(obj)
 		t = obj.xtype.obj.pythonType()
 		attr = "bind_stream_" + t.__name__
+
+		structInfo = translator.serializationInfo(current)
+		assert structInfo is not None
+
+		shaderName = structInfo.intrinsics[t].decl.name
 
 		statements.append(bind.rewrite(self=self, attr=attr, shaderName=shaderName, name=root))
 
@@ -208,23 +245,18 @@ classTemplate = ast.ClassDef(
 	[]
 )
 
-def generateBindingClass(vscontext, fscontext):
-	compiler = vscontext.compiler
+def generateBindingClass(compiler, prgm, shaderprgm, translator):
+	uniformSlot = shaderprgm.vscontext.originalParams.params[0]
 
-	vsCode = vscontext.shaderCode
-	fsCode = fscontext.shaderCode
+	uniformCode = bindUniforms(compiler, translator, uniformSlot)
+	streamCode  = bindStreams(compiler, translator, shaderprgm.vscontext)
 
-	merged = vscontext.trees.uniformIn.merge(fscontext.trees.uniformIn, None)
-	uniformCode = bindUniforms(vscontext.compiler, merged)
-	streamCode = bindStreams(vscontext)
+	vsCode = shaderprgm.vscontext.shaderCode
+	fsCode = shaderprgm.fscontext.shaderCode
 
-
-	code = symbols.SymbolRewriter(vscontext.compiler.extractor, classTemplate)
-
+	code = symbols.SymbolRewriter(compiler.extractor, classTemplate)
 	cdef = code.rewrite(vsCode=vsCode, fsCode=fsCode, bindUniforms=uniformCode, bindStreams=streamCode)
 	cdef = existingtransform.evaluateAST(compiler, cdef)
-
-	#pprint(cdef)
 
 	buffer = cStringIO.StringIO()
 	SimpleCodeGen(buffer).process(cdef)

@@ -2,7 +2,7 @@ from .. import intrinsics
 from language.glsl import ast as glsl
 
 class IOInfo(object):
-	__slots__ = 'uniforms', 'inputs', 'outputs', 'builtin', 'same'
+	__slots__ = 'uniforms', 'inputs', 'outputs', 'builtin', 'same', 'fieldTrans'
 
 	def __init__(self):
 		self.uniforms = set()
@@ -12,6 +12,8 @@ class IOInfo(object):
 		self.builtin  = {}
 
 		self.same     = {}
+
+		self.fieldTrans = {}
 
 class ProgramDescription(object):
 	__slots__ = 'prgm', 'vscontext', 'fscontext', 'mapping', 'vs2fs', 'ioinfo'
@@ -28,8 +30,13 @@ class ProgramDescription(object):
 			assert lcl not in mapping
 			mapping[lcl] = tree.lcl
 
+			assert tree.lcl not in self.vs2fs
+			self.vs2fs[tree.lcl] = lcl
+
 		refs = lcl.annotation.references.merged
 		self.traverse(tree, refs, mapping)
+
+
 
 	def handleOutputToField(self, tree, field, mapping):
 		if tree.used:
@@ -79,17 +86,21 @@ class ProgramDescription(object):
 
 	def markEquivilents(self, field, marks):
 		lcls = []
+
 		for fields in (self.vscontext.shaderdesc.fields, self.fscontext.shaderdesc.fields):
 			if field in fields:
 				lcl = fields[field]
 				marks.add(lcl)
 				lcls.append(lcl)
 
+		if len(lcls) > 0:
+			self.ioinfo.fieldTrans[field] = lcls[0]
+
 		if len(lcls) > 1:
 			self.ioinfo.same[lcls[0]] = lcls[1]
 
 	def markField(self, field, marks):
-		if field not in self.ioinfo.uniforms and not intrinsics.isIntrinsicSlot(field):
+		if field not in marks and not intrinsics.isIntrinsicSlot(field):
 			marks.add(field)
 			self.markEquivilents(field, marks)
 

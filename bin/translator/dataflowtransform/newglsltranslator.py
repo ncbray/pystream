@@ -102,8 +102,6 @@ class StructureInfo(object):
 		if self is src: return
 
 		if self.mode is input or self.mode is uniform:
-			import pdb
-			pdb.set_trace()
 			assert False
 
 		assert not src.mode is output
@@ -175,6 +173,26 @@ class GLSLTranslator(TypeDispatcher):
 			self.nameCount[name] = count
 			name = "%s_%d" % (name, count)
 		return name
+
+	def serializationInfo(self, original):
+		slot = self.ioinfo.fieldTrans.get(original, original)
+
+		poolInfo = self.poolanalysis.poolInfoIfExists(slot)
+		if poolInfo is None and slot in self.ioinfo.same:
+			slot = self.ioinfo.same[slot]
+			poolInfo = self.poolanalysis.poolInfoIfExists(slot)
+
+		if not poolInfo:
+			return None
+
+		if poolInfo.isSingleton():
+			slot = poolInfo.name
+
+		structInfo =  self.slotInfos.get(slot)
+
+		assert structInfo.mode != 'LOCAL', original
+			
+		return structInfo
 
 	def pushBlock(self):
 		self.blockStack.append(self.current)
@@ -340,13 +358,13 @@ def processContext(compiler, trans, context):
 	print s
 	print
 
+	context.shaderCode = s
 
-def process(compiler, prgm, exgraph, poolanalysis, shaderprgm):
+def process(compiler, prgm, exgraph, poolanalysis, shaderprgm, ioinfo):
 	rewriter = intrinsics.makeIntrinsicRewriter(compiler.extractor)
 
-	ioinfo = shaderprgm.makeIOInfo()
-
 	trans = GLSLTranslator(compiler, poolanalysis, rewriter, ioinfo)
+
 	trans.inputID  = "inp"
 	trans.outputID = "v2f"
 	processContext(compiler, trans, shaderprgm.vscontext)
@@ -354,3 +372,5 @@ def process(compiler, prgm, exgraph, poolanalysis, shaderprgm):
 	trans.inputID  = "v2f"
 	trans.outputID = "out"
 	processContext(compiler, trans, shaderprgm.fscontext)
+
+	return trans

@@ -145,8 +145,9 @@ class FieldGroup(object):
 		return "FieldGroup(%r)" % (self.name,)
 
 class PoolGraphBuilder(TypeDispatcher):
-	def __init__(self, exgraph):
+	def __init__(self, exgraph, ioinfo):
 		self.exgraph = exgraph
+		self.ioinfo  = ioinfo
 		self.poolInfos  = {}
 		self.fieldInfos = {}
 		self.typeIDs    = {}
@@ -213,17 +214,23 @@ class PoolGraphBuilder(TypeDispatcher):
 		info.dirty = True
 		self.dirty.add(info)
 
+	def isAnchor(self, slot):
+		return slot in self.ioinfo.outputs or slot in self.ioinfo.uniforms or slot in self.ioinfo.inputs
+
 	def localInfo(self, slot):
 		info = self.poolInfo(slot, slot.annotation.references.merged)
-		info.anchor = slot in self.outputAnchors
+		info.anchor = self.isAnchor(slot)
 		return info
 
 	def fieldInfo(self, slot):
 		return self.poolInfo(slot, slot)
 
+	def poolInfoIfExists(self, slot):
+		return self.poolInfos.get(slot)
+
 	def poolInfo(self, slot, refs):
 		if slot not in self.poolInfos:
-			assert self.active
+			assert self.active, slot
 
 			info = PoolInfo(slot, refs)
 			self.poolInfos[slot] = info
@@ -312,8 +319,7 @@ class PoolGraphBuilder(TypeDispatcher):
 		node.visitChildren(self)
 
 
-	def analyzeCode(self, code, outputAnchors):
-		self.outputAnchors = outputAnchors
+	def analyzeCode(self, code):
 		code.visitChildrenForced(self)
 
 	def process(self):
@@ -358,13 +364,13 @@ class PoolGraphBuilder(TypeDispatcher):
 			print
 		print
 
-def process(compiler, prgm, exgraph, *contexts):
-	pgb = PoolGraphBuilder(exgraph)
+def process(compiler, prgm, exgraph, ioinfo, *contexts):
+	pgb = PoolGraphBuilder(exgraph, ioinfo)
 
 	for context in contexts:
 		code = context.code
 		print code
-		pgb.analyzeCode(code, context.shaderdesc.outputs.collectUsed())
+		pgb.analyzeCode(code)
 
 	pgb.process()
 

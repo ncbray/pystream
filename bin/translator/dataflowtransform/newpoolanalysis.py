@@ -351,7 +351,7 @@ class PoolGraphBuilder(TypeDispatcher):
 				print '\t', t
 			print "REFS"
 			for ref in info.refs:
-				print '\t', ref
+				print '\t', ref, ref.annotation.final
 			print "GROUPS REFER"
 			for fg in info.fieldGroupsRefer:
 				print '\t', fg

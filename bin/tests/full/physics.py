@@ -125,13 +125,25 @@ class Material(object):
 		return surface
 
 class LambertMaterial(Material):
-	pass
+	__slots__ = 'wrap',
+
+	def __init__(self, wrap):
+		Material.__init__(self)
+		self.wrap = wrap
+
+	def diffuseTransfer(self, n, l, e):
+		ndl = n.dot(l)
+		wrapped = (ndl+self.wrap)/(1.0+self.wrap)
+		return max(wrapped, 0.0)
+
+	def specularTransfer(self, n, l, e):
+		return 0.0
 
 class DummyMaterial(Material):
 	pass
 
 class PhongMaterial(Material):
-	__slots__ = 'shiny'
+	__slots__ = 'shiny',
 
 	def __init__(self, shiny):
 		Material.__init__(self)

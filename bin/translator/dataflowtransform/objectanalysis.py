@@ -2,6 +2,8 @@ from util.typedispatch import *
 from language.python import ast
 from .. import intrinsics
 
+immutableTypes = frozenset([float, int, long, bool, str, tuple, frozenset])
+
 class ObjectAnalysis(TypeDispatcher):
 	def __init__(self, compiler, prgm):
 		self.compiler = compiler
@@ -54,6 +56,9 @@ class ObjectAnalysis(TypeDispatcher):
 		region = self.prgm.storeGraph.regionHint
 		for xtype, obj in region.objects.iteritems():
 			assert xtype.obj.pythonType() is not list, "Temporary Limitation: Cannot handle lists"
+
+			if xtype.obj.pythonType() in immutableTypes:
+				obj.rewriteAnnotation(final=True)
 
 			if xtype.isUnique():
 				obj.rewriteAnnotation(unique=True)

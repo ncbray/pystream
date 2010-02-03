@@ -191,7 +191,7 @@ class GLSLTranslator(TypeDispatcher):
 		structInfo =  self.slotInfos.get(slot)
 
 		assert structInfo.mode != 'LOCAL', original
-			
+
 		return structInfo
 
 	def pushBlock(self):

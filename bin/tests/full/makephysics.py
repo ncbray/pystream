@@ -76,6 +76,9 @@ attr(inst(physics.PhongMaterial),   'shiny',     inst(float))
 attr(inst(physics.PhongMaterial), 'diffuseColor',    inst(vec.vec3))
 attr(inst(physics.PhongMaterial), 'specularColor',   inst(vec.vec3))
 
+
+attr(inst(physics.LambertMaterial),   'wrap',     inst(float))
+
 attr(inst(physics.LambertMaterial), 'diffuseColor',    inst(vec.vec3))
 attr(inst(physics.LambertMaterial), 'specularColor',   inst(vec.vec3))
 

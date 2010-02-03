@@ -278,9 +278,9 @@ def evaluateShaderProgram(compiler, vscontext, fscontext):
 	with compiler.console.scope('pool analysis'):
 		poolAnalysis = newpoolanalysis.process(compiler, prgm, exgraph, ioinfo, vscontext, fscontext)
 
-	translator = newglsltranslator.process(compiler, prgm, exgraph, poolAnalysis, shaderprgm, ioinfo)
-
-	bind.generateBindingClass(compiler, prgm, shaderprgm, translator)
+	with compiler.console.scope('translating'):
+		translator = newglsltranslator.process(compiler, prgm, exgraph, poolAnalysis, shaderprgm, ioinfo)
+		bind.generateBindingClass(compiler, prgm, shaderprgm, translator)
 
 	return shaderprgm
 

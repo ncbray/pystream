@@ -52,15 +52,12 @@ class EntryPoint(object):
 		return "EntryPoint(%r, %d)" % (self.code, len(self.args))
 
 class InterfaceDeclaration(object):
-	__slots__ = 'func', 'cls', 'attr', 'entryPoint', 'translated', 'glsl'
+	__slots__ = 'func', 'cls', 'entryPoint', 'translated', 'glsl'
 
 	def __init__(self):
 
 		self.func       = []
 		self.cls        = []
-
-		# The memory image
-		self.attr       = []
 
 		# Entry points, derived from other declarations.
 		self.entryPoint = []
@@ -74,7 +71,6 @@ class InterfaceDeclaration(object):
 
 		self.entryPoint = []
 
-		self._extractAttr(extractor)
 		self._extractFunc(extractor)
 		self._extractCls(extractor)
 
@@ -143,17 +139,6 @@ class InterfaceDeclaration(object):
 				for args in arglist:
 					ep = self.createEntryPoint(code, selfarg, (inst,)+args, [], nullWrapper, nullWrapper, group)
 					if group is None: group = ep
-
-	def _extractAttr(self, extractor):
-		attrs = []
-
-		for src, attr, dst in self.attr:
-			srcobj = src.getObject(extractor)
-			attrName = extractor.getObjectAttr(srcobj, attr)
-			dstobj = dst.getObject(extractor)
-			attrs.append((srcobj, attrName, dstobj))
-
-		self.attr = attrs
 
 	def __nonzero__(self):
 		return bool(self.func) or bool(self.cls) or bool(self.glsl)

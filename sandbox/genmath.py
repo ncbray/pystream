@@ -280,6 +280,7 @@ for l in range(2, 5):
 
 	print "class %s%d(object):" % (base, l)
 	print "\t__slots__ = %s" % (", ".join([repr(coord) for coord in coords]))
+	print "\t__fieldtypes__ = {%s}" % (", ".join(["%r:float" % coord for coord in coords]),)
 	print
 
 	declClass(fullname)
@@ -401,6 +402,7 @@ for l in range(2, 5):
 
 	print "class %s%d(object):" % (base, l)
 	print "\t__slots__ = %s" % (", ".join("'%s'" % mc for mc in mcoords))
+	print "\t__fieldtypes__ = {%s}" % (", ".join(["%r:float" % coord for coord in mcoords]),)
 	print
 
 	declClass("%s%d" % (base, l))

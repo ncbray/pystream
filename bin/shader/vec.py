@@ -2,6 +2,7 @@ import math
 
 class vec2(object):
 	__slots__ = 'x', 'y'
+	__fieldtypes__ = {'x':float, 'y':float}
 
 	def __init__(self, x, y=None):
 		if isinstance(x, float):
@@ -373,6 +374,7 @@ class vec2(object):
 
 class vec3(object):
 	__slots__ = 'x', 'y', 'z'
+	__fieldtypes__ = {'x':float, 'y':float, 'z':float}
 
 	def __init__(self, x, y=None, z=None):
 		if isinstance(x, float):
@@ -1322,6 +1324,7 @@ class vec3(object):
 
 class vec4(object):
 	__slots__ = 'x', 'y', 'z', 'w'
+	__fieldtypes__ = {'x':float, 'y':float, 'z':float, 'w':float}
 
 	def __init__(self, x, y=None, z=None, w=None):
 		if isinstance(x, float):
@@ -3894,6 +3897,7 @@ class vec4(object):
 
 class mat2(object):
 	__slots__ = 'm00', 'm01', 'm10', 'm11'
+	__fieldtypes__ = {'m00':float, 'm01':float, 'm10':float, 'm11':float}
 
 	def __init__(self, m00, m01, m10, m11):
 		self.m00 = m00
@@ -3924,6 +3928,7 @@ class mat2(object):
 
 class mat3(object):
 	__slots__ = 'm00', 'm01', 'm02', 'm10', 'm11', 'm12', 'm20', 'm21', 'm22'
+	__fieldtypes__ = {'m00':float, 'm01':float, 'm02':float, 'm10':float, 'm11':float, 'm12':float, 'm20':float, 'm21':float, 'm22':float}
 
 	def __init__(self, m00, m01, m02, m10, m11, m12, m20, m21, m22):
 		self.m00 = m00
@@ -3959,6 +3964,7 @@ class mat3(object):
 
 class mat4(object):
 	__slots__ = 'm00', 'm01', 'm02', 'm03', 'm10', 'm11', 'm12', 'm13', 'm20', 'm21', 'm22', 'm23', 'm30', 'm31', 'm32', 'm33'
+	__fieldtypes__ = {'m00':float, 'm01':float, 'm02':float, 'm03':float, 'm10':float, 'm11':float, 'm12':float, 'm13':float, 'm20':float, 'm21':float, 'm22':float, 'm23':float, 'm30':float, 'm31':float, 'm32':float, 'm33':float}
 
 	def __init__(self, m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33):
 		self.m00 = m00

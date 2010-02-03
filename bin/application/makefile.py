@@ -47,11 +47,6 @@ class Makefile(object):
 		for k, v in kargs.iteritems():
 			self.config[k] = v
 
-	def declAttr(self, src, attr, dst):
-		assert isinstance(src, interface.InstanceWrapper), src
-		assert isinstance(dst, interface.InstanceWrapper), dst
-		self.interface.attr.append((src, attr, dst))
-
 	def declFunction(self, func, *args):
 		self.interface.func.append((func, args))
 
@@ -74,7 +69,6 @@ class Makefile(object):
 			   'inst':self.declInstance,
 
 			   # Interface declarations
-			   'attr':self.declAttr,
 			   'func':self.declFunction,
 			   'cls':self.declClass,
 

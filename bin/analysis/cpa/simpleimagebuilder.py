@@ -6,6 +6,9 @@ class ImageBuilder(object):
 		self.compiler = compiler
 		self.prgm = prgm
 
+		self.allObjects = set()
+		self.dirtyObjects = set()
+
 		self.canonical  = canonicalobjects.CanonicalObjects()
 		self.storeGraph = storegraph.StoreGraph(self.compiler.extractor, self.canonical)
 		self.entryPoints = []
@@ -19,7 +22,16 @@ class ImageBuilder(object):
 
 	def objGraphObj(self, obj):
 		xtype  = self.objType(obj)
-		return self.storeGraph.regionHint.object(xtype)
+
+		region = self.storeGraph.regionHint
+		obj = region.object(xtype)
+		self.logObj(obj)
+		return obj
+
+	def logObj(self, obj):
+		if obj not in self.allObjects:
+			self.allObjects.add(obj)
+			self.dirtyObjects.add(obj)
 
 	def ensureLoaded(self, obj):
 		# HACK sometimes constant folding neglects this.
@@ -63,16 +75,40 @@ class ImageBuilder(object):
 
 		return CallerArgs(selfarg, args, kwds, varg, karg, None)
 
+	def attachAttr(self, root):
+		pt = root.xtype.obj.pythonType()
+
+		for t in pt.mro():
+			fieldtypes = getattr(t, '__fieldtypes__', None)
+			if not isinstance(fieldtypes, dict): continue
+
+			for name, types in fieldtypes.iteritems():
+				descriptorName = self.compiler.slots.uniqueSlotName(getattr(pt, name))
+				nameObj = self.compiler.extractor.getObject(descriptorName)
+				fieldName = self.canonical.fieldName('Attribute', nameObj)
+				field = root.field(fieldName, self.storeGraph.regionHint)
+
+				if isinstance(types, type):
+					types = (types,)
+
+				for ft in types:
+					inst = self.compiler.extractor.getInstance(ft)
+					field.initializeType(self.objType(inst))
+
+				for obj in field:
+					self.logObj(obj)
+
 	def process(self):
 		interface = self.prgm.interface
 
-		for src, attrName, dst in interface.attr:
-			self.addAttr(src, attrName, dst)
-
 		for entryPoint in interface.entryPoint:
 			args = self.resolveEntryPoint(entryPoint)
-
 			self.entryPoints.append((entryPoint, args))
+
+		while self.dirtyObjects:
+			obj = self.dirtyObjects.pop()
+			self.attachAttr(obj)
+
 
 def build(compiler, prgm):
 	ib = ImageBuilder(compiler, prgm)

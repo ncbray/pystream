@@ -1,6 +1,7 @@
 import math
 import random
 from shader.vec import *
+from shader import sampler
 
 class Particle(object):
 	__slots__ = 'position', 'velocity'
@@ -108,6 +109,9 @@ class SurfaceFragment(object):
 
 class Material(object):
 	__slots__ = 'diffuseColor', 'specularColor'
+	__fieldtypes__ = {'diffuseColor':vec3, 'specularColor':vec3}
+
+
 	def __init__(self):
 		self.diffuseColor  = vec3(0.125, 0.125, 1.0)
 		self.specularColor = vec3(0.5, 0.5, 0.5)
@@ -126,6 +130,7 @@ class Material(object):
 
 class LambertMaterial(Material):
 	__slots__ = 'wrap',
+	__fieldtypes__ = {'wrap':float}
 
 	def __init__(self, wrap):
 		Material.__init__(self)
@@ -143,6 +148,7 @@ class LambertMaterial(Material):
 
 class PhongMaterial(Material):
 	__slots__ = 'shiny',
+	__fieldtypes__ = {'shiny':float}
 
 	def __init__(self, shiny):
 		Material.__init__(self)
@@ -159,6 +165,8 @@ class PhongMaterial(Material):
 
 class ToonMaterial(Material):
 	__slots__ = 'toonMap',
+	__fieldtypes__ = {'toonMap':sampler.sampler2D}
+
 
 	def __init__(self, toonMap):
 		Material.__init__(self)
@@ -179,6 +187,7 @@ class Light(object):
 
 class AmbientLight(Light):
 	__slots__ = 'direction', 'color0', 'color1'
+	__fieldtypes__ = {'direction':vec3, 'color0':vec3, 'color1':vec3}
 
 	def __init__(self, direction, color0, color1):
 		self.direction = direction
@@ -200,6 +209,7 @@ class AmbientLight(Light):
 
 class PointLight(Light):
 	__slots__ = 'position', 'color', 'attenuation'
+	__fieldtypes__ = {'position':vec3, 'color':vec3, 'attenuation':vec3}
 
 	def __init__(self, position, color, attenuation):
 		self.position    = position
@@ -222,6 +232,8 @@ class PointLight(Light):
 
 class Fog(object):
 	__slots__ = 'color', 'density'
+	__fieldtypes__ = {'color':vec3, 'density':float}
+
 	def __init__(self, color, density):
 		self.color = color
 		self.density = density
@@ -249,6 +261,12 @@ class Shader(object):
 				'material',
 				'sampler', 'normalmap', 'useNormalMap',
 				'fog']
+
+	__fieldtypes__ = {'objectToWorld':mat4, 'worldToCamera':mat4, 'projection':mat4,
+				'light':PointLight, 'ambient':AmbientLight,
+				'material':(LambertMaterial, PhongMaterial, ToonMaterial),
+				'sampler':sampler.sampler2D, 'normalmap':sampler.sampler2D, 'useNormalMap':bool,
+				'fog':Fog}
 
 	def __init__(self):
 		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,

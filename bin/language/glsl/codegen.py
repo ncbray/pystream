@@ -213,14 +213,32 @@ class GLSLCodeGen(TypeDispatcher):
 		else:
 			return self.wrapSimpleStatement("return %s" % self(node.expr))
 
+	def canFlattenSwitch(self, suite):
+		return len(suite.statements) == 1 and isinstance(suite.statements[0], ast.Switch)
+
 	@dispatch(ast.Switch)
 	def visitSwitch(self, node):
 		condition = self(node.condition)
 
 		t = self(node.t)
-		f = self(node.f)
+		s = "%sif(%s)\n%s{\n%s%s}\n" % (self.indent, condition, self.indent, t, self.indent,)
 
-		return "%sif(%s)\n%s{\n%s%s}\n%selse\n%s{\n%s%s}\n" % (self.indent, condition, self.indent, t, self.indent, self.indent, self.indent, f, self.indent)
+		elseBlock = node.f
+
+		while True:
+			if self.canFlattenSwitch(elseBlock):
+				switch = elseBlock.statements[0]
+				condition = self(switch.condition)
+				t = self(switch.t)
+				s += "%selse if(%s)\n%s{\n%s%s}\n" % (self.indent, condition, self.indent, t, self.indent,)
+				elseBlock = switch.f
+			else:
+				if len(elseBlock.statements):
+					f = self(elseBlock)
+					s += "%selse\n%s{\n%s%s}\n" % (self.indent, self.indent, f, self.indent)
+				break
+
+		return s
 
 	@dispatch(ast.Suite)
 	def visitSuite(self, node):

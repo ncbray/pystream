@@ -615,10 +615,22 @@ class SimpleCodeGen(TypeDispatcher):
 		self(node.t)
 		self.out.endBlock()
 
-		if node.f and node.f.significant():
-			self.out.startBlock("else")
-			self(node.f)
-			self.out.endBlock()
+		elseBlock = node.f
+
+		while elseBlock and elseBlock.significant():
+			if len(elseBlock.blocks) == 1 and isinstance(elseBlock.blocks[0], ast.Switch):
+				switch = elseBlock.blocks[0]
+				cond, prec = self(switch.condition)
+				self.out.startBlock("elif %s" % cond)
+				self(switch.t)
+				self.out.endBlock()
+
+				elseBlock = switch.f
+			else:
+				self.out.startBlock("else")
+				self(elseBlock)
+				self.out.endBlock()
+				break
 
 	def visitTypeSwitchCase(self, node):
 		types = []

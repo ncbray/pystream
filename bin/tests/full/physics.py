@@ -251,6 +251,33 @@ class TangentSpaceBasis(object):
 		self.bitangent = bitangent
 
 
+	def normalize(self):
+		self.normal    = self.normal.normalize()
+		self.tanget    = self.tangent.normalize()
+		self.bitangent = self.bitangent.normalize()
+
+
+	def fromTangentSpace(self, tsn):
+		if False:
+			self.normalize()
+
+			n = self.normal
+			t = self.tangent
+			b = self.bitangent
+		else:
+			n = self.normal.normalize()
+			t = self.tangent.normalize()
+			b = self.bitangent.normalize()
+
+		result = vec3(tsn.x*t.x + tsn.y*b.x + tsn.z*n.x,
+					  tsn.x*t.y + tsn.y*b.y + tsn.z*n.y,
+					  tsn.x*t.z + tsn.y*b.z + tsn.z*n.z)
+
+		return result.normalize()
+
+	def getNormal(self):
+		return self.normal.normalize()
+
 def transformNormal(m, n):
 	return (m*vec4(n, 0.0)).xyz
 
@@ -313,21 +340,10 @@ class Shader(object):
 		n  = tsbasis.normal.normalize()
 
 		if self.useNormalMap:
-			t  = tsbasis.tangent.normalize()
-			b  = tsbasis.bitangent.normalize()
-			#btsign = tangent.w
-			#b      = (n.cross(t)*btsign).normalize()
-
-			# Look up the tangent space normal and transform it to camera space
 			tsn = self.normalmap.texture(texCoord).xyz*2.0-1.0
-
-			normal = vec3(tsn.x*t.x + tsn.y*b.x + tsn.z*n.x,
-						  tsn.x*t.y + tsn.y*b.y + tsn.z*n.y,
-						  tsn.x*t.z + tsn.y*b.z + tsn.z*n.z)
-
-			normal = normal.normalize()
+			normal = tsbasis.fromTangentSpace(tsn)
 		else:
-			normal = n
+			normal = tsbasis.getNormal()
 
 		surface = self.material.surface(pos, normal)
 

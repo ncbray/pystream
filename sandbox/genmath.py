@@ -190,8 +190,14 @@ def makeSubconstructor(base, count, baseType, args, indent, srcs=()):
 		currentSrcs = srcs + (args[0],)
 		makeSubconstructor(base, count, baseType, args[1:], indent+'\t', currentSrcs)
 
-		for i in range(2, 5):
-			print "%selif isinstance(%s, %s%d):" % (indent, args[0], base, i)
+		done = False
+
+		for i in (2, 3, 4):
+			if len(srcs)+i >= count and i<4:
+				print "%selif isinstance(%s, (%s)):" % (indent, args[0], ", ".join(["%s%d" % (base, j) for j in range(i, 5)]))
+				done = True
+			else:
+				print "%selif isinstance(%s, %s%d):" % (indent, args[0], base, i)
 
 			currentSrcs = srcs
 			for coord in allcoords[:i]:
@@ -200,10 +206,16 @@ def makeSubconstructor(base, count, baseType, args, indent, srcs=()):
 
 			makeSubconstructor(base, count, baseType, args[1:], indent+'\t', currentSrcs)
 
+			if done: break
 
-		if len(srcs) == 1:
+		if len(srcs) < 2:
 			print "%selif %s is None:" % (indent, args[0])
-			makeSubconstructor(base, count, baseType, (), indent+'\t', srcs*count)
+			if len(srcs) == 1:
+				srcs = srcs*count
+			else:
+				srcs = ('0.0',)*count
+
+			makeSubconstructor(base, count, baseType, (), indent+'\t', srcs)
 
 		#print "%selse:\n%s\tassert False, type(%s)" % (indent, indent, args[0])
 		print "%selse:\n%s\tpass #assert False, type(%s)" % (indent, indent, args[0])
@@ -217,8 +229,7 @@ def makeSubconstructor(base, count, baseType, args, indent, srcs=()):
 			print "%sself.%s = %s" % (indent, coord, src)
 
 def makeConstructor(base, coords):
-	parts = [coords[0]]
-	parts.extend(["%s=None" % coord for coord in coords[1:]])
+	parts = ["%s=None" % coord for coord in coords]
 
 	print "\tdef __init__(self, %s):" % ", ".join(parts)
 
@@ -272,7 +283,7 @@ print >> interface, "from decl import *"
 print "import math"
 print
 
-for l in range(2, 5):
+for l in (2, 3, 4):
 	coords = allcoords[:l]
 	base = "vec"
 
@@ -395,7 +406,7 @@ for l in range(2, 5):
 
 
 # Matrix
-for l in range(2, 5):
+for l in (2, 3, 4):
 	coords = allcoords[:l]
 	mcoords = ["m%d%d" % (a, b) for a in range(l) for b in range(l)]
 	base = "mat"

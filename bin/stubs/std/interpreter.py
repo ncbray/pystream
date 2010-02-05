@@ -169,18 +169,29 @@ def makeInterpreterStubs(collector):
 		call = loadDict(load(load(internal_self, 'type'), 'dictionary'), '__call__')
 		return call(internal_self, *vargs)
 
+	def dynamictuple(*args):
+		for arg in args:
+			if isinstance(arg, tuple): raise Exception
+		return args
+
 	# Horrible hack, as vargs depend on creating a tuple,
 	# and creating a tuple depends on vargs.
+	@staticFold(tuple)
+	@fold(dynamictuple)
 	@interpfunc(descriptive=True)
 	def buildTuple(*vargs):
 		return vargs
 
+	@staticFold(tuple)
+	@fold(dynamictuple)
 	@interpfunc
 	def interpreter_buildTuple0():
 		inst = allocate(tuple)
 		store(inst, 'length', 0)
 		return inst
 
+	@staticFold(tuple)
+	@fold(dynamictuple)
 	@interpfunc
 	def interpreter_buildTuple1(arg0):
 		inst = allocate(tuple)
@@ -188,6 +199,8 @@ def makeInterpreterStubs(collector):
 		storeArray(inst, 0, arg0)
 		return inst
 
+	@staticFold(tuple)
+	@fold(dynamictuple)
 	@interpfunc
 	def interpreter_buildTuple2(arg0, arg1):
 		inst = allocate(tuple)
@@ -196,6 +209,8 @@ def makeInterpreterStubs(collector):
 		storeArray(inst, 1, arg1)
 		return inst
 
+	@staticFold(tuple)
+	@fold(dynamictuple)
 	@interpfunc
 	def interpreter_buildTuple3(arg0, arg1, arg2):
 		inst = allocate(tuple)
@@ -205,6 +220,8 @@ def makeInterpreterStubs(collector):
 		storeArray(inst, 2, arg2)
 		return inst
 
+	@staticFold(tuple)
+	@fold(dynamictuple)
 	@interpfunc
 	def interpreter_buildTuple4(arg0, arg1, arg2, arg3):
 		inst = allocate(tuple)
@@ -215,6 +232,8 @@ def makeInterpreterStubs(collector):
 		storeArray(inst, 3, arg3)
 		return inst
 
+	@staticFold(tuple)
+	@fold(dynamictuple)
 	@interpfunc
 	def interpreter_buildTuple5(arg0, arg1, arg2, arg3, arg4):
 		inst = allocate(tuple)

@@ -4,18 +4,12 @@ class vec2(object):
 	__slots__ = 'x', 'y'
 	__fieldtypes__ = {'x':float, 'y':float}
 
-	def __init__(self, x, y=None):
+	def __init__(self, x=None, y=None):
 		if isinstance(x, float):
 			if isinstance(y, float):
 				self.x = x
 				self.y = y
-			elif isinstance(y, vec2):
-				self.x = x
-				self.y = y.x
-			elif isinstance(y, vec3):
-				self.x = x
-				self.y = y.x
-			elif isinstance(y, vec4):
+			elif isinstance(y, (vec2, vec3, vec4)):
 				self.x = x
 				self.y = y.x
 			elif y is None:
@@ -23,18 +17,13 @@ class vec2(object):
 				self.y = x
 			else:
 				pass #assert False, type(y)
-		elif isinstance(x, vec2):
+		elif isinstance(x, (vec2, vec3, vec4)):
 			pass #assert y is None
 			self.x = x.x
 			self.y = x.y
-		elif isinstance(x, vec3):
-			pass #assert y is None
-			self.x = x.x
-			self.y = x.y
-		elif isinstance(x, vec4):
-			pass #assert y is None
-			self.x = x.x
-			self.y = x.y
+		elif x is None:
+			self.x = 0.0
+			self.y = 0.0
 		else:
 			pass #assert False, type(x)
 
@@ -376,38 +365,20 @@ class vec3(object):
 	__slots__ = 'x', 'y', 'z'
 	__fieldtypes__ = {'x':float, 'y':float, 'z':float}
 
-	def __init__(self, x, y=None, z=None):
+	def __init__(self, x=None, y=None, z=None):
 		if isinstance(x, float):
 			if isinstance(y, float):
 				if isinstance(z, float):
 					self.x = x
 					self.y = y
 					self.z = z
-				elif isinstance(z, vec2):
-					self.x = x
-					self.y = y
-					self.z = z.x
-				elif isinstance(z, vec3):
-					self.x = x
-					self.y = y
-					self.z = z.x
-				elif isinstance(z, vec4):
+				elif isinstance(z, (vec2, vec3, vec4)):
 					self.x = x
 					self.y = y
 					self.z = z.x
 				else:
 					pass #assert False, type(z)
-			elif isinstance(y, vec2):
-				pass #assert z is None
-				self.x = x
-				self.y = y.x
-				self.z = y.y
-			elif isinstance(y, vec3):
-				pass #assert z is None
-				self.x = x
-				self.y = y.x
-				self.z = y.y
-			elif isinstance(y, vec4):
+			elif isinstance(y, (vec2, vec3, vec4)):
 				pass #assert z is None
 				self.x = x
 				self.y = y.x
@@ -424,35 +395,23 @@ class vec3(object):
 				self.x = x.x
 				self.y = x.y
 				self.z = y
-			elif isinstance(y, vec2):
-				pass #assert z is None
-				self.x = x.x
-				self.y = x.y
-				self.z = y.x
-			elif isinstance(y, vec3):
-				pass #assert z is None
-				self.x = x.x
-				self.y = x.y
-				self.z = y.x
-			elif isinstance(y, vec4):
+			elif isinstance(y, (vec2, vec3, vec4)):
 				pass #assert z is None
 				self.x = x.x
 				self.y = x.y
 				self.z = y.x
 			else:
 				pass #assert False, type(y)
-		elif isinstance(x, vec3):
+		elif isinstance(x, (vec3, vec4)):
 			pass #assert y is None
 			pass #assert z is None
 			self.x = x.x
 			self.y = x.y
 			self.z = x.z
-		elif isinstance(x, vec4):
-			pass #assert y is None
-			pass #assert z is None
-			self.x = x.x
-			self.y = x.y
-			self.z = x.z
+		elif x is None:
+			self.x = 0.0
+			self.y = 0.0
+			self.z = 0.0
 		else:
 			pass #assert False, type(x)
 
@@ -1326,7 +1285,7 @@ class vec4(object):
 	__slots__ = 'x', 'y', 'z', 'w'
 	__fieldtypes__ = {'x':float, 'y':float, 'z':float, 'w':float}
 
-	def __init__(self, x, y=None, z=None, w=None):
+	def __init__(self, x=None, y=None, z=None, w=None):
 		if isinstance(x, float):
 			if isinstance(y, float):
 				if isinstance(z, float):
@@ -1335,36 +1294,14 @@ class vec4(object):
 						self.y = y
 						self.z = z
 						self.w = w
-					elif isinstance(w, vec2):
-						self.x = x
-						self.y = y
-						self.z = z
-						self.w = w.x
-					elif isinstance(w, vec3):
-						self.x = x
-						self.y = y
-						self.z = z
-						self.w = w.x
-					elif isinstance(w, vec4):
+					elif isinstance(w, (vec2, vec3, vec4)):
 						self.x = x
 						self.y = y
 						self.z = z
 						self.w = w.x
 					else:
 						pass #assert False, type(w)
-				elif isinstance(z, vec2):
-					pass #assert w is None
-					self.x = x
-					self.y = y
-					self.z = z.x
-					self.w = z.y
-				elif isinstance(z, vec3):
-					pass #assert w is None
-					self.x = x
-					self.y = y
-					self.z = z.x
-					self.w = z.y
-				elif isinstance(z, vec4):
+				elif isinstance(z, (vec2, vec3, vec4)):
 					pass #assert w is None
 					self.x = x
 					self.y = y
@@ -1379,19 +1316,7 @@ class vec4(object):
 					self.y = y.x
 					self.z = y.y
 					self.w = z
-				elif isinstance(z, vec2):
-					pass #assert w is None
-					self.x = x
-					self.y = y.x
-					self.z = y.y
-					self.w = z.x
-				elif isinstance(z, vec3):
-					pass #assert w is None
-					self.x = x
-					self.y = y.x
-					self.z = y.y
-					self.w = z.x
-				elif isinstance(z, vec4):
+				elif isinstance(z, (vec2, vec3, vec4)):
 					pass #assert w is None
 					self.x = x
 					self.y = y.x
@@ -1399,14 +1324,7 @@ class vec4(object):
 					self.w = z.x
 				else:
 					pass #assert False, type(z)
-			elif isinstance(y, vec3):
-				pass #assert z is None
-				pass #assert w is None
-				self.x = x
-				self.y = y.x
-				self.z = y.y
-				self.w = y.z
-			elif isinstance(y, vec4):
+			elif isinstance(y, (vec3, vec4)):
 				pass #assert z is None
 				pass #assert w is None
 				self.x = x
@@ -1428,19 +1346,7 @@ class vec4(object):
 					self.y = x.y
 					self.z = y
 					self.w = z
-				elif isinstance(z, vec2):
-					pass #assert w is None
-					self.x = x.x
-					self.y = x.y
-					self.z = y
-					self.w = z.x
-				elif isinstance(z, vec3):
-					pass #assert w is None
-					self.x = x.x
-					self.y = x.y
-					self.z = y
-					self.w = z.x
-				elif isinstance(z, vec4):
+				elif isinstance(z, (vec2, vec3, vec4)):
 					pass #assert w is None
 					self.x = x.x
 					self.y = x.y
@@ -1448,21 +1354,7 @@ class vec4(object):
 					self.w = z.x
 				else:
 					pass #assert False, type(z)
-			elif isinstance(y, vec2):
-				pass #assert z is None
-				pass #assert w is None
-				self.x = x.x
-				self.y = x.y
-				self.z = y.x
-				self.w = y.y
-			elif isinstance(y, vec3):
-				pass #assert z is None
-				pass #assert w is None
-				self.x = x.x
-				self.y = x.y
-				self.z = y.x
-				self.w = y.y
-			elif isinstance(y, vec4):
+			elif isinstance(y, (vec2, vec3, vec4)):
 				pass #assert z is None
 				pass #assert w is None
 				self.x = x.x
@@ -1479,21 +1371,7 @@ class vec4(object):
 				self.y = x.y
 				self.z = x.z
 				self.w = y
-			elif isinstance(y, vec2):
-				pass #assert z is None
-				pass #assert w is None
-				self.x = x.x
-				self.y = x.y
-				self.z = x.z
-				self.w = y.x
-			elif isinstance(y, vec3):
-				pass #assert z is None
-				pass #assert w is None
-				self.x = x.x
-				self.y = x.y
-				self.z = x.z
-				self.w = y.x
-			elif isinstance(y, vec4):
+			elif isinstance(y, (vec2, vec3, vec4)):
 				pass #assert z is None
 				pass #assert w is None
 				self.x = x.x
@@ -1510,6 +1388,11 @@ class vec4(object):
 			self.y = x.y
 			self.z = x.z
 			self.w = x.w
+		elif x is None:
+			self.x = 0.0
+			self.y = 0.0
+			self.z = 0.0
+			self.w = 0.0
 		else:
 			pass #assert False, type(x)
 

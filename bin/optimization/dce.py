@@ -88,6 +88,12 @@ class MarkLive(TypeDispatcher):
 			self.marker(node)
 		return node
 
+	@dispatch(ast.OutputBlock)
+	def visitOutputBlock(self, node):
+		for output in node.outputs:
+			self.flow.define(output.expr, top)
+		return node
+
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
 		for lcl in self.initialLive:
@@ -106,7 +112,7 @@ class MarkLive(TypeDispatcher):
 	@dispatch(ast.CodeParameters)
 	def visitCodeParameters(self, node):
 		# Insert don't care for unused parameters.
-		# selfparam is a special case, it's OK if it disapears in descriptive stubs.
+		# selfparam is a special case, it's OK if it disappears in descriptive stubs.
 		selfparam = self.filterParam(node.selfparam)
 
 		if self.descriptive():

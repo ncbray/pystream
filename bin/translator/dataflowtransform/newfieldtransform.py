@@ -7,6 +7,8 @@ from optimization import rewrite, simplify
 
 from . import common
 
+from analysis.cfg import ssatransform
+
 class FieldTransformAnalysis(TypeDispatcher):
 	def __init__(self, compiler, prgm, exgraph):
 		TypeDispatcher.__init__(self)
@@ -22,13 +24,15 @@ class FieldTransformAnalysis(TypeDispatcher):
 
 		self.exgraph = exgraph
 
+		self.ssaBroken = False
+
 	def reads(self, args):
 		self.compatable.union(*args)
 
 	def modifies(self, args):
 		self.compatable.union(*args)
 
-	@dispatch(ast.leafTypes, ast.Local, ast.Existing, ast.DoNotCare, ast.CodeParameters)
+	@dispatch(ast.leafTypes, ast.Local, ast.Existing, ast.DoNotCare, ast.CodeParameters, ast.OutputBlock)
 	def visitLeaf(self, node, stmt=None):
 		pass
 
@@ -95,7 +99,9 @@ class FieldTransformAnalysis(TypeDispatcher):
 			self.rewrites[store] = ast.Assign(store.value, [lcl])
 			storeCount += 1
 
-		assert storeCount == 0 or storeCount == 1 and not isLoaded, "Field transform broke SSA form"
+		if storeCount > 1 or storeCount == 1 and isLoaded:
+			self.ssaBroken = True
+
 
 	def processGroup(self, code, name, group):
 		self.transform(code, name, group)
@@ -171,7 +177,7 @@ class FieldTransformAnalysis(TypeDispatcher):
 		self.loadLUT  = self.loadGroups()
 		self.storeLUT = self.storeGroups()
 
-	def postProcessCode(self, code, outputAnchors):
+	def postProcessCode(self, code):
 		self.rewrites = {}
 		self.remap = {}
 		self.fields = {}
@@ -179,14 +185,10 @@ class FieldTransformAnalysis(TypeDispatcher):
 		for name, group in self.groups.iteritems():
 			self.processGroup(code, name, group)
 
-#		for k, v in self.rewrites.iteritems():
-#			print k
-#			print v
-#			print
-
 		rewrite.rewrite(self.compiler, code, self.rewrites)
 		# TODO SSA
-		simplify.evaluateCode(self.compiler, self.prgm, code, outputAnchors=outputAnchors)
+		assert not self.ssaBroken
+		simplify.evaluateCode(self.compiler, self.prgm, code)
 
 
 	def process(self, code):
@@ -202,5 +204,5 @@ def process(compiler, prgm, exgraph, *contexts):
 	fta.postProcess()
 
 	for context in contexts:
-		fta.postProcessCode(context.code, context.shaderdesc.outputs.collectUsed())
+		fta.postProcessCode(context.code)
 		context.shaderdesc.fields = fta.fields

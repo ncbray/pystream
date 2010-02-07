@@ -63,6 +63,24 @@ class DoNotCare(Reference):
 	def isDoNotCare(self):
 		return True
 
+### AST nodes for emulating GLSL's input / output nodes ###
+class IOName(PythonASTNode):
+	__fields__ = 'name:str?'
+	__shared__ = True
+	__leaf__   = True
+
+class Input(Reference):
+	__fields__ = 'src:IOName'
+	__leaf__   = True
+
+class Output(Statement):
+	__fields__ = 'expr:Reference dst:IOName'
+	__leaf__   = True
+
+class OutputBlock(Statement):
+	__fields__ = 'outputs:Output*'
+
+
 class Cell(PythonASTNode):
 	__slots__  = 'name'
 	__shared__ = True

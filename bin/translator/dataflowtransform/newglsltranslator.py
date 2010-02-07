@@ -239,7 +239,7 @@ class GLSLTranslator(TypeDispatcher):
 		stmt = glsl.Assign(expr, target)
 		self.current.append(stmt)
 
-	@dispatch(ast.Local)
+	@dispatch(ast.Local, ast.IOName)
 	def visitLocal(self, node):
 		return self.slotInfo(node)
 
@@ -264,32 +264,46 @@ class GLSLTranslator(TypeDispatcher):
 		field   = intrinsics.fields[node.name.object.pyobj]
 		return glsl.Load(exprRef, field)
 
+	def filteredRefs(self, refs, filter):
+			refs = set(refs)
+			if filter is not None: refs = refs.intersection(filter)
+			return refs
+
+	def transfer(self, expr, targetInfo, filter=None):
+		if isinstance(expr, ast.DirectCall):
+			assert filter is not None
+			expr = self(expr)
+			targetInfo.assignIntrinsic(self, filter, expr)
+		elif isinstance(expr, ast.Load):
+			assert filter is not None
+			assert intrinsics.isIntrinsicMemoryOp(expr), expr
+			expr = self(expr)
+			targetInfo.assignIntrinsic(self, filter, expr)
+		elif isinstance(expr, ast.Local):
+			refs = self.filteredRefs(expr.annotation.references.merged, filter)
+			exprInfo = self(expr)
+			targetInfo.copyFrom(self, exprInfo, refs)
+		elif isinstance(expr, ast.Existing):
+			refs = self.filteredRefs(expr.annotation.references.merged, filter)
+			expr = self(expr)
+			targetInfo.assignIntrinsic(self, refs, expr)
+		else:
+			assert False, expr
+
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
 		assert len(node.lcls) == 1
 		target = node.lcls[0]
 		targetInfo = self(target)
 
-		if isinstance(node.expr, ast.DirectCall):
-			expr = self(node.expr)
-			targetInfo.assignIntrinsic(self, node.lcls[0].annotation.references.merged, expr)
+		filter = target.annotation.references.merged
 
-		elif isinstance(node.expr, ast.Load):
-			load = node.expr
-			assert intrinsics.isIntrinsicMemoryOp(load), load
+		self.transfer(node.expr, targetInfo, filter)
 
-			expr = self(node.expr)
-			targetInfo.assignIntrinsic(self, node.lcls[0].annotation.references.merged, expr)
-
-		elif isinstance(node.expr, ast.Local):
-			refs = set(node.expr.annotation.references.merged).intersection(target.annotation.references.merged)
-			exprInfo = self(node.expr)
-			targetInfo.copyFrom(self, exprInfo, refs)
-		elif isinstance(node.expr, ast.Existing):
-			expr = self(node.expr)
-			targetInfo.assignIntrinsic(self, node.expr.annotation.references.merged, expr)
-		else:
-			assert False, node.expr
+	@dispatch(ast.OutputBlock)
+	def visitOutputBlock(self, node):
+		for output in node.outputs:
+			self.transfer(output.expr, self(output.dst))
 
 	def getCondition(self, condInfo, types):
 		parts = [glsl.BinaryOp(condInfo.typeField, '==', self.typeID(te.object.pyobj)) for te in types]

@@ -263,7 +263,7 @@ class TangentSpaceBasis(object):
 
 			n = self.normal
 			t = self.tangent
-			b = self.bitangent
+			b = -self.bitangent
 		else:
 			n = self.normal.normalize()
 			t = self.tangent.normalize()

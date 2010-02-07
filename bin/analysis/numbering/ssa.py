@@ -223,6 +223,11 @@ class ForwardESSA(TypeDispatcher):
 		self.renameModifiedFields(node)
 		self.logModifiedFields(node)
 
+	@dispatch(ast.OutputBlock)
+	def visitOutputBlock(self, node):
+		for output in node.outputs:
+			self.logReadLocals(node, output.expr)
+
 	@dispatch(ast.Discard)
 	def processDiscard(self, node):
 		self.logReadLocals(node, node.expr)

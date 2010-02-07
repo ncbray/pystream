@@ -62,6 +62,10 @@ class ObjectAnalysis(TypeDispatcher):
 		self.loopLevel -= 1
 		self(node.else_)
 
+	@dispatch(ast.OutputBlock)
+	def visitOutputBlock(self, node):
+		pass
+
 	@dispatch(ast.Suite, ast.Condition)
 	def visitOK(self, node):
 		node.visitChildren(self)

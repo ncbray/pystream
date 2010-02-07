@@ -28,7 +28,7 @@ class ForwardDataflow(TypeDispatcher):
 			self.next[prev].append(next)
 
 
-	@dispatch(ast.Assign, ast.Discard, ast.Store)
+	@dispatch(ast.Assign, ast.Discard, ast.Store, ast.OutputBlock)
 	def visitStatement(self, node):
 		entry, exit = self.makeConcrete(node)
 

@@ -434,6 +434,11 @@ class ForwardFlowTraverse(TypeDispatcher):
 		self.flow.save('continue')
 		return result
 
+	@dispatch(ast.OutputBlock)
+	def visitOutputBlock(self, node):
+		outputs = [ast.Output(self.processExpr(output.expr), output.dst) for output in node.outputs]
+		return ast.OutputBlock(outputs)
+
 	@dispatch(ast.Return)
 	def visitReturn(self, node):
 		result = self.processExpr(node)

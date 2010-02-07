@@ -275,6 +275,16 @@ class DefUseVisitor(TypeDispatcher):
 			if not isinstance(expr, ast.Existing):
 				self.use(node, expr)
 
+	@dispatch(ast.OutputBlock)
+	def visitOutputBlock(self, node):
+		for output in node.outputs:
+			if not isinstance(output.expr, ast.Existing):
+				self.use(node, output.expr)
+
+	@dispatch(ast.Output, ast.IOName)
+	def visitOutput(self, node):
+		pass
+
 	@dispatch(ast.Raise)
 	def visitRaise(self, node):
 		if node.exception: self.use(node, node.exception)

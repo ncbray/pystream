@@ -17,6 +17,11 @@ class GetOps(TypeDispatcher):
 	def visitOK(self, node):
 		node.visitChildren(self)
 
+	@dispatch(ast.OutputBlock)
+	def visitOutputBlock(self, node):
+		for output in node.outputs:
+			self(output.expr)
+
 	@dispatch(ast.Local, ast.Existing)
 	def visitLocal(self, node):
 		self.locals.add(node)

@@ -154,6 +154,16 @@ class FindReadModify(TypeDispatcher):
 		self.lut[node] = info
 		return info
 
+	@dispatch(ast.OutputBlock)
+	def visitOutputBlock(self, node):
+		info = ReadModifyInfo()
+
+		for output in node.outputs:
+			self(output.expr, info)
+
+		self.lut[node] = info
+		return info
+
 	def processCode(self, code):
 		self.lut = {}
 		self(code.ast)

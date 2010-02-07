@@ -105,7 +105,7 @@ class PoolInfo(object):
 		# Choose a random name
 		self.name = tuple(self.slots)[0]
 
-		if len(self.slots) == 1 and isinstance(self.name, ast.Local):
+		if len(self.slots) == 1 and isinstance(self.name, (ast.Local, ast.IOName)):
 			# If there is only one pointer to this pool, it is safe to assume it is unique.
 			unique = True
 		else:
@@ -282,6 +282,15 @@ class PoolGraphBuilder(TypeDispatcher):
 
 			src.transfer(self, target)
 
+	@dispatch(ast.OutputBlock)
+	def visitOutputBlock(self, node):
+		for output in node.outputs:
+			expr = self.localInfo(output.expr)
+			# HACK ionames are not annotated?
+			dst = self.poolInfo(output.dst, output.expr.annotation.references.merged)
+			dst.anchor = True
+
+			expr.transfer(self, dst)
 
 	@dispatch(ast.Store)
 	def visitStore(self, node):

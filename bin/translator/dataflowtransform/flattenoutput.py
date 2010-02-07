@@ -89,8 +89,7 @@ class OutputFlattener(object):
 
 		return lcl
 
-	def handleTree(self, root):
-		slot = root.lcl
+	def handleTree(self, root, slot):
 		refs = slot.annotation.references.merged
 
 		assert refs
@@ -104,7 +103,7 @@ class OutputFlattener(object):
 			if not intrinsics.isIntrinsicField(fieldName):
 				fieldslot = self.generateLoad(slot, fieldName, refs)
 				fieldroot = root.field(fieldName, fieldslot)
-				self.handleTree(fieldroot)
+				self.handleTree(fieldroot, fieldslot)
 
 
 
@@ -127,7 +126,7 @@ class OutputFlattener(object):
 
 	def makeTree(self, slot):
 		root = TreeNode(slot)
-		self.handleTree(root)
+		self.handleTree(root, slot)
 		return root
 
 	def processReturn(self, ret):
@@ -159,6 +158,7 @@ class OutputFlattener(object):
 
 			outdesc.position = self.makeTree(posslot)
 
+		self.statements.append(outdesc.generateOutputStatements())
 
 		self.returnNone()
 
@@ -182,18 +182,13 @@ class OutputFlattener(object):
 		for ret in returns:
 			desc, rewrites[ret] = self.processReturn(ret)
 
-		self.outputAnchors = desc.outputs.collectUsed()
-
-		print self.outputAnchors
-
 		rewrite.rewrite(self.compiler, self.code, rewrites)
-
 
 		# HACK
 		while loadelimination.evaluateCode(self.compiler, self.prgm, self.code, simplify=False):
 			pass
 
-		simplify.evaluateCode(self.compiler, self.prgm, self.code, outputAnchors=self.outputAnchors)
+		simplify.evaluateCode(self.compiler, self.prgm, self.code)
 
 		return desc
 

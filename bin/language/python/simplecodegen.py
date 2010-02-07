@@ -390,6 +390,10 @@ class SimpleCodeGen(TypeDispatcher):
 		self.exitSupress()
 		return ret
 
+	def visitOutputBlock(self, node):
+		for output in node.outputs:
+			self.emitStatement("%s => %r" % (self.seg.process(output.expr), output.dst))
+
 	def visitReturn(self, node):
 		expr = ", ".join([self.seg.process(expr) for expr in node.exprs])
 

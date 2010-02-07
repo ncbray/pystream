@@ -1,4 +1,5 @@
 from .. import intrinsics
+from language.python import ast
 from language.glsl import ast as glsl
 
 class IOInfo(object):
@@ -25,40 +26,30 @@ class ProgramDescription(object):
 
 		self.vs2fs = {}
 
-	def handleOutputToLocal(self, tree, lcl, mapping):
+	def makeMap(self, tree, slot, mapping):
 		if tree.used:
-			assert lcl not in mapping
-			mapping[lcl] = tree.lcl
+			assert slot not in mapping
+			mapping[slot] = tree.ioname
 
-			assert tree.lcl not in self.vs2fs
-			self.vs2fs[tree.lcl] = lcl
+			assert tree.ioname not in self.vs2fs
+			self.vs2fs[tree.ioname] = slot
 
+
+	def handleOutputToLocal(self, tree, lcl, mapping):
+		self.makeMap(tree, lcl, mapping)
 		refs = lcl.annotation.references.merged
 		self.traverse(tree, refs, mapping)
 
-
-
 	def handleOutputToField(self, tree, field, mapping):
-		if tree.used:
-			assert field not in mapping
-			mapping[field] = tree.lcl
-
-			assert tree.lcl not in self.vs2fs
-			self.vs2fs[tree.lcl] = field
-
+		self.makeMap(tree, field, mapping)
 		refs = field
 		self.traverse(tree, refs, mapping)
-
 
 	def traverse(self, tree, refs, mapping):
 		for fieldName, child in tree.fields.iteritems():
 			for obj in refs:
 				if fieldName in obj.slots:
 					self.handleOutputToField(child, obj.slots[fieldName], mapping)
-
-	def link(self):
-		#self.linkUniform()
-		self.linkVarying()
 
 	def linkVarying(self):
 		# Generate fs input => vs output mappings
@@ -76,7 +67,9 @@ class ProgramDescription(object):
 
 		self.mapping = mapping
 
-
+	def link(self):
+		#self.linkUniform()
+		self.linkVarying()
 
 
 	def markTraverse(self, refs, marks):
@@ -143,9 +136,40 @@ class OutputBase(object):
 	__slots__ = ()
 
 	def updateInfo(self, info):
-		info.outputs.update(self.collectUsed())
+		info.outputs.update(self.collectIONames())
 		self.getBuiltin(info)
 
+	def generateOutput(self, tree, outputs):
+		if tree.used:
+			if tree.ioname is None:
+				tree.ioname = ast.IOName(None)
+			outputs.append(ast.Output(tree._lcl, tree.ioname))
+
+		for child in tree.fields.itervalues():
+			self.generateOutput(child, outputs)
+
+	def generateOutputStatements(self):
+		outputs = []
+
+		for tree in self.getOutputs():
+			self.generateOutput(tree, outputs)
+
+		return ast.OutputBlock(outputs)
+
+	def _collectIONames(self, tree, outputs):
+		if tree.used and tree.ioname is not None:
+			outputs.append(tree.ioname)
+
+		for child in tree.fields.itervalues():
+			self._collectIONames(child, outputs)
+
+	def collectIONames(self):
+		outputs = []
+
+		for tree in self.getOutputs():
+			self._collectIONames(tree, outputs)
+
+		return outputs
 
 class VSOutputDescription(OutputBase):
 	__slots__ = 'position', 'varying'
@@ -161,7 +185,12 @@ class VSOutputDescription(OutputBase):
 
 	def getBuiltin(self, info):
 		vec4T = intrinsics.intrinsicTypeNodes[intrinsics.vec.vec4]
-		info.builtin[self.position.lcl] = glsl.OutputDecl(None, False, False, True, vec4T, 'gl_Position')
+		info.builtin[self.position.ioname] = glsl.OutputDecl(None, False, False, True, vec4T, 'gl_Position')
+
+	def getOutputs(self):
+		outputs = [self.position]
+		outputs.extend(self.varying)
+		return outputs
 
 class FSOutputDescription(OutputBase):
 	__slots__ = 'colors', 'depth'
@@ -179,17 +208,28 @@ class FSOutputDescription(OutputBase):
 	def getBuiltin(self, info):
 		if self.depth:
 			floatT = intrinsics.intrinsicTypeNodes[float]
-			info.builtin[self.position.lcl] = glsl.OutputDecl(None, False, False, True, floatT, 'gl_Depth')
+			info.builtin[self.position.ioname] = glsl.OutputDecl(None, False, False, True, floatT, 'gl_Depth')
+
+	def getOutputs(self):
+		outputs = []
+		if self.depth:
+			outputs.append(self.depth)
+		outputs.extend(self.colors)
+		return outputs
 
 
 class TreeNode(object):
 	def __init__(self, lcl):
-		self.lcl    = lcl
+		self._lcl = lcl
 		self.fields = {}
 		self.used   = intrinsics.isIntrinsicType(self.pythonType())
+		self.ioname = None
+
+	def refs(self):
+		return self._lcl.annotation.references.merged
 
 	def pythonType(self):
-		refs = self.lcl.annotation.references.merged
+		refs = self.refs()
 		pt = refs[0].xtype.obj.pythonType()
 		for ref in refs[1:]:
 			assert pt is ref.xtype.obj.pythonType()
@@ -200,20 +240,18 @@ class TreeNode(object):
 		self.fields[fieldName] = tree
 		return tree
 
-	def collectUsed(self, used):
-		if self.used:
-			used.add(self.lcl)
-		for child in self.fields.itervalues():
-			child.collectUsed(used)
-
 	def extractTuple(self):
 		array = {}
 		length = None
 
+		refs = self.refs()
+		for ref in refs:
+			assert ref.xtype.obj.pythonType() is tuple, refs
+
 		for fieldName, child in self.fields.iteritems():
 			if fieldName.type == 'LowLevel':
 				if fieldName.name.pyobj == 'length':
-					length = child.lcl.annotation.references.merged[0].xtype.obj.pyobj
+					length = child.refs()[0].xtype.obj.pyobj
 
 			elif fieldName.type == 'Array':
 				array[fieldName.name.pyobj] = child

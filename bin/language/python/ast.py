@@ -434,3 +434,7 @@ class FunctionDef(CompoundStatement):
 
 class ClassDef(CompoundStatement):
 	__fields__ = 'name:str bases:Expression* body:Suite decorators:Expression*'
+
+
+class Phi(PythonASTNode):
+	__fields__ = 'arguments:Reference?* target:Local'

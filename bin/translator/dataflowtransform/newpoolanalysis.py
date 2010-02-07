@@ -251,7 +251,7 @@ class PoolGraphBuilder(TypeDispatcher):
 	def visitLocal(self, node):
 		return self.localInfo(node)
 
-	@dispatch(ast.DirectCall, ast.Call, ast.Allocate, ast.Load)
+	@dispatch(ast.DirectCall, ast.Call, ast.Allocate, ast.Load, ast.Discard)
 	def visitOp(self, node):
 		node.visitChildren(self)
 
@@ -314,7 +314,7 @@ class PoolGraphBuilder(TypeDispatcher):
 			cond = cond.transfer(self, expr)
 			self(case.body)
 
-	@dispatch(ast.Suite, ast.Switch, ast.Condition)
+	@dispatch(ast.Suite, ast.Switch, ast.Condition, ast.While)
 	def visitOK(self, node):
 		node.visitChildren(self)
 

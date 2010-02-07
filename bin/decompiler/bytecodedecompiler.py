@@ -24,6 +24,8 @@ from decompiler.destacker import destack
 from . structuralanalyzer import StructuralAnalyzer
 from . import ssitransform
 
+from analysis.cfg import ssatransform
+
 from decompiler.flowblockdump import FlowBlockDump
 from language.python.simplecodegen import SimpleCodeGen
 
@@ -114,7 +116,8 @@ class Decompiler(object):
 		root = destack(code, mname, name, root, argnames, vargs, kargs, self.compiler, decompileCode, trace)
 
 		if ssa:
-			root = ssitransform.ssiTransform(root)
+			root = ssatransform.evaluateCode(self.compiler, root)
+			#root = ssitransform.ssiTransform(root)
 
 		return root
 

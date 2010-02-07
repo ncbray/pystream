@@ -78,6 +78,14 @@ class CollapserAnalysis(TypeDispatcher):
 		self(node.f)
 		self.reset()
 
+	@dispatch(glsl.While)
+	def visitWhile(self, node):
+		self.reset()
+		self(node.condition)
+		self.reset()
+		self(node.body)
+		self.reset()
+
 	@dispatch(glsl.Suite,
 			glsl.Discard, glsl.Return,
 			glsl.BinaryOp, glsl.UnaryPrefixOp, glsl.Constructor,
@@ -161,6 +169,7 @@ class CollapserTransform(TypeDispatcher):
 
 
 	@dispatch(glsl.Suite, glsl.Switch,
+			glsl.While,
 			glsl.Discard, glsl.Return,
 			glsl.BinaryOp, glsl.UnaryPrefixOp, glsl.Constructor,
 			glsl.Load, glsl.Store,

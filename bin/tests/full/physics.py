@@ -86,7 +86,7 @@ def simpleUpdate(dt, iterations):
 class SurfaceFragment(object):
 	__slots__ = 'material', 'p', 'n', 'e', 'diffuseColor', 'specularColor', 'diffuseLight', 'specularLight'
 
-	def __init__(self, material, p, n):
+	def __init__(self, material, p, n, e):
 		self.material      = material
 
 		self.diffuseColor  = vec3(1.0)
@@ -97,7 +97,7 @@ class SurfaceFragment(object):
 
 		self.p = p
 		self.n = n
-		self.e = -p.normalize()
+		self.e = e
 
 	def accumulateLight(self, l, amt):
 		self.diffuseLight  += self.material.diffuseTransfer(self.n, l, self.e)*amt
@@ -122,8 +122,8 @@ class Material(object):
 	def specularTransfer(self, n, l, e):
 		return 0.0
 
-	def surface(self, p, n):
-		surface = SurfaceFragment(self, p, n)
+	def surface(self, p, n, e):
+		surface = SurfaceFragment(self, p, n, e)
 		surface.diffuseColor  = self.diffuseColor
 		surface.specularColor = self.specularColor
 		return surface
@@ -267,13 +267,67 @@ class TangentSpaceBasis(object):
 		else:
 			n = self.normal.normalize()
 			t = self.tangent.normalize()
-			b = self.bitangent.normalize()
+			b = -self.bitangent.normalize()
 
+		# Transform out of tangent space.
 		result = vec3(tsn.x*t.x + tsn.y*b.x + tsn.z*n.x,
 					  tsn.x*t.y + tsn.y*b.y + tsn.z*n.y,
 					  tsn.x*t.z + tsn.y*b.z + tsn.z*n.z)
 
 		return result.normalize()
+
+	def tangentSpaceEye(self, e):
+		n = self.normal.normalize()
+		t = self.tangent.normalize()
+		b = self.bitangent.normalize()
+
+		e = -e
+
+		tse = vec3(-e.dot(t), e.dot(b), e.dot(n))
+		return tse
+
+	def parallaxOcclusionAdjust(self, e, texCoord, nm, amount):
+		tse = self.tangentSpaceEye(e)
+
+		maxSteps = 64
+		nSteps = maxSteps * tse.xy.length()*amount
+
+		dir = tse.xy*amount/(nSteps*tse.z*8.0)
+		stepDepth = 1.0/(nSteps)
+
+		# TODO texture LOD?
+
+		depth = 1.0
+		diff0 = depth-nm.texture(texCoord).w
+		diff1 = diff0
+
+		if diff1 > 0.0:
+			while diff1 > 0.0:
+				texCoord += dir
+				depth -= stepDepth
+
+				diff0 = diff1
+				diff1 = depth-nm.textureLod(texCoord, 0.0).w
+
+			# Find the crossover point
+			# Beware of a divide by zero, that's why there's an outer if.
+
+			# diff1 is negative, diff0 is positive
+			backtrack = diff1/(diff0 - diff1)
+			texCoord += backtrack * dir
+
+		return texCoord
+
+
+
+	def parallaxAdjust(self, e, texCoord, nm, amount):
+		tse = self.tangentSpaceEye(e)
+
+		height = nm.texture(texCoord).a
+		offset = amount*(height-1.0);
+		texCoord = texCoord + tse.xy*offset
+
+		return texCoord
 
 	def getNormal(self):
 		return self.normal.normalize()
@@ -286,14 +340,14 @@ class Shader(object):
 	__slots__ = ['objectToWorld', 'worldToCamera', 'projection',
 				'light', 'ambient',
 				'material',
-				'sampler', 'normalmap', 'useNormalMap',
-				'fog']
+				'sampler', 'normalmap', 'useNormalMap', 'parallaxAmount',
+				'fog', 'exposure']
 
 	__fieldtypes__ = {'objectToWorld':mat4, 'worldToCamera':mat4, 'projection':mat4,
 				'light':PointLight, 'ambient':AmbientLight,
 				'material':(LambertMaterial, PhongMaterial, ToonMaterial),
-				'sampler':sampler.sampler2D, 'normalmap':sampler.sampler2D, 'useNormalMap':bool,
-				'fog':Fog}
+				'sampler':sampler.sampler2D, 'normalmap':sampler.sampler2D, 'useNormalMap':bool, 'parallaxAmount':float,
+				'fog':Fog, 'exposure':float}
 
 	def __init__(self):
 		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
@@ -337,18 +391,23 @@ class Shader(object):
 		return newpos.xyz, tsbasis, texCoord
 
 	def shadeFragment(self, context, pos, tsbasis, texCoord):
-		n  = tsbasis.normal.normalize()
+		n = tsbasis.normal.normalize()
+		e = -pos.normalize()
 
 		if self.useNormalMap:
+			texCoord = tsbasis.parallaxOcclusionAdjust(e, texCoord, self.normalmap, self.parallaxAmount)
+
+			normal = tsbasis.getNormal()
 			tsn = self.normalmap.texture(texCoord).xyz*2.0-1.0
 			normal = tsbasis.fromTangentSpace(tsn)
 		else:
 			normal = tsbasis.getNormal()
 
-		surface = self.material.surface(pos, normal)
+		surface = self.material.surface(pos, normal, e)
 
 		# Texture
-		surface.diffuseColor *= self.sampler.texture(texCoord).xyz
+		albedo = self.sampler.texture(texCoord).xyz
+		surface.diffuseColor *= albedo
 
 		# Accumulate lighting
 		self.ambient.accumulate(surface, self.worldToCamera)
@@ -362,7 +421,7 @@ class Shader(object):
 		context.colors = (mainColor,)
 
 	def processOutputColor(self, color):
-		return rgb2srgb(tonemap(color))
+		return rgb2srgb(tonemap(color*self.exposure))
 
 def nldot(a, b):
 	return max(a.dot(b), 0.0)

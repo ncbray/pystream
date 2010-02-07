@@ -140,6 +140,9 @@ class SetSubscript(Statement):
 class Switch(Statement):
 	__fields__ = 'condition:Expression t:Suite f:Suite'
 
+class While(Statement):
+	__fields__ = 'condition:Expression body:Suite'
+
 class Suite(GLSLASTNode):
 	__fields__ = 'statements:Statement*'
 

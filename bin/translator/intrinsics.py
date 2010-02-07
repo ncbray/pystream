@@ -512,6 +512,14 @@ def samplerTextureRewrite(self, node):
 	else:
 		return glsl.IntrinsicOp('texture', [self(arg) for arg in node.args])
 
+def samplerTextureLodRewrite(self, node):
+	if not hasNumArgs(node, 3): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('textureLod', [self(arg) for arg in node.args])
+
 
 def makeIntrinsicRewriter(extractor):
 	init(extractor.compiler)
@@ -590,5 +598,6 @@ def makeIntrinsicRewriter(extractor):
 	rewriter.attribute(random._random.Random, 'random', randomRewrite)
 
 	rewriter.addRewrite('texture', samplerTextureRewrite)
+	rewriter.addRewrite('textureLod', samplerTextureLodRewrite)
 
 	return rewriter

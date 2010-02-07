@@ -254,7 +254,7 @@ class ForwardESSA(TypeDispatcher):
 
 #	@dispatch(ast.For)
 #	def processFor(self, node):
-#		# Only valid without breaks/contiues
+#		# Only valid without breaks/continues
 
 
 #		self(node.loopPreamble)
@@ -272,19 +272,28 @@ class ForwardESSA(TypeDispatcher):
 
 #		self(node.else_)
 
-#	@dispatch(ast.While)
-#	def processWhile(self, node):
-#		# Only valid without breaks/contiues
+	@dispatch(ast.While)
+	def processWhile(self, node):
+		info = self.rm[node]
 
-#		self.renameModified(node.condition)
-#		self.renameModified(node.body)
-#		self(node.condition)
+		self.renameAll(info.localModify)
+		self.renameAll(info.fieldModify)
 
-#		self.renameModified(node.body)
-#		self(node.body)
-#		self.renameModified(node.body)
+		# TODO Only valid without breaks/continues?
 
-#		self(node.else_)
+		self(node.condition)
+		self.logRead(node, node.condition.conditional)
+
+		self(node.body)
+
+		self.renameAll(info.localModify)
+		self.renameAll(info.fieldModify)
+
+		self(node.else_)
+
+		self.renameAll(info.localModify)
+		self.renameAll(info.fieldModify)
+
 
 	@dispatch(ast.Condition)
 	def processCondition(self, node):

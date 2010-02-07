@@ -184,15 +184,22 @@ class SimpleExprGen(TypeDispatcher):
 
 
 	def visitBinaryOp(self, node):
-		assert not node.op in opnames.inplaceOps
+		#assert not node.op in opnames.inplaceOps
 
-		prec = opnames.binaryOpPrecedence[node.op]
-		flipBinding = node.op == '**'
+		op = node.op
+
+
+		if op in opnames.inplaceOps:
+			prec = 24
+			flipBinding = False
+			op = "<%s>" % op
+		else:
+			prec = opnames.binaryOpPrecedence[op]
+			flipBinding = op == '**'
 
 		left = self.process(node.left, prec, flipBinding)
 		right = self.process(node.right, prec, not flipBinding)
 
-		op = node.op
 		if op in opnames.mustHaveSpace:
 			op = " %s " % op
 

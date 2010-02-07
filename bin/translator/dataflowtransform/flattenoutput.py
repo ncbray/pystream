@@ -17,7 +17,7 @@ class FindReturns(TypeDispatcher):
 	def visitLeaf(self, node):
 		pass
 
-	@dispatch(ast.Suite, ast.Switch, ast.Condition, ast.TypeSwitch, ast.TypeSwitchCase)
+	@dispatch(ast.Suite, ast.Switch, ast.Condition, ast.TypeSwitch, ast.TypeSwitchCase, ast.While)
 	def visitOK(self, node):
 		node.visitChildren(self)
 

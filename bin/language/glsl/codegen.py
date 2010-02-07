@@ -240,6 +240,15 @@ class GLSLCodeGen(TypeDispatcher):
 
 		return s
 
+	@dispatch(ast.While)
+	def visitWhile(self, node):
+		condition = self(node.condition)
+
+		body = self(node.body)
+		s = "%swhile(%s)\n%s{\n%s%s}\n" % (self.indent, condition, self.indent, body, self.indent,)
+
+		return s
+
 	@dispatch(ast.Suite)
 	def visitSuite(self, node):
 		oldIndent = self.indent

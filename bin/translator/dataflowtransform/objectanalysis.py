@@ -54,6 +54,14 @@ class ObjectAnalysis(TypeDispatcher):
 		self(node.t)
 		self(node.f)
 
+	@dispatch(ast.While)
+	def visitWhile(self, node):
+		self.loopLevel += 1
+		self(node.condition)
+		self(node.body)
+		self.loopLevel -= 1
+		self(node.else_)
+
 	@dispatch(ast.Suite, ast.Condition)
 	def visitOK(self, node):
 		node.visitChildren(self)

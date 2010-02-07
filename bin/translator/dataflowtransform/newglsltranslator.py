@@ -303,7 +303,7 @@ class GLSLTranslator(TypeDispatcher):
 	def visitSwitch(self, node):
 		condition = node.condition
 
-		self(condition.preamble)
+		self.inlineSuite(condition.preamble)
 
 		condInfo = self(condition.conditional)
 		cond = condInfo.intrinsics[bool]
@@ -348,6 +348,29 @@ class GLSLTranslator(TypeDispatcher):
 				last = glsl.Suite([glsl.Switch(condCheck, block, last)])
 
 		self.current.append(last)
+
+	def inlineSuite(self, node):
+		for child in node.blocks:
+			self(child)
+
+	@dispatch(ast.While)
+	def visitWhile(self, node):
+		condition = node.condition
+
+		self.inlineSuite(condition.preamble)
+
+		condInfo = self(condition.conditional)
+		cond = condInfo.intrinsics[bool]
+
+		# TODO preamble -> continue?
+		self.pushBlock()
+		self.inlineSuite(node.body)
+		self.inlineSuite(condition.preamble)
+		body = self.popBlock()
+
+		assert len(node.else_.blocks) == 0, "Can't synthesize else blocks?"
+
+		self.current.append(glsl.While(cond, body))
 
 	@dispatch(ast.Discard)
 	def visitDiscard(self, node):

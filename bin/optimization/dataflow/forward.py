@@ -434,6 +434,11 @@ class ForwardFlowTraverse(TypeDispatcher):
 		self.flow.save('continue')
 		return result
 
+	@dispatch(ast.InputBlock)
+	def visitInputBlock(self, node):
+		# HACK not exposed?
+		return node
+
 	@dispatch(ast.OutputBlock)
 	def visitOutputBlock(self, node):
 		outputs = [ast.Output(self.processExpr(output.expr), output.dst) for output in node.outputs]

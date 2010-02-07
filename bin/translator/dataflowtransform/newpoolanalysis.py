@@ -282,6 +282,17 @@ class PoolGraphBuilder(TypeDispatcher):
 
 			src.transfer(self, target)
 
+	@dispatch(ast.InputBlock)
+	def visitInputBlock(self, node):
+		for input in node.inputs:
+			# HACK ionames are not annotated?
+			src = self.poolInfo(input.src, input.lcl.annotation.references.merged)
+			src.anchor = True
+
+			lcl = self.localInfo(input.lcl)
+
+			src.transfer(self, lcl)
+
 	@dispatch(ast.OutputBlock)
 	def visitOutputBlock(self, node):
 		for output in node.outputs:

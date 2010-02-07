@@ -70,8 +70,11 @@ class IOName(PythonASTNode):
 	__leaf__   = True
 
 class Input(Reference):
-	__fields__ = 'src:IOName'
+	__fields__ = 'src:IOName lcl:Local'
 	__leaf__   = True
+
+class InputBlock(Statement):
+	__fields__ = 'inputs:Input*'
 
 class Output(Statement):
 	__fields__ = 'expr:Reference dst:IOName'

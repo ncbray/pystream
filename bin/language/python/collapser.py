@@ -44,6 +44,10 @@ class Collapser(TypeDispatcher):
 	def visitSuite(self, node):
 		node.visitChildrenReversed(self.process)
 
+	@dispatch(ast.InputBlock)
+	def visitInputBlock(self, node):
+		pass
+
 	@dispatch(ast.OutputBlock)
 	def visitOutputBlock(self, node):
 		node.visitChildrenReversed(self.process)

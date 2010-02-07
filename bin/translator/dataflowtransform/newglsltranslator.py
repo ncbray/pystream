@@ -300,6 +300,15 @@ class GLSLTranslator(TypeDispatcher):
 
 		self.transfer(node.expr, targetInfo, filter)
 
+	@dispatch(ast.InputBlock)
+	def visitInputBlock(self, node):
+		for input in node.inputs:
+			src = self(input.src)
+			lcl = self(input.lcl)
+
+			refs = input.lcl.annotation.references.merged
+			lcl.copyFrom(self, src, refs)
+
 	@dispatch(ast.OutputBlock)
 	def visitOutputBlock(self, node):
 		for output in node.outputs:

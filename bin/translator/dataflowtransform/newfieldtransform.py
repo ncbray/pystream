@@ -78,15 +78,19 @@ class FieldTransformAnalysis(TypeDispatcher):
 	def transform(self, code, name, group):
 		lcl = common.localForFieldSlot(self.compiler, code, name, group)
 
+		ioname = ast.IOName(None)
+
+		self.header.append(ast.Input(ioname, lcl))
+
 		for field in group:
-			self.remap[field] = lcl
+			self.remap[field] = lcl, ioname
 
 
 	def generateRewrites(self, code, name, group):
-		lcl = self.remap[name]
+		lcl, ioname = self.remap[name]
 
 		for field in group:
-			self.fields[field] = lcl
+			self.fields[field] = ioname
 
 		isLoaded = False
 
@@ -181,11 +185,15 @@ class FieldTransformAnalysis(TypeDispatcher):
 		self.rewrites = {}
 		self.remap = {}
 		self.fields = {}
+		self.header = []
 
 		for name, group in self.groups.iteritems():
 			self.processGroup(code, name, group)
 
 		rewrite.rewrite(self.compiler, code, self.rewrites)
+
+		code.ast = ast.Suite([ast.InputBlock(self.header), code.ast])
+
 		# TODO SSA
 		assert not self.ssaBroken
 		simplify.evaluateCode(self.compiler, self.prgm, code)

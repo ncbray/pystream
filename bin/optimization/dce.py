@@ -88,6 +88,14 @@ class MarkLive(TypeDispatcher):
 			self.marker(node)
 		return node
 
+	@dispatch(ast.InputBlock)
+	def visitInputBlock(self, node):
+		inputs = []
+		for input in node.inputs:
+			if self.flow.lookup(input.lcl) is not undefined:
+				inputs.append(input)
+		return ast.InputBlock(inputs)
+
 	@dispatch(ast.OutputBlock)
 	def visitOutputBlock(self, node):
 		for output in node.outputs:

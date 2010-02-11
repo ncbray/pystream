@@ -336,18 +336,32 @@ def transformNormal(m, n):
 	return (m*vec4(n, 0.0)).xyz
 
 
-class Shader(object):
-	__slots__ = ['objectToWorld', 'worldToCamera', 'projection',
-				'light', 'ambient',
-				'material',
-				'sampler', 'normalmap', 'useNormalMap', 'parallaxAmount',
-				'fog', 'exposure']
+# Environment
+class Environment(object):
+	__slots__ = ['worldToCamera', 'projection', 'ambient', 'fog', 'exposure']
 
-	__fieldtypes__ = {'objectToWorld':mat4, 'worldToCamera':mat4, 'projection':mat4,
-				'light':PointLight, 'ambient':AmbientLight,
+	__fieldtypes__ = {'worldToCamera':mat4, 'projection':mat4, 'ambient':AmbientLight,
+				'fog':Fog, 'exposure':float}
+
+	def processSurfaceColor(self, color, p):
+		return self.processOutputColor(self.fog.apply(color, p))
+
+	def processOutputColor(self, color):
+		return rgb2srgb(tonemap(color*self.exposure))
+
+	def clearColor(self):
+		return self.processOutputColor(self.fog.color)
+
+
+class Shader(object):
+	__slots__ = ['objectToWorld', 'light',
+				'material', 'sampler', 'normalmap', 'useNormalMap', 'parallaxAmount',
+				'env']
+
+	__fieldtypes__ = {'objectToWorld':mat4, 'light':PointLight,
 				'material':(LambertMaterial, PhongMaterial, ToonMaterial),
 				'sampler':sampler.sampler2D, 'normalmap':sampler.sampler2D, 'useNormalMap':bool, 'parallaxAmount':float,
-				'fog':Fog, 'exposure':float}
+				'env':Environment,}
 
 	def __init__(self):
 		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
@@ -355,28 +369,17 @@ class Shader(object):
 					  0.0, 0.0, 1.0, 0.0,
 					  0.0, 0.0, 0.0, 1.0)
 
-
-		self.worldToCamera = mat4(1.0, 0.0, 0.0, 0.0,
-					  0.0, 1.0, 0.0, 0.0,
-					  0.0, 0.0, 1.0, 0.0,
-					  0.0, 0.0, 0.0, 1.0)
-
-		self.projection = mat4(1.0, 0.0, 0.0, 0.0,
-					  0.0, 1.0, 0.0, 0.0,
-					  0.0, 0.0, 1.0, 0.0,
-					  0.0, 0.0, 0.0, 1.0)
-
 		self.light = PointLight(vec3(0.0, 10.0, 0.0), vec3(1.0, 1.0, 1.0), vec3(0.01, 0.0, 0.00001))
-
-		self.ambient = AmbientLight(vec3(0.0, 1.0, 0.0), vec3(0.25, 0.75, 0.25), vec3(0.75, 0.25, 0.25))
 
 		self.material = Material()
 
 		self.sampler    = None
 		self.normalmap  = None
 
+		self.env = None
+
 	def shadeVertex(self, context, pos, normal, tangent, bitangent, texCoord):
-		trans      = self.worldToCamera*self.objectToWorld
+		trans      = self.env.worldToCamera*self.objectToWorld
 		newpos     = trans*pos
 
 		newnormal  = transformNormal(trans, normal)
@@ -386,7 +389,7 @@ class Shader(object):
 
 		tsbasis = TangentSpaceBasis(newnormal, newtangent, newbitangent)
 
-		context.position = self.projection*newpos
+		context.position = self.env.projection*newpos
 
 		return newpos.xyz, tsbasis, texCoord
 
@@ -410,18 +413,15 @@ class Shader(object):
 		surface.diffuseColor *= albedo
 
 		# Accumulate lighting
-		self.ambient.accumulate(surface, self.worldToCamera)
-		self.light.accumulate(surface, self.worldToCamera)
+		self.env.ambient.accumulate(surface, self.env.worldToCamera)
+		self.light.accumulate(surface, self.env.worldToCamera)
 
-		mainColor = surface.litColor()
-		mainColor = self.fog.apply(mainColor, surface.p)
-		mainColor = self.processOutputColor(mainColor)
+		mainColor = self.env.processSurfaceColor(surface.litColor(), surface.p)
 
-		mainColor = vec4(mainColor, 1.0)
-		context.colors = (mainColor,)
+		context.colors = (vec4(mainColor, 1.0),)
 
 	def processOutputColor(self, color):
-		return rgb2srgb(tonemap(color*self.exposure))
+		return rgb2srgb(tonemap(color*self.env.exposure))
 
 def nldot(a, b):
 	return max(a.dot(b), 0.0)

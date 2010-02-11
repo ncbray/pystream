@@ -46,7 +46,7 @@ class CFGTransformer(TypeDispatcher):
 		self.attachCurrent(y)
 		y.setExit('normal', self.makeNewSuite())
 
-	@dispatch(ast.Assign, ast.Discard, ast.SetAttr, ast.UnpackSequence)
+	@dispatch(ast.Assign, ast.Discard, ast.SetAttr, ast.UnpackSequence, ast.InputBlock, ast.OutputBlock)
 	def visitStatement(self, node):
 		self.emit(node)
 
@@ -118,6 +118,41 @@ class CFGTransformer(TypeDispatcher):
 			merge = self.createMerge()
 			merges[0].setExit('normal', merge)
 			merges[1].setExit('normal', merge)
+
+			self.makeNewSuite()
+			merge.setExit('normal', self.current)
+		elif len(merges) == 1:
+			self.current = merges[0]
+		else:
+			raise NoNormalFlow
+
+	@dispatch(ast.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		switch = cfg.TypeSwitch(self.region, node)
+		self.attachStandardHandlers(switch)
+
+		self.attachCurrent(switch)
+
+		merges = []
+
+		uid = 0
+
+		for case in node.cases:
+			switch.setExit(uid, self.makeNewSuite())
+			uid += 1
+
+			try:
+				self(case.body)
+			except NoNormalFlow:
+				pass
+			else:
+				merges.append(self.current)
+
+		if len(merges) > 1:
+			merge = self.createMerge()
+
+			for edge in merges:
+				edge.setExit('normal', merge)
 
 			self.makeNewSuite()
 			merge.setExit('normal', self.current)

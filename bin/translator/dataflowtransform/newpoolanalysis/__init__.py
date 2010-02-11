@@ -1,137 +1,20 @@
 from util.typedispatch import *
 from language.python import ast
 
+from ... import intrinsics
+
 import collections
 from PADS.UnionFind import UnionFind
 
+from analysis.storegraph import storegraph
 
-class PoolInfo(object):
-	def __init__(self, slot, refs):
-		self.slots = set([slot])
-		self.refs  = set(refs)
-
-		self.final = True
-		for ref in refs:
-			self.final &= ref.annotation.final
-
-		self.anchor = False
-
-		self.next  = set()
-		self.prev  = set()
-
-		self.fieldGroupsRefer = []
-		self.containedFieldGroups = []
-
-		self._forward = None
-
-		self.dirty = False
-
-	def forward(self):
-		if self._forward:
-			self._forward = self._forward.forward()
-			assert self._forward._forward is None
-			return self._forward
-		else:
-			return self
-
-	def transfer(self, analysis, other):
-		if other is not self:
-			self.next.add(other)
-			other.prev.add(self)
-
-		return self
-
-	def merge(self, analysis, other):
-		self  = self.forward()
-		other = other.forward()
-
-		if self is other:
-			return self
-
-		assert not self.anchor and not other.anchor
-
-		other._forward = self
-
-		self.slots.update(other.slots)
-		self.refs.update(other.refs)
-
-		self.final &= other.final
-
-		# Note that prev and next stay unforwarded, as we'll need to forward
-		# everything when we use it, anyways
-		self.prev.update(other.prev)
-		self.next.update(other.next)
-
-		if other.dirty:
-			analysis.dirty.remove(other)
-
-		if not self.dirty:
-			analysis.markDirty(self)
-
-		return self
-
-	def updateLinks(self):
-		self.prev = set([other.forward() for other in self.prev])
-		self.next = set([other.forward() for other in self.next])
-
-		if self in self.prev:
-			self.prev.remove(self)
-
-		if self in self.next:
-			self.next.remove(self)
+from . import prepass, shaderanalysis
 
 
-	def contract(self, analysis):
-		self = self.forward()
-		self.updateLinks()
+from . model import *
 
-		if self.anchor: return
+from .. import bind
 
-		others = self.prev.union(self.next)
-		for other in others:
-			other = other.forward()
-			if other.anchor: continue
-
-			if self.final == other.final:
-				print "CONTRACT"
-				print self.slots
-				print other.slots
-				print
-
-				self = self.merge(analysis, other)
-
-
-	def postProcess(self, analysis):
-		# Choose a random name
-		self.name = tuple(self.slots)[0]
-
-		if len(self.slots) == 1 and isinstance(self.name, (ast.Local, ast.IOName)):
-			# If there is only one pointer to this pool, it is safe to assume it is unique.
-			unique = True
-		else:
-			unique = True
-			for ref in self.refs:
-				unique &= ref.annotation.unique
-
-			if unique:
-				exclusive = analysis.exgraph.mutuallyExclusive(*self.refs)
-				unique &= exclusive
-
-		self.unique = unique
-
-		self.types = set([ref.xtype.obj.pythonType() for ref in self.refs])
-
-		if len(self.types) > 1:
-			analysis.ambiguousTypes(self.types)
-
-	def isSingleton(self):
-		return self.unique
-
-	def isStructure(self):
-		return not self.unique and self.final
-
-	def isPool(self):
-		return not self.unique and not self.final
 
 class FieldGroup(object):
 	def __init__(self, name, fields, poolInfo):
@@ -154,6 +37,8 @@ class PoolGraphBuilder(TypeDispatcher):
 		self.uid = 0
 
 		self.dirty = set()
+
+		self.lut = SubpoolLUT()
 
 		self.compatable = UnionFind()
 
@@ -228,11 +113,15 @@ class PoolGraphBuilder(TypeDispatcher):
 	def poolInfoIfExists(self, slot):
 		return self.poolInfos.get(slot)
 
-	def poolInfo(self, slot, refs):
+	def poolInfo(self, slot, refs, output=False):
 		if slot not in self.poolInfos:
 			assert self.active, slot
 
-			info = PoolInfo(slot, refs)
+			info = ReferenceInfo(output)
+			info.addSlot(slot)
+			for ref in refs:
+				info.addRef(ref)
+
 			self.poolInfos[slot] = info
 			self.markDirty(info)
 		else:
@@ -297,10 +186,10 @@ class PoolGraphBuilder(TypeDispatcher):
 	def visitOutputBlock(self, node):
 		for output in node.outputs:
 			expr = self.localInfo(output.expr)
-			# HACK ionames are not annotated?
-			dst = self.poolInfo(output.dst, output.expr.annotation.references.merged)
+			dst = self.poolInfo(output.dst, output.expr.annotation.references.merged, output=True)
 			dst.anchor = True
 
+			# TODO no merge?
 			expr.transfer(self, dst)
 
 	@dispatch(ast.Store)
@@ -349,7 +238,14 @@ class PoolGraphBuilder(TypeDispatcher):
 			info.contract(self)
 
 		for info in self.getUniquePools():
-			info.postProcess(self)
+			info.postProcess(self.exgraph)
+
+			if len(info.types) > 1:
+				self.ambiguousTypes(info.types)
+
+
+		for sub in self.getUniqueSubpools():
+			sub.postProcess(self.exgraph)
 
 		self.fieldGroups()
 
@@ -361,7 +257,27 @@ class PoolGraphBuilder(TypeDispatcher):
 
 		return unique
 
+	def getUniqueSubpools(self):
+		unique = set()
+		for info in self.poolInfos.itervalues():
+			for subpool in info.lut.subpools.itervalues():
+				unique.add(subpool.forward())
+		return unique
+
 	def dump(self):
+		for info in self.getUniqueSubpools():
+			print "SLOTS"
+			for slot in info.slots:
+				print '\t', slot
+			print "REFS"
+			for ref in info.refs:
+				print '\t', ref, ref.annotation.final
+			print "VOLATILE", info.volatile
+			print "UNIQUE  ", info.unique
+			print "U/I/A   ", info.uniform, info.input, info.allocated
+			print
+		return
+
 		for info in self.getUniquePools():
 			print "SLOTS"
 			for slot in info.slots:
@@ -381,10 +297,21 @@ class PoolGraphBuilder(TypeDispatcher):
 
 			print "FINAL ", info.final
 			print "UNIQUE", info.unique
+
+			for name, sub in info.lut.subpools.iteritems():
+				print '\t', name, sub.volatile
+				print '\t', sub.refs
 			print
 		print
 
-def process(compiler, prgm, exgraph, ioinfo, *contexts):
+def process(compiler, prgm, shaderprgm, exgraph, ioinfo, *contexts):
+	prepassInfo = prepass.process(compiler, prgm, exgraph, ioinfo, contexts)
+
+	for context in contexts:
+		shaderanalysis.process(compiler, prgm, exgraph, ioinfo, prepassInfo, context)
+
+	bind.generateBindingClass(compiler, prgm, shaderprgm, prepassInfo)
+
 	pgb = PoolGraphBuilder(exgraph, ioinfo)
 
 	for context in contexts:

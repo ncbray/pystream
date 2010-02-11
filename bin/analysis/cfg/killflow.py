@@ -6,7 +6,7 @@ from . dfs import CFGDFS
 NoNormalFlow = cfg.NoNormalFlow
 
 class OpFlow(TypeDispatcher):
-	@dispatch(ast.leafTypes, ast.GetCellDeref,)
+	@dispatch(ast.leafTypes, ast.GetCellDeref, ast.Code, ast.DoNotCare, ast.OutputBlock, ast.InputBlock)
 	def visitLeaf(self, node):
 		pass
 
@@ -28,13 +28,14 @@ class OpFlow(TypeDispatcher):
 			ast.Is, ast.UnpackSequence,
 			ast.GetGlobal, ast.SetGlobal, ast.DeleteGlobal,
 			ast.GetAttr, ast.SetAttr, ast.DeleteAttr,
-			ast.GetSubscript, ast.SetSubscript, ast.DeleteSubscript)
+			ast.GetSubscript, ast.SetSubscript, ast.DeleteSubscript,
+			ast.Load, ast.Store)
 	def visitOp(self, node):
 		node.visitChildren(self)
 		self.assumePessimistic()
 
 
-	@dispatch(ast.BuildTuple)
+	@dispatch(ast.BuildTuple, ast.Allocate)
 	def visitBuildTuple(self, node):
 		node.visitChildren(self)
 		# No problems
@@ -108,6 +109,19 @@ class FlowKiller(TypeDispatcher):
 			# HACK should convert into a suite?
 			node.killExit('t')
 			node.killExit('f')
+
+		if not self.opFlow.fails:
+			node.killExit('fail')
+
+		if not self.opFlow.errors:
+			node.killExit('error')
+
+	@dispatch(cfg.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		self.yields |= self.opFlow.yields
+
+		if not self.opFlow.normal:
+			assert False
 
 		if not self.opFlow.fails:
 			node.killExit('fail')

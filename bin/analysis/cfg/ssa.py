@@ -12,19 +12,36 @@ class CollectModifies(TypeDispatcher):
 
 	def modified(self, node):
 		assert isinstance(node, ast.Local)
+		self._modified(node, self.current)
 
+	def _modified(self, node, block):
 		if not node in self.mod:
 			self.mod[node] = set()
 
-		self.mod[node].add(self.current.data)
+		# .data is the djnode
+		self.mod[node].add(block.data)
 
 	@dispatch(cfg.Entry, cfg.Exit, cfg.Merge, cfg.Yield, cfg.Switch)
 	def visitLeaf(self, node):
 		self.order.append(node)
 
-	@dispatch(ast.Discard, ast.Return, ast.SetAttr, ast.Store)
+	@dispatch(cfg.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		self.order.append(node)
+
+		for i, case in enumerate(node.original.cases):
+			if case.expr:
+				self._modified(case.expr, node.getExit(i))
+
+
+	@dispatch(ast.Discard, ast.Return, ast.SetAttr, ast.Store, ast.OutputBlock)
 	def visitDiscard(self, node):
 		pass
+
+	@dispatch(ast.InputBlock)
+	def visitInputBlock(self, node):
+		for input in node.inputs:
+			self.modified(input.lcl)
 
 	@dispatch(ast.Assign)
 	def visitAssign(self, node):
@@ -109,6 +126,30 @@ class SSARename(TypeDispatcher):
 
 		self.frames[node] = self.currentFrame
 
+	@dispatch(cfg.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		self.currentFrame = dict(self.frames[node.prev])
+
+		conditional = self(node.original.conditional)
+
+
+		cases = []
+		for i, case in enumerate(node.original.cases):
+			if case.expr:
+				# TODO slightly unsound, modifies the expressions in the wrong frame.
+				expr = self.clone(case.expr, self.currentFrame)
+
+				cases.append(ast.TypeSwitchCase(case.types, expr, case.body))
+			else:
+				cases.append(case)
+
+
+		node.original = ast.TypeSwitch(conditional, cases)
+
+		self.frames[node] = self.currentFrame
+
+
+
 	@dispatch(cfg.Yield)
 	def visitCFGYield(self, node):
 		self.currentFrame = dict(self.frames[node.prev])
@@ -141,11 +182,21 @@ class SSARename(TypeDispatcher):
 		self.read.add(result)
 		return result
 
+	@dispatch(ast.InputBlock)
+	def visitInputBlock(self, node):
+		return ast.InputBlock([ast.Input(input.src, self.clone(input.lcl, self.currentFrame)) for input in node.inputs])
+
+	@dispatch(ast.OutputBlock)
+	def visitOutputBlock(self, node):
+		return ast.OutputBlock([ast.Output(self(output.expr), output.dst) for output in node.outputs])
+
+
 	@dispatch(ast.BinaryOp, ast.Call, ast.ConvertToBool, ast.UnaryPrefixOp, ast.BuildTuple, ast.Return, ast.DirectCall,
 			ast.Is,
 			ast.GetGlobal, ast.SetGlobal, ast.DeleteGlobal,
 			ast.GetAttr, ast.SetAttr, ast.DeleteAttr,
-			ast.GetSubscript, ast.SetSubscript, ast.DeleteSubscript)
+			ast.GetSubscript, ast.SetSubscript, ast.DeleteSubscript,
+			ast.Allocate, ast.Load, ast.Store, ast.Check)
 	def visitOK(self, node):
 		return node.rewriteChildren(self)
 
@@ -156,7 +207,7 @@ class SSARename(TypeDispatcher):
 			return None
 		return result
 
-	@dispatch(ast.leafTypes, ast.Existing, ast.GetCellDeref,)
+	@dispatch(ast.leafTypes, ast.Existing, ast.GetCellDeref, ast.Code, ast.DoNotCare)
 	def visitASTLeaf(self, node):
 		return node
 

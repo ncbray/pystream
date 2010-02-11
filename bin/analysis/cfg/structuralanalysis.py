@@ -135,6 +135,46 @@ class Compactor(TypeDispatcher):
 
 		self.simplifySuite(result)
 
+	@dispatch(graph.TypeSwitch)
+	def visitTypeSwitch(self, node):
+		exits = [self.getSwitchExit(node, i) for i in range(len(node.original.cases))]
+
+
+		for e in exits:
+			assert node.region is e.region
+
+
+		ok, exit = self.getCommonExit(*exits)
+		assert ok
+
+		ok, error = self.getError(*exits)
+		assert ok
+
+
+		cases = [ast.TypeSwitchCase(case.types, case.expr, ast.Suite(e.ops)) for case, e in zip(node.original.cases, exits)]
+
+		switch = ast.TypeSwitch(node.original.conditional, cases)
+
+		result = graph.Suite(node.region)
+		result.ops.append(switch)
+
+
+		# Reconnect the graph
+
+		node.redirectEntries(result)
+		for e in exits:
+			e.destroy()
+
+		if exit:
+			result.setExit('normal', exit)
+			if isinstance(exit, graph.Merge):
+				exit.simplify()
+
+		if error:
+			result.setExit('error', error)
+
+		self.simplifySuite(result)
+
 	def getError(self, *args):
 		error = None
 

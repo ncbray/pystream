@@ -3,8 +3,6 @@ from language.python import ast
 from language.glsl import ast as glsl
 
 class IOInfo(object):
-	__slots__ = 'uniforms', 'inputs', 'outputs', 'builtin', 'same', 'fieldTrans'
-
 	def __init__(self):
 		self.uniforms = set()
 		self.inputs   = set()
@@ -15,6 +13,9 @@ class IOInfo(object):
 		self.same     = {}
 
 		self.fieldTrans = {}
+
+		self.specialInputs  = {}
+		self.specialOutputs = {}
 
 class ProgramDescription(object):
 	__slots__ = 'prgm', 'vscontext', 'fscontext', 'mapping', 'vs2fs', 'ioinfo'
@@ -67,10 +68,10 @@ class ProgramDescription(object):
 
 		self.mapping = mapping
 
-	def link(self):
-		#self.linkUniform()
-		self.linkVarying()
 
+	def link(self):
+		# Uniform objects and fields have the same names, so it is unnecessary to link them.
+		self.linkVarying()
 
 	def markTraverse(self, refs, marks):
 		for ref in refs:
@@ -91,6 +92,7 @@ class ProgramDescription(object):
 
 		if len(lcls) > 1:
 			self.ioinfo.same[lcls[0]] = lcls[1]
+			self.ioinfo.same[lcls[1]] = lcls[0]
 
 	def markField(self, field, marks):
 		if field not in marks and not intrinsics.isIntrinsicSlot(field):
@@ -109,7 +111,10 @@ class ProgramDescription(object):
 		params = context.originalParams
 		self.markParam(params.params[0], self.ioinfo.uniforms)
 
-		for param in params.params[1:]:
+		# TODO what about the context?
+		context.shaderdesc.outputs.markSpecial(self.ioinfo)
+
+		for param in params.params[2:]:
 			self.markParam(param, self.ioinfo.inputs)
 
 	def makeIOInfo(self):
@@ -192,6 +197,10 @@ class VSOutputDescription(OutputBase):
 		outputs.extend(self.varying)
 		return outputs
 
+	def markSpecial(self, ioinfo):
+		ioinfo.specialOutputs[self.position.ioname] = 'gl_Position'
+
+
 class FSOutputDescription(OutputBase):
 	__slots__ = 'colors', 'depth'
 
@@ -216,6 +225,11 @@ class FSOutputDescription(OutputBase):
 			outputs.append(self.depth)
 		outputs.extend(self.colors)
 		return outputs
+
+	def markSpecial(self, ioinfo):
+		if self.depth:
+			ioinfo.specialOutputs[self.depth.ioname] = 'gl_Depth'
+
 
 
 class TreeNode(object):

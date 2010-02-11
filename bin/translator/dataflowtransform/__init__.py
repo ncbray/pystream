@@ -276,7 +276,7 @@ def evaluateShaderProgram(compiler, vscontext, fscontext):
 	ioinfo = shaderprgm.makeIOInfo()
 
 	with compiler.console.scope('pool analysis'):
-		poolAnalysis = newpoolanalysis.process(compiler, prgm, exgraph, ioinfo, vscontext, fscontext)
+		poolAnalysis = newpoolanalysis.process(compiler, prgm, shaderprgm, exgraph, ioinfo, vscontext, fscontext)
 
 	with compiler.console.scope('translating'):
 		translator = newglsltranslator.process(compiler, prgm, exgraph, poolAnalysis, shaderprgm, ioinfo)
@@ -293,9 +293,6 @@ def evaluateCode(compiler, prgm, vscode, fscode):
 
 	with compiler.console.scope('debug dump'):
 		dumpreport.evaluate(compiler, shaderprgm.prgm, "shaderProgram")
-
-	raise compilerexceptions.CompilerAbort, "testing"
-
 
 	raise compilerexceptions.CompilerAbort, "testing"
 

@@ -123,5 +123,11 @@ class IndexedObjectType(ExtendedObjectType):
 	def isUnique(self):
 		return self.xtype.isUnique()
 
+	def isExisting(self):
+		return self.xtype.isExisting()
+
+	def isExternal(self):
+		return self.xtype.isExternal()
+
 	def __repr__(self):
 			return "<index %r %r>" % (self.index, self.xtype)

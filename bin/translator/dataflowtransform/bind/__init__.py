@@ -111,18 +111,28 @@ def classAttrFromField(compiler, field):
 def handleUniformType(compiler, translator, self, holdingSlot, ref, root, t):
 	statements = []
 
-	structInfo = translator.serializationInfo(holdingSlot)
+	# Find the group name
+	holdingSlot = translator.compatible[holdingSlot]
+
+	structInfo = translator.ioRefInfo.get(holdingSlot)
 
 	if structInfo:
-		if structInfo.typeField:
-			name = structInfo.typeField.decl.name
-			uid  = translator.poolanalysis.typeIDs[t]
+		if structInfo.multipleTypes():
+			sub = structInfo.lut.subpools['type']
+			name = sub.name
+			uid  = translator.typeIDs[t]
 			uidO = compiler.extractor.getObject(uid)
 
 			statements.append(bindUniform(compiler, self, name, int, ast.Existing(uidO)))
 
 		if intrinsics.isIntrinsicType(t):
-			name = structInfo.intrinsics[t].decl.name
+			if t in intrinsics.samplerTypes:
+				sg = translator.samplerGroup(ref)
+				assert sg.unique
+				name = sg.name
+			else:
+				sub = structInfo.lut.subpools[t]
+				name = sub.name
 			statements.append(bindUniform(compiler, self, name, t, root))
 
 		# TODO fields?
@@ -202,25 +212,45 @@ def bindStreams(compiler, translator, context):
 
 	statements = []
 
-	for original, current in zip(originalParams.params, currentParams.params)[2:]:
+	for original in originalParams.params[2:]:
 		root = ast.Local(original.name)
 		streams.append(root)
 
-		if current.isDoNotCare(): continue
+		ioname = context.shaderdesc.fields[original]
+		if ioname in translator.liveInputs:
 
-		refs = current.annotation.references.merged
-		assert len(refs) == 1
-		obj = refs[0]
-		assert intrinsics.isIntrinsicObject(obj)
-		t = obj.xtype.obj.pythonType()
-		attr = "bind_stream_" + t.__name__
+			refs = original.annotation.references.merged
+			assert len(refs) == 1
+			obj = refs[0]
+			assert intrinsics.isIntrinsicObject(obj)
+			t = obj.xtype.obj.pythonType()
+			attr = "bind_stream_" + t.__name__
 
-		structInfo = translator.serializationInfo(current)
-		assert structInfo is not None
+			structInfo = translator.ioRefInfo.get(ioname)
 
-		shaderName = structInfo.intrinsics[t].decl.name
+			shaderName = structInfo.lut.subpools[t].name
 
-		statements.append(bind.rewrite(self=self, attr=attr, shaderName=shaderName, name=root))
+			statements.append(bind.rewrite(self=self, attr=attr, shaderName=shaderName, name=root))
+
+#	for original, current in zip(originalParams.params, currentParams.params)[2:]:
+#		root = ast.Local(original.name)
+#		streams.append(root)
+#
+#		if current.isDoNotCare(): continue
+#
+#		refs = current.annotation.references.merged
+#		assert len(refs) == 1
+#		obj = refs[0]
+#		assert intrinsics.isIntrinsicObject(obj)
+#		t = obj.xtype.obj.pythonType()
+#		attr = "bind_stream_" + t.__name__
+#
+#		structInfo = translator.serializationInfo(current)
+#		assert structInfo is not None
+#
+#		shaderName = structInfo.intrinsics[t].decl.name
+#
+#		statements.append(bind.rewrite(self=self, attr=attr, shaderName=shaderName, name=root))
 
 	body = ast.Suite(statements)
 

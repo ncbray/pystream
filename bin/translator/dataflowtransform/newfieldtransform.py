@@ -181,11 +181,25 @@ class FieldTransformAnalysis(TypeDispatcher):
 		self.loadLUT  = self.loadGroups()
 		self.storeLUT = self.storeGroups()
 
+	def processParameters(self, code):
+		params = code.codeparameters
+
+
+		for param in params.params[2:]:
+			if isinstance(param, ast.Local):
+				ioname = ast.IOName(None)
+				self.header.append(ast.Input(ioname, param))
+				self.fields[param] = ioname
+
+		code.codeparameters = ast.CodeParameters(params.selfparam, params.params[:2], params.paramnames[:2], [], params.vparam, params.kparam, params.returnparams)
+
 	def postProcessCode(self, code):
 		self.rewrites = {}
 		self.remap = {}
 		self.fields = {}
 		self.header = []
+
+		self.processParameters(code)
 
 		for name, group in self.groups.iteritems():
 			self.processGroup(code, name, group)
@@ -194,8 +208,9 @@ class FieldTransformAnalysis(TypeDispatcher):
 
 		code.ast = ast.Suite([ast.InputBlock(self.header), code.ast])
 
-		# TODO SSA
-		assert not self.ssaBroken
+		if self.ssaBroken:
+			ssatransform.evaluateCode(self.compiler, code)
+
 		simplify.evaluateCode(self.compiler, self.prgm, code)
 
 

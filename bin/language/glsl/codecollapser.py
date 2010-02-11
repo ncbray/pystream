@@ -157,6 +157,7 @@ class CollapserTransform(TypeDispatcher):
 				canCollapse = False
 
 			canCollapse &= node.lcl in self.possible
+
 			if canCollapse:
 				self.lut[node.lcl] = expr
 				return []

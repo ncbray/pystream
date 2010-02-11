@@ -85,6 +85,10 @@ class ObjectAnalysis(TypeDispatcher):
 				for field in obj:
 					field.rewriteAnnotation(unique=True)
 
+			if xtype.isExisting() or xtype.isExternal():
+				# HACK may be input?
+				obj.rewriteAnnotation(uniform=True)
+
 	def postProcess(self):
 		for obj in self.allocated:
 			unique = obj in self.unique

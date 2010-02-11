@@ -10,8 +10,11 @@ class CFGBlock(object):
 		self.region = region
 		self.next = {}
 
+	def validExitName(self, name):
+		return name in self.exitNames
+
 	def setExit(self, name, other):
-		assert name in self.exitNames, name
+		assert self.validExitName(name)
 		assert name not in self.next
 
 		if other is not None:
@@ -19,7 +22,7 @@ class CFGBlock(object):
 			other.addPrev(self, name)
 
 	def getExit(self, name):
-		assert name in self.exitNames, name
+		assert self.validExitName(name)
 		return self.next.get(name)
 
 	def killExit(self, name):
@@ -257,6 +260,20 @@ class Switch(SingleEntryBlock):
 	def __init__(self, region, condition):
 		SingleEntryBlock.__init__(self, region)
 		self.condition = condition
+
+class TypeSwitch(SingleEntryBlock):
+	__slots__ = 'original'
+
+	exitNames = ('fail', 'error')
+
+	def __init__(self, region, original):
+		SingleEntryBlock.__init__(self, region)
+		self.original = original
+
+	def validExitName(self, name):
+		return name in self.exitNames or (isinstance(name, int) and name >= 0 and name < len(self.original.cases))
+
+
 
 class State(SingleEntryBlock):
 	__slots__ = 'name'

@@ -8,6 +8,86 @@ from translator.exceptions import TemporaryLimitation
 
 from language.glsl import codegen
 
+
+def makeRef(mode, t, name=None):
+	bt = intrinsics.intrinsicTypeNodes[t]
+
+	if mode is output:
+		return glsl.Output(glsl.OutputDecl(None, False, False, False, bt, name))
+	elif mode is uniform:
+		return glsl.Uniform(glsl.UniformDecl(False, bt, name, None))
+	elif mode is input:
+		return glsl.Input(glsl.InputDecl(None, False, False, bt, name))
+	elif mode is local:
+		return glsl.Local(bt, name)
+	else:
+		assert False, mode
+
+class SlotImpl(object):
+	def __init__(self, subpool):
+		self.subpool = subpool
+
+class IntrinsicCopyImpl(SlotImpl):
+	def __init__(self, subpool):
+		SlotImpl.__init__(self, subpool)
+
+	def makeRef(self, prefix):
+		return CopyRef(self, makeRef(local, self.subpool.t, "%s_%s" % (prefix, self.subpool.t.__name__)))
+
+class IntrinsicSingletonImpl(SlotImpl):
+	def __init__(self, subpool):
+		SlotImpl.__init__(self, subpool)
+
+		if subpool.uniform:
+			assert not subpool.input
+			assert not subpool.allocated
+			mode = uniform
+		elif subpool.input:
+			assert not subpool.allocated
+			mode = input
+		else:
+			mode = local
+
+		self.ref = makeRef(mode, subpool.t, 'singleton')
+
+		self.refobj = SingletonRef(self)
+
+	def makeRef(self, prefix):
+		return self.refobj
+
+class CopyRef(object):
+	def __init__(self, impl, ref):
+		self.impl = impl
+		self.ref = ref
+
+	def get(self):
+		return self.ref
+
+	def set(self, expr):
+		return glsl.Assign(expr, self.ref)
+
+	def assignTo(self, other):
+		if self is not other:
+			return other.set(self.get())
+		else:
+			return None
+
+class SingletonRef(object):
+	def __init__(self, impl):
+		self.impl = impl
+
+	def get(self):
+		return self.impl.ref
+
+	def set(self, expr):
+		return glsl.Assign(expr, self.impl.ref)
+
+	def assignTo(self, other):
+		if self is not other:
+			return other.set(self.get())
+		else:
+			return None
+
 class RewriterWrapper(TypeDispatcher):
 	def __init__(self, translator):
 		TypeDispatcher.__init__(self)
@@ -45,11 +125,15 @@ class StructureInfo(object):
 		else:
 			self.typeField = None
 
-		self.intrinsics = {}
+#		self.intrinsics = {}
+#		for t in self.poolInfo.types:
+#			if intrinsics.isIntrinsicType(t):
+#				self.intrinsics[t] = self.makeField(t, "%s_%s" % (prefix, t.__name__))
 
-		for t in self.poolInfo.types:
-			if intrinsics.isIntrinsicType(t):
-				self.intrinsics[t] = self.makeField(t, "%s_%s" % (prefix, t.__name__))
+		self.subpools = {}
+		for name, subpool in poolInfo.lut.subpools.iteritems():
+			impl = translator.subpoolInfo(subpool)
+			self.subpools[name] = impl.makeRef(prefix)
 
 	def makeField(self, t, name):
 		bt = intrinsics.intrinsicTypeNodes[t]
@@ -88,7 +172,10 @@ class StructureInfo(object):
 	def intrinsicRef(self, refs):
 		assert not self.mode is output
 		t = self.refType(refs)
-		return self.intrinsics[t]
+		return self.intrinsicTypeRef(t)
+
+	def intrinsicTypeRef(self, t):
+		return self.subpools[t].get()
 
 	def assignIntrinsic(self, analysis, refs, expr):
 		assert self.mode is not input and self.mode is not uniform
@@ -96,7 +183,8 @@ class StructureInfo(object):
 		t = self.refType(refs)
 
 		if self.typeField: analysis.initType(t, self.typeField)
-		analysis.emitAssign(expr, self.intrinsics[t])
+
+		analysis.emit(self.subpools[t].set(expr))
 
 	def copyFrom(self, analysis, src, refs):
 		if self is src: return
@@ -117,8 +205,7 @@ class StructureInfo(object):
 
 		for t in types:
 			if intrinsics.isIntrinsicType(t):
-				analysis.emitAssign(src.intrinsics[t], self.intrinsics[t])
-
+				analysis.emit(src.subpools[t].assignTo(self.subpools[t]))
 
 
 class GLSLTranslator(TypeDispatcher):
@@ -142,6 +229,26 @@ class GLSLTranslator(TypeDispatcher):
 		self.nameCount = {}
 
 		self.names = {}
+
+		self.subpools = {}
+
+	def subpoolInfo(self, subpool):
+		subpool = subpool.forward()
+
+		if subpool not in self.subpools:
+			if subpool.intrinsic():
+				if not subpool.volatile:
+					impl = IntrinsicCopyImpl(subpool)
+				elif subpool.unique:
+					impl = IntrinsicSingletonImpl(subpool)
+				else:
+					assert False, "Pooling not yet supported"
+
+			self.subpools[subpool] = impl
+		else:
+			impl = self.subpools[subpool]
+
+		return impl
 
 	def uniqueNameForSlot(self, slot, mode):
 		if slot in self.names:
@@ -235,9 +342,13 @@ class GLSLTranslator(TypeDispatcher):
 	def initType(self, t, target):
 		self.emitAssign(self.typeID(t), target)
 
+	def emit(self, stmt):
+		if stmt is not None:
+			self.current.append(stmt)
+
 	def emitAssign(self, expr, target):
 		stmt = glsl.Assign(expr, target)
-		self.current.append(stmt)
+		self.emit(stmt)
 
 	@dispatch(ast.Local, ast.IOName)
 	def visitLocal(self, node):
@@ -329,7 +440,7 @@ class GLSLTranslator(TypeDispatcher):
 		self.inlineSuite(condition.preamble)
 
 		condInfo = self(condition.conditional)
-		cond = condInfo.intrinsics[bool]
+		cond = condInfo.intrinsicTypeRef(bool)
 
 		t = self(node.t)
 		f = self(node.f)
@@ -383,7 +494,7 @@ class GLSLTranslator(TypeDispatcher):
 		self.inlineSuite(condition.preamble)
 
 		condInfo = self(condition.conditional)
-		cond = condInfo.intrinsics[bool]
+		cond = condInfo.intrinsicTypeRef(bool)
 
 		# TODO preamble -> continue?
 		self.pushBlock()

@@ -423,6 +423,36 @@ class Shader(object):
 	def processOutputColor(self, color):
 		return rgb2srgb(tonemap(color*self.env.exposure))
 
+
+class SkyBox(object):
+	__slots__ = ['objectToWorld', 'sampler', 'env']
+
+	__fieldtypes__ = {'objectToWorld':mat4, 'sampler':sampler.sampler2D, 'env':Environment,}
+
+	def __init__(self):
+		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
+					  0.0, 1.0, 0.0, 0.0,
+					  0.0, 0.0, 1.0, 0.0,
+					  0.0, 0.0, 0.0, 1.0)
+
+		self.sampler = None
+		self.env     = None
+
+	def objectToCamera(self):
+		return self.env.worldToCamera*self.objectToWorld
+
+	def shadeVertex(self, context, pos, texCoord):
+		trans      = self.objectToCamera()
+		newpos     = trans*pos
+		context.position = self.env.projection*newpos
+		return texCoord,
+
+	def shadeFragment(self, context, texCoord):
+		albedo = self.sampler.texture(texCoord).xyz
+		mainColor = self.env.processOutputColor(albedo)
+		context.colors = (vec4(mainColor, 1.0),)
+
+
 def nldot(a, b):
 	return max(a.dot(b), 0.0)
 

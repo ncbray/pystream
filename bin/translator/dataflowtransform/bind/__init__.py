@@ -261,12 +261,13 @@ def bindStreams(compiler, translator, context):
 	return code.rewrite(args=args, argnames=names, body=body)
 
 classTemplate = ast.ClassDef(
-	'CompiledShader',
+	symbols.Symbol('className'),
 	[ast.GetAttr(
 		ast.GetGlobal(existingConstant('pystreamruntime')),
 		existingConstant('BaseCompiledShader')
 	)],
 	ast.Suite([
+		ast.Assign(existingSymbol('original'), [ast.Local('original')]),
 		ast.Assign(existingSymbol('vsCode'), [ast.Local('vs')]),
 		ast.Assign(existingSymbol('fsCode'), [ast.Local('fs')]),
 		ast.FunctionDef('bindUniforms', symbols.Symbol('bindUniforms'), []),
@@ -275,7 +276,33 @@ classTemplate = ast.ClassDef(
 	[]
 )
 
+
+callback = ast.Local('callback')
+# Not a FunctionDef, as the symbol rewriter would not be able to reach through the (shared) code
+registerTemplate = ast.Code(
+	'register',
+	ast.CodeParameters(
+		None,
+		[callback],
+		['callback'], [], None, None, []),
+	ast.Suite([
+			ast.Discard(
+					ast.Call(
+							callback,
+							[ast.GetGlobal(existingSymbol('className')),],
+							[], None, None)
+			)
+	])
+)
+
+
+
 def generateBindingClass(compiler, prgm, shaderprgm, translator):
+	className = "Compiled%s" % shaderprgm.name
+
+	# TODO original as the actual class object?
+	original = shaderprgm.name
+
 	uniformSlot = shaderprgm.vscontext.originalParams.params[0]
 
 	uniformCode = bindUniforms(compiler, translator, uniformSlot)
@@ -285,11 +312,15 @@ def generateBindingClass(compiler, prgm, shaderprgm, translator):
 	fsCode = shaderprgm.fscontext.shaderCode
 
 	code = symbols.SymbolRewriter(compiler.extractor, classTemplate)
-	cdef = code.rewrite(vsCode=vsCode, fsCode=fsCode, bindUniforms=uniformCode, bindStreams=streamCode)
+	cdef = code.rewrite(className=className, original=original, vsCode=vsCode, fsCode=fsCode, bindUniforms=uniformCode, bindStreams=streamCode)
 	cdef = existingtransform.evaluateAST(compiler, cdef)
+
+	register = symbols.SymbolRewriter(compiler.extractor, registerTemplate)
+	rdef = register.rewrite(className=className)
 
 	buffer = cStringIO.StringIO()
 	SimpleCodeGen(buffer).process(cdef)
+	SimpleCodeGen(buffer).process(rdef)
 
 	s = buffer.getvalue()
 
@@ -300,6 +331,6 @@ def generateBindingClass(compiler, prgm, shaderprgm, translator):
 	print s
 	print
 
-	filesystem.writeData('summaries', 'compiledshader', 'py', s)
+	filesystem.writeData('summaries/shaders', shaderprgm.name, 'py', s)
 
 	return cdef

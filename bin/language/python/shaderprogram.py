@@ -15,9 +15,7 @@ class FSContext(object):
 from language.python.annotations import CodeAnnotation
 emptyShaderProgramAnnotation = CodeAnnotation(None, False, False, None, None, None, None, None, None, None, None, False)
 
-def createShaderProgram(extractor):
-	name = "shader_program"
-
+def createShaderProgram(extractor, name):
 	selfparam = None
 	parameters = (Local('vs'), Local('fs'), Local('shader'))
 	parameternames = ('vs', 'fs', 'shader')

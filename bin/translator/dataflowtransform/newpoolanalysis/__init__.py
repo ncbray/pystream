@@ -312,6 +312,8 @@ def process(compiler, prgm, shaderprgm, exgraph, ioinfo, *contexts):
 
 	bind.generateBindingClass(compiler, prgm, shaderprgm, prepassInfo)
 
+	return
+
 	pgb = PoolGraphBuilder(exgraph, ioinfo)
 
 	for context in contexts:

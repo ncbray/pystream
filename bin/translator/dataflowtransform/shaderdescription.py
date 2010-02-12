@@ -18,10 +18,11 @@ class IOInfo(object):
 		self.specialOutputs = {}
 
 class ProgramDescription(object):
-	__slots__ = 'prgm', 'vscontext', 'fscontext', 'mapping', 'vs2fs', 'ioinfo'
+	__slots__ = 'prgm', 'name', 'vscontext', 'fscontext', 'mapping', 'vs2fs', 'ioinfo'
 
-	def __init__(self, prgm, vscontext, fscontext):
+	def __init__(self, prgm, name, vscontext, fscontext):
 		self.prgm = prgm
+		self.name = name
 		self.vscontext = vscontext
 		self.fscontext = fscontext
 

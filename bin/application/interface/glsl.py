@@ -87,6 +87,8 @@ class GLSLDeclaration(object):
 
 
 		for shader, args in self._shader:
+			name = shader.typeobj.__name__
+
 			vsobj, vscode = interface.getMethCode(shader, 'shadeVertex', extractor)
 			fsobj, fscode = interface.getMethCode(shader, 'shadeFragment', extractor)
 
@@ -95,7 +97,7 @@ class GLSLDeclaration(object):
 				interface.createEntryPoint(fscode, fsobj, (shader,)+args)
 			else:
 				shaderargs = (vsobj, fsobj, shader,)+args
-				interface.createEntryPoint(language.python.shaderprogram.createShaderProgram(extractor), None, shaderargs)
+				interface.createEntryPoint(language.python.shaderprogram.createShaderProgram(extractor, name), None, shaderargs)
 
 	def __nonzero__(self):
 		return bool(self._shader)

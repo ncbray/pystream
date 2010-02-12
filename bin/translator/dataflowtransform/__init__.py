@@ -244,7 +244,7 @@ class DataflowTransformContext(object):
 		self.originalParams = self.code.codeparameters.clone()
 
 
-def evaluateShaderProgram(compiler, vscontext, fscontext):
+def evaluateShaderProgram(compiler, name, vscontext, fscontext):
 	with compiler.console.scope('tree transform'):
 		prgm, code, exgraph, objectInfo = treetransform.process(compiler, vscontext.code, fscontext.code)
 
@@ -270,7 +270,7 @@ def evaluateShaderProgram(compiler, vscontext, fscontext):
 	with compiler.console.scope('field transform'):
 		newfieldtransform.process(compiler, prgm, exgraph, vscontext, fscontext)
 
-	shaderprgm = shaderdescription.ProgramDescription(prgm, vscontext, fscontext)
+	shaderprgm = shaderdescription.ProgramDescription(prgm, name, vscontext, fscontext)
 	shaderprgm.link()
 
 	ioinfo = shaderprgm.makeIOInfo()
@@ -278,18 +278,22 @@ def evaluateShaderProgram(compiler, vscontext, fscontext):
 	with compiler.console.scope('pool analysis'):
 		poolAnalysis = newpoolanalysis.process(compiler, prgm, shaderprgm, exgraph, ioinfo, vscontext, fscontext)
 
+	return
+
 	with compiler.console.scope('translating'):
 		translator = newglsltranslator.process(compiler, prgm, exgraph, poolAnalysis, shaderprgm, ioinfo)
 		bind.generateBindingClass(compiler, prgm, shaderprgm, translator)
 
 	return shaderprgm
 
-def evaluateCode(compiler, prgm, vscode, fscode):
+def evaluateCode(compiler, prgm, name, vscode, fscode):
 	vscontext = DataflowTransformContext(compiler, prgm, vscode)
 	fscontext = DataflowTransformContext(compiler, prgm, fscode)
 
 
-	shaderprgm = evaluateShaderProgram(compiler, vscontext, fscontext)
+	shaderprgm = evaluateShaderProgram(compiler, name, vscontext, fscontext)
+
+	return
 
 	with compiler.console.scope('debug dump'):
 		dumpreport.evaluate(compiler, shaderprgm.prgm, "shaderProgram")
@@ -346,7 +350,8 @@ def translate(compiler, prgm):
 	with compiler.console.scope('translate to glsl'):
 		for code in prgm.interface.entryCode():
 			if isinstance(code, ShaderProgram):
+				name = code.name
 				vs = code.vertexShaderCode()
 				fs = code.fragmentShaderCode()
 
-				evaluateCode(compiler, prgm, vs, fs)
+				evaluateCode(compiler, prgm, name, vs, fs)

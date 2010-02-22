@@ -13,7 +13,7 @@ def _merge(*args):
 constantTypes = frozenset([float, int, bool])
 vectorTypes   = frozenset([vec.vec2, vec.vec3, vec.vec4])
 matrixTypes   = frozenset([vec.mat2, vec.mat3, vec.mat4])
-samplerTypes  = frozenset([sampler.sampler2D])
+samplerTypes  = frozenset([sampler.sampler2D, sampler.samplerCube])
 
 intrinsicTypes = _merge(constantTypes, vectorTypes, matrixTypes, samplerTypes)
 
@@ -114,7 +114,8 @@ def init(compiler):
 	components(int, int, 1)
 	components(bool, bool, 1)
 
-	components(sampler.sampler2D, sampler.sampler2D, 1)
+	for st in samplerTypes:
+		components(st, st, 1)
 
 
 def isIntrinsicObject(obj):
@@ -505,12 +506,13 @@ def leRewrite(self, node):
 		return glsl.BinaryOp(self(node.args[0]), '<=', self(node.args[1]))
 
 def samplerTextureRewrite(self, node):
-	if not hasNumArgs(node, 2): return
-
-	if self is None:
-		return True
+	if hasNumArgs(node, 2) or hasNumArgs(node, 3):
+		if self is None:
+			return True
+		else:
+			return glsl.IntrinsicOp('texture', [self(arg) for arg in node.args])
 	else:
-		return glsl.IntrinsicOp('texture', [self(arg) for arg in node.args])
+		return
 
 def samplerTextureLodRewrite(self, node):
 	if not hasNumArgs(node, 3): return
@@ -540,6 +542,23 @@ def makeIntrinsicRewriter(extractor):
 	rewriter.addRewrite('prim_float_ge', geRewrite)
 	rewriter.addRewrite('prim_float_lt', ltRewrite)
 	rewriter.addRewrite('prim_float_le', leRewrite)
+
+
+	
+	rewriter.addRewrite('prim_int_add', floatAddRewrite)
+	rewriter.addRewrite('prim_int_sub', floatSubRewrite)
+	rewriter.addRewrite('prim_int_mul', floatMulRewrite)
+	rewriter.addRewrite('prim_int_div', floatDivRewrite)
+	rewriter.addRewrite('prim_int_pow', floatPowRewrite)
+	rewriter.addRewrite('prim_int_pos', posRewrite)
+	rewriter.addRewrite('prim_int_neg', negRewrite)
+
+	rewriter.addRewrite('prim_int_eq', eqRewrite)
+	rewriter.addRewrite('prim_int_ne', neRewrite)
+	rewriter.addRewrite('prim_int_gt', gtRewrite)
+	rewriter.addRewrite('prim_int_ge', geRewrite)
+	rewriter.addRewrite('prim_int_lt', ltRewrite)
+	rewriter.addRewrite('prim_int_le', leRewrite)
 
 	rewriter.addRewrite('type__call__', typeCallRewrite)
 	rewriter.addRewrite('max_stub', maxRewrite)

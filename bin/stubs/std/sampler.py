@@ -13,12 +13,14 @@ def makeSamplerFunc(collector):
 
 	@export
 	@replaceAttr(sampler.sampler2D, 'texture')
+	@replaceAttr(sampler.samplerCube, 'texture')	
 	@llfunc(descriptive=True)
 	def texture(self, P, bias=None):
 		return vec4(allocate(float), allocate(float), allocate(float), allocate(float))
 
 	@export
 	@replaceAttr(sampler.sampler2D, 'textureLod')
+	@replaceAttr(sampler.samplerCube, 'textureLod')
 	@llfunc(descriptive=True)
 	def textureLod(self, P, lod):
 		return vec4(allocate(float), allocate(float), allocate(float), allocate(float))

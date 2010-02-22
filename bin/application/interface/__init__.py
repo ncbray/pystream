@@ -103,8 +103,9 @@ class InterfaceDeclaration(object):
 			ep = self.createEntryPoint(code, selfarg, tuple(args), [], nullWrapper, nullWrapper, None)
 
 	def getMethCode(self, cls, name, extractor):
-		# TODO what about inheritance?
-		func = cls.typeobj.__dict__[name]
+		meth = getattr(cls.typeobj, name)
+		func = meth.im_func
+		
 		fobj, code = extractor.getObjectCall(func)
 		selfarg  = ExistingWrapper(func)
 		return selfarg, code

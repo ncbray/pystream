@@ -175,9 +175,12 @@ def bindUniforms(compiler, translator, uniformSlot):
 	self   = ast.Local('self')
 	shader = ast.Local('shader')
 
-	uniformRefs = uniformSlot.annotation.references.merged
-
-	body = ast.Suite(serializeUniformNode(compiler, translator, self, uniformSlot, uniformRefs, shader))
+	if uniformSlot.annotation.references:
+		uniformRefs = uniformSlot.annotation.references.merged	
+		body = ast.Suite(serializeUniformNode(compiler, translator, self, uniformSlot, uniformRefs, shader))
+	else:
+		# No uniforms are used.
+		body = ast.Suite([])
 
 	return code.rewrite(args=[self, shader], body=body)
 
@@ -304,6 +307,9 @@ def generateBindingClass(compiler, prgm, shaderprgm, translator):
 	original = shaderprgm.name
 
 	uniformSlot = shaderprgm.vscontext.originalParams.params[0]
+	if not uniformSlot.annotation.references:
+		# May be unused in vs.
+		uniformSlot = shaderprgm.fscontext.originalParams.params[0]
 
 	uniformCode = bindUniforms(compiler, translator, uniformSlot)
 	streamCode  = bindStreams(compiler, translator, shaderprgm.vscontext)

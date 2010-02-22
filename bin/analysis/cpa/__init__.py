@@ -158,10 +158,13 @@ class InterproceduralDataflow(object):
 		self.constraints.append(constraint)
 
 	def _signature(self, code, selfparam, params):
+		def checkParam(param):
+			return param is None or param is analysis.cpasignature.Any or isinstance(param, extendedtypes.ExtendedType)
+		
 		assert code.isCode(), type(code)
-		assert selfparam is None or selfparam is analysis.cpasignature.Any or isinstance(selfparam,  extendedtypes.ExtendedType), selfparam
+		assert checkParam(selfparam), selfparam
 		for param in params:
-			assert param is analysis.cpasignature.Any or isinstance(param, extendedtypes.ExtendedType), param
+			assert checkParam(param), param
 
 		return analysis.cpasignature.CPASignature(code, selfparam, params)
 

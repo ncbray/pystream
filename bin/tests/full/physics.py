@@ -344,10 +344,13 @@ class Environment(object):
 				'fog':Fog, 'exposure':float}
 
 	def processSurfaceColor(self, color, p):
-		return self.processOutputColor(self.fog.apply(color, p))
+		return self.processBufferColor(self.fog.apply(color, p))
 
 	def processOutputColor(self, color):
 		return rgb2srgb(tonemap(color*self.exposure))
+
+	def processBufferColor(self, color):
+		return color
 
 	def clearColor(self):
 		return self.processOutputColor(self.fog.color)
@@ -420,14 +423,11 @@ class Shader(object):
 
 		context.colors = (vec4(mainColor, 1.0),)
 
-	def processOutputColor(self, color):
-		return rgb2srgb(tonemap(color*self.env.exposure))
-
 
 class SkyBox(object):
 	__slots__ = ['objectToWorld', 'sampler', 'env']
 
-	__fieldtypes__ = {'objectToWorld':mat4, 'sampler':sampler.sampler2D, 'env':Environment,}
+	__fieldtypes__ = {'objectToWorld':mat4, 'sampler':sampler.samplerCube, 'env':Environment,}
 
 	def __init__(self):
 		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
@@ -441,16 +441,91 @@ class SkyBox(object):
 	def objectToCamera(self):
 		return self.env.worldToCamera*self.objectToWorld
 
-	def shadeVertex(self, context, pos, texCoord):
+	def shadeVertex(self, context, pos):
 		trans      = self.objectToCamera()
 		newpos     = trans*pos
 		context.position = self.env.projection*newpos
-		return texCoord,
+		return pos.xyz,
 
 	def shadeFragment(self, context, texCoord):
 		albedo = self.sampler.texture(texCoord).xyz
-		mainColor = self.env.processOutputColor(albedo)
+		mainColor = self.env.processBufferColor(albedo)
 		context.colors = (vec4(mainColor, 1.0),)
+
+
+class FullScreenEffect(object):
+	__slots__ = []
+	__fieldtypes__ = {}
+
+	def shadeVertex(self, context, pos, texCoord):
+		context.position = pos
+		return texCoord,
+
+	def shadeFragment(self, context, texCoord):
+		context.colors = (self.process(texCoord),)
+
+class RadialBlur(FullScreenEffect):
+	__slots__ = ['colorBuffer', 'blurBuffer', 'samples', 'scaleFactor', 'falloff', 'bias', 'blurAmount', 'radialAmount', 'env']
+
+	__fieldtypes__ = {'colorBuffer':sampler.sampler2D, 'blurBuffer':sampler.sampler2D,
+					'samples':int, 'scaleFactor':float, 'falloff':float, 'bias':float,
+					'blurAmount':float, 'radialAmount':float,
+					'env':Environment,}
+
+	def __init__(self):
+		self.colorBuffer = None
+
+	def computeRadial(self, texCoord):
+		color  = vec4(0.0)
+		scale  = 1.0 
+		amount = 1.0
+		weight = 0.0
+		
+		i = 0
+		
+		while i < self.samples:
+			# Shift to the center
+			uv = (texCoord-0.5)*scale+0.5
+			scale *= self.scaleFactor
+
+			# Weighted sample
+			color += self.blurBuffer.texture(uv, self.bias)*amount
+			weight += amount
+			amount *= self.falloff
+			
+			i += 1
+		
+		return color/weight
+
+	def process(self, texCoord):
+		original = self.colorBuffer.texture(texCoord)
+		blured   = self.blurBuffer.texture(texCoord)
+		color    = original.mix(blured, self.blurAmount)
+		
+		color += self.computeRadial(texCoord)*self.radialAmount
+		
+		return vec4(self.env.processOutputColor(color.xyz), 1.0)
+
+
+class DirectionalBlur(FullScreenEffect):
+	__slots__ = ['colorBuffer', 'offset']
+
+	__fieldtypes__ = {'colorBuffer':sampler.sampler2D, 'offset':vec2}
+
+	def __init__(self):
+		self.colorBuffer = None
+
+
+	def process(self, texCoord):
+		color = self.colorBuffer.texture(texCoord)
+		color += self.colorBuffer.texture(texCoord+self.offset)*0.825
+		color += self.colorBuffer.texture(texCoord-self.offset)*0.825
+		color += self.colorBuffer.texture(texCoord+self.offset*2.0)*0.384
+		color += self.colorBuffer.texture(texCoord-self.offset*2.0)*0.384
+		
+		weight = (1.0+0.825*2.0+0.384*2.0)
+	
+		return color/weight
 
 
 def nldot(a, b):

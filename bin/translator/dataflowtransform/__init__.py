@@ -260,6 +260,8 @@ def evaluateShaderProgram(compiler, name, vscontext, fscontext):
 		fscontext.objectInfo = objectInfo
 		fscontext.copyOriginalParams()
 
+	#dumpreport.evaluate(compiler,prgm, name)
+
 	with compiler.console.scope('flatten output'):
 		vscontext.shaderdesc = flattenoutput.process(compiler, prgm, vscontext.code, False)
 		fscontext.shaderdesc = flattenoutput.process(compiler, prgm, fscontext.code, True)

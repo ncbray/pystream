@@ -137,6 +137,12 @@ class GetSubscript(Expression):
 class SetSubscript(Statement):
 	__fields__ = 'value:Expression expr:Expression subscript:Expression'
 
+class ShortCircutAnd(Expression):
+	__fields__ = 'exprs:Expression*'
+
+class ShortCircutOr(Expression):
+	__fields__ = 'exprs:Expression*'
+
 class Switch(Statement):
 	__fields__ = 'condition:Expression t:Suite f:Suite'
 

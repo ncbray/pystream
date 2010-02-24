@@ -176,7 +176,7 @@ def bindUniforms(compiler, translator, uniformSlot):
 	shader = ast.Local('shader')
 
 	if uniformSlot.annotation.references:
-		uniformRefs = uniformSlot.annotation.references.merged	
+		uniformRefs = uniformSlot.annotation.references.merged
 		body = ast.Suite(serializeUniformNode(compiler, translator, self, uniformSlot, uniformRefs, shader))
 	else:
 		# No uniforms are used.

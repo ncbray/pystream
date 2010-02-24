@@ -105,7 +105,7 @@ class InterfaceDeclaration(object):
 	def getMethCode(self, cls, name, extractor):
 		meth = getattr(cls.typeobj, name)
 		func = meth.im_func
-		
+
 		fobj, code = extractor.getObjectCall(func)
 		selfarg  = ExistingWrapper(func)
 		return selfarg, code

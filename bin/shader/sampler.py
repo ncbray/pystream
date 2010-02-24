@@ -25,6 +25,6 @@ class samplerCube(Sampler):
 
 	def texture(self, P, bias=None):
 		return vec.vec4(1.0, 1.0, 1.0, 1.0)
-	
+
 	def textureLod(self, P, lod):
 		return vec.vec4(1.0, 1.0, 1.0, 1.0)

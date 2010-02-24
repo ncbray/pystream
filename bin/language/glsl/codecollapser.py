@@ -90,6 +90,7 @@ class CollapserAnalysis(TypeDispatcher):
 			glsl.Discard, glsl.Return,
 			glsl.BinaryOp, glsl.UnaryPrefixOp, glsl.Constructor,
 			glsl.Load,
+			glsl.ShortCircutAnd, glsl.ShortCircutOr, # HACK should not collapse in some cases?
 			glsl.IntrinsicOp # HACK can intrinsic ops mutate?
 			)
 	def visitOK(self, node):
@@ -174,6 +175,7 @@ class CollapserTransform(TypeDispatcher):
 			glsl.Discard, glsl.Return,
 			glsl.BinaryOp, glsl.UnaryPrefixOp, glsl.Constructor,
 			glsl.Load, glsl.Store,
+			glsl.ShortCircutAnd, glsl.ShortCircutOr,
 			glsl.IntrinsicOp # HACK can intrinsic ops mutate?
 			)
 	def visitOK(self, node):

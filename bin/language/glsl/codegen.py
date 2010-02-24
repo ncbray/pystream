@@ -153,6 +153,24 @@ class GLSLCodeGen(TypeDispatcher):
 	def visitUnaryPrefixOp(self, node, prec=17):
 		return self.wrap("%s%s" % (node.op, self(node.expr, 2)), 2, prec)
 
+	@dispatch(ast.ShortCircutAnd)
+	def visitShortCircutAnd(self, node, prec=17):
+		opPrec = 11
+		# TODO precedence on first element wrong?
+		exprs = [self(expr, opPrec-1) for expr in node.exprs]
+		s = " && ".join(exprs)
+		return self.wrap(s, opPrec, prec)
+
+	@dispatch(ast.ShortCircutOr)
+	def visitShortCircutOr(self, node, prec=17):
+		opPrec = 12
+		# TODO precedence on first element wrong?
+		exprs = [self(expr, opPrec-1) for expr in node.exprs]
+		s = " || ".join(exprs)
+		return self.wrap(s, opPrec, prec)
+
+
+
 	@dispatch(ast.Assign)
 	def visitAssign(self, node, prec=17):
 		return self.wrapSimpleStatement("%s = %s" % (self(node.lcl, 15), self(node.expr, 16)), 16, prec)

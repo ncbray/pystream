@@ -544,7 +544,7 @@ def makeIntrinsicRewriter(extractor):
 	rewriter.addRewrite('prim_float_le', leRewrite)
 
 
-	
+
 	rewriter.addRewrite('prim_int_add', floatAddRewrite)
 	rewriter.addRewrite('prim_int_sub', floatSubRewrite)
 	rewriter.addRewrite('prim_int_mul', floatMulRewrite)

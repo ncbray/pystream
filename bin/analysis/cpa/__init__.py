@@ -160,7 +160,7 @@ class InterproceduralDataflow(object):
 	def _signature(self, code, selfparam, params):
 		def checkParam(param):
 			return param is None or param is analysis.cpasignature.Any or isinstance(param, extendedtypes.ExtendedType)
-		
+
 		assert code.isCode(), type(code)
 		assert checkParam(selfparam), selfparam
 		for param in params:

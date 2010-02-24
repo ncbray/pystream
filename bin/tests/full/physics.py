@@ -108,9 +108,8 @@ class SurfaceFragment(object):
 
 
 class Material(object):
-	__slots__ = 'diffuseColor', 'specularColor'
-	__fieldtypes__ = {'diffuseColor':vec3, 'specularColor':vec3}
-
+	__slots__ = 'diffuseColor', 'specularColor', 'diffuseMap'
+	__fieldtypes__ = {'diffuseColor':vec3, 'specularColor':vec3, 'diffuseMap':sampler.sampler2D}
 
 	def __init__(self):
 		self.diffuseColor  = vec3(0.125, 0.125, 1.0)
@@ -122,9 +121,9 @@ class Material(object):
 	def specularTransfer(self, n, l, e):
 		return 0.0
 
-	def surface(self, p, n, e):
+	def surface(self, p, n, e, texCoord):
 		surface = SurfaceFragment(self, p, n, e)
-		surface.diffuseColor  = self.diffuseColor
+		surface.diffuseColor  = self.diffuseColor*self.diffuseMap.texture(texCoord).xyz
 		surface.specularColor = self.specularColor
 		return surface
 
@@ -194,6 +193,9 @@ class AmbientLight(Light):
 		self.color0 = color0
 		self.color1 = color1
 
+	def color(self, edir):
+		amt = self.direction.dot(edir)*0.5+0.5
+		return  self.color1.mix(self.color0, amt)
 
 	def accumulate(self, surface, w2c):
 		# Transform the direction into world space
@@ -332,16 +334,48 @@ class TangentSpaceBasis(object):
 	def getNormal(self):
 		return self.normal.normalize()
 
-def transformNormal(m, n):
-	return (m*vec4(n, 0.0)).xyz
+
+class SurfacePerturber(object):
+	__slots__ = ['normalmap']
+	__fieldtypes__ = {'normalmap':sampler.sampler2D}
+
+	def perturb(self, tsbasis, texCoord, e):
+		return texCoord
+
+	def rayDepth(self, texCoord):
+		return self.normalmap.textureLod(texCoord, 0.0).w
+
+	def normal(self, tsbasis, texCoord):
+		normal = self.normalmap.texture(texCoord).xyz*2.0-1.0
+		return tsbasis.fromTangentSpace(normal)
+
+
+class NoPerturbation(SurfacePerturber):
+	__slots__ = ()
+
+	def normal(self, tsbasis, texCoord):
+		return tsbasis.getNormal()
+
+
+class NormalMapPerturbation(SurfacePerturber):
+	__slots__ = ()
+
+
+class ParallaxOcclusionPerturbation(SurfacePerturber):
+	__slots__ = ['parallaxAmount']
+	__fieldtypes__ = {'parallaxAmount':float}
+
+	def perturb(self, tsbasis, texCoord, e):
+		return tsbasis.parallaxOcclusionAdjust(e, texCoord, self.normalmap, self.parallaxAmount)
 
 
 # Environment
 class Environment(object):
-	__slots__ = ['worldToCamera', 'projection', 'ambient', 'fog', 'exposure']
+	__slots__ = ['worldToCamera', 'projection', 'cameraToEnvironment', 'ambientMap', 'ambient', 'fog', 'exposure']
 
-	__fieldtypes__ = {'worldToCamera':mat4, 'projection':mat4, 'ambient':AmbientLight,
-				'fog':Fog, 'exposure':float}
+	__fieldtypes__ = {'worldToCamera':mat4, 'projection':mat4,
+					'cameraToEnvironment':mat4, 'ambientMap':sampler.samplerCube,
+					'ambient':AmbientLight, 'fog':Fog, 'exposure':float}
 
 	def processSurfaceColor(self, color, p):
 		return self.processBufferColor(self.fog.apply(color, p))
@@ -355,68 +389,52 @@ class Environment(object):
 	def clearColor(self):
 		return self.processOutputColor(self.fog.color)
 
+	def ambientColor(self, n):
+		edir = transformNormal(self.cameraToEnvironment, n)
+		return self.ambientMap.texture(edir).xyz
+		#return self.ambient.color(edir)
+
+
 
 class Shader(object):
 	__slots__ = ['objectToWorld', 'light',
-				'material', 'sampler', 'normalmap', 'useNormalMap', 'parallaxAmount',
+				'material', 'perturb',
 				'env']
 
 	__fieldtypes__ = {'objectToWorld':mat4, 'light':PointLight,
 				'material':(LambertMaterial, PhongMaterial, ToonMaterial),
-				'sampler':sampler.sampler2D, 'normalmap':sampler.sampler2D, 'useNormalMap':bool, 'parallaxAmount':float,
+				'perturb':(NoPerturbation, NormalMapPerturbation, ParallaxOcclusionPerturbation),
 				'env':Environment,}
 
-	def __init__(self):
-		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
-					  0.0, 1.0, 0.0, 0.0,
-					  0.0, 0.0, 1.0, 0.0,
-					  0.0, 0.0, 0.0, 1.0)
-
-		self.light = PointLight(vec3(0.0, 10.0, 0.0), vec3(1.0, 1.0, 1.0), vec3(0.01, 0.0, 0.00001))
-
-		self.material = Material()
-
-		self.sampler    = None
-		self.normalmap  = None
-
-		self.env = None
-
-	def shadeVertex(self, context, pos, normal, tangent, bitangent, texCoord):
-		trans      = self.env.worldToCamera*self.objectToWorld
-		newpos     = trans*pos
-
+	def createTSBasis(self, trans, normal, tangent, bitangent):
 		newnormal  = transformNormal(trans, normal)
 		newtangent = transformNormal(trans, tangent.xyz)
 		#newtangent = vec4(newtangent, tangent.w)
 		newbitangent  = transformNormal(trans, bitangent)
 
-		tsbasis = TangentSpaceBasis(newnormal, newtangent, newbitangent)
+		return TangentSpaceBasis(newnormal, newtangent, newbitangent)
+
+	def shadeVertex(self, context, pos, normal, tangent, bitangent, texCoord):
+		trans      = self.env.worldToCamera*self.objectToWorld
+		newpos     = trans*pos
+
+		tsbasis = self.createTSBasis(trans, normal, tangent, bitangent)
 
 		context.position = self.env.projection*newpos
 
 		return newpos.xyz, tsbasis, texCoord
 
 	def shadeFragment(self, context, pos, tsbasis, texCoord):
-		n = tsbasis.normal.normalize()
 		e = -pos.normalize()
 
-		if self.useNormalMap:
-			texCoord = tsbasis.parallaxOcclusionAdjust(e, texCoord, self.normalmap, self.parallaxAmount)
+		# TODO control flow mutual exclusivity
+		texCoord = self.perturb.perturb(tsbasis, texCoord, e)
+		normal   = self.perturb.normal(tsbasis, texCoord)
 
-			normal = tsbasis.getNormal()
-			tsn = self.normalmap.texture(texCoord).xyz*2.0-1.0
-			normal = tsbasis.fromTangentSpace(tsn)
-		else:
-			normal = tsbasis.getNormal()
-
-		surface = self.material.surface(pos, normal, e)
-
-		# Texture
-		albedo = self.sampler.texture(texCoord).xyz
-		surface.diffuseColor *= albedo
+		surface = self.material.surface(pos, normal, e, texCoord)
 
 		# Accumulate lighting
-		self.env.ambient.accumulate(surface, self.env.worldToCamera)
+		surface.diffuseLight += self.env.ambientColor(surface.n)
 		self.light.accumulate(surface, self.env.worldToCamera)
 
 		mainColor = self.env.processSurfaceColor(surface.litColor(), surface.p)
@@ -435,7 +453,6 @@ class SkyBox(object):
 					  0.0, 0.0, 1.0, 0.0,
 					  0.0, 0.0, 0.0, 1.0)
 
-		self.sampler = None
 		self.env     = None
 
 	def objectToCamera(self):
@@ -477,12 +494,12 @@ class RadialBlur(FullScreenEffect):
 
 	def computeRadial(self, texCoord):
 		color  = vec4(0.0)
-		scale  = 1.0 
+		scale  = 1.0
 		amount = 1.0
 		weight = 0.0
-		
+
 		i = 0
-		
+
 		while i < self.samples:
 			# Shift to the center
 			uv = (texCoord-0.5)*scale+0.5
@@ -492,18 +509,18 @@ class RadialBlur(FullScreenEffect):
 			color += self.blurBuffer.texture(uv, self.bias)*amount
 			weight += amount
 			amount *= self.falloff
-			
+
 			i += 1
-		
+
 		return color/weight
 
 	def process(self, texCoord):
 		original = self.colorBuffer.texture(texCoord)
 		blured   = self.blurBuffer.texture(texCoord)
 		color    = original.mix(blured, self.blurAmount)
-		
+
 		color += self.computeRadial(texCoord)*self.radialAmount
-		
+
 		return vec4(self.env.processOutputColor(color.xyz), 1.0)
 
 
@@ -522,11 +539,18 @@ class DirectionalBlur(FullScreenEffect):
 		color += self.colorBuffer.texture(texCoord-self.offset)*0.825
 		color += self.colorBuffer.texture(texCoord+self.offset*2.0)*0.384
 		color += self.colorBuffer.texture(texCoord-self.offset*2.0)*0.384
-		
+
 		weight = (1.0+0.825*2.0+0.384*2.0)
-	
+
 		return color/weight
 
+
+def transformNormal(m, n):
+	return (m*vec4(n, 0.0)).xyz
+
+# TODO clamp?
+def fresnel(n, e):
+	return min(max(1.0-n.dot(-e), 0.0), 1.0)**5.0
 
 def nldot(a, b):
 	return max(a.dot(b), 0.0)

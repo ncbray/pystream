@@ -354,7 +354,7 @@ class GLSLTranslator(TypeDispatcher):
 		if len(parts) == 1:
 			return parts[0]
 		else:
-			assert False, parts
+			return glsl.ShortCircutOr(parts)
 
 	@dispatch(ast.Switch)
 	def visitSwitch(self, node):

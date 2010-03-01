@@ -48,6 +48,12 @@ class OutputDecl(GLSLASTNode):
 	def __repr__(self):
 		return "%s(%s)" % (type(self).__name__, self.name)
 
+class BlockDecl(GLSLASTNode):
+	__fields__ = 'layout:str? name:str decls:UniformDecl*'
+
+
+class Declarations(GLSLASTNode):
+	__fields__ = 'decls*'
 
 #interpolation: (smooth, nonperspective, flat)
 

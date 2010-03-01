@@ -18,7 +18,7 @@ class IOInfo(object):
 		self.specialOutputs = {}
 
 class ProgramDescription(object):
-	__slots__ = 'prgm', 'name', 'vscontext', 'fscontext', 'mapping', 'vs2fs', 'ioinfo'
+	__slots__ = 'prgm', 'name', 'vscontext', 'fscontext', 'mapping', 'vs2fs', 'ioinfo', 'uniformBlock'
 
 	def __init__(self, prgm, name, vscontext, fscontext):
 		self.prgm = prgm
@@ -27,6 +27,8 @@ class ProgramDescription(object):
 		self.fscontext = fscontext
 
 		self.vs2fs = {}
+		
+		self.uniformBlock = None
 
 	def makeMap(self, tree, slot, mapping):
 		if tree.used:

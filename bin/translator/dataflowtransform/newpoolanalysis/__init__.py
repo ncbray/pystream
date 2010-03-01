@@ -308,7 +308,7 @@ def process(compiler, prgm, shaderprgm, exgraph, ioinfo, *contexts):
 	prepassInfo = prepass.process(compiler, prgm, exgraph, ioinfo, contexts)
 
 	for context in contexts:
-		shaderanalysis.process(compiler, prgm, exgraph, ioinfo, prepassInfo, context)
+		shaderanalysis.process(compiler, prgm, exgraph, ioinfo, prepassInfo, context, shaderprgm)
 
 	bind.generateBindingClass(compiler, prgm, shaderprgm, prepassInfo)
 

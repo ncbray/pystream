@@ -308,16 +308,45 @@ class GLSLCodeGen(TypeDispatcher):
 		decl = "".join(["%s;\n" % (self(lcl)) for lcl in lcls])
 		return decl
 
+	@dispatch(ast.BlockDecl)
+	def visitBlockDecl(self, node):
+		if node.layout:
+			layout = "layout(%s) " % node.layout
+		else:
+			layout = ""
+
+
+
+
+		oldIndent = self.indent
+		self.indent += '\t'
+		statements = ["%s%s;\n" % (self.indent, self(stmt)) for stmt in node.decls]
+		self.indent = oldIndent
+		body = "".join(statements)
+
+		stmt = "%suniform %s\n{\n%s}" % (layout, node.name, body)
+
+		return stmt
+
+	@dispatch(ast.Declarations)
+	def visitDeclarations(self, node):
+		decl = "".join(["%s;\n" % (self(decl)) for decl in node.decls])
+		return decl
+
+
 	@dispatch(ast.Code)
-	def visitCode(self, node):
+	def visitCode(self, node, uniblock):
 		finder = FindLocals()
 		finder.processCode(node)
 
 		# Generate header declarations
-		parts = ["#version 130\n"]
+		parts = ["#version 150\n"]
 
-		uniformdecl = self.makeDecl(finder.uniforms)
-		if uniformdecl: parts.append(uniformdecl)
+		if uniblock:
+			parts.append(self(uniblock))
+		else:
+			uniformdecl = self.makeDecl(finder.uniforms)
+			if uniformdecl: parts.append(uniformdecl)
 
 		inputdecl   = self.makeDecl(finder.inputs)
 		if inputdecl: parts.append(inputdecl)
@@ -332,6 +361,6 @@ class GLSLCodeGen(TypeDispatcher):
 
 		return "%s\n%s %s(%s)\n{\n%s\n%s}\n" % (header, self.typename(node.returnType), node.name, ", ".join([self(param) for param in node.params]), localdecl, self(node.body))
 
-def evaluateCode(compiler, code):
+def evaluateCode(compiler, code, uniblock=None):
 	code = codecollapser.evaluateCode(compiler, code)
-	return GLSLCodeGen()(code)
+	return GLSLCodeGen()(code, uniblock)

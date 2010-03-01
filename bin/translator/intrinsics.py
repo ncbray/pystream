@@ -19,6 +19,7 @@ intrinsicTypes = _merge(constantTypes, vectorTypes, matrixTypes, samplerTypes)
 
 constantTypeNodes = {}
 intrinsicTypeNodes = {}
+intrinsicToType = {}
 
 typeComponents = {} # type -> (componentType, count)
 componentTypes = {} # (componentType, count) -> type
@@ -26,16 +27,26 @@ componentTypeNodes = {}
 
 fields = {}
 
+byteAlignment = {}
+byteSize = {}
+
 referenceType = glsl.BuiltinType('ref')
 
 for t in intrinsicTypes:
-	intrinsicTypeNodes[t] = glsl.BuiltinType(t.__name__)
+	bt = glsl.BuiltinType(t.__name__)
+	intrinsicTypeNodes[t] = bt
+	intrinsicToType[bt] = t
+
 for t in constantTypes:
 	constantTypeNodes[t] = intrinsicTypeNodes[t]
 
 import util
 
 initialized = False
+
+def basicAlignment(ctype, count):
+	if count == 3: count = 4
+	return count*4
 
 def init(compiler):
 	# Prevent multiple initializations
@@ -59,30 +70,41 @@ def init(compiler):
 			componentTypes[key] = cls
 			componentTypeNodes[key] = intrinsicTypeNodes[cls]
 
-	components(float, float, 1)
+	def scalarComponents(cls, ctype, cnum):
+		byteAlignment[cls] = basicAlignment(ctype, cnum)
+		byteSize[cls] = cnum*4
 
-	components(vec.vec2, float, 2)
+		components(cls, ctype, cnum)
+
+	def matrixComponents(cls, ctype, col, row):
+		byteAlignment[cls] = 4*4
+		byteSize[cls] = basicAlignment(ctype, row)*col
+		components(cls, ctype, col*row)
+
+	scalarComponents(float, float, 1)
+
+	scalarComponents(vec.vec2, float, 2)
 	addName(vec.vec2, 'x', fields)
 	addName(vec.vec2, 'y', fields)
 
-	components(vec.vec3, float, 3)
+	scalarComponents(vec.vec3, float, 3)
 	addName(vec.vec3, 'x', fields)
 	addName(vec.vec3, 'y', fields)
 	addName(vec.vec3, 'z', fields)
 
-	components(vec.vec4, float, 4)
+	scalarComponents(vec.vec4, float, 4)
 	addName(vec.vec4, 'x', fields)
 	addName(vec.vec4, 'y', fields)
 	addName(vec.vec4, 'z', fields)
 	addName(vec.vec4, 'w', fields)
 
-	components(vec.mat2, float, 4)
+	matrixComponents(vec.mat2, float, 2, 2)
 	addName(vec.mat2, 'm00', fields)
 	addName(vec.mat2, 'm01', fields)
 	addName(vec.mat2, 'm10', fields)
 	addName(vec.mat2, 'm11', fields)
 
-	components(vec.mat3, float, 9)
+	matrixComponents(vec.mat3, float, 3, 3)
 	addName(vec.mat3, 'm00', fields)
 	addName(vec.mat3, 'm01', fields)
 	addName(vec.mat3, 'm02', fields)
@@ -93,7 +115,7 @@ def init(compiler):
 	addName(vec.mat3, 'm21', fields)
 	addName(vec.mat3, 'm22', fields)
 
-	components(vec.mat4, float, 16)
+	matrixComponents(vec.mat4, float, 4, 4)
 	addName(vec.mat4, 'm00', fields)
 	addName(vec.mat4, 'm01', fields)
 	addName(vec.mat4, 'm02', fields)
@@ -111,11 +133,11 @@ def init(compiler):
 	addName(vec.mat4, 'm32', fields)
 	addName(vec.mat4, 'm33', fields)
 
-	components(int, int, 1)
-	components(bool, bool, 1)
+	scalarComponents(int, int, 1)
+	scalarComponents(bool, bool, 1)
 
 	for st in samplerTypes:
-		components(st, st, 1)
+		scalarComponents(st, st, 1)
 
 
 def isIntrinsicObject(obj):

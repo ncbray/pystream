@@ -35,6 +35,7 @@ class SamplerGroup(object):
 		self.canonical = canonical
 		self.group = group
 		self.name = "samplerGroup%d" % uid
+		self.impl = None
 
 		assert len(group) == 1
 
@@ -64,6 +65,7 @@ class SubrefInfo(Mergable):
 		self.slots = set()
 		self.holdsVolatile = False
 		self.builtin = False
+		self.impl = None
 
 	def merge(self, analysis, other):
 		assert isinstance(other, SubrefInfo), other
@@ -127,6 +129,7 @@ class IntrinsicSubrefInfo(SubrefInfo):
 		self.t = t
 		self.sampler = t in intrinsics.samplerTypes
 		self.refs = set()
+		self.impl = None
 
 	def postfix(self):
 		return self.t.__name__

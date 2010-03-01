@@ -161,7 +161,7 @@ def handleUniformType(compiler, translator, self, holdingSlot, ref, root, t):
 	return statements
 
 uniformCodeTemplate = ast.Code(
-	'bindUniforms',
+	'_bindUniforms',
 	ast.CodeParameters(
 		None,
 		symbols.Symbol('args'),
@@ -273,7 +273,7 @@ classTemplate = ast.ClassDef(
 		ast.Assign(existingSymbol('original'), [ast.Local('original')]),
 		ast.Assign(existingSymbol('vsCode'), [ast.Local('vs')]),
 		ast.Assign(existingSymbol('fsCode'), [ast.Local('fs')]),
-		ast.FunctionDef('bindUniforms', symbols.Symbol('bindUniforms'), []),
+		ast.FunctionDef('_bindUniforms', symbols.Symbol('bindUniforms'), []),
 		ast.FunctionDef('bindStreams',  symbols.Symbol('bindStreams'), [])
 	]),
 	[]
@@ -333,9 +333,9 @@ def generateBindingClass(compiler, prgm, shaderprgm, translator):
 	# HACK for imports
 	s = "import pystreamruntime\nimport tests.full.physics\n\n" + s
 
-	print
-	print s
-	print
+#	print
+#	print s
+#	print
 
 	filesystem.writeData('summaries/shaders', shaderprgm.name, 'py', s)
 

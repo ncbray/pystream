@@ -16,16 +16,22 @@ def makeRef(ref, subref):
 	bt = intrinsics.intrinsicTypeNodes[subref.t]
 	name = subref.name
 
-	if ref.mode is model.OUTPUT:
-		return glsl.Output(glsl.OutputDecl(None, False, False, subref.builtin, bt, name))
-	elif ref.mode is model.UNIFORM:
-		return glsl.Uniform(glsl.UniformDecl(False, bt, name, None))
-	elif ref.mode is model.INPUT:
-		return glsl.Input(glsl.InputDecl(None, False, subref.builtin, bt, name))
-	elif ref.mode is model.LOCAL:
-		return glsl.Local(bt, name)
-	else:
-		assert False, mode
+	if not subref.impl:
+		if ref.mode is model.OUTPUT:
+			impl = glsl.Output(glsl.OutputDecl(None, False, False, subref.builtin, bt, name))
+		elif ref.mode is model.UNIFORM:
+			impl = glsl.Uniform(glsl.UniformDecl(False, bt, name, None))
+		elif ref.mode is model.INPUT:
+			impl = glsl.Input(glsl.InputDecl(None, False, subref.builtin, bt, name))
+		elif ref.mode is model.LOCAL:
+			impl = glsl.Local(bt, name)
+		else:
+			assert False, mode
+
+		subref.impl = impl
+
+	return subref.impl
+
 
 class SubrefImpl(object):
 	def __init__(self, refImpl, info):
@@ -170,8 +176,12 @@ class SamplerGroupImpl(object):
 	def __init__(self, info):
 		self.info = info
 		assert info.unique
-		bt = intrinsics.intrinsicTypeNodes[info.t]
-		self.ref = glsl.Uniform(glsl.UniformDecl(False, bt, info.name, None))
+
+		if not info.impl:
+			bt = intrinsics.intrinsicTypeNodes[info.t]
+			info.impl = glsl.Uniform(glsl.UniformDecl(False, bt, info.name, None))
+
+		self.ref = info.impl
 
 class GLSLTranslator(TypeDispatcher):
 	def __init__(self, compiler, prepassInfo, poolanalysis, rewriter, ioinfo, context):
@@ -449,14 +459,100 @@ class GLSLTranslator(TypeDispatcher):
 		return glsl.Code('main', [], glsl.BuiltinType('void'), suite)
 
 
+def padding(offset, granularity):
+	size = offset
+	size += granularity-1
+	size -= size%granularity
+	return size-offset
 
-def processCode(compiler, prgm, exgraph, ioinfo, prepassInfo, poolInfo, context):
+
+def buildBlocks(prepassInfo, shaderprgm):
+	block = []
+	decls = []
+
+	alignedUniforms = collections.defaultdict(list)
+	alignedCount = 0
+
+	for refInfo in prepassInfo.ioRefInfo.itervalues():
+		for sub in refInfo.lut.subpools.itervalues():
+			print sub.impl
+
+			if isinstance(sub.impl, glsl.Uniform):
+				bt = sub.impl.decl.type
+				t = intrinsics.intrinsicToType[bt]
+				ct, cc = intrinsics.typeComponents[t]
+
+
+				if False:
+					decls.append(sub.impl.decl)
+				else:
+					align = intrinsics.byteAlignment[t]
+					size = intrinsics.byteSize[t]
+					alignedUniforms[align].append((sub.impl.decl, size))
+					alignedCount += 1
+	print
+
+	for sg in prepassInfo.samplerGroups.itervalues():
+		print sg.impl
+		decls.append(sg.impl.decl)
+	print
+
+	# Pack the fields, greedily minimizing the fragmentation.
+	offset = 0
+	while alignedCount:
+		bestErr = 1024
+		bestAlign = 32
+		for align in alignedUniforms.iterkeys():
+			err = padding(offset, align)
+			
+			if err < bestErr or (err == bestErr and align > bestAlign):
+				bestErr   = err
+				bestAlign = align
+		
+		assert bestErr < 1024
+		
+		print "pad", bestErr
+		print "choose", bestAlign, '@', offset
+		
+		
+		uniforms = alignedUniforms[bestAlign]
+		
+		assert uniforms, bestAlign
+		
+		chosen, size = uniforms.pop()
+		
+		if not uniforms:
+			print "kill", bestAlign
+			del alignedUniforms[bestAlign]
+		
+		block.append(chosen)
+		
+		offset += bestErr+size
+		
+		alignedCount -= 1
+	assert not alignedUniforms
+
+	# Make sure the uniform block is shared between shaders
+	if not shaderprgm.uniformBlock:
+		if block:
+			shaderprgm.uniformBlock = glsl.BlockDecl('shared', 'uni', block)
+
+	if shaderprgm.uniformBlock:
+		decls.append(shaderprgm.uniformBlock)
+
+	return glsl.Declarations(decls)
+
+
+def processCode(compiler, prgm, exgraph, ioinfo, prepassInfo, poolInfo, context, shaderprgm):
 	rewriter = intrinsics.makeIntrinsicRewriter(compiler.extractor)
 
 	trans = GLSLTranslator(compiler, prepassInfo, poolInfo, rewriter, ioinfo, context)
 
 	result = trans.process(context.code)
-	s = codegen.evaluateCode(compiler, result)
+
+	uniblock = buildBlocks(prepassInfo, shaderprgm)
+
+	s = codegen.evaluateCode(compiler, result, uniblock)
 
 	print
 	print s

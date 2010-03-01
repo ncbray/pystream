@@ -128,8 +128,8 @@ class PoolAnalysis(TypeDispatcher):
 
 from .. import glsltranslatortwo
 
-def process(compiler, prgm, exgraph, ioinfo, prepassInfo, context):
+def process(compiler, prgm, exgraph, ioinfo, prepassInfo, context, shaderprgm):
 	pa = PoolAnalysis(exgraph, ioinfo, prepassInfo)
 	pa.processCode(context.code)
 
-	glsltranslatortwo.processCode(compiler, prgm, exgraph, ioinfo, prepassInfo, pa, context)
+	glsltranslatortwo.processCode(compiler, prgm, exgraph, ioinfo, prepassInfo, pa, context, shaderprgm)

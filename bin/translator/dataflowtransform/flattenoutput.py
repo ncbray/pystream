@@ -158,7 +158,8 @@ class OutputFlattener(object):
 
 			outdesc.position = self.makeTree(posslot)
 
-		self.statements.append(outdesc.generateOutputStatements())
+		block = outdesc.generateOutputStatements()
+		self.statements.append(block)
 
 		self.returnNone()
 

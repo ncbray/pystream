@@ -16,6 +16,9 @@ def makeRef(ref, subref):
 	bt = intrinsics.intrinsicTypeNodes[subref.t]
 	name = subref.name
 
+	if not name:
+		name = 'bogus%d' % id(subref)
+
 	if not subref.impl:
 		if ref.mode is model.OUTPUT:
 			impl = glsl.Output(glsl.OutputDecl(None, False, False, subref.builtin, bt, name))
@@ -466,7 +469,7 @@ def padding(offset, granularity):
 	return size-offset
 
 
-def buildBlocks(prepassInfo, shaderprgm):
+def buildBlocks(prepassInfo, shaderprgm, context):
 	block = []
 	decls = []
 
@@ -475,13 +478,10 @@ def buildBlocks(prepassInfo, shaderprgm):
 
 	for refInfo in prepassInfo.ioRefInfo.itervalues():
 		for sub in refInfo.lut.subpools.itervalues():
-			print sub.impl
-
 			if isinstance(sub.impl, glsl.Uniform):
 				bt = sub.impl.decl.type
 				t = intrinsics.intrinsicToType[bt]
 				ct, cc = intrinsics.typeComponents[t]
-
 
 				if False:
 					decls.append(sub.impl.decl)
@@ -504,31 +504,26 @@ def buildBlocks(prepassInfo, shaderprgm):
 		bestAlign = 32
 		for align in alignedUniforms.iterkeys():
 			err = padding(offset, align)
-			
+
 			if err < bestErr or (err == bestErr and align > bestAlign):
 				bestErr   = err
 				bestAlign = align
-		
+
 		assert bestErr < 1024
-		
-		print "pad", bestErr
-		print "choose", bestAlign, '@', offset
-		
-		
+
 		uniforms = alignedUniforms[bestAlign]
-		
+
 		assert uniforms, bestAlign
-		
+
 		chosen, size = uniforms.pop()
-		
+
 		if not uniforms:
-			print "kill", bestAlign
 			del alignedUniforms[bestAlign]
-		
+
 		block.append(chosen)
-		
+
 		offset += bestErr+size
-		
+
 		alignedCount -= 1
 	assert not alignedUniforms
 
@@ -540,6 +535,15 @@ def buildBlocks(prepassInfo, shaderprgm):
 	if shaderprgm.uniformBlock:
 		decls.append(shaderprgm.uniformBlock)
 
+	# Create an ordered set of outputs.
+	outputs = []
+	for ioname in context.shaderdesc.outputs.flat:
+		refInfo = prepassInfo.ioRefInfo[ioname]
+		for sub in refInfo.lut.subpools.itervalues():
+			outputs.append(sub.impl.decl)
+
+	decls.extend(outputs)
+
 	return glsl.Declarations(decls)
 
 
@@ -550,7 +554,7 @@ def processCode(compiler, prgm, exgraph, ioinfo, prepassInfo, poolInfo, context,
 
 	result = trans.process(context.code)
 
-	uniblock = buildBlocks(prepassInfo, shaderprgm)
+	uniblock = buildBlocks(prepassInfo, shaderprgm, context)
 
 	s = codegen.evaluateCode(compiler, result, uniblock)
 

@@ -8,6 +8,7 @@ from ... import intrinsics
 import collections
 from PADS.UnionFind import UnionFind
 
+from analysis.storegraph import storegraph
 
 class UniformInterfaceBuilder(object):
 	def __init__(self, compiler, analysis):
@@ -22,8 +23,13 @@ class UniformInterfaceBuilder(object):
 	def getSlotRefs(self, slot):
 		if isinstance(slot, ast.IOName):
 			refs = self.analysis.ioRefs[slot]
-		else:
+		elif isinstance(slot, ast.Local):
+			refs = slot.annotation.references.merged
+		elif isinstance(slot, storegraph.SlotNode):
 			refs = slot
+		else:
+			assert False, slot
+
 		return refs
 
 	def getReference(self, slot):

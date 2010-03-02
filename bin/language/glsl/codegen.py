@@ -348,11 +348,11 @@ class GLSLCodeGen(TypeDispatcher):
 			uniformdecl = self.makeDecl(finder.uniforms)
 			if uniformdecl: parts.append(uniformdecl)
 
+			outputdecl  = self.makeDecl(finder.outputs)
+			if outputdecl: parts.append(outputdecl)
+
 		inputdecl   = self.makeDecl(finder.inputs)
 		if inputdecl: parts.append(inputdecl)
-
-		outputdecl  = self.makeDecl(finder.outputs)
-		if outputdecl: parts.append(outputdecl)
 
 		header = "\n".join(parts)
 

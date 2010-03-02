@@ -27,7 +27,7 @@ class ProgramDescription(object):
 		self.fscontext = fscontext
 
 		self.vs2fs = {}
-		
+
 		self.uniformBlock = None
 
 	def makeMap(self, tree, slot, mapping):
@@ -141,28 +141,31 @@ class ShaderDescription(object):
 	__slots__ = 'fields', 'outputs'
 
 class OutputBase(object):
-	__slots__ = ()
+	__slots__ = 'flat'
 
 	def updateInfo(self, info):
 		info.outputs.update(self.collectIONames())
 		self.getBuiltin(info)
 
-	def generateOutput(self, tree, outputs):
+	def generateOutput(self, tree, block, flat):
 		if tree.used:
 			if tree.ioname is None:
 				tree.ioname = ast.IOName(None)
-			outputs.append(ast.Output(tree._lcl, tree.ioname))
+			block.append(ast.Output(tree._lcl, tree.ioname))
+			flat.append(tree.ioname)
 
 		for child in tree.fields.itervalues():
-			self.generateOutput(child, outputs)
+			self.generateOutput(child, block, flat)
 
 	def generateOutputStatements(self):
-		outputs = []
+		block = []
+		flat  = []
 
 		for tree in self.getOutputs():
-			self.generateOutput(tree, outputs)
+			self.generateOutput(tree, block, flat)
 
-		return ast.OutputBlock(outputs)
+		self.flat = flat
+		return ast.OutputBlock(block)
 
 	def _collectIONames(self, tree, outputs):
 		if tree.used and tree.ioname is not None:

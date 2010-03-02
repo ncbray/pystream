@@ -28,3 +28,4 @@ glsl.shader(physics.Shader, inst(vec.vec4), inst(vec.vec3), inst(vec.vec3), inst
 glsl.shader(physics.SkyBox, inst(vec.vec4))
 glsl.shader(physics.RadialBlur, inst(vec.vec4), inst(vec.vec2))
 glsl.shader(physics.DirectionalBlur, inst(vec.vec4), inst(vec.vec2))
+glsl.shader(physics.LightPass, inst(vec.vec4), inst(vec.vec2))

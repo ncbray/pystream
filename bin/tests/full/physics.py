@@ -145,6 +145,14 @@ class LambertMaterial(Material):
 		return 0.0
 
 
+def blinnPhong(n, l, e, shiny):
+	# Blinn-Phong transfer
+	h = (l+e).normalize()
+	ndh = nldot(n, h)
+	# Scale by (shiny+8)/8 to approximate energy conservation
+	scale = (shiny+8.0)*0.125
+	return (ndh**shiny)*scale
+
 class PhongMaterial(Material):
 	__slots__ = 'shiny',
 	__fieldtypes__ = {'shiny':float}
@@ -154,12 +162,7 @@ class PhongMaterial(Material):
 		self.shiny = shiny
 
 	def specularTransfer(self, n, l, e):
-		# Blinn-Phong transfer
-		h = (l+e).normalize()
-		ndh = nldot(n, h)
-		# Scale by (shiny+8)/8 to approximate energy conservation
-		scale = (self.shiny+8.0)*0.125
-		return (ndh**self.shiny)*scale
+		return blinnPhong(n, l, e, self.shiny)
 
 
 class ToonMaterial(Material):
@@ -219,17 +222,16 @@ class PointLight(Light):
 		self.attenuation = attenuation
 
 	def accumulate(self, surface, w2c):
-		p = self.position
-		pos = (w2c*vec4(p, 1.0)).xyz
+		l, color = self.lightInfo(surface.p, w2c)
+		surface.accumulateLight(l, color)
 
-		dir    = pos-surface.p
+	def lightInfo(self, surfacePosition, w2c):
+		lpos = (w2c*vec4(self.position, 1.0)).xyz
+		dir    = lpos-surfacePosition
 		dist2  = dir.dot(dir)
 		dist   = dist2**0.5
 		dists  = vec3(1.0, dist, dist2)
-
-		lightAtten = 1.0/dists.dot(self.attenuation)
-
-		surface.accumulateLight(dir/dist, self.color*lightAtten)
+		return dir/dist, self.color/dists.dot(self.attenuation)
 
 
 class Fog(object):
@@ -394,6 +396,40 @@ class Environment(object):
 		return self.ambientMap.texture(edir).xyz
 		#return self.ambient.color(edir)
 
+def packGBuffer(color, albedo, specular, position, normal):
+	return (vec4(color, 1.0), vec4(albedo, specular), vec4(position, 1.0), vec4(normal, 1.0))
+
+def packDistantGBuffer(color):
+	surfaceColor = vec4(0.0, 0.0, 0.0, 0.0)
+	normal   = vec3(0.0, 0.0, 1.0)
+	position = vec3(0.0, 0.0, 10000000.0)
+
+	return (vec4(color, 1.0), surfaceColor, vec4(position, 1.0), vec4(normal, 1.0))
+
+class GBuffer(object):
+	__slots__ = ['color', 'surface', 'position', 'normal']
+	__fieldtypes__ = {'color':sampler.sampler2D, 'surface':sampler.sampler2D,
+					'position':sampler.sampler2D, 'normal':sampler.sampler2D}
+
+	def allocate(self, fbo, width, height):
+		self.color    = fbo.createTextureTarget(width, height)
+		self.surface  = fbo.createTextureTarget(width, height)
+		self.position = fbo.createTextureTarget(width, height)
+		self.normal   = fbo.createTextureTarget(width, height)
+
+	def bindForWriting(self, fbo):
+		fbo.bind()
+		fbo.bindColorAttachment(0, self.color.textureData)
+		fbo.bindColorAttachment(1, self.surface.textureData)
+		fbo.bindColorAttachment(2, self.position.textureData)
+		fbo.bindColorAttachment(3, self.normal.textureData)
+		fbo.drawBuffers([0, 1, 2, 3])
+
+	def unpack(self, coord):
+		surface  = self.surface.texture(coord)
+		position = self.position.texture(coord)
+		normal   = self.normal.texture(coord)
+		return surface.xyz, surface.w, position.xyz, normal.xyz
 
 
 class Shader(object):
@@ -439,7 +475,7 @@ class Shader(object):
 
 		mainColor = self.env.processSurfaceColor(surface.litColor(), surface.p)
 
-		context.colors = (vec4(mainColor, 1.0),)
+		context.colors = packGBuffer(mainColor, surface.diffuseColor, surface.specularColor.r, pos, normal)
 
 
 class SkyBox(object):
@@ -467,7 +503,7 @@ class SkyBox(object):
 	def shadeFragment(self, context, texCoord):
 		albedo = self.sampler.texture(texCoord).xyz
 		mainColor = self.env.processBufferColor(albedo)
-		context.colors = (vec4(mainColor, 1.0),)
+		context.colors = packDistantGBuffer(mainColor)
 
 
 class FullScreenEffect(object):
@@ -480,6 +516,21 @@ class FullScreenEffect(object):
 
 	def shadeFragment(self, context, texCoord):
 		context.colors = (self.process(texCoord),)
+
+class LightPass(FullScreenEffect):
+	__slots__ = ['gbuffer', 'light', 'env']
+
+	__fieldtypes__ = {'gbuffer':GBuffer, 'light':PointLight, 'env':Environment,}
+
+	def process(self, texCoord):
+		diffuse, specular, position, normal = self.gbuffer.unpack(texCoord)
+
+		e = -position.normalize()
+
+		l, color = self.light.lightInfo(position, self.env.worldToCamera)
+		lit = (diffuse*nldot(normal, l)+blinnPhong(normal, l, e, 100.0)*specular)*color
+		return vec4(lit, 1.0)
+
 
 class RadialBlur(FullScreenEffect):
 	__slots__ = ['colorBuffer', 'blurBuffer', 'samples', 'scaleFactor', 'falloff', 'bias', 'blurAmount', 'radialAmount', 'env']

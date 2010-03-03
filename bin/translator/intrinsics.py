@@ -1,7 +1,7 @@
 from optimization.termrewrite import *
 from language.glsl import ast as glsl
 
-from shader import vec, sampler
+from shader import vec, sampler, function
 import random
 
 def _merge(*args):
@@ -396,6 +396,24 @@ def logRewrite(self, node):
 	else:
 		return glsl.IntrinsicOp('log', self(node.args))
 
+def smoothstepRewrite(self, node):
+	if not hasNumArgs(node, 3): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('smoothstep', self(node.args))
+
+
+def clampRewrite(self, node):
+	if not hasNumArgs(node, 3): return
+
+	if self is None:
+		return True
+	else:
+		return glsl.IntrinsicOp('clamp', self(node.args))
+
+
 def posRewrite(self, node):
 	if not hasNumArgs(node, 1): return
 
@@ -587,7 +605,10 @@ def makeIntrinsicRewriter(extractor):
 	rewriter.addRewrite('min_stub', minRewrite)
 
 	rewriter.addRewrite('math_exp', expRewrite)
-	rewriter.addRewrite('math_log', expRewrite)
+	rewriter.addRewrite('math_log', logRewrite)
+
+	rewriter.function(function.clamp, clampRewrite)
+	rewriter.function(function.smoothstep, smoothstepRewrite)
 
 
 	fvecs = (vec.vec2, vec.vec3, vec.vec4)
@@ -634,6 +655,8 @@ def makeIntrinsicRewriter(extractor):
 	rewriter.attribute(vec.vec3, 'cross', crossRewrite)
 
 	rewriter.function(vec.vec4.__dict__['xyz'].fget, swizzleRewrite)
+	rewriter.function(vec.vec4.__dict__['xy'].fget, swizzleRewrite)
+	rewriter.function(vec.vec3.__dict__['xy'].fget, swizzleRewrite)
 
 	# HACK
 	rewriter.attribute(random._random.Random, 'random', randomRewrite)

@@ -401,13 +401,13 @@ class ParallaxOcclusionPerturbation(SurfacePerturber):
 
 # Environment
 class Environment(object):
-	__slots__ = ['worldToCamera', 'projection', 'cameraToEnvironment', 'envMap', 'ambientMap', 'ambient', 'fog', 'exposure']
+	__slots__ = ['worldToCamera', 'projection', 'cameraToEnvironment', 'envMap', 'ambientMap', 'fog', 'exposure']
 
 	__fieldtypes__ = {'worldToCamera':mat4, 'projection':mat4,
 					'cameraToEnvironment':mat4,
 					'envMap':sampler.samplerCube,
 					'ambientMap':sampler.samplerCube,
-					'ambient':AmbientLight, 'fog':Fog, 'exposure':float}
+					'fog':Fog, 'exposure':float}
 
 	def processSurfaceColor(self, color, p):
 		return self.processBufferColor(self.fog.apply(color, p))
@@ -424,11 +424,14 @@ class Environment(object):
 	def ambientColor(self, n):
 		edir = transformNormal(self.cameraToEnvironment, n)
 		return self.ambientMap.texture(edir).xyz
-		#return self.ambient.color(edir)
 
 	def specularColor(self, dir):
 		edir = transformNormal(self.cameraToEnvironment, dir)
-		return self.envMap.texture(edir).xyz
+		return self.envColor(edir)
+
+	def envColor(self, dir):
+		return self.envMap.texture(dir).xyz
+
 
 def packGBuffer(color, albedo, specular, position, normal):
 	return (vec4(color, 1.0), vec4(albedo, specular), vec4(position, 1.0), vec4(normal, 1.0))
@@ -459,12 +462,21 @@ class GBuffer(object):
 		fbo.bindColorAttachment(3, self.normal.textureData)
 		fbo.drawBuffers([0, 1, 2, 3])
 
-	def unpack(self, coord):
+	def sample(self, coord):
 		surface  = self.surface.texture(coord)
 		position = self.position.texture(coord)
 		normal   = self.normal.texture(coord)
-		return surface.xyz, surface.w, position.xyz, normal.xyz.normalize()
 
+		g = GSample()
+		g.diffuse  = surface.xyz
+		g.specular = surface.w
+		g.position = position.xyz
+		g.normal   = normal.xyz.normalize()
+
+		return g
+
+class GSample(object):
+	__slots__ = 'diffuse', 'specular', 'position', 'normal'
 
 class Shader(object):
 	__slots__ = ['objectToWorld', 'light',
@@ -504,8 +516,7 @@ class Shader(object):
 		surface = self.material.surface(pos, normal, e, texCoord)
 
 		# Accumulate lighting
-		#surface.diffuseLight += self.env.ambientColor(surface.n)
-		self.light.accumulate(surface, self.env.worldToCamera)
+		#self.light.accumulate(surface, self.env.worldToCamera)
 
 		mod = fresnel(normal, e)
 		envSpecular = self.env.specularColor(-e.reflect(normal))
@@ -518,29 +529,16 @@ class Shader(object):
 
 
 class SkyBox(object):
-	__slots__ = ['objectToWorld', 'sampler', 'env']
-
-	__fieldtypes__ = {'objectToWorld':mat4, 'sampler':sampler.samplerCube, 'env':Environment,}
-
-	def __init__(self):
-		self.objectToWorld = mat4(1.0, 0.0, 0.0, 0.0,
-					  0.0, 1.0, 0.0, 0.0,
-					  0.0, 0.0, 1.0, 0.0,
-					  0.0, 0.0, 0.0, 1.0)
-
-		self.env     = None
-
-	def objectToCamera(self):
-		return self.env.worldToCamera*self.objectToWorld
+	__slots__ = ['env']
+	__fieldtypes__ = {'env':Environment,}
 
 	def shadeVertex(self, context, pos):
-		trans      = self.objectToCamera()
-		newpos     = trans*pos
+		newpos     = self.env.worldToCamera*pos
 		context.position = self.env.projection*newpos
 		return pos.xyz,
 
 	def shadeFragment(self, context, texCoord):
-		albedo = self.env.envMap.texture(texCoord).xyz
+		albedo = self.env.envColor(texCoord)
 		mainColor = self.env.processBufferColor(albedo)
 		context.colors = packDistantGBuffer(mainColor)
 
@@ -562,12 +560,14 @@ class LightPass(FullScreenEffect):
 	__fieldtypes__ = {'gbuffer':GBuffer, 'light':SpotLight, 'env':Environment,}
 
 	def process(self, texCoord):
-		diffuse, specular, position, normal = self.gbuffer.unpack(texCoord)
+		g = self.gbuffer.sample(texCoord)
 
-		e = -position.normalize()
+		e = -g.position.normalize()
 
-		l, color = self.light.lightInfo(position, self.env.worldToCamera)
-		lit = (diffuse*nldot(normal, l)+blinnPhong(normal, l, e, 100.0)*specular)*color
+		l, color = self.light.lightInfo(g.position, self.env.worldToCamera)
+		diffuseLighting = g.diffuse*nldot(g.normal, l)
+		specularLighting = blinnPhong(g.normal, l, e, 100.0)*g.specular
+		lit = (diffuseLighting+specularLighting)*color
 		return vec4(lit, 1.0)
 
 
@@ -578,9 +578,6 @@ class RadialBlur(FullScreenEffect):
 					'samples':int, 'scaleFactor':float, 'falloff':float, 'bias':float,
 					'blurAmount':float, 'radialAmount':float,
 					'env':Environment,}
-
-	def __init__(self):
-		self.colorBuffer = None
 
 	def computeRadial(self, texCoord):
 		color  = vec4(0.0)
@@ -616,11 +613,7 @@ class RadialBlur(FullScreenEffect):
 
 class DirectionalBlur(FullScreenEffect):
 	__slots__ = ['colorBuffer', 'offset']
-
 	__fieldtypes__ = {'colorBuffer':sampler.sampler2D, 'offset':vec2}
-
-	def __init__(self):
-		self.colorBuffer = None
 
 
 	def process(self, texCoord):
@@ -638,17 +631,16 @@ class SSAO(FullScreenEffect):
 	__slots__ = ['gbuffer']
 	__fieldtypes__ = {'gbuffer':GBuffer}
 
-
 	def sampleOffset(self, texCoord, offset, position, normal):
 		# Flip the offset to be in the normal's hemisphere.
 		facing = normal.dot(offset)
 		if facing < 0.0:
 			offset -= normal*facing*2.0
 
+		# Sample at the screen space position
+		g = self.gbuffer.sample(texCoord+offset.xy/512.0)
 
-		diffuse, specular, sposition, snormal = self.gbuffer.unpack(texCoord+offset.xy/512.0)
-
-		diff = sposition-position
+		diff = g.position-position
 		dist = diff.length()
 
 		weight = max(1.0-dist*dist, 0.0)
@@ -660,19 +652,19 @@ class SSAO(FullScreenEffect):
 
 		return amt
 
-
-
 	def process(self, texCoord):
-		diffuse, specular, position, normal = self.gbuffer.unpack(texCoord)
+		g = self.gbuffer.sample(texCoord)
+		position = g.position
+		normal   = g.normal
 
-		ssao  = self.sampleOffset(texCoord, vec3(-0.515199, 0.641665, 0.568187), position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(0.627079, 0.543492, 0.558022), position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(-0.530851, 0.609046, 0.589288), position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(0.785924, -0.551296, 0.279993), position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(-0.642479, 0.591967, 0.486616), position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(-0.731236, 0.672430, -0.114596), position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(0.535317, 0.487092, -0.690056), position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(-0.623743, 0.199685, -0.755692), position, normal)
+		ssao  = self.sampleOffset(texCoord, vec3(-0.515199, 0.641665, 0.568187)*4.0, position, normal)
+		ssao += self.sampleOffset(texCoord, vec3(0.627079, 0.543492, 0.558022)*4.0, position, normal)
+		ssao += self.sampleOffset(texCoord, vec3(-0.530851, 0.609046, 0.589288)*4.0, position, normal)
+		ssao += self.sampleOffset(texCoord, vec3(0.785924, -0.551296, 0.279993)*4.0, position, normal)
+		ssao += self.sampleOffset(texCoord, vec3(-0.642479, 0.591967, 0.486616)*4.0, position, normal)
+		ssao += self.sampleOffset(texCoord, vec3(-0.731236, 0.672430, -0.114596)*4.0, position, normal)
+		ssao += self.sampleOffset(texCoord, vec3(0.535317, 0.487092, -0.690056)*4.0, position, normal)
+		ssao += self.sampleOffset(texCoord, vec3(-0.623743, 0.199685, -0.755692)*4.0, position, normal)
 
 		ssao /= 8.0
 
@@ -684,9 +676,10 @@ class AmbientPass(FullScreenEffect):
 	__fieldtypes__ = {'gbuffer':GBuffer, 'env':Environment, 'ao':sampler.sampler2D}
 
 	def process(self, texCoord):
-		diffuse, specular, position, normal = self.gbuffer.unpack(texCoord)
+		g = self.gbuffer.sample(texCoord)
 		ao = self.ao.texture(texCoord).xyz
-		return vec4(diffuse*self.env.ambientColor(normal)*ao, 1.0)
+		ambientLight = self.env.ambientColor(g.normal)*ao
+		return vec4(g.diffuse*ambientLight, 1.0)
 
 
 class DirectionalBilateralBlur(FullScreenEffect):
@@ -694,33 +687,35 @@ class DirectionalBilateralBlur(FullScreenEffect):
 
 	__fieldtypes__ = {'gbuffer':GBuffer, 'source':sampler.sampler2D, 'offset':vec2, 'samples':float, 'falloff':float, 'similarity':float}
 
+	def rawSample(self, texCoord):
+		g = self.gbuffer.sample(texCoord)
+		color = self.source.texture(texCoord)
+		return g.position, color
+
 	def sample(self, texCoord, offset, position):
-		diffuse, specular, sposition, snormal = self.gbuffer.unpack(texCoord)
-		color  = self.source.texture(texCoord)
+		sposition, color = self.rawSample(texCoord)
 
-		similar = (position-sposition).length()
-		weight = math.exp(-offset*self.falloff-similar*self.similarity)
+		distance = (position-sposition).length()
 
-		return color, weight
+		diff = offset*self.falloff + distance*self.similarity
 
+		weight  = math.exp(-diff)
+
+		return color*weight, weight
 
 	def process(self, texCoord):
-		diffuse, specular, position, normal = self.gbuffer.unpack(texCoord)
-
-		color  = self.source.texture(texCoord)
+		position, color = self.rawSample(texCoord)
 		weight = 1.0
 
-
 		offset = 1.0
-
-
 		while offset < self.samples:
-			c, w = self.sample(texCoord+self.offset*offset, offset, position)
-			color += c*w
+			scaledOffset = self.offset*offset
+			c, w = self.sample(texCoord+scaledOffset, offset, position)
+			color  += c
 			weight += w
 
-			c, w = self.sample(texCoord-self.offset*offset, offset, position)
-			color += c*w
+			c, w = self.sample(texCoord-scaledOffset, offset, position)
+			color  += c
 			weight += w
 
 			offset += 1.0
@@ -731,7 +726,6 @@ class DirectionalBilateralBlur(FullScreenEffect):
 def transformNormal(m, n):
 	return (m*vec4(n, 0.0)).xyz
 
-# TODO clamp?
 def fresnel(n, e):
 	return (1.0 - nldot(n, e))**5.0
 

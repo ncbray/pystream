@@ -410,13 +410,10 @@ class Environment(object):
 					'fog':Fog, 'exposure':float}
 
 	def processSurfaceColor(self, color, p):
-		return self.processBufferColor(self.fog.apply(color, p))
+		return self.fog.apply(color, p)
 
 	def processOutputColor(self, color):
 		return rgb2srgb(tonemap(color*self.exposure))
-
-	def processBufferColor(self, color):
-		return color
 
 	def clearColor(self):
 		return self.processOutputColor(self.fog.color)
@@ -433,15 +430,15 @@ class Environment(object):
 		return self.envMap.texture(dir).xyz
 
 
-def packGBuffer(color, albedo, specular, position, normal):
-	return (vec4(color, 1.0), vec4(albedo, specular), vec4(position, 1.0), vec4(normal, 1.0))
+def packGBuffer(color, albedo, specular, shiny, position, normal):
+	return (vec4(color, 1.0), vec4(albedo, specular), vec4(position, 1.0), vec4(normal, shiny))
 
 def packDistantGBuffer(color):
 	surfaceColor = vec4(0.0, 0.0, 0.0, 0.0)
 	normal   = vec3(0.0, 0.0, 1.0)
 	position = vec3(0.0, 0.0, 10000000.0)
 
-	return (vec4(color, 1.0), surfaceColor, vec4(position, 1.0), vec4(normal, 1.0))
+	return (vec4(color, 1.0), surfaceColor, vec4(position, 1.0), vec4(normal, 0.0))
 
 class GBuffer(object):
 	__slots__ = ['color', 'surface', 'position', 'normal']
@@ -470,13 +467,14 @@ class GBuffer(object):
 		g = GSample()
 		g.diffuse  = surface.xyz
 		g.specular = surface.w
+		g.shiny    = normal.w
 		g.position = position.xyz
 		g.normal   = normal.xyz.normalize()
 
 		return g
 
 class GSample(object):
-	__slots__ = 'diffuse', 'specular', 'position', 'normal'
+	__slots__ = 'diffuse', 'specular', 'shiny', 'position', 'normal'
 
 class Shader(object):
 	__slots__ = ['objectToWorld', 'light',
@@ -484,7 +482,7 @@ class Shader(object):
 				'env']
 
 	__fieldtypes__ = {'objectToWorld':mat4, 'light':PointLight,
-				'material':(LambertMaterial, PhongMaterial, ToonMaterial),
+				'material':(PhongMaterial,),
 				'perturb':(NoPerturbation, NormalMapPerturbation, ParallaxOcclusionPerturbation),
 				'env':Environment,}
 
@@ -525,7 +523,10 @@ class Shader(object):
 		surfaceColor = surface.litColor()
 		mainColor = self.env.processSurfaceColor(surfaceColor, surface.p)
 
-		context.colors = packGBuffer(mainColor, surface.diffuseColor, surface.specularColor.r, pos, normal)
+		context.colors = packGBuffer(mainColor,
+									surface.diffuseColor,
+									surface.specularColor.r, self.material.shiny,
+									pos, normal)
 
 
 class SkyBox(object):
@@ -538,9 +539,8 @@ class SkyBox(object):
 		return pos.xyz,
 
 	def shadeFragment(self, context, texCoord):
-		albedo = self.env.envColor(texCoord)
-		mainColor = self.env.processBufferColor(albedo)
-		context.colors = packDistantGBuffer(mainColor)
+		emissive = self.env.envColor(texCoord)
+		context.colors = packDistantGBuffer(emissive)
 
 
 class FullScreenEffect(object):
@@ -566,7 +566,7 @@ class LightPass(FullScreenEffect):
 
 		l, color = self.light.lightInfo(g.position, self.env.worldToCamera)
 		diffuseLighting = g.diffuse*nldot(g.normal, l)
-		specularLighting = blinnPhong(g.normal, l, e, 100.0)*g.specular
+		specularLighting = blinnPhong(g.normal, l, e, g.shiny)*g.specular
 		lit = (diffuseLighting+specularLighting)*color
 		return vec4(lit, 1.0)
 
@@ -605,7 +605,7 @@ class RadialBlur(FullScreenEffect):
 		original = self.colorBuffer.texture(texCoord)
 		blured   = self.blurBuffer.texture(texCoord)
 
-		color    = original.mix(blured, self.blurAmount)
+		color = original.mix(blured, self.blurAmount)
 		color += self.computeRadial(texCoord)*self.radialAmount
 
 		return vec4(self.env.processOutputColor(color.xyz), 1.0)

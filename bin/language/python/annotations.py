@@ -18,9 +18,9 @@ class CodeAnnotation(Annotation):
 		'origin',
 		'live', 'killed',
 		'codeReads', 'codeModifies', 'codeAllocates',
-		'lowered']
+		'lowered', 'runtime', 'interpreter']
 
-	def __init__(self, contexts, descriptive, primitive, staticFold, dynamicFold, origin, live, killed, codeReads, codeModifies, codeAllocates, lowered):
+	def __init__(self, contexts, descriptive, primitive, staticFold, dynamicFold, origin, live, killed, codeReads, codeModifies, codeAllocates, lowered, runtime, interpreter):
 		self.contexts    = tuple(contexts) if contexts is not None else None
 		self.descriptive = descriptive
 		self.primitive   = primitive
@@ -33,13 +33,16 @@ class CodeAnnotation(Annotation):
 		self.codeModifies  = codeModifies
 		self.codeAllocates = codeAllocates
 		self.lowered     = lowered
+		self.runtime     = runtime
+		self.interpreter = interpreter
 
 	def rewrite(self, contexts=noMod,
 			descriptive=noMod, primitive=noMod,
 			staticFold=noMod, dynamicFold=noMod,
 			origin=noMod,
 			live=noMod, killed=noMod,
-			codeReads=noMod, codeModifies=noMod, codeAllocates=noMod, lowered=noMod):
+			codeReads=noMod, codeModifies=noMod, codeAllocates=noMod, lowered=noMod,
+			runtime=noMod, interpreter=noMod):
 		if contexts    is noMod: contexts    = self.contexts
 		if descriptive is noMod: descriptive = self.descriptive
 		if primitive   is noMod: primitive   = self.primitive
@@ -52,8 +55,10 @@ class CodeAnnotation(Annotation):
 		if codeModifies  is noMod: codeModifies  = self.codeModifies
 		if codeAllocates is noMod: codeAllocates = self.codeAllocates
 		if lowered is noMod: lowered = self.lowered
+		if runtime is noMod: runtime = self.runtime
+		if interpreter is noMod: interpreter = self.interpreter
 
-		return CodeAnnotation(contexts, descriptive, primitive, staticFold, dynamicFold, origin, live, killed, codeReads, codeModifies, codeAllocates, lowered)
+		return CodeAnnotation(contexts, descriptive, primitive, staticFold, dynamicFold, origin, live, killed, codeReads, codeModifies, codeAllocates, lowered, runtime, interpreter)
 
 	def contextSubset(self, remap, invokeMapper=None):
 		contexts = [self.contexts[i] for i in remap]
@@ -129,6 +134,6 @@ class SlotAnnotation(Annotation):
 			return len(self.references[1]) == len(codeAnnotation.contexts)
 		return True
 
-emptyCodeAnnotation  = CodeAnnotation(None, False, False, None, None, None, None, None, None, None, None, False)
+emptyCodeAnnotation  = CodeAnnotation(None, False, False, None, None, None, None, None, None, None, None, False, False, False)
 emptyOpAnnotation    = OpAnnotation(None, None, None, None, None, None, None, (None,))
 emptySlotAnnotation  = SlotAnnotation(None)

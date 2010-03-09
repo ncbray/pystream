@@ -38,7 +38,9 @@ def makeInterpreterStubs(collector):
 
 	def interpfunc(f=None, descriptive=False):
 		def wrapper(f):
-			return export(noself(llfunc(f, descriptive=descriptive)))
+			code = export(noself(llfunc(f, descriptive=descriptive)))
+			code.rewriteAnnotation(interpreter=True, runtime=False)
+			return code
 
 		if f is not None:
 			return wrapper(f)

@@ -54,6 +54,8 @@ class StubCollector(object):
 	def llfunc(self, func=None, descriptive=False, primitive=False):
 		def wrapper(func):
 			code = self.compiler.extractor.decompileFunction(func, descriptive=(primitive or descriptive))
+			code.rewriteAnnotation(runtime=True)
+
 			self.registerFunction(func, code)
 
 			if primitive:
@@ -144,7 +146,7 @@ class StubCollector(object):
 
 	def primitive(self,code):
 		assert code.isCode(), type(code)
-		code.rewriteAnnotation(descriptive=True, primitive=True)
+		code.rewriteAnnotation(descriptive=True, primitive=True, runtime=False, interpreter=False)
 		return code
 
 	def replaceAttr(self, o, attr):

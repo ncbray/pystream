@@ -5,16 +5,24 @@ class GetOps(TypeDispatcher):
 	def __init__(self):
 		self.ops    = []
 		self.locals = set()
+		self.copies = []
 
 	@dispatch(ast.leafTypes, ast.Break, ast.Continue, ast.Code, ast.DoNotCare)
 	def visitLeaf(self, node):
 		pass
 
-	@dispatch(ast.Suite, ast.Condition, ast.Assign, ast.Switch, ast.Discard,
+	@dispatch(ast.Suite, ast.Condition, ast.Switch, ast.Discard,
 		ast.For, ast.While,
 		ast.CodeParameters,
 		ast.TypeSwitch, ast.TypeSwitchCase, ast.Return)
 	def visitOK(self, node):
+		node.visitChildren(self)
+
+	@dispatch(ast.Assign)
+	def visitAssign(self, node):
+		if isinstance(node.expr, ast.Local):
+			self.copies.append(node)
+
 		node.visitChildren(self)
 
 	@dispatch(ast.InputBlock)
@@ -54,3 +62,9 @@ def getOps(func):
 	go = GetOps()
 	go.process(func)
 	return go.ops, go.locals
+
+
+def getAll(func):
+	go = GetOps()
+	go.process(func)
+	return go.ops, go.locals, go.copies

@@ -132,6 +132,10 @@ class CanonicalObjects(object):
 		return self.cache[extendedtypes.ExistingObjectType(obj, None)]
 
 	def pathType(self, path, obj, op):
+		# HACK reduces the ops by 50%
+		if obj.pythonType() in (float, int, bool, str, long):
+			op = None
+
 		return self.cache[extendedtypes.PathObjectType(path, obj, op)]
 
 	def methodType(self, func, inst, obj, op):

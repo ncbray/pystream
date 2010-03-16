@@ -21,6 +21,10 @@ import translator.dataflowtransform
 import config
 import threading
 
+from . import errors
+
+import stats
+
 def codeConditioning(compiler, prgm):
 	with compiler.console.scope('conditioning'):
 		if True:
@@ -33,9 +37,15 @@ def codeConditioning(compiler, prgm):
 			# Fold, DCE, etc.
 			optimization.simplify.evaluate(compiler, prgm)
 
+		stats.contextStats(compiler, prgm, 'optimized', classOK=True)
+
+
 		if True:
 			# Separate different invocations of the same code.
 			optimization.clone.evaluate(compiler, prgm)
+
+			stats.contextStats(compiler, prgm, 'clone', classOK=True)
+
 
 		if True:
 			# Try to eliminate kwds, vargs, kargs, and default arguments.
@@ -51,11 +61,16 @@ def codeConditioning(compiler, prgm):
 			# Get rid of dead functions/contexts
 			optimization.cullprogram.evaluate(compiler, prgm)
 
+
 		if True:
 			optimization.loadelimination.evaluate(compiler, prgm)
 
 		if True:
 			optimization.storeelimination.evaluate(compiler, prgm)
+
+		stats.contextStats(compiler, prgm, 'inline')
+
+		#errors.abort('test')
 
 		# HACK read/modify information is imprecise, so keep re-evaluating it
 		# basically, DCE improves read modify information, which in turn allows better DCE
@@ -78,44 +93,52 @@ def depythonPass(compiler, prgm, opPathLength=0, firstPass=True):
 		#assert False, "abort"
 
 		analysis.cpa.evaluate(compiler, prgm, opPathLength, firstPass=firstPass)
+
+		stats.contextStats(compiler, prgm, 'firstpass' if firstPass else 'secondpass', classOK=firstPass)
+		#errors.abort("testing")
+
 		codeConditioning(compiler, prgm)
 
 
 def evaluate(compiler, prgm, name):
-	with compiler.console.scope('compile'):
-		try:
-			# First compiler pass
-			depythonPass(compiler, prgm)
+	try:
+		with compiler.console.scope('compile'):
+			try:
+				# First compiler pass
+				depythonPass(compiler, prgm)
 
-			if True:
-				# Second compiler pass
-				# Intrinsics can prevent complete exhaustive inlining.
-				# Adding call-path sensitivity compensates.
-				depythonPass(compiler, prgm, 3, firstPass=False)
+				if True:
+					# Second compiler pass
+					# Intrinsics can prevent complete exhaustive inlining.
+					# Adding call-path sensitivity compensates.
+					depythonPass(compiler, prgm, 3, firstPass=False)
 
-			if True:
-				# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
-				analysis.lifetimeanalysis.evaluate(compiler, prgm)
+				if True:
+					# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
+					analysis.lifetimeanalysis.evaluate(compiler, prgm)
 
-			if True:
-				# Translate abstract shader programs into code.
-				translator.dataflowtransform.translate(compiler, prgm)
-		finally:
-			if config.doDump:
-				try:
-					analysis.dump.dumpreport.evaluate(compiler, prgm, name)
-				except Exception, e:
-					if config.maskDumpErrors:
-						# HACK prevents it from masking any exception that was thrown before.
-						print "Exception dumping the report: ", e
-					else:
-						raise
+				if True:
+					# Translate abstract shader programs into code.
+					translator.dataflowtransform.translate(compiler, prgm)
+			finally:
+				if config.doDump:
+					try:
+						analysis.dump.dumpreport.evaluate(compiler, prgm, name)
+					except Exception, e:
+						if config.maskDumpErrors:
+							# HACK prevents it from masking any exception that was thrown before.
+							print "Exception dumping the report: ", e
+						else:
+							raise
 
-			if config.doThreadCleanup:
-				if threading.activeCount() > 1:
-					with compiler.console.scope('threading cleanup'):
-						compiler.console.output('Threads: %d' % (threading.activeCount()-1))
-						for t in threading.enumerate():
-							if t is not threading.currentThread():
-								compiler.console.output('.')
-								t.join()
+				if config.doThreadCleanup:
+					if threading.activeCount() > 1:
+						with compiler.console.scope('threading cleanup'):
+							compiler.console.output('Threads: %d' % (threading.activeCount()-1))
+							for t in threading.enumerate():
+								if t is not threading.currentThread():
+									compiler.console.output('.')
+									t.join()
+	except errors.CompilerAbort, e:
+		print
+		print "ABORT", e

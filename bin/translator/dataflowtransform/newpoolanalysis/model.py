@@ -157,7 +157,6 @@ class IntrinsicSubrefInfo(SubrefInfo):
 
 	def markRefsVolatile(self, analysis):
 		for ref in self.refs:
-			print "mark", ref
 			objInfo = analysis.objInfo(ref)
 			objInfo.markVolatile(analysis)
 
@@ -224,7 +223,6 @@ class ObjectInfo(object):
 	def resolve(self, analysis):
 			sub = self.subrefs.pop().forward()
 			for other in self.subrefs:
-				print sub, other
 				sub = sub.merge(analysis, other)
 
 			self.subrefs.clear()

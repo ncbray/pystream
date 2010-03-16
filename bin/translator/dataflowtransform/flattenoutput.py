@@ -2,7 +2,7 @@ from util.typedispatch import *
 from language.python import ast
 from language.python.shaderprogram import VSContext, FSContext
 from optimization import rewrite
-from optimization import loadelimination, simplify
+from optimization import loadelimination, storeelimination, simplify
 
 from . import common
 
@@ -163,10 +163,10 @@ class OutputFlattener(object):
 
 		self.returnNone()
 
-		print
-		for stmt in self.statements:
-			print stmt
-		print
+		#print
+		#for stmt in self.statements:
+		#	print stmt
+		#print
 
 
 		desc = ShaderDescription()
@@ -188,6 +188,9 @@ class OutputFlattener(object):
 		# HACK
 		while loadelimination.evaluateCode(self.compiler, self.prgm, self.code, simplify=False):
 			pass
+
+		#simplify.evaluateCode(self.compiler, self.prgm, self.code)
+		#storeelimination.evaluate(self.compiler, self.prgm, simplify=False)
 
 		simplify.evaluateCode(self.compiler, self.prgm, self.code)
 

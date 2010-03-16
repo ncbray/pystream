@@ -75,34 +75,21 @@ class UniformInterfaceBuilder(object):
 	def process(self):
 		ioinfo = self.analysis.ioinfo
 
-		print "uniform fields"
 		for field in self.analysis.inputFields:
 			if field in ioinfo.uniforms:
 				ref = self.getReference(field)
 				ref.mode = model.UNIFORM
 
-
 		# TODO indirect input loads?
 
-		print "inputs"
 		for inp in self.analysis.liveInputs:
 			if inp in ioinfo.uniforms: continue
-
-			print "inp", inp
-			print self.analysis.ioRefs[inp]
-
 			ref = self.getReference(inp)
 			ref.mode = model.INPUT
 
-		print
-
-		print "outputs"
 		for outp in self.analysis.ioinfo.outputs:
-			print outp, ioinfo.same.get(outp), ioinfo.specialOutputs.get(outp)
-
 			ref = self.getReference(outp)
 			ref.mode = model.OUTPUT
-		print
 
 		outs = []
 
@@ -132,11 +119,12 @@ class UniformInterfaceBuilder(object):
 
 
 
-		for group, refInfo in self.references.iteritems():
-			print refInfo.name, refInfo.mode
-			for sub in refInfo.subpools():
-				print '\t', sub.name
-		print
+		if False:
+			for group, refInfo in self.references.iteritems():
+				print refInfo.name, refInfo.mode
+				for sub in refInfo.subpools():
+					print '\t', sub.name
+			print
 
 		return self.references
 
@@ -305,17 +293,17 @@ class PoolAnalysisInfoCollector(TypeDispatcher):
 		self.volatileFields = set()
 		self.volatileIntrinsics = set()
 
-		print "Volatile"
+		#print "Volatile"
 		for field in self.modifiedFields:
 			obj = field.object
 			if self.holdingCount[obj] > 1:
 				if intrinsics.isIntrinsicSlot(field):
-					print "obj", obj
+					#print "obj", obj
 					self.volatileIntrinsics.add(obj)
 				else:
-					print "field", field
+					#print "field", field
 					self.volatileFields.add(self.compatible[field])
-		print
+		#print
 
 		uib = UniformInterfaceBuilder(self.compiler, self)
 		self.ioRefInfo = uib.process()
@@ -327,7 +315,7 @@ def process(compiler, prgm, exgraph, ioinfo, contexts):
 
 	for context in contexts:
 		code = context.code
-		print code
+		#print code
 		paic.analyzeCode(code)
 
 	return paic.postProcess()

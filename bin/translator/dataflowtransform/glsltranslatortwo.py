@@ -490,12 +490,12 @@ def buildBlocks(prepassInfo, shaderprgm, context):
 					size = intrinsics.byteSize[t]
 					alignedUniforms[align].append((sub.impl.decl, size))
 					alignedCount += 1
-	print
+	#print
 
 	for sg in prepassInfo.samplerGroups.itervalues():
-		print sg.impl
+		#print sg.impl
 		decls.append(sg.impl.decl)
-	print
+	#print
 
 	# Pack the fields, greedily minimizing the fragmentation.
 	offset = 0
@@ -558,8 +558,8 @@ def processCode(compiler, prgm, exgraph, ioinfo, prepassInfo, poolInfo, context,
 
 	s = codegen.evaluateCode(compiler, result, uniblock)
 
-	print
-	print s
-	print
+	#print
+	#print s
+	#print
 
 	context.shaderCode = s

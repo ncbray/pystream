@@ -90,14 +90,14 @@ class PoolAnalysis(TypeDispatcher):
 	def resolveVolatile(self):
 		self.markInitialVolatile()
 
-		print
-		print "resolving"
+		#print
+		#print "resolving"
 
 		while self.dirty:
 			current = self.dirty.pop()
-			print current.name
+			#print current.name
 			current.resolve(self)
-			print
+			#print
 
 	def resolveNames(self):
 		for slot, refInfo in self.refInfos.iteritems():

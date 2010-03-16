@@ -115,8 +115,8 @@ class FieldTransformAnalysis(TypeDispatcher):
 	def filterGroups(self, groups):
 		filtered = {}
 
-		print
-		print "GROUPS"
+		#print
+		#print "GROUPS"
 
 		for name, group in groups.iteritems():
 			unique = True
@@ -129,13 +129,14 @@ class FieldTransformAnalysis(TypeDispatcher):
 			exclusive = self.exgraph.mutuallyExclusive(*group)
 
 			if unique and exclusive:
-				print "+", group
+				#print "+", group
 				filtered[name] = group
 			else:
-				print "-", group
-				print unique, exclusive
-				print [objfield.object.annotation.unique for objfield in group]
-				print
+				pass
+				#print "-", group
+				#print unique, exclusive
+				#print [objfield.object.annotation.unique for objfield in group]
+				#print
 
 		return filtered
 

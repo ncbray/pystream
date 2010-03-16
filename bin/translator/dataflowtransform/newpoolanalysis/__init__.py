@@ -318,7 +318,7 @@ def process(compiler, prgm, shaderprgm, exgraph, ioinfo, *contexts):
 
 	for context in contexts:
 		code = context.code
-		print code
+		#print code
 		pgb.analyzeCode(code)
 
 	pgb.process()

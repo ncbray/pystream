@@ -99,12 +99,12 @@ class FieldTransformAnalysis(TypeDispatcher):
 
 		# TODO non-interfering objects?
 		if unique and exclusive:
-			print "+", group
+			#print "+", group
 			self.transform(group)
 		else:
-			print "-", group
+			pass #print "-", group
 
-		if len(group) > 1:
+		if len(group) > 1 and False:
 			print "ex?", exclusive
 			print
 			print

@@ -532,9 +532,9 @@ def processContext(compiler, trans, context):
 	result = trans.process(context.code)
 	s = codegen.evaluateCode(compiler, result)
 
-	print
-	print s
-	print
+	#print
+	#print s
+	#print
 
 	context.shaderCode = s
 

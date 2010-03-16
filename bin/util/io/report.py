@@ -1,6 +1,9 @@
 def reindex(indexes, l):
 	return [l[i] for i in indexes]
 
+asts = 'CopyLocal', 'Call', 'MethodCall', 'DirectCall', 'Load', 'ILoad', 'Store', 'IStore', 'Allocate', 'Check', 'Is'
+astColors = 'pink', 'red', 'gray', 'orange', 'yellow', 'gray', 'green', 'gray', 'teal', 'blue', 'purple'
+
 
 class TableBuilder(object):
 	def __init__(self, *columns):
@@ -14,7 +17,7 @@ class TableBuilder(object):
 		self.formats = formats
 
 	def row(self, name, *values):
-		assert len(values) == len(self.columns)
+		assert len(values) == len(self.columns),  (values, self.columns)
 		self.rows.append((name, values))
 
 	def formatRow(self, name, values):

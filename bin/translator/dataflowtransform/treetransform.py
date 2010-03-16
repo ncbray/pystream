@@ -281,13 +281,14 @@ class TreeResynthesis(object):
 		self.code  = code
 		argobjs = args.map(self.translateParam)
 
-		print "="*60
-		print argobjs.selfarg
-		for arg in argobjs.args:
-			print '\t', arg
-		print argobjs.vargs
-		print argobjs.kargs
-		print
+		if False:
+			print "="*60
+			print argobjs.selfarg
+			for arg in argobjs.args:
+				print '\t', arg
+			print argobjs.vargs
+			print argobjs.kargs
+			print
 
 		# Create an entry point
 		# The arguments for this entry points are bogus.

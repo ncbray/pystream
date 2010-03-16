@@ -12,6 +12,8 @@ doDump = False
 maskDumpErrors = False
 doThreadCleanup = False
 
+dumpStats = True
+
 if True:
 	testOnly = [
 		('tests', 'test_full'),

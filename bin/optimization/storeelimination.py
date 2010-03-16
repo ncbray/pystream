@@ -3,10 +3,9 @@ from language.python import ast
 from analysis.tools import codeOps
 import collections
 
-from optimization.rewrite import rewriteAndSimplify
+from optimization import rewrite
 
-
-def evaluate(compiler, prgm):
+def evaluate(compiler, prgm, simplify=False):
 	with compiler.console.scope('dead store elimination'):
 		live = set()
 		stores = collections.defaultdict(list)
@@ -41,7 +40,11 @@ def evaluate(compiler, prgm):
 			# Rewrite the code without the dead stores
 			if replace:
 				compiler.console.output('%r %d' % (code, eliminated))
-				rewriteAndSimplify(compiler, prgm, code, replace)
+
+				if simplify:
+					rewrite.rewriteAndSimplify(compiler, prgm, code, replace)
+				else:
+					rewrite.rewrite(compiler, code, replace)
 
 			totalEliminated += eliminated
 

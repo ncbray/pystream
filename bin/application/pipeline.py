@@ -23,11 +23,11 @@ import threading
 
 from . import errors
 
-import stats
+import stats.shader
 
-def codeConditioning(compiler, prgm):
+def codeConditioning(compiler, prgm, firstPass, dumpStats=False):
 	with compiler.console.scope('conditioning'):
-		if True:
+		if firstPass:
 			# Try to identify and optimize method calls
 			optimization.methodcall.evaluate(compiler, prgm)
 
@@ -37,27 +37,28 @@ def codeConditioning(compiler, prgm):
 			# Fold, DCE, etc.
 			optimization.simplify.evaluate(compiler, prgm)
 
-		stats.contextStats(compiler, prgm, 'optimized', classOK=True)
+		if firstPass and dumpStats:
+			stats.contextStats(compiler, prgm, 'optimized', classOK=True)
 
 
-		if True:
+		if firstPass:
 			# Separate different invocations of the same code.
 			optimization.clone.evaluate(compiler, prgm)
 
+		if firstPass and dumpStats:
 			stats.contextStats(compiler, prgm, 'clone', classOK=True)
 
 
-		if True:
+		if firstPass:
 			# Try to eliminate kwds, vargs, kargs, and default arguments.
 			# Done before inlining, as the current implementation of inlining
 			# Cannot deal with complex calling conventions.
 			optimization.argumentnormalization.evaluate(compiler, prgm)
 
-		if True:
+		if firstPass:
 			# Try to eliminate trivial functions.
 			optimization.codeinlining.evaluate(compiler, prgm)
 
-		if True:
 			# Get rid of dead functions/contexts
 			optimization.cullprogram.evaluate(compiler, prgm)
 
@@ -68,9 +69,8 @@ def codeConditioning(compiler, prgm):
 		if True:
 			optimization.storeelimination.evaluate(compiler, prgm)
 
-		stats.contextStats(compiler, prgm, 'inline')
-
-		#errors.abort('test')
+		if firstPass and dumpStats:
+			stats.contextStats(compiler, prgm, 'inline')
 
 		# HACK read/modify information is imprecise, so keep re-evaluating it
 		# basically, DCE improves read modify information, which in turn allows better DCE
@@ -94,10 +94,11 @@ def depythonPass(compiler, prgm, opPathLength=0, firstPass=True):
 
 		analysis.cpa.evaluate(compiler, prgm, opPathLength, firstPass=firstPass)
 
-		stats.contextStats(compiler, prgm, 'firstpass' if firstPass else 'secondpass', classOK=firstPass)
+		if firstPass:
+			stats.contextStats(compiler, prgm, 'firstpass' if firstPass else 'secondpass', classOK=firstPass)
 		#errors.abort("testing")
 
-		codeConditioning(compiler, prgm)
+		codeConditioning(compiler, prgm, firstPass, firstPass)
 
 
 def evaluate(compiler, prgm, name):
@@ -112,14 +113,20 @@ def evaluate(compiler, prgm, name):
 					# Intrinsics can prevent complete exhaustive inlining.
 					# Adding call-path sensitivity compensates.
 					depythonPass(compiler, prgm, 3, firstPass=False)
-
-				if True:
+				else:
 					# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
 					analysis.lifetimeanalysis.evaluate(compiler, prgm)
+
+					stats.contextStats(compiler, prgm, 'secondpass')
+
+				#errors.abort('test')1
 
 				if True:
 					# Translate abstract shader programs into code.
 					translator.dataflowtransform.translate(compiler, prgm)
+
+					if config.dumpStats:
+						stats.shader.digest(compiler)
 			finally:
 				if config.doDump:
 					try:

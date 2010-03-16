@@ -9,9 +9,11 @@ from util.io.filesystem import ensureDirectoryExists
 
 import subprocess
 
-from util.io.report import TableBuilder, PieBuilder
+from util.io.report import *
 
 import optimization.cullprogram
+
+import config
 
 def classifyCode(code):
 	if code.annotation.primitive:
@@ -32,10 +34,6 @@ def classifyCode(code):
 
 
 classes = 'user', 'glsl', 'interp', 'runtime', 'primitive'
-
-asts = 'CopyLocal', 'Call', 'MethodCall', 'DirectCall', 'Load', 'Store', 'Allocate', 'Check', 'Is'
-
-astColors = 'pink', 'red', 'gray', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple'
 
 def isGLSL(filename):
 	if len(filename) > len(glslFiles):
@@ -266,6 +264,8 @@ def generateIndex(collect):
 	print >>f, r"\end{figure}"
 
 def contextStats(compiler, prgm, name, classOK=False):
+	if not config.dumpStats: return
+
 	optimization.cullprogram.evaluate(compiler, prgm)
 
 	reportdir = os.path.join(config.outputDirectory, 'stats', name)

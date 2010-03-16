@@ -1,4 +1,5 @@
 from util.python import uniqueSlotName
+import collections
 
 class Slots(object):
 	def __init__(self):
@@ -17,9 +18,10 @@ class Slots(object):
 		return uniqueName
 
 class CompilerContext(object):
-	__slots__ = 'console', 'extractor', 'slots'
+	__slots__ = 'console', 'extractor', 'slots', 'stats'
 
 	def __init__(self, console):
 		self.console    = console
 		self.extractor  = None
 		self.slots      = Slots()
+		self.stats      = collections.defaultdict(dict)

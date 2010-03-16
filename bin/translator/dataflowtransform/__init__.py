@@ -21,6 +21,8 @@ from util.application import compilerexceptions
 
 from analysis.dump import dumpreport # DEBUGGING
 
+import stats.shader
+
 # Make a multi-level dictionary that terminates with names as its leaves.
 # matcher[a][b] -> the name of path a.b
 def makePathMatcher(prgm):
@@ -260,17 +262,24 @@ def evaluateShaderProgram(compiler, name, vscontext, fscontext):
 		fscontext.objectInfo = objectInfo
 		fscontext.copyOriginalParams()
 
+	stats.shader.shaderStats(compiler, 'treetransform', name, vscontext, fscontext)
+
 	#dumpreport.evaluate(compiler,prgm, name)
 
 	with compiler.console.scope('flatten output'):
 		vscontext.shaderdesc = flattenoutput.process(compiler, prgm, vscontext.code, False)
 		fscontext.shaderdesc = flattenoutput.process(compiler, prgm, fscontext.code, True)
 
+	#stats.shader.shaderStats(compiler, 'flattenoutput', name, vscontext, fscontext)
+
 	with compiler.console.scope('object analysis'):
 		objectanalysis.process(compiler, prgm, vscontext.code, fscontext.code)
 
 	with compiler.console.scope('field transform'):
 		newfieldtransform.process(compiler, prgm, exgraph, vscontext, fscontext)
+
+	stats.shader.shaderStats(compiler, 'fieldtransform', name, vscontext, fscontext)
+
 
 	shaderprgm = shaderdescription.ProgramDescription(prgm, name, vscontext, fscontext)
 	shaderprgm.link()
@@ -281,6 +290,8 @@ def evaluateShaderProgram(compiler, name, vscontext, fscontext):
 		poolAnalysis = newpoolanalysis.process(compiler, prgm, shaderprgm, exgraph, ioinfo, vscontext, fscontext)
 
 	return
+
+	###########################################################
 
 	with compiler.console.scope('translating'):
 		translator = newglsltranslator.process(compiler, prgm, exgraph, poolAnalysis, shaderprgm, ioinfo)
@@ -296,6 +307,8 @@ def evaluateCode(compiler, prgm, name, vscode, fscode):
 	shaderprgm = evaluateShaderProgram(compiler, name, vscontext, fscontext)
 
 	return
+
+	###########################################################
 
 	with compiler.console.scope('debug dump'):
 		dumpreport.evaluate(compiler, shaderprgm.prgm, "shaderProgram")

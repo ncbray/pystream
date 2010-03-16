@@ -174,6 +174,11 @@ class InterproceduralDataflow(object):
 
 		sig     = self._signature(code, selfparam, params)
 		opPath  = self.advanceOpPath(srcOp.context.opPath, srcOp.op)
+
+		if code.annotation.primitive:
+			# Call path does not matter.
+			opPath = None
+
 		context = self._canonicalContext(sig, opPath, self.storeGraph)
 
 		# Mark that we created the context.

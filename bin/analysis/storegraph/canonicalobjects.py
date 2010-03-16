@@ -134,7 +134,8 @@ class CanonicalObjects(object):
 	def pathType(self, path, obj, op):
 		# HACK reduces the ops by 50%
 		if obj.pythonType() in (float, int, bool, str, long):
-			op = None
+			op   = None
+			path = None
 
 		return self.cache[extendedtypes.PathObjectType(path, obj, op)]
 
@@ -148,6 +149,9 @@ class CanonicalObjects(object):
 		# Remove indexed object wrappers
 		while isinstance(xtype, extendedtypes.IndexedObjectType):
 			xtype = xtype.xtype
+
+		if xtype.obj.pythonType() in (float, int, bool, str, long):
+			return xtype
 
 		index = self.index
 		self.index += 1

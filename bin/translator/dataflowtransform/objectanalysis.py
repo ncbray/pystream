@@ -19,7 +19,8 @@ class ObjectAnalysis(TypeDispatcher):
 		allocated = annotation.allocates.merged
 
 		for obj in allocated:
-			assert obj not in self.allocated, "Temporary limitation: all allocated objects must have unique names"
+			if obj.xtype.obj.pythonType() not in (float, int, bool, long, str):
+				assert obj not in self.allocated, "Temporary limitation: all allocated objects must have unique names (%r)" % obj
 			self.allocated.add(obj)
 			if self.loopLevel == 0:
 				self.unique.add(obj)

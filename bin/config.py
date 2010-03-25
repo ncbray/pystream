@@ -12,7 +12,13 @@ doDump = False
 maskDumpErrors = False
 doThreadCleanup = False
 
-dumpStats = True
+dumpStats = False
+
+
+# Pointer analysis testing
+useXTypes = True
+useControlSensitivity = True
+useCPA = True
 
 if True:
 	testOnly = [

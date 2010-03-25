@@ -117,9 +117,9 @@ def evaluate(compiler, prgm, name):
 					# HACK rerun lifetime analysis, as inlining causes problems for the function annotations.
 					analysis.lifetimeanalysis.evaluate(compiler, prgm)
 
-					stats.contextStats(compiler, prgm, 'secondpass')
+				stats.contextStats(compiler, prgm, 'secondpass')
 
-				#errors.abort('test')1
+				#errors.abort('test')
 
 				if True:
 					# Translate abstract shader programs into code.

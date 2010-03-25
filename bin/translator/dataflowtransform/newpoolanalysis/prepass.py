@@ -305,6 +305,31 @@ class PoolAnalysisInfoCollector(TypeDispatcher):
 					self.volatileFields.add(self.compatible[field])
 		#print
 
+
+		singleCopy = 0
+		multiCopy = 0
+		singleton = 0
+		pool = 0
+
+		for name, count in self.holdingCount.iteritems():
+			if name in self.volatileIntrinsics or name in self.samplers:
+				if count > 1:
+					pool += 1
+				else:
+					singleton += 1
+			else:
+				if count > 1:
+					multiCopy += 1
+				else:
+					singleCopy += 1
+
+		print
+		print singleCopy
+		print multiCopy
+		print singleton
+		print pool
+		print
+
 		uib = UniformInterfaceBuilder(self.compiler, self)
 		self.ioRefInfo = uib.process()
 		return self

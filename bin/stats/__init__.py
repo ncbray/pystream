@@ -63,6 +63,10 @@ class StatCollector(object):
 
 		self.subfigures = []
 
+		self.access = collections.defaultdict(lambda: 0)
+		self.taccess = collections.defaultdict(lambda: 0)
+
+
 	def code(self, cls, code):
 		contexts = len(code.annotation.contexts)
 
@@ -85,6 +89,28 @@ class StatCollector(object):
 		if hasattr(op, 'vargs') and op.vargs:
 			self.vargCount += 1
 			self.contextVargCount += contexts
+
+
+		ts = set()
+
+		def handleSlot(slot):
+			xtype = slot.object.xtype
+
+			t = xtype.obj.pythonType()
+			ts.add((t, slot.slotName))
+
+			self.access[xtype] += 1
+
+
+		for slot in op.annotation.opReads.merged:
+			handleSlot(slot)
+
+		for slot in op.annotation.opModifies.merged:
+			handleSlot(slot)
+
+		for t, f in ts:
+			self.taccess[t] += 1
+
 
 	def copies(self, cls, code, count):
 		contexts = len(code.annotation.contexts)
@@ -306,6 +332,29 @@ def contextStats(compiler, prgm, name, classOK=False):
 				print '\t', cls, num
 			print
 
+
+	tw = collections.defaultdict(lambda: 0)
+	tc = collections.defaultdict(lambda: 0)
+	for xtype, count in collect.access.iteritems():
+		tw[xtype.obj.pythonType()] += count
+		tc[xtype.obj.pythonType()] += 1
+
+
+	paw = 0
+	tow = 0
+	otc = 0
+	for t, count in collect.taccess.iteritems():
+		rel = tw[t]/float(tc[t])
+		print t, count, rel
+		paw += rel
+		tow += count
+		otc += 1
+
+	tapo = float(tow)/otc
+	papo = paw/otc
+	print
+	print tapo, papo, papo/tapo
+	print
 
 	functionRatios(collect, classOK)
 	opRatios(collect, classOK)

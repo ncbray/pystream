@@ -82,8 +82,8 @@ class MethodObjectType(ExtendedObjectType):
 	__slots__ = 'func', 'inst'
 
 	def __init__(self, func, inst, obj, op):
-		assert isinstance(func, ExtendedType)
-		assert isinstance(inst, ExtendedType)
+		#assert isinstance(func, ExtendedType)
+		#assert isinstance(inst, ExtendedType)
 		self.func = func
 		self.inst = inst
 		self.obj  = obj

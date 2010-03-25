@@ -520,7 +520,11 @@ def buildBlocks(prepassInfo, shaderprgm, context):
 		if not uniforms:
 			del alignedUniforms[bestAlign]
 
-		block.append(chosen)
+		# OpenGL 3 vs. OpenGL 2
+		if True:
+			block.append(chosen)
+		else:
+			decls.append(chosen)
 
 		offset += bestErr+size
 

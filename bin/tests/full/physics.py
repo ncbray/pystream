@@ -399,7 +399,6 @@ class ParallaxOcclusionPerturbation(SurfacePerturber):
 		return tsbasis.parallaxOcclusionAdjust(e, texCoord, self.normalmap, self.parallaxAmount)
 
 
-# Environment
 class Environment(object):
 	__slots__ = ['worldToCamera', 'projection', 'cameraToEnvironment', 'envMap', 'ambientMap', 'fog', 'exposure']
 
@@ -413,8 +412,10 @@ class Environment(object):
 		return self.fog.apply(color, p)
 
 	def processOutputColor(self, color):
+		# Scale, tonemap, and apply gamma correction
 		return rgb2srgb(tonemap(color*self.exposure))
 
+	# Called on the CPU
 	def clearColor(self):
 		return self.processOutputColor(self.fog.color)
 
@@ -438,19 +439,23 @@ def packDistantGBuffer(color):
 	normal   = vec3(0.0, 0.0, 1.0)
 	position = vec3(0.0, 0.0, 10000000.0)
 
-	return (vec4(color, 1.0), surfaceColor, vec4(position, 1.0), vec4(normal, 0.0))
+	return (vec4(color, 1.0), surfaceColor, vec4(position, 1.0), vec4(normal, 1.0))
 
 class GBuffer(object):
 	__slots__ = ['color', 'surface', 'position', 'normal']
 	__fieldtypes__ = {'color':sampler.sampler2D, 'surface':sampler.sampler2D,
 					'position':sampler.sampler2D, 'normal':sampler.sampler2D}
 
+	# Allocate the buffers when the rendering system
+	# is initialized.
 	def allocate(self, fbo, width, height):
 		self.color    = fbo.createTextureTarget(width, height)
 		self.surface  = fbo.createTextureTarget(width, height)
 		self.position = fbo.createTextureTarget(width, height)
 		self.normal   = fbo.createTextureTarget(width, height)
 
+	# Setup the buffers as rendering targets for
+	# the material shader.
 	def bindForWriting(self, fbo):
 		fbo.bind()
 		fbo.bindColorAttachment(0, self.color.textureData)
@@ -459,6 +464,9 @@ class GBuffer(object):
 		fbo.bindColorAttachment(3, self.normal.textureData)
 		fbo.drawBuffers([0, 1, 2, 3])
 
+	# Sample the buffers inside of a shader.
+	# Dead code elimination will eliminate unused portions
+	# of the sample, so just read everything.
 	def sample(self, coord):
 		surface  = self.surface.texture(coord)
 		position = self.position.texture(coord)
@@ -498,8 +506,11 @@ class Shader(object):
 		trans      = self.env.worldToCamera*self.objectToWorld
 		newpos     = trans*pos
 
+		# Create an orthonormal basis that translates from
+		# texture space to camera space
 		tsbasis = self.createTSBasis(trans, normal, tangent, bitangent)
 
+		# Pass the screen-space position to the rasterizer
 		context.position = self.env.projection*newpos
 
 		return newpos.xyz, tsbasis, texCoord
@@ -508,21 +519,28 @@ class Shader(object):
 		e = -pos.normalize()
 
 		# TODO control flow mutual exclusivity
+		# Perturb the texture coordinate
 		texCoord = self.perturb.perturb(tsbasis, texCoord, e)
+
+		# Get the normal at the peturbed texture coordinate
 		normal   = self.perturb.normal(tsbasis, texCoord)
 
+		# Create a structure holding properties of the surface
+		# at this fragment
 		surface = self.material.surface(pos, normal, e, texCoord)
 
 		# Accumulate lighting
 		#self.light.accumulate(surface, self.env.worldToCamera)
 
-		mod = fresnel(normal, e)
+		# Reflect the sky box off the model
 		envSpecular = self.env.specularColor(-e.reflect(normal))
-		surface.specularLight += envSpecular*mod
+		surface.specularLight += envSpecular*fresnel(normal, e)
 
+		# Calculate the color or the surface
 		surfaceColor = surface.litColor()
 		mainColor = self.env.processSurfaceColor(surfaceColor, surface.p)
 
+		# Write the outputs into the material buffer
 		context.colors = packGBuffer(mainColor,
 									surface.diffuseColor,
 									surface.specularColor.r, self.material.shiny,
@@ -561,10 +579,13 @@ class LightPass(FullScreenEffect):
 
 	def process(self, texCoord):
 		g = self.gbuffer.sample(texCoord)
-
 		e = -g.position.normalize()
 
+		# Calculate the direction to the light and the
+		# light's color at this point in the image
 		l, color = self.light.lightInfo(g.position, self.env.worldToCamera)
+
+		# Calculate how the light reflects off the surface
 		diffuseLighting = g.diffuse*nldot(g.normal, l)
 		specularLighting = blinnPhong(g.normal, l, e, g.shiny)*g.specular
 		lit = (diffuseLighting+specularLighting)*color
@@ -602,10 +623,12 @@ class RadialBlur(FullScreenEffect):
 		return color/weight
 
 	def process(self, texCoord):
+		# Blend the original image and the bloom
 		original = self.colorBuffer.texture(texCoord)
 		blured   = self.blurBuffer.texture(texCoord)
-
 		color = original.mix(blured, self.blurAmount)
+
+		# Add radial streaks to the bloom
 		color += self.computeRadial(texCoord)*self.radialAmount
 
 		return vec4(self.env.processOutputColor(color.xyz), 1.0)
@@ -631,7 +654,7 @@ class SSAO(FullScreenEffect):
 	__slots__ = ['gbuffer']
 	__fieldtypes__ = {'gbuffer':GBuffer}
 
-	def sampleOffset(self, texCoord, offset, position, normal):
+	def sample(self, texCoord, position, normal, offset):
 		# Flip the offset to be in the normal's hemisphere.
 		facing = normal.dot(offset)
 		if facing < 0.0:
@@ -643,9 +666,11 @@ class SSAO(FullScreenEffect):
 		diff = g.position-position
 		dist = diff.length()
 
+		# Make the occlusion fall off with distance.
 		weight = max(1.0-dist*dist, 0.0)
 		amt = 1.0
 
+		# Calculate the occlusion with a bias to avoid artifacts
 		if dist > 0.001:
 			dir = diff.normalize()
 			amt = clamp(1.01-dir.dot(normal)*1.01*weight, 0.0, 1.0)
@@ -654,21 +679,22 @@ class SSAO(FullScreenEffect):
 
 	def process(self, texCoord):
 		g = self.gbuffer.sample(texCoord)
-		position = g.position
-		normal   = g.normal
+		p = g.position
+		n = g.normal
 
-		ssao  = self.sampleOffset(texCoord, vec3(-0.515199, 0.641665, 0.568187)*4.0, position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(0.627079, 0.543492, 0.558022)*4.0, position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(-0.530851, 0.609046, 0.589288)*4.0, position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(0.785924, -0.551296, 0.279993)*4.0, position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(-0.642479, 0.591967, 0.486616)*4.0, position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(-0.731236, 0.672430, -0.114596)*4.0, position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(0.535317, 0.487092, -0.690056)*4.0, position, normal)
-		ssao += self.sampleOffset(texCoord, vec3(-0.623743, 0.199685, -0.755692)*4.0, position, normal)
+		# Average a number of occlusion samples
+		ssao  = self.sample(texCoord, p, n, vec3(-0.515199, 0.641665, 0.568187)*4.0)
+		ssao += self.sample(texCoord, p, n, vec3(0.627079, 0.543492, 0.558022)*4.0)
+		ssao += self.sample(texCoord, p, n, vec3(-0.530851, 0.609046, 0.589288)*4.0)
+		ssao += self.sample(texCoord, p, n, vec3(0.785924, -0.551296, 0.279993)*4.0)
+		ssao += self.sample(texCoord, p, n, vec3(-0.642479, 0.591967, 0.486616)*4.0)
+		ssao += self.sample(texCoord, p, n, vec3(-0.731236, 0.672430, -0.114596)*4.0)
+		ssao += self.sample(texCoord, p, n, vec3(0.535317, 0.487092, -0.690056)*4.0)
+		ssao += self.sample(texCoord, p, n, vec3(-0.623743, 0.199685, -0.755692)*4.0)
 
 		ssao /= 8.0
 
-		return vec4(ssao, ssao, ssao, ssao)
+		return vec4(ssao)
 
 
 class AmbientPass(FullScreenEffect):
